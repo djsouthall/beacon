@@ -7,12 +7,11 @@ a more pythonic way.
 import numpy
 import os
 import sys
+
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader
-import matplotlib.pyplot as plt
+import examples.beacon_data_reader #Must be imported before matplotlib or else plots don't load.
 import glob
 from pprint import pprint
-plt.ion()
 
 
 def getHeaderKeys(reader=None):
@@ -76,7 +75,7 @@ def getStatusKeys(reader=None):
     '''
     try:
         if reader == None:
-            reader = Reader(os.environ['BEACON_DATA'],int(os.path.basename(glob.glob(os.environ['BEACON_DATA']+'/*')[0]).split('run')[-1]) ) #Just picks the first listed run in the default data directory. 
+            reader = examples.beacon_data_reader.Reader(os.environ['BEACON_DATA'],int(os.path.basename(glob.glob(os.environ['BEACON_DATA']+'/*')[0]).split('run')[-1]) ) #Just picks the first listed run in the default data directory. 
         raw_keys = numpy.array(list(type(reader.status()).__dict__.keys()))
         parsed_keys = []
         for key in raw_keys:
@@ -164,7 +163,7 @@ if __name__ == '__main__':
     # If your data is elsewhere, pass it as an argument
     datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
     run = 367 #Selects which run to examine
-    reader = Reader(datapath,run)
+    reader = examples.beacon_data_reader.Reader(datapath,run)
 
     print('\nReader:')
     d = getReaderDict(reader)
