@@ -9,7 +9,9 @@ from multiprocessing import cpu_count
 
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
-import analysis.tools.interpret #Must be imported before matplotlib or else plots don't load.
+
+sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
+import tools.interpret #Must be imported before matplotlib or else plots don't load.
 
 import matplotlib.pyplot as plt
 plt.ion()
@@ -55,13 +57,13 @@ def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=F
     N = reader.N() if event_limit == None else min(reader.N(),abs(event_limit))
 
     print('\nReader:')
-    d = analysis.tools.interpret.getReaderDict(reader)
+    d = tools.interpret.getReaderDict(reader)
     pprint(d)
     print('\nHeader:')
-    h = analysis.tools.interpret.getHeaderDict(reader)
+    h = tools.interpret.getHeaderDict(reader)
     pprint(h)
     print('\nStatus:')
-    s = analysis.tools.interpret.getStatusDict(reader)
+    s = tools.interpret.getStatusDict(reader)
     pprint(s)
 
 

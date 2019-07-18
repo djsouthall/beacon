@@ -5,7 +5,9 @@ import sys
 
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
-import analysis.tools.interpret #Must be imported before matplotlib or else plots don't load.
+
+sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
+import tools.interpret #Must be imported before matplotlib or else plots don't load.
 
 import matplotlib.pyplot as plt
 from pprint import pprint
@@ -41,11 +43,11 @@ if __name__ == '__main__':
         ## dump the headers and status, just to show they're there
         if verbose == True:
             print('\nReader:')
-            pprint(analysis.tools.interpret.getReaderDict(reader))
+            pprint(tools.interpret.getReaderDict(reader))
             print('\nHeader:')
-            pprint(analysis.tools.interpret.getHeaderDict(reader))
+            pprint(tools.interpret.getHeaderDict(reader))
             print('\nStatus:')
-            pprint(analysis.tools.interpret.getStatusDict(reader))
+            pprint(tools.interpret.getStatusDict(reader))
 
         reader.header().Dump(); 
         reader.status().Dump(); 

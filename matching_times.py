@@ -12,7 +12,9 @@ import glob
 
 sys.path.append(os.environ['BEACON_INSTALL_DIR']) 
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
-from analysis.tools.interpret import getReaderDict, getHeaderDict, getStatusDict #Must be imported before matplotlib or else plots don't load.
+
+sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
+from tools.interpret import getReaderDict, getHeaderDict, getStatusDict #Must be imported before matplotlib or else plots don't load.
 
 import matplotlib.pyplot as plt
 plt.ion()

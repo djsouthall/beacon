@@ -5,7 +5,9 @@ import sys
 
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
-import analysis.tools.interpret #Must be imported before matplotlib or else plots don't load.
+
+sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
+import tools.interpret #Must be imported before matplotlib or else plots don't load.
 
 import matplotlib.pyplot as plt
 from pprint import pprint
