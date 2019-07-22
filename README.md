@@ -16,11 +16,11 @@ Currently this is only contains working files that I (Dan Southall) have been wo
 
 # Table of Contents
 
-0.0.0 [Prep Work](#prep-work)
+0.0.0 [Prep Work](#000-prep-work)
 
-0.1.0 [Dependencies](#dependencies)
+0.1.0 [Dependencies](#010-dependencies)
 
-0.2.0 [Paths](#paths)
+0.2.0 [Paths](#020-paths)
 
 
 ---
