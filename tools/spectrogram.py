@@ -141,7 +141,7 @@ def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=F
         return reader, freqs, spectra_dbish_binned
 
 if __name__ == '__main__':
-    plt.close('all')
+    #plt.close('all')
     # If your data is elsewhere, pass it as an argument
     datapath = os.environ['BEACON_DATA']#sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
     run = int(sys.argv[1]) if len(sys.argv) > 1 else 367 #Selects which run to examine
@@ -149,7 +149,7 @@ if __name__ == '__main__':
 
     import time
 
-    reader, freqs, spectra_dbish_binned = getSpectData(datapath,run,event_limit,bin_size=10,group_fft=True)
+    reader, freqs, spectra_dbish_binned = getSpectData(datapath,run,event_limit,bin_size=10,group_fft=False)
 
     gc.collect()
 
@@ -163,7 +163,7 @@ if __name__ == '__main__':
             ax = plt.gca()
             plt.title('Run %i, Channel %i'%(run,channel),fontsize=28)
             plt.imshow(spectra_dbish_binned['ch%i'%channel],extent = [0,(reader.head_tree.GetMaximum('readout_time')-reader.head_tree.GetMinimum('readout_time'))/60.0,min(freqs)/1e6,max(freqs)/1e6],aspect='auto',cmap=cmap)
-            plt.ylim(20,100)
+            plt.ylim(0,200)
             #plt.xlim(0,100)
             plt.ylabel('Freq (MHz)',fontsize=20)
             plt.xlabel('Readout Time (min)',fontsize=20)

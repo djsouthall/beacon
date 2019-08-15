@@ -16,7 +16,7 @@ import pylab
 import scipy
 import scipy.interpolate
 sys.path.append('/home/dsouthall/Beacon')
-from pySmithPlot.smithplot import SmithAxes
+#from pySmithPlot.smithplot import SmithAxes
 import pyBeaconKit.utils.constants as constants
 pylab.ion()
 

@@ -50,7 +50,7 @@ def getTimes(reader):
 
 
 
-def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=1.0, percent_cut=0.001, plot=True, verbose=True):
+def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=1.0, percent_cut=0.005, plot=True, verbose=True):
     '''
     This uses a nearest neighbour calculation to select the cal pulser events from underneath the
     noise.  Adjust the parameters until it works for you specific run.  
@@ -257,16 +257,20 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
         print(e)
         return 0
 
+#Below is known good percentages to identify pulser points.
+percent_cuts = {'run792':0.0011,
+                'run793':0.003}
+
 if __name__ == '__main__':
-    plt.close('all')
+    #plt.close('all')
     # If your data is elsewhere, pass it as an argument
     datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
-    runs = numpy.array([792])#numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793]) #Selects which run to examine
+    runs = numpy.array([793])#numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793]) #Selects which run to examine
     nearest_neighbor = 10 #Adjust until works.
     scale_subtimes = 10.0 #The larger this is the the less the nearest neighbor favors vertical lines.
     scale_times = 1.0  #The larger this is the the less the nearest neighbor favors horizontal lines.
     slope_bound = 1.0e-9
-    percent_cut = 0.001
+    percent_cut = 0.003
     nominal_clock_rate = 31.25e6
     lower_rate_bound = 31.2e6 #Don't make the bounds too large or the bisection method will overshoot and roll over.
     upper_rate_bound = 31.3e6 #Don't make the bounds too large or the bisection method will overshoot and roll over.
@@ -278,9 +282,7 @@ if __name__ == '__main__':
     for run_index, run in enumerate(runs):
         reader = Reader(datapath,run)
         try:
-            clock_rate, times, subtimes, trigtimes, eventids = getClockCorrection(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, slope_bound=slope_bound, percent_cut=percent_cut, nominal_clock_rate=nominal_clock_rate, lower_rate_bound=lower_rate_bound, upper_rate_bound=upper_rate_bound, plot=plot, verbose=verbose)
-            
-
+            clock_rate, times, subtimes, trigtimes, eventids = getClockCorrection(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, slope_bound=slope_bound, percent_cut=percent_cuts['run%i'%run], nominal_clock_rate=nominal_clock_rate, lower_rate_bound=lower_rate_bound, upper_rate_bound=upper_rate_bound, plot=plot, verbose=verbose)
             all_adjusted_clock_rates.append(clock_rate)
         except Exception as e:
             print('Error in main clock correction loop.')
@@ -288,8 +290,9 @@ if __name__ == '__main__':
             good_runs[run_index] = False
 
     all_adjusted_clock_rates = numpy.array(all_adjusted_clock_rates)
-    print('Mean adjusted clock rate = %f'%numpy.mean(all_adjusted_clock_rates))
-
+    print('Adjusted clockrates are:')
+    for i in all_adjusted_clock_rates:
+        print(i)
     plt.figure()
     cut = ~numpy.logical_or(all_adjusted_clock_rates == lower_rate_bound,all_adjusted_clock_rates == upper_rate_bound)
     print('Mean adjusted clock rate = %f'%numpy.mean(all_adjusted_clock_rates[cut]))
@@ -298,3 +301,21 @@ if __name__ == '__main__':
     plt.ylabel('Adjusted Clock Rate (MHz)')
     plt.xlabel('Run Number')
     plt.legend()
+    '''
+    This was a plot for Kaeli's poster.
+    fig = plt.figure()
+    adjusted_trigtimes = trigtimes%clock_rate
+    adjusted_trigtimes = adjusted_trigtimes/(max(adjusted_trigtimes))
+    plt.scatter(times-times[0],adjusted_trigtimes,c='b',marker=',',s=(2*72./fig.dpi)**2)
+    #plt.scatter(times[eventids],adjusted_trigtimes[eventids],c='r',marker=',',s=(72./fig.dpi)**2)
+    plt.ylabel('Sub-Second Trigger Time',fontsize=16)
+    plt.xlabel('Seconds from Start of Run',fontsize=16)
+
+    plt.xlim((7300,8400))
+    plt.ylim((0,0.4))
+    ax = plt.gca()
+    ax.tick_params(axis='both', which='major', labelsize=14)
+
+    #plt.legend()
+    #plt.title('Run: %i - Adjusted Clock Rate = %f MHz'%(run,clock_rate/1e6),fontsize=20)
+    '''
