@@ -41,12 +41,13 @@ def getTimes(reader):
     trigtimes : numpy.ndarray of floats
         The trig_time values for each event from the Tree.
     '''
-    N = reader.head_tree.Draw("raw_approx_trigger_time_nsecs:raw_approx_trigger_time:trig_time","trigger_type==2","goff") 
+    N = reader.head_tree.Draw("raw_approx_trigger_time_nsecs:raw_approx_trigger_time:trig_time:Entry$","trigger_type==2","goff") 
     #ROOT.gSystem.ProcessEvents()
     subtimes = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N)
     times = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N) 
-    trigtimes = numpy.frombuffer(reader.head_tree.GetV3(), numpy.dtype('float64'), N)     
-    return times, subtimes, trigtimes
+    trigtimes = numpy.frombuffer(reader.head_tree.GetV3(), numpy.dtype('float64'), N)
+    eventids = numpy.frombuffer(reader.head_tree.GetV4(), numpy.dtype('float64'), N).astype(int)
+    return times, subtimes, trigtimes, eventids
 
 
 
@@ -98,7 +99,7 @@ def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=
         if run not in pulserRuns():
             print('WARNING:  The selected run is not in the known list of pulser runs.')
 
-        times, subtimes, trigtimes = getTimes(reader)
+        times, subtimes, trigtimes, eventids = getTimes(reader)
 
         times_scaled       =    scale_times *    (times - min(times))    /    (max(times) - min(times))
         subtimes_scaled    = scale_subtimes * (subtimes - min(subtimes)) / (max(subtimes) - min(subtimes))
@@ -107,7 +108,7 @@ def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=
         distance, index = tree.query(points,k=nearest_neighbor)
         distance = distance[:,nearest_neighbor-1]
 
-        eventids = numpy.argsort(distance)[0:int(percent_cut*len(distance))]
+        indices = numpy.argsort(distance)[0:int(percent_cut*len(distance))]
         if plot == True:
             fig = plt.figure()
             plt.scatter(times,subtimes,c=distance,marker=',',s=(72./fig.dpi)**2)
@@ -117,17 +118,18 @@ def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=
 
             fig = plt.figure()
             plt.scatter(times,subtimes,c='b',marker=',',s=(72./fig.dpi)**2)
-            plt.scatter(times[eventids],subtimes[eventids],c='r',marker=',',s=(72./fig.dpi)**2)
+            plt.scatter(times[indices],subtimes[indices],c='r',marker=',',s=(72./fig.dpi)**2)
             plt.ylabel('Sub times')
             plt.xlabel('Times')
 
             fig = plt.figure()
             plt.scatter(trigtimes,subtimes,c='b',marker=',',s=(72./fig.dpi)**2)
-            plt.scatter(trigtimes[eventids],subtimes[eventids],c='r',marker=',',s=(72./fig.dpi)**2)
+            plt.scatter(trigtimes[indices],subtimes[indices],c='r',marker=',',s=(72./fig.dpi)**2)
             plt.ylabel('Sub Times')
             plt.xlabel('Trig Times')
 
-        return times, subtimes, trigtimes, eventids
+        return times, subtimes, trigtimes, eventids, indices
+
     except Exception as e:
         print('Error in pulserLocator.')
         print(e)
@@ -195,13 +197,13 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
     '''
     try:
         run = reader.run
-        times, subtimes, trigtimes, eventids = pulserLocator(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, percent_cut=percent_cut, plot=plot, verbose=verbose)
+        times, subtimes, trigtimes, eventids, indices = pulserLocator(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, percent_cut=percent_cut, plot=plot, verbose=verbose)
 
         clock_rate = nominal_clock_rate
         slope = 1000000.0
         clock_rate_upper = upper_rate_bound
         clock_rate_lower = lower_rate_bound
-        pulser_x = times[eventids]
+        pulser_x = times[indices]
         max_iter = 1000
         i = 0
         roll_offset = 0
@@ -211,11 +213,11 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
             if verbose == True:
                 print(clock_rate)
             i += 1
-            pulser_y = (trigtimes[eventids] + roll_offset)%clock_rate
+            pulser_y = (trigtimes[indices] + roll_offset)%clock_rate
             max_diff = numpy.max(numpy.diff(pulser_y))
             if max_diff > (max((trigtimes + roll_offset)%clock_rate) - min((trigtimes + roll_offset)%clock_rate))/2.0: #In case the points get split
                 roll_offset += (max((trigtimes + roll_offset)%clock_rate) - min((trigtimes + roll_offset)%clock_rate))/2.0
-                pulser_y = (trigtimes[eventids] + roll_offset)%clock_rate
+                pulser_y = (trigtimes[indices] + roll_offset)%clock_rate
             coeff = numpy.polyfit(pulser_x,pulser_y,1)
             slope = coeff[0]
 
@@ -231,16 +233,16 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
             return 0
         else:
             adjusted_trigtimes = trigtimes%clock_rate
-            coeff = numpy.polyfit(times[eventids],adjusted_trigtimes[eventids],1)
+            coeff = numpy.polyfit(times[indices],adjusted_trigtimes[indices],1)
             p = numpy.poly1d(coeff)
-            x = numpy.arange(min(times[eventids]),max(times[eventids]),100)
+            x = numpy.arange(min(times[indices]),max(times[indices]),100)
             y = p(x)
             poly_label = '$y = ' + str(['%0.9g x^%i'%(coefficient,order_index) for order_index,coefficient in enumerate(coeff[::-1])]).replace("'","").replace(', ',' + ').replace('[','').replace(']','')+ '$' #Puts the polynomial into a str name.
 
             if plot == True:
                 fig = plt.figure()
                 plt.scatter(times,adjusted_trigtimes,c='b',marker=',',s=(72./fig.dpi)**2)
-                plt.scatter(times[eventids],adjusted_trigtimes[eventids],c='r',marker=',',s=(72./fig.dpi)**2)
+                plt.scatter(times[indices],adjusted_trigtimes[indices],c='r',marker=',',s=(72./fig.dpi)**2)
                 plt.ylabel('Trig times')
                 plt.xlabel('Times')
 
@@ -250,7 +252,7 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
 
 
             print('Run: %i\tAdjusted Clock Rate = %f MHz'%(run,clock_rate/1e6))
-            return clock_rate, times, subtimes, trigtimes, eventids
+            return clock_rate, times, subtimes, trigtimes, eventids, indices
 
     except Exception as e:
         print('Error in getClockCorrection.  Skipping run %i'%run)
@@ -265,7 +267,7 @@ if __name__ == '__main__':
     #plt.close('all')
     # If your data is elsewhere, pass it as an argument
     datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
-    runs = numpy.array([793])#numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793]) #Selects which run to examine
+    runs = numpy.array([792])#numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793]) #Selects which run to examine
     nearest_neighbor = 10 #Adjust until works.
     scale_subtimes = 10.0 #The larger this is the the less the nearest neighbor favors vertical lines.
     scale_times = 1.0  #The larger this is the the less the nearest neighbor favors horizontal lines.
@@ -282,7 +284,7 @@ if __name__ == '__main__':
     for run_index, run in enumerate(runs):
         reader = Reader(datapath,run)
         try:
-            clock_rate, times, subtimes, trigtimes, eventids = getClockCorrection(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, slope_bound=slope_bound, percent_cut=percent_cuts['run%i'%run], nominal_clock_rate=nominal_clock_rate, lower_rate_bound=lower_rate_bound, upper_rate_bound=upper_rate_bound, plot=plot, verbose=verbose)
+            clock_rate, times, subtimes, trigtimes, eventids, indices = getClockCorrection(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, slope_bound=slope_bound, percent_cut=percent_cuts['run%i'%run], nominal_clock_rate=nominal_clock_rate, lower_rate_bound=lower_rate_bound, upper_rate_bound=upper_rate_bound, plot=plot, verbose=verbose)
             all_adjusted_clock_rates.append(clock_rate)
         except Exception as e:
             print('Error in main clock correction loop.')
@@ -301,13 +303,15 @@ if __name__ == '__main__':
     plt.ylabel('Adjusted Clock Rate (MHz)')
     plt.xlabel('Run Number')
     plt.legend()
+
+    print(numpy.sort(eventids[indices]))
     '''
     This was a plot for Kaeli's poster.
     fig = plt.figure()
     adjusted_trigtimes = trigtimes%clock_rate
     adjusted_trigtimes = adjusted_trigtimes/(max(adjusted_trigtimes))
     plt.scatter(times-times[0],adjusted_trigtimes,c='b',marker=',',s=(2*72./fig.dpi)**2)
-    #plt.scatter(times[eventids],adjusted_trigtimes[eventids],c='r',marker=',',s=(72./fig.dpi)**2)
+    #plt.scatter(times[indices],adjusted_trigtimes[indices],c='r',marker=',',s=(72./fig.dpi)**2)
     plt.ylabel('Sub-Second Trigger Time',fontsize=16)
     plt.xlabel('Seconds from Start of Run',fontsize=16)
 

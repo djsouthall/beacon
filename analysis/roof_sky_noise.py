@@ -131,6 +131,14 @@ config_legend_day4 = {  'cfg1':'No Low Pass, Stripped, Anechoic, Power On',
                         'cfg11':'Low Pass 2 + Ext, Stripped, Anechoic, Power On',
                         'cfg12':'Low Pass 2 + Ext, Stripped, Anechoic, Power On'}
 
+config_legend_day5 = {  'cfg1':'Aug21 - No On Board Filters, 40 dB - 10 dB, Full, NS, Power On',
+                        'cfg2':'Aug21 - No On Board Filters, 40 dB - 10 dB, Full, NS, Power On',
+                        'cfg3':'Aug21 - No On Board Filters, 40 dB - 10 dB, Full, EW, Power On',
+                        'cfg4':'Aug21 - No On Board Filters, 40 dB - 10 dB, Full, EW, Power On',
+                        'cfg5':'Aug21 - No On Board Filters, 40 dB - 10 dB, Stripped, Anechoic',
+                        'cfg6':'Aug21 - No On Board Filters, 40 dB, Stripped, Anechoic'}
+
+
 #Low pass 1 = old wrong low pass (Eric says he messed up the calculation)
 #No low pass = when L4,L5, and C5 were removed
 #Low pass 2 = a low pass that was added using the parts we had at the time: L4,L5=100nH, C5=82pF
@@ -167,11 +175,11 @@ def averageRIGOL(infiles,mode='log'):
     return freqs, antenna_dB, headers
 
 if __name__ == '__main__':
-    infiles = numpy.array(glob.glob(os.environ['BEACON_ANALYSIS_DIR'] + 'data/roof-aug8-9/*.csv'))
-    config_legend = config_legend_day4
+    infiles = numpy.array(glob.glob(os.environ['BEACON_ANALYSIS_DIR'] + 'data/aug21/*cfg*.csv'))
+    config_legend = config_legend_day5
     infiles = numpy.array(infiles)[numpy.argsort([int(i.split('cfg')[-1].replace('.csv','')) for i in infiles])]
     plot_title_root = '5 Minute Sweep with 10 KHz BWR'
-    roof_cfgs =  [[7,8],[9,10],[11,12]]#[[3,4],[5,6],[1,2]] #any multi element portion will be averaged
+    roof_cfgs =  [[1,2],[3,4],[5],[6]]#[[3,4],[5,6],[1,2]] #any multi element portion will be averaged
     lna_index = 2
     #Preparation.  Getting file names for averaging later.
     roof_cfgs_files = []
@@ -200,7 +208,7 @@ if __name__ == '__main__':
     plt.minorticks_on()
     plt.grid(b=True, which='major', color='k', linestyle='-')
     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-    plt.ylim([-80,10])
+    plt.ylim([-100,10])
     
     for index, _infiles in enumerate(roof_cfgs_files):
         freqs, antenna_dB, headers = averageRIGOL(_infiles,mode='log')

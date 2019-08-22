@@ -303,9 +303,17 @@ if __name__ == '__main__':
                 pulser_max_corrs[event_index] = numpy.max(corr,axis=1)
                 pulser_delays[event_index] = corr_delay_times[numpy.argmax(corr,axis=1)]
 
+
+
+
+
         if True:
             fig = plt.figure(figsize=(16,12))
             plt.suptitle('Max Correlation Values for Run %i'%(run),fontsize=20)
+
+            times, subtimes, trigtimes, all_eventids = cc.getTimes(reader)
+
+
             for channel in range(8):
                 if channel == 0:
                     ax = plt.subplot(4,2,channel+1)
@@ -319,6 +327,20 @@ if __name__ == '__main__':
                 plt.ylabel('Counts',fontsize=16)
                 plt.xlabel('Correlation Value',fontsize=16)
                 plt.legend(fontsize=16)
+
+
+                plt.figure()
+                plt.plot(times[numpy.isin(all_eventids,known_pulser_ids['run%i'%run]['eventids'])],pulser_max_corrs[:,channel])
+
+                plt.figure()
+                plt.subplot(2,1,1)
+                for index in numpy.where(max_corrs[:,channel] < 0.7):
+                    plt.plot(waveform_times,waveforms['ch%i'%channel][index],alpha=0.5)        
+                plt.subplot(2,1,2)
+                for index in numpy.where(max_corrs[:,channel] > 0.8):
+                    plt.plot(waveform_times,waveforms['ch%i'%channel][index],alpha=0.5)        
+
+
             if save_fig:
                 fig_saved = False
                 attempt = 0

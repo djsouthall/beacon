@@ -1,3 +1,9 @@
+'''
+This script uses the events found by find_good_saturating_signals.py to determine some good
+expected time delays between antennas.  These can be used then as educated guesses for time
+differences in the antenna_timings.py script. 
+'''
+
 import numpy
 import scipy.spatial
 import scipy.signal
@@ -15,49 +21,14 @@ import tools.clock_correct as cc
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from pprint import pprint
-plt.ion()
-
+import itertools
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
+plt.ion()
+
 
 #The below are not ALL pulser points, but a set that has been precalculated and can be used
 #if you wish to skip the calculation finding them.
-template_dirs = {
-    'run793':{  'dir':'/home/dsouthall/Projects/Beacon/beacon/analysis/templates/run793_4',
-                'resample_factor' : 200,
-                'crit_freq_low_pass_MHz' : 75,
-                'crit_freq_high_pass_MHz' : 15,
-                'filter_order' : 6,
-    }
-}
-
-def rfftWrapper(waveform_times, *args, **kwargs):
-    spec = numpy.fft.rfft(*args, **kwargs)
-    real_power_multiplier = 2.0*numpy.ones_like(spec) #The factor of 2 because rfft lost half of the power except for dc and Nyquist bins (handled below).
-    if len(numpy.shape(spec)) != 1:
-        real_power_multiplier[:,[0,-1]] = 1.0
-    else:
-        real_power_multiplier[[0,-1]] = 1.0
-    spec_dbish = 10.0*numpy.log10( real_power_multiplier*spec * numpy.conj(spec) / len(waveform_times)) #10 because doing power in log.  Dividing by N to match monutau. 
-    freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
-    return freqs, spec_dbish
-
-def loadTemplates(template_path):
-    waveforms = {}
-    for channel in range(8):
-        with open(template_path + '/ch%i.csv'%channel) as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=',')
-            line_count = 0
-            x = []
-            y = []
-            for row in csv_reader:
-                x.append(float(row[0]))
-                y.append(float(row[1]))
-                line_count += 1
-            waveforms['ch%i'%channel] = numpy.array(y)
-    return x,waveforms
-
-
 known_pulser_ids = {
     'run792':{
         'eventids':numpy.array([115156, 115228, 115256, 115276, 115283, 115315, 115330, 115371,\
@@ -164,181 +135,183 @@ known_pulser_ids = {
 }
 
 
+
+def rfftWrapper(waveform_times, *args, **kwargs):
+    spec = numpy.fft.rfft(*args, **kwargs)
+    real_power_multiplier = 2.0*numpy.ones_like(spec) #The factor of 2 because rfft lost half of the power except for dc and Nyquist bins (handled below).
+    if len(numpy.shape(spec)) != 1:
+        real_power_multiplier[:,[0,-1]] = 1.0
+    else:
+        real_power_multiplier[[0,-1]] = 1.0
+    spec_dbish = 10.0*numpy.log10( real_power_multiplier*spec * numpy.conj(spec) / len(waveform_times)) #10 because doing power in log.  Dividing by N to match monutau. 
+    freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
+    return freqs, spec_dbish
+
+def makeFilter(waveform_times,crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, filter_order, plot_filter=False):
+    dt = waveform_times[1] - waveform_times[0]
+    freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
+    b, a = scipy.signal.butter(filter_order, crit_freq_low_pass_MHz*1e6, 'low', analog=True)
+    d, c = scipy.signal.butter(filter_order, crit_freq_high_pass_MHz*1e6, 'high', analog=True)
+
+    filter_x_low_pass, filter_y_low_pass = scipy.signal.freqs(b, a,worN=freqs)
+    filter_x_high_pass, filter_y_high_pass = scipy.signal.freqs(d, c,worN=freqs)
+    filter_x = freqs
+    filter_y = numpy.multiply(filter_y_low_pass,filter_y_high_pass)
+    return filter_y, freqs
+
+def loadSignals(reader,eventid,filter_y):
+    try:
+        reader.setEntry(eventid)
+        raw = numpy.zeros((8,reader.header().buffer_length))
+        filter_y = numpy.tile(filter_y,(8,1))
+        for channel in range(8):
+            #Load waveform
+            raw[channel] = reader.wf(channel)
+        #Upsample
+        upsampled = scipy.signal.resample(raw,2*(numpy.shape(filter_y)[1]-1),axis=1)
+        #Apply filter
+        upsampled = numpy.fft.irfft(numpy.multiply(filter_y,numpy.fft.rfft(upsampled,axis=1)),axis=1)
+    except Exception as e:
+        print('Error in loadSignals')
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+    return raw, upsampled
+
+
+expected_time_differences = [((0, 1), 13.508319251205194), ((0, 2), 17.170337798788978), ((0, 3), 33.424724259292816), ((1, 2), 30.67865704999417), ((1, 3), 46.93304351049801), ((2, 3), 16.254386460503838)]
+max_time_differences = [((0, 1), 22.199031286793637), ((0, 2), 35.09576572192467), ((0, 3), 41.32087648347992), ((1, 2), 33.39469529610869), ((1, 3), 47.45680773722745), ((2, 3), 17.40978039384259)]
+
+
 if __name__ == '__main__':
-    #plt.close('all')
+    plt.close('all')
     # If your data is elsewhere, pass it as an argument
     # If your data is elsewhere, pass it as an argument
     datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
     runs = numpy.array([793])#numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793]) #Selects which run to examine
-    event_limit = 1
-    save_fig = True
+    
+
+    #Filter settings
+    final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
+    crit_freq_low_pass_MHz = 75
+    crit_freq_high_pass_MHz = 15
+    filter_order = 6
+
+    #Plotting info
+    plot = True
+    n_bins = 1000
+    hist_range = (-100,100)
 
     for run_index, run in enumerate(runs):
-        reader = Reader(datapath,run)
-        eventids = cc.getTimes(reader)[3]
-
-        if event_limit is not None:
-            if event_limit < len(eventids):
-                eventids = eventids[0:event_limit]
-
-        waveform_times, templates = loadTemplates(template_dirs['run%i'%run]['dir'])
-        original_wf_len = int(reader.header().buffer_length)
-        upsample_wf_len = original_wf_len*template_dirs['run%i'%run]['resample_factor']
-        corr_delay_times = numpy.arange(-upsample_wf_len+1,upsample_wf_len)
-        #Setup Filter
-        freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
-        b, a = scipy.signal.butter(template_dirs['run%i'%run]['filter_order'], template_dirs['run%i'%run]['crit_freq_low_pass_MHz']*1e6, 'low', analog=True)
-        d, c = scipy.signal.butter(template_dirs['run%i'%run]['filter_order'], template_dirs['run%i'%run]['crit_freq_high_pass_MHz']*1e6, 'high', analog=True)
-
-        filter_x_low_pass, filter_y_low_pass = scipy.signal.freqs(b, a,worN=freqs)
-        filter_x_high_pass, filter_y_high_pass = scipy.signal.freqs(d, c,worN=freqs)
-        filter_x = freqs
-        filter_y = numpy.multiply(filter_y_low_pass,filter_y_high_pass)
-        filter_y = numpy.tile(filter_y,(8,1))
-        templates_scaled = {} #precomputing
-        len_template = len(waveform_times)
-
-        templates_scaled_2d = numpy.zeros((8,len_template))
-        for channel in range(8):
-            templates_scaled['ch%i'%channel] = templates['ch%i'%channel]/numpy.std(templates['ch%i'%channel])
-            templates_scaled_2d[channel] = templates['ch%i'%channel]/numpy.std(templates['ch%i'%channel])
-
-        if True:
-            plt.figure()
-            plt.suptitle('Averaged Templates for Run %i'%(run),fontsize=20)
-            for channel in range(8):
-                if channel == 0:
-                    ax = plt.subplot(4,2,channel+1)
-                else:
-                    plt.subplot(4,2,channel+1,sharex=ax)
-                plt.plot(waveform_times,templates['ch%i'%channel],label='ch%i'%channel)
-                plt.ylabel('Adu',fontsize=16)
-                plt.xlabel('Time (ns)',fontsize=16)
-                plt.legend(fontsize=16)
-
-        if True:
-            plt.figure()
-            plt.suptitle('Averaged Templates for Run %i'%(run),fontsize=20)
-            plt.subplot(2,1,1)
-            for channel in range(8):
-                if channel == 0:
-                    ax = plt.subplot(2,1,1)
-                elif channel %2 == 0:
-                    plt.subplot(2,1,1)
-                elif channel %2 == 1:
-                    plt.subplot(2,1,2)
-
-                template_freqs, template_fft_dbish = rfftWrapper(waveform_times,templates['ch%i'%channel])
-                plt.plot(template_freqs/1e6,template_fft_dbish,label='ch%i'%channel)
-            
-            plt.subplot(2,1,1)
-            plt.ylabel('dBish',fontsize=16)
-            plt.xlabel('Freq (MHz)',fontsize=16)
-            plt.xlim(0,250)
-            plt.ylim(-50,100)
-            plt.legend(fontsize=16)
-            plt.subplot(2,1,2)
-            plt.ylabel('dBish',fontsize=16)
-            plt.xlabel('Freq (MHz)',fontsize=16)
-            plt.legend(fontsize=16)
-            plt.xlim(0,250)
-            plt.ylim(-50,100)
-        '''
-        max_corrs = {}
-        delays = {}
-        for channel in range(8):
-            max_corrs['ch%i'%channel] = numpy.zeros(len(eventids))
-            delays['ch%i'%channel] = numpy.zeros(len(eventids))
-        '''
-        
-        max_corrs = numpy.zeros((len(eventids),8))
-        delays = numpy.zeros((len(eventids),8))
-
-        for event_index, eventid in enumerate(eventids):
-            sys.stdout.write('\r(%i/%i)'%(event_index+1,len(eventids)))
-            sys.stdout.flush()
-            reader.setEntry(eventid) 
-
-            wfs = numpy.zeros((8,original_wf_len))
-            for channel in range(8):
-                wfs[channel] = reader.wf(channel)
-            
-            wfs = scipy.signal.resample(wfs,upsample_wf_len,axis=1)
-
-            #Apply filter
-            wfs = numpy.fft.irfft(numpy.multiply(filter_y,numpy.fft.rfft(wfs,axis=1)),axis=1)
-
-            #Can't find a way to vectorize corr
-            scaled_wfs = wfs/numpy.tile(numpy.std(wfs,axis=1),(numpy.shape(wfs)[1],1)).T
-            corr = numpy.zeros((8,numpy.shape(wfs)[1]*2 - 1))
-            for channel in range(8):
-                corr[channel] = scipy.signal.correlate(templates_scaled_2d[channel],scaled_wfs[channel])/(len_template) #should be roughly normalized between -1,1
-            
-            max_corrs[event_index] = numpy.max(corr,axis=1)
-            delays[event_index] = corr_delay_times[numpy.argmax(corr,axis=1)]
-
         if 'run%i'%run in list(known_pulser_ids.keys()):
-            print('Testing against known pulser events')
-            pulser_max_corrs = numpy.zeros((len(known_pulser_ids['run%i'%run]['eventids']),8))
-            pulser_delays = numpy.zeros((len(known_pulser_ids['run%i'%run]['eventids']),8))
+            try:
+                eventids = numpy.sort(known_pulser_ids['run%i'%run]['eventids'])
+                reader = Reader(datapath,run)
+                reader.setEntry(eventids[0])
+                waveform_times = reader.t()
+                dt = waveform_times[1]-waveform_times[0]
+                waveform_times_factor2 = numpy.arange(2**(numpy.ceil(numpy.log2(len(waveform_times)))))*dt #Rounding up to a factor of 2 of the len of the waveforms
+                padded_times = numpy.arange(2*len(waveform_times_factor2))*dt #multiplying by 2 for cross correlation later.
+                filter_y,freqs = makeFilter(padded_times,crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, filter_order)
+                df = freqs[1] - freqs[0]
+                final_dt = 1e9/(2*(final_corr_length//2 + 1)*df) #ns
 
-            for event_index, eventid in enumerate(known_pulser_ids['run%i'%run]['eventids']):
-                sys.stdout.write('\r(%i/%i)'%(event_index+1,len(known_pulser_ids['run%i'%run]['eventids'])))
-                sys.stdout.flush()
-                reader.setEntry(eventid) 
-                wfs = numpy.zeros((8,original_wf_len))
-                for channel in range(8):
-                    wfs[channel] = reader.wf(channel)
 
-                wfs = scipy.signal.resample(wfs,upsample_wf_len,axis=1)
+                hpol_pairs = list(itertools.combinations((0,2,4,6), 2))
+                vpol_pairs = list(itertools.combinations((1,3,5,7), 2))
+                pairs = numpy.vstack((hpol_pairs,vpol_pairs)) 
+                #pairs = numpy.vstack((hpol_pairs,vpol_pairs,(0,0))) #0,0 is test case for autocorrelation 
 
-                #Apply filter
-                wfs = numpy.fft.irfft(numpy.multiply(filter_y,numpy.fft.rfft(wfs,axis=1)),axis=1)
+                indices = numpy.zeros((len(pairs),len(eventids)))
+                max_corrs = numpy.zeros((len(pairs),len(eventids)))
 
-                #Can't find a way to vectorize corr
-                scaled_wfs = wfs/numpy.tile(numpy.std(wfs,axis=1),(numpy.shape(wfs)[1],1)).T
-                corr = numpy.zeros((8,numpy.shape(wfs)[1]*2 - 1))
-                for channel in range(8):
-                    corr[channel] = scipy.signal.correlate(templates_scaled_2d[channel],scaled_wfs[channel])/(len_template) #should be roughly normalized between -1,1
-                pulser_max_corrs[event_index] = numpy.max(corr,axis=1)
-                pulser_delays[event_index] = corr_delay_times[numpy.argmax(corr,axis=1)]
+                for event_index, eventid in enumerate(eventids):
+                    sys.stdout.write('(%i/%i)\r'%(event_index,len(eventids)))
+                    sys.stdout.flush()
+                    reader.setEntry(eventid)
 
-        if True:
-            fig = plt.figure(figsize=(16,12))
-            plt.suptitle('Max Correlation Values for Run %i'%(run),fontsize=20)
-            for channel in range(8):
-                if channel == 0:
-                    ax = plt.subplot(4,2,channel+1)
-                else:
-                    plt.subplot(4,2,channel+1,sharex=ax)
-                max_bin = numpy.max(numpy.histogram(max_corrs[:,channel],bins=100,range=(-1.05,1.05))[0])
-                plt.hist(max_corrs[:,channel],weights=numpy.ones_like(max_corrs[:,channel])/max_bin,bins=100,range=(-1.05,1.05),label='ch%i all events'%channel,alpha=0.5)
-                if 'run%i'%run in list(known_pulser_ids.keys()):
-                    max_bin = numpy.max(numpy.histogram(pulser_max_corrs[:,channel],bins=100,range=(-1.05,1.05))[0])
-                    plt.hist(pulser_max_corrs[:,channel],weights=numpy.ones_like(pulser_max_corrs[:,channel])/max_bin,bins=100,range=(-1.05,1.05),label='ch%i pulser events'%channel,alpha=0.5)
-                plt.ylabel('Counts',fontsize=16)
-                plt.xlabel('Correlation Value',fontsize=16)
-                plt.legend(fontsize=16)
-            if save_fig:
-                fig_saved = False
-                attempt = 0
-                while fig_saved == False:
-                    filename = 'template_search_%i.png'%attempt
-                    if os.path.exists(filename):
-                        print('%s exists, altering name.'%filename)
-                        attempt += 1
-                    else:
-                        try:
-                            fig.savefig(filename)
-                            print('%s saved'%filename)
-                            fig_saved = True
+                    raw_wfs = numpy.zeros((8,len(padded_times)))
+                    for channel in range(8):
+                        raw_wfs[channel][0:reader.header().buffer_length] = reader.wf(channel)
+                    ffts = numpy.fft.rfft(raw_wfs,axis=1) #Now upsampled
+                    ffts = numpy.multiply(ffts,filter_y) #Now filtered
 
-                        except Exception as e:
-                            print('Error while saving figure.')
-                            print(e)
-                            exc_type, exc_obj, exc_tb = sys.exc_info()
-                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                            print(exc_type, fname, exc_tb.tb_lineno)
+                    corrs_fft = numpy.multiply((ffts[pairs[:,0]].T/numpy.std(ffts[pairs[:,0]],axis=1)).T,(numpy.conj(ffts[pairs[:,1]]).T/numpy.std(numpy.conj(ffts[pairs[:,1]]),axis=1)).T) / (len(padded_times)//2 + 1)
+                    corrs = numpy.fft.fftshift(numpy.fft.irfft(corrs_fft,axis=1,n=final_corr_length),axes=1) * (final_corr_length//2 + 1) #Upsampling and keeping scale
 
-                        
+                    max_indices = numpy.array(list(zip(numpy.arange(len(pairs)),numpy.argmax(corrs,axis=1))))
+                    super_indices = numpy.array(list(zip(numpy.arange(len(pairs),dtype=int),event_index*numpy.ones(len(pairs),dtype=int))))
+                    indices[super_indices[:,0], super_indices[:,1]] = numpy.argmax(corrs,axis=1)
+
+                    max_corrs[super_indices[:,0], super_indices[:,1]] = numpy.max(corrs,axis=1)
+
+                time_shifts = numpy.arange(-(final_corr_length-1)//2,(final_corr_length-1)//2 + 1)*final_dt #This results in the maxiumum of an autocorrelation being located at a time shift of 0.0
+                
+                #PLOTTING
+                if plot:
+                    time_differences_hpol = []
+                    time_differences_vpol = []
+
+                    hpol_delays = time_shifts[indices[0:6].astype(int)]
+                    hpol_corrs = max_corrs[0:6]
+
+                    vpol_delays = time_shifts[indices[6:12].astype(int)]
+                    vpol_corrs = max_corrs[6:12]
+
+                    for pair_index in range(6):
+                        plt.figure()
+
+                        #HPOL Plot
+                        pair = hpol_pairs[pair_index]
+
+                        i = pair[0]//2 #Antenna numbers
+                        j = pair[1]//2 #Antenna numbers
+                        expected_time_difference = numpy.array(expected_time_differences)[[i in x[0] and j in x[0] for x in expected_time_differences]][0][1]
+                        max_time_difference = numpy.array(max_time_differences)[[i in x[0] and j in x[0] for x in max_time_differences]][0][1]
+
+                        ax = plt.subplot(2,1,1)
+                        n, bins, patches = plt.hist(hpol_delays[pair_index],label=('Channel %i and %i'%(2*i,2*j)),bins=n_bins,range=hist_range)
+                        best_delay_hpol = (bins[numpy.argmax(n)+1] + bins[numpy.argmax(n)])/2.0
+                        time_differences_hpol.append(((i,j),best_delay_hpol))
+
+                        plt.xlabel('Delay (ns)',fontsize=16)
+                        plt.ylabel('Counts',fontsize=16)
+                        plt.axvline(expected_time_difference,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference)
+                        plt.axvline(-expected_time_difference,c='r',linestyle='--')
+                        plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
+                        plt.axvline(-max_time_difference,c='g',linestyle='--')
+
+                        plt.axvline(best_delay_hpol,c='c',linestyle='--',label='Best Time Difference = %f'%best_delay_hpol)
+                        plt.legend(fontsize=16)
+
+
+                        plt.subplot(2,1,2)
+                        n, bins, patches = plt.hist(vpol_delays[pair_index],label=('Channel %i and %i'%(2*i+1,2*j+1)),bins=n_bins,range=hist_range)
+                        best_delay_vpol = (bins[numpy.argmax(n)+1] + bins[numpy.argmax(n)])/2.0
+                        time_differences_vpol.append(((i,j),best_delay_vpol))
+                        plt.xlabel('Delay (ns)',fontsize=16)
+                        plt.ylabel('Counts',fontsize=16)
+                        plt.axvline(expected_time_difference,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference)
+                        plt.axvline(-expected_time_difference,c='r',linestyle='--')
+                        plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
+                        plt.axvline(-max_time_difference,c='g',linestyle='--')
+                        plt.axvline(best_delay_vpol,c='c',linestyle='--',label='Best Time Difference = %f'%best_delay_vpol)
+                        plt.legend(fontsize=16)
+
+                    print(time_differences_hpol)
+                    print(time_differences_vpol)
+
+
+            except Exception as e:
+                print('Error in main loop.')
+                print(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+
+
+
+
+
 
