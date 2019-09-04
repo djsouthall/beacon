@@ -139,6 +139,33 @@ def rfftWrapper(waveform_times, *args, **kwargs):
     return freqs, spec_dbish
 
 
+def makeFilter(waveform_times,crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, filter_order, plot_filter=False):
+    dt = waveform_times[1] - waveform_times[0]
+    freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
+    b, a = scipy.signal.butter(filter_order, crit_freq_low_pass_MHz*1e6, 'low', analog=True)
+    d, c = scipy.signal.butter(filter_order, crit_freq_high_pass_MHz*1e6, 'high', analog=True)
+
+    filter_x_low_pass, filter_y_low_pass = scipy.signal.freqs(b, a,worN=freqs)
+    filter_x_high_pass, filter_y_high_pass = scipy.signal.freqs(d, c,worN=freqs)
+    filter_x = freqs
+    filter_y = numpy.multiply(filter_y_low_pass,filter_y_high_pass)
+    if plot_filter == True:
+        plt.figure()
+        plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y)),color='k',label='final filter')
+        plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_low_pass)),color='r',linestyle='--',label='low pass')
+        plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_high_pass)),color='orange',linestyle='--',label='high pass')
+        plt.title('Butterworth filter frequency response')
+        plt.xlabel('Frequency [MHz]')
+        plt.ylabel('Amplitude [dB]')
+        plt.margins(0, 0.1)
+        plt.grid(which='both', axis='both')
+        plt.axvline(crit_freq_low_pass_MHz, color='magenta',label='LP Crit') # cutoff frequency
+        plt.axvline(crit_freq_high_pass_MHz, color='cyan',label='HP Crit') # cutoff frequency
+        plt.xlim(0,200)
+        plt.ylim(-50,10)
+        plt.legend()
+    return filter_y, freqs
+
 
 if __name__ == '__main__':
     plt.close('all')
@@ -177,6 +204,15 @@ if __name__ == '__main__':
         reader = Reader(datapath,run)
         waveforms = {}
 
+        reader.setEntry(eventids[0])
+        waveform_times = reader.t()
+        dt = waveform_times[1]-waveform_times[0]
+        waveform_times_factor2 = numpy.arange(2**(numpy.ceil(numpy.log2(len(waveform_times)))))*dt #Rounding up to a factor of 2 of the len of the waveforms
+        padded_times = numpy.arange(2*len(waveform_times_factor2))*dt #multiplying by 2 for cross correlation later.
+        
+        filter_y,freqs = makeFilter(padded_times,crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, filter_order,plot_filter=True)
+        filter_y = numpy.ones_like(filter_y)
+        
         #Prepare filter
         reader.setEntry(0)
         wf = reader.wf(0)
@@ -184,12 +220,12 @@ if __name__ == '__main__':
         freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
         b, a = scipy.signal.butter(filter_order, crit_freq_low_pass_MHz*1e6, 'low', analog=True)
         d, c = scipy.signal.butter(filter_order, crit_freq_high_pass_MHz*1e6, 'high', analog=True)
-
+        
         filter_x_low_pass, filter_y_low_pass = scipy.signal.freqs(b, a,worN=freqs)
         filter_x_high_pass, filter_y_high_pass = scipy.signal.freqs(d, c,worN=freqs)
         filter_x = freqs
         filter_y = numpy.multiply(filter_y_low_pass,filter_y_high_pass)
-
+        
         if plot_filter == True:
             plt.figure()
             plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_low_pass)),label='low pass')
@@ -502,26 +538,6 @@ if __name__ == '__main__':
                                 writer.writerow([x[i],y[i]])
 
 
-
-
-            '''
-            plt.figure()
-            eid=100
-            ax = plt.subplot(2,1,1)
-            freqs, spec_dbish = rfftWrapper(waveform_times, waveforms['ch1'][eid])
-            plt.plot(freqs/1e6,rfftWrapper(waveform_times, waveforms['ch1'][eid])[1],label='ch1')
-            plt.plot(freqs/1e6,rfftWrapper(waveform_times, waveforms['ch7'][eid])[1],label='ch7')
-            plt.ylabel('dBish')
-            plt.xlabel('Freqs (MHz)')
-            plt.legend()
-            plt.subplot(2,1,2,sharex=ax)
-            freqs, spec_dbish = rfftWrapper(waveform_times, waveforms['ch1'][eid])
-            plt.plot(freqs/1e6,rfftWrapper(waveform_times, waveforms['ch3'][eid])[1],label='ch3')
-            plt.plot(freqs/1e6,rfftWrapper(waveform_times, waveforms['ch5'][eid])[1],label='ch5')
-            plt.ylabel('dBish')
-            plt.xlabel('Freqs (MHz)')
-            plt.legend()
-            '''
         except Exception as e:
             print('Error in main loop.')
             print(e)

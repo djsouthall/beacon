@@ -48,8 +48,8 @@ if __name__ == '__main__':
         dt = []
         max_dt = []
         for pair in pairs:
-            dt.append(abs(tof[pair[1]] - tof[pair[0]]))
-            max_dt.append((numpy.sqrt((Antennas[pair[1]][0] - Antennas[pair[0]][0])**2 + (Antennas[pair[1]][1] - Antennas[pair[0]][1])**2 + (Antennas[pair[1]][2] - Antennas[pair[0]][2])**2) / c)*1e9) #ns
+            dt.append(tof[pair[0]] - tof[pair[1]]) #Convention of 0 - 1 to match the time delays in frequency_domain_time_delays.py
+            max_dt.append(numpy.sign(tof[pair[0]] - tof[pair[1]])*(numpy.sqrt((Antennas[pair[0]][0] - Antennas[pair[1]][0])**2 + (Antennas[pair[0]][1] - Antennas[pair[1]][1])**2 + (Antennas[pair[0]][2] - Antennas[pair[1]][2])**2) / c)*1e9) #ns
 
         print(list(zip(pairs,dt)))
         print(list(zip(pairs,max_dt)))

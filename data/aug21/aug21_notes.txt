@@ -1,0 +1,39 @@
+I forgot my notebook so am taking notes in a text file.  
+
+The first setup I tried uses:
+NSBP-208+ 	FM Tank
+SLP-90+ 	LP Filter
+ZFPT-282-1.5A+ 	Bias-Tee
+SHP-0+ HP 	Filter
+ZFL-750+ 	Amplifier.  
+From what I am seeing on the scope, the current amplifier is not saturating, 
+but it is also not providing sufficient amplification to overcome the noise
+floor of the spectrum analyzer.  Going to swap out for higher gain amplifier.   
+
+Swapping amp for ZKL-1R5+, the signals on the scope did not seem to be saturating, but the
+signal was out of range on the oscilloscope, so I added a VAT-10+ 10dB attenuator before the
+amplifier.  
+
+Final electronics chain for roof measurement:
+
+NSBP-208+ 	FM Tank
+SLP-90+ 	LP Filter
+ZFPT-282-1.5A+ 	Bias-Tee
+SHP-0+ HP 	Filter
+VAT-10+		Attenuator
+ZKL-1R5+ 	Amplifier
+
+Taking a 5 min measurement with this configuration.  
+Settings on SA:
+300s
+3000 Points
+0-200 MHz
+10 KHz vbw, rbw
+Acc time
+ref level = -10 dBm
+atten = 0 dBm 
+
+cfg1/2 NS VAT10
+cfg3/4 EW VAT10
+cfg5 Stripped VAT10
+cfg6 Stripped NO VAT10
