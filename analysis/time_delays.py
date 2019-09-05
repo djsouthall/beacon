@@ -135,18 +135,6 @@ known_pulser_ids = {
 }
 
 
-
-def rfftWrapper(waveform_times, *args, **kwargs):
-    spec = numpy.fft.rfft(*args, **kwargs)
-    real_power_multiplier = 2.0*numpy.ones_like(spec) #The factor of 2 because rfft lost half of the power except for dc and Nyquist bins (handled below).
-    if len(numpy.shape(spec)) != 1:
-        real_power_multiplier[:,[0,-1]] = 1.0
-    else:
-        real_power_multiplier[[0,-1]] = 1.0
-    spec_dbish = 10.0*numpy.log10( real_power_multiplier*spec * numpy.conj(spec) / len(waveform_times)) #10 because doing power in log.  Dividing by N to match monutau. 
-    freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
-    return freqs, spec_dbish
-
 def makeFilter(waveform_times,crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, filter_order, plot_filter=False):
     dt = waveform_times[1] - waveform_times[0]
     freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
@@ -177,7 +165,11 @@ def makeFilter(waveform_times,crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, f
 #expected_time_differences = [((0, 1), 13.508319251205194), ((0, 2), 17.170337798788978), ((0, 3), 33.424724259292816), ((1, 2), 30.67865704999417), ((1, 3), 46.93304351049801), ((2, 3), 16.254386460503838)]
 #max_time_differences = [((0, 1), 22.199031286793637), ((0, 2), 35.09576572192467), ((0, 3), 41.32087648347992), ((1, 2), 33.39469529610869), ((1, 3), 47.45680773722745), ((2, 3), 17.40978039384259)]
 
-expected_time_differences = [((0, 1), -13.508319251205194), ((0, 2), 17.170337798788978), ((0, 3), 33.424724259292816), ((1, 2), 30.67865704999417), ((1, 3), 46.93304351049801), ((2, 3), 16.254386460503838)]
+#expected_time_differences_hpol = [((0, 1), -13.508319251205194), ((0, 2), 17.170337798788978), ((0, 3), 33.424724259292816), ((1, 2), 30.67865704999417), ((1, 3), 46.93304351049801), ((2, 3), 16.254386460503838)] #Using physical location of antennas
+#expected_time_differences_vpol = [((0, 1), -13.508319251205194), ((0, 2), 17.170337798788978), ((0, 3), 33.424724259292816), ((1, 2), 30.67865704999417), ((1, 3), 46.93304351049801), ((2, 3), 16.254386460503838)] #Using physical location of antennas
+expected_time_differences_hpol = [((0, 1), -13.490847233240856), ((0, 2), 19.2102184307073), ((0, 3), 30.782767964694813), ((1, 2), 32.70106566394816), ((1, 3), 44.27361519793567), ((2, 3), 11.572549533987512)] #Using minimizing phase centers
+expected_time_differences_vpol = [((0, 1), -9.889400300196257), ((0, 2), 17.233687802734266), ((0, 3), 38.68880234261974), ((1, 2), 27.123088102930524), ((1, 3), 48.578202642815995), ((2, 3), 21.45511453988547)] #Using minimizing phase centers
+
 max_time_differences = [((0, 1), -22.199031286793637), ((0, 2), 35.09576572192467), ((0, 3), 41.32087648347992), ((1, 2), 33.39469529610869), ((1, 3), 47.45680773722745), ((2, 3), 17.40978039384259)]
 
 
@@ -263,7 +255,8 @@ if __name__ == '__main__':
                     #time_bins = numpy.arange(-(final_corr_length-1)//2 - 1,(final_corr_length-1)//2 + 1)*final_dt + final_dt/2 
 
                     for pair_index in range(6):
-                        plt.figure()
+                        bins_pm_ns = 2.5
+                        fig = plt.figure()
 
                         #HPOL Plot
                         pair = hpol_pairs[pair_index]
@@ -272,10 +265,10 @@ if __name__ == '__main__':
                         j = pair[1]//2 #Antenna numbers
 
 
-                        expected_time_difference = numpy.array(expected_time_differences)[[i in x[0] and j in x[0] for x in expected_time_differences]][0][1]
+                        expected_time_difference_hpol = numpy.array(expected_time_differences_hpol)[[i in x[0] and j in x[0] for x in expected_time_differences_hpol]][0][1]
                         max_time_difference = numpy.array(max_time_differences)[[i in x[0] and j in x[0] for x in max_time_differences]][0][1]
                         
-                        bin_bounds = numpy.sort((0, numpy.sign(expected_time_difference)*50))
+                        bin_bounds = [expected_time_difference_hpol - bins_pm_ns,expected_time_difference_hpol + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_hpol)*50))
                         time_bins = numpy.arange(bin_bounds[0],bin_bounds[1],final_dt)
 
                         plt.suptitle('t(Ant%i) - t(Ant%i)'%(i,j))
@@ -287,30 +280,41 @@ if __name__ == '__main__':
 
                         plt.xlabel('HPol Delay (ns)',fontsize=16)
                         plt.ylabel('Counts',fontsize=16)
-                        plt.axvline(expected_time_difference,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference)
-                        #plt.axvline(-expected_time_difference,c='r',linestyle='--')
+                        plt.axvline(expected_time_difference_hpol,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference_hpol)
+                        #plt.axvline(-expected_time_difference_hpol,c='r',linestyle='--')
                         #plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
                         #plt.axvline(-max_time_difference,c='g',linestyle='--')
 
-                        plt.axvline(best_delay_hpol,c='c',linestyle='--',label='Max Bin Time Difference = %f'%best_delay_hpol)
+                        plt.axvline(best_delay_hpol,c='c',linestyle='--',label='Peak Bin Value = %f'%best_delay_hpol)
                         plt.legend(fontsize=16)
 
+                        #VPOL Plot
 
-                        plt.subplot(2,1,2,sharex=ax)
+                        expected_time_difference_vpol = numpy.array(expected_time_differences_vpol)[[i in x[0] and j in x[0] for x in expected_time_differences_vpol]][0][1]
+                        max_time_difference = numpy.array(max_time_differences)[[i in x[0] and j in x[0] for x in max_time_differences]][0][1]
+                        
+                        bin_bounds = [expected_time_difference_vpol - bins_pm_ns,expected_time_difference_vpol + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_vpol)*50))
+                        time_bins = numpy.arange(bin_bounds[0],bin_bounds[1],final_dt)
+
+                        plt.subplot(2,1,2)
                         n, bins, patches = plt.hist(vpol_delays[pair_index],label=('Channel %i and %i'%(2*i+1,2*j+1)),bins=time_bins)
                         #best_delay_vpol = numpy.mean(vpol_delays[pair_index])
                         best_delay_vpol = (bins[numpy.argmax(n)+1] + bins[numpy.argmax(n)])/2.0
                         time_differences_vpol.append(((i,j),best_delay_vpol))
                         plt.xlabel('VPol Delay (ns)',fontsize=16)
                         plt.ylabel('Counts',fontsize=16)
-                        plt.axvline(expected_time_difference,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference)
-                        #plt.axvline(-expected_time_difference,c='r',linestyle='--')
+                        plt.axvline(expected_time_difference_vpol,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference_vpol)
+                        #plt.axvline(-expected_time_difference_vpol,c='r',linestyle='--')
                         #plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
                         #plt.axvline(-max_time_difference,c='g',linestyle='--')
-                        plt.axvline(best_delay_vpol,c='c',linestyle='--',label='Max Bin Time Difference = %f'%best_delay_vpol)
+                        plt.axvline(best_delay_vpol,c='c',linestyle='--',label='Peak Bin Value = %f'%best_delay_vpol)
                         plt.legend(fontsize=16)
 
+
+
+                    print('time_differences_hpol')
                     print(time_differences_hpol)
+                    print('time_differences_vpol')
                     print(time_differences_vpol)
 
 
