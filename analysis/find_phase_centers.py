@@ -57,13 +57,13 @@ for key, value in Antennas.items():
 
 c = 2.99700e8 #m/s
 
-measured_time_delays_hpol = [((0, 1), -13.522159868650306), ((0, 2), 19.163342519369962), ((0, 3), 30.86098740386865), ((1, 2), 32.763473610383244), ((1, 3), 44.17987278635087), ((2, 3), 11.588118967840956)]
-measured_time_delays_errors_hpol = [((0, 1), 1.0), ((0, 2), 1.0), ((0, 3), 1.0), ((1, 2), 1.0), ((1, 3), 1.0), ((2, 3), 1.0)]
+measured_time_delays_hpol = [((0, 1), -13.592091429151054), ((0, 2), 19.16001027052159), ((0, 3), 30.75389605307086), ((1, 2), 32.70726977544983), ((1, 3), 44.207337841605415), ((2, 3), 11.299536705693228)]
+measured_time_delays_errors_hpol = [((0, 1), 0.09620101986130024), ((0, 2), 0.13301888847570267), ((0, 3), 0.39484710750876817), ((1, 2), 0.1262325763913089), ((1, 3), 0.360032335595451), ((2, 3), 0.33944838464119326)]
 
-measured_time_delays_vpol = [((0, 1), -9.875403459432164), ((0, 2), 17.19470489079049), ((0, 3), 38.70998128227029), ((1, 2), 27.116830049415512), ((1, 3), 48.600856917725196), ((2, 3), 21.40575047482207)]
-measured_time_delays_errors_vpol = [((0, 1), 1.0), ((0, 2), 1.0), ((0, 3), 1.0), ((1, 2), 1.0), ((1, 3), 1.0), ((2, 3), 1.0)]
+measured_time_delays_vpol = [((0, 1), -9.907815800005917), ((0, 2), 17.246090416069613), ((0, 3), 38.69389075198866), ((1, 2), 27.113051415306572), ((1, 3), 48.574239548950025), ((2, 3), 21.462514816608664)]
+measured_time_delays_errors_vpol = [((0, 1), 0.09705042719954765), ((0, 2), 0.11589576468440983), ((0, 3), 0.10906867130376277), ((1, 2), 0.07376204794601858), ((1, 3), 0.079778528687297), ((2, 3), 0.06997973562561836)]
 
-mode = 'vpol'
+mode = 'hpol'
 if mode == 'hpol':
     measured_time_delays = measured_time_delays_hpol
     measured_time_delays_errors = measured_time_delays_errors_hpol
@@ -83,24 +83,24 @@ def f(ant0_x, ant0_y, ant0_z, ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, an
 
     #calculate differences in distances travelled and convert to expected time delays for known pairs.
     #Ant 0 - Ant 1
-    p0 = ((d0 - d1)/c)*1e9 #ns
+    p0 = ((d0 - d1)/c)*1.0e9 #ns
     #Ant 0 - Ant 2
-    p1 = ((d0 - d2)/c)*1e9 #ns
+    p1 = ((d0 - d2)/c)*1.0e9 #ns
     #Ant 0 - Ant 3
-    p2 = ((d0 - d3)/c)*1e9 #ns
+    p2 = ((d0 - d3)/c)*1.0e9 #ns
     #Ant 1 - Ant 2
-    p3 = ((d1 - d2)/c)*1e9 #ns
+    p3 = ((d1 - d2)/c)*1.0e9 #ns
     #Ant 1 - Ant 3
-    p4 = ((d1 - d3)/c)*1e9 #ns
+    p4 = ((d1 - d3)/c)*1.0e9 #ns
     #Ant 2 - Ant 3
-    p5 = ((d2 - d3)/c)*1e9 #ns
+    p5 = ((d2 - d3)/c)*1.0e9 #ns
     
-    chi_2 =     ((p0 - measured_time_delays[0][1])**2)/measured_time_delays_errors[0][1] + \
-                ((p1 - measured_time_delays[1][1])**2)/measured_time_delays_errors[1][1] + \
-                ((p2 - measured_time_delays[2][1])**2)/measured_time_delays_errors[2][1] + \
-                ((p3 - measured_time_delays[3][1])**2)/measured_time_delays_errors[3][1] + \
-                ((p4 - measured_time_delays[4][1])**2)/measured_time_delays_errors[4][1] + \
-                ((p5 - measured_time_delays[5][1])**2)/measured_time_delays_errors[5][1]
+    chi_2 =     ((p0 - measured_time_delays[0][1])**2)/measured_time_delays_errors[0][1]**2 + \
+                ((p1 - measured_time_delays[1][1])**2)/measured_time_delays_errors[1][1]**2 + \
+                ((p2 - measured_time_delays[2][1])**2)/measured_time_delays_errors[2][1]**2 + \
+                ((p3 - measured_time_delays[3][1])**2)/measured_time_delays_errors[3][1]**2 + \
+                ((p4 - measured_time_delays[4][1])**2)/measured_time_delays_errors[4][1]**2 + \
+                ((p5 - measured_time_delays[5][1])**2)/measured_time_delays_errors[5][1]**2
     return chi_2
 
 
@@ -112,6 +112,8 @@ if __name__ == '__main__':
                         error_ant0_x=initial_step, error_ant0_y=initial_step, error_ant0_z=initial_step, error_ant1_x=initial_step, error_ant1_y=initial_step, error_ant1_z=initial_step, error_ant2_x=initial_step, error_ant2_y=initial_step, error_ant2_z=initial_step, error_ant3_x=initial_step, error_ant3_y=initial_step, error_ant3_z=initial_step,\
                         errordef = 1.0)
         result = m.migrad()
+        m.hesse()
+        m.minos()
         pprint(m.get_fmin())
         print(result)
 
