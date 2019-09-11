@@ -32,8 +32,8 @@ plt.ion()
 #The below are not ALL pulser points, but a set that has been precalculated and can be used
 #if you wish to skip the calculation finding them.
 
-known_pulser_ids = loadPulserEventids()
-ignorable_pulser_ids = loadPulserIgnorableEventids()
+known_pulser_ids = info.loadPulserEventids()
+ignorable_pulser_ids = info.loadPulserIgnorableEventids()
 
 
 def makeFilter(waveform_times,crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, filter_order, plot_filter=False):

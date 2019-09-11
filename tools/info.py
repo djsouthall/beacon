@@ -109,8 +109,9 @@ def loadClockRates():
     These are given in Hz.
     '''
     clock_rates = {
-    'run792':31249812.04283368,
-    'run793':31249809.22371152
+    'default'   :31250000.0,
+    'run792'    :31249812.04283368,
+    'run793'    :31249809.22371152
     }
     return clock_rates
 

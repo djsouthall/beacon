@@ -17,6 +17,7 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret #Must be imported before matplotlib or else plots don't load.
 import tools.clock_correct as cc
+import tools.info as info
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -25,25 +26,8 @@ plt.ion()
 
 #The below are not ALL pulser points, but a set that has been precalculated and can be used
 #if you wish to skip the calculation finding them.
-known_pulser_ids = {
-    'run793':{
-        'eventids':numpy.array([ 98958, 102883, 101954, 110633, 106755, 102863, 110415, 110465, 110372,  98075,\
-                                 97898,  94907,  98402, 110747, 102796,  99008,  98001,  98061, 102560, 110606,\
-                                 98490, 106395,  95429,  98221, 102745, 102344,  99025,  97850,  98835, 110347,\
-                                110584, 105617,  97796,  98799,  98862,  98844,  98983, 106727, 105101, 100552,\
-                                 93623, 108037, 106412, 102165,  99891, 109519,  97727, 110075, 109530, 108953,\
-                                 97600,  97702, 107065, 104092,  94728, 100619,  98639,  99391,  96539, 109268,\
-                                 99165, 100856,  93987, 101844, 103264, 101564, 100344,  93551, 108833,  93954,\
-                                104061, 110160, 109106,  97669, 109310,  93438, 101024, 105723, 106431,  96802,\
-                                 99406, 101578,  97436, 106103, 105560, 103241, 100756,  96715, 109905,  96701,\
-                                109942, 103994, 102927,  95365, 100724,  96378, 100670, 105890, 101183, 107502,\
-                                 94604, 106471,  95357, 107786, 106486,  97078,  93685,  95556, 104258, 103939,\
-                                 94492, 103399,  96137]),
-        'clock_rate':31249809.22371152
-            }
-}
-
-
+known_pulser_ids = info.loadPulserEventids()
+ignorable_pulser_ids = info.loadPulserIgnorableEventids()
 
 def rfftWrapper(waveform_times, *args, **kwargs):
     spec = numpy.fft.rfft(*args, **kwargs)
@@ -115,7 +99,7 @@ if __name__ == '__main__':
     corr_plot = True
 
     for run_index, run in enumerate(runs):
-        eventids = numpy.sort(known_pulser_ids['run%i'%run]['eventids'])
+        eventids = numpy.sort(known_pulser_ids['run%i'%run])
         reader = Reader(datapath,run)
 
         waveform_times = reader.t()
