@@ -27,6 +27,60 @@ def loadAntennaLocationsENU():
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
 
+def loadPulserPolarizations():
+    '''
+    Loads the polarizations used in each pulsing run.  Options are hpol, vpol, or both
+    '''
+    pulser_pol = {}
+
+    #Day 1
+    #Site 1 37.4671° N, 117.7525° W
+    pulser_pol['run734'] = 'vpol'
+    pulser_pol['run735'] = 'vpol'
+    pulser_pol['run736'] = 'both'
+    pulser_pol['run737'] = 'hpol'
+    #Site 2 37° 34' 30.8" N, 117° 54' 31.7" W
+    pulser_pol['run739'] = 'both'
+    pulser_pol['run740'] = 'hpol'
+
+    #Day 2 37° 34' 30.8" N 117° 54' 31.7" W
+    pulser_pol['run746'] = 'both'
+    pulser_pol['run747'] = 'vpol'
+
+    #Day 3 37° 35’ 54.82” N 117° 59’ 37.97” W
+    pulser_pol['run756'] = 'hpol'
+    pulser_pol['run757'] = 'hpol'
+
+    #Day 4
+    #Site 1 37° 43' 36.40" N 118° 2' 3.40" W
+    pulser_pol['run762'] = 'vpol'
+    pulser_pol['run763'] = 'vpol'
+    pulser_pol['run764'] = 'vpol'
+    #Site2 37° 25' 32.85" N 117° 37' 57.55" W
+    pulser_pol['run766'] = 'vpol'
+    pulser_pol['run767'] = 'vpol'
+    pulser_pol['run768'] = 'vpol'
+    pulser_pol['run769'] = 'vpol'
+    pulser_pol['run770'] = 'hpol'
+
+    #Day 5 37° 35' 9.27" N 118° 14' 0.73" W
+    pulser_pol['run781'] = 'hpol'
+    pulser_pol['run782'] = 'hpol'
+    pulser_pol['run783'] = 'hpol'
+    pulser_pol['run784'] = 'hpol'
+    pulser_pol['run785'] = 'hpol'
+    pulser_pol['run786'] = 'hpol'
+    pulser_pol['run787'] = 'hpol'
+    pulser_pol['run788'] = 'hpol'
+    pulser_pol['run789'] = 'hpol'
+    pulser_pol['run790'] = 'vpol'
+
+    #Day 6 37° 35.166' N 118° 13.990' W 
+    pulser_pol['run792'] = 'vpol'
+    pulser_pol['run793'] = 'vpol'
+    
+    return pulser_pol   
+
 def loadPulserLocations():
     '''
     Loads the latitude,longtidue,elevation locations of the antennas.
@@ -70,7 +124,7 @@ def loadPulserLocations():
     #Day 5 37° 35' 9.27" N 118° 14' 0.73" W
     pulser_locations['run781'] = (37.585912,-118.233535,3789)
     pulser_locations['run782'] = (37.585912,-118.233535,3789)
-    pulser_locations['run753'] = (37.585912,-118.233535,3789)
+    pulser_locations['run783'] = (37.585912,-118.233535,3789)
     pulser_locations['run784'] = (37.585912,-118.233535,3789)
     pulser_locations['run785'] = (37.585912,-118.233535,3789)
     pulser_locations['run786'] = (37.585912,-118.233535,3789)
@@ -109,18 +163,34 @@ def loadClockRates():
     These are given in Hz.
     '''
     clock_rates = {
-    'default'   :31250000.0,
+    'run782'    :31249808.91966798,
+    'run783'    :31249808.948130235,
+    'run784'    :31249809.35802664,
+    'run785'    :31249809.82779526,
+    'run788'    :31249807.839061476,
+    'run789'    :31249809.895620257,
     'run792'    :31249812.04283368,
     'run793'    :31249809.22371152
     }
+    clock_rates['default'] = numpy.mean([v for key,v in clock_rates.items()])
     return clock_rates
 
 def loadPulserEventids():
     '''
     Loads a dictionary containing the known eventids for pulsers.
     '''
-    known_pulser_ids = {
-    'run792':\
+    known_pulser_ids = {}
+    known_pulser_ids['run781'] = numpy.array([])
+    known_pulser_ids['run782'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run782_pulser_eventids.csv',delimiter=',').astype(int)
+    known_pulser_ids['run783'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run783_pulser_eventids.csv',delimiter=',').astype(int)
+    known_pulser_ids['run784'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run784_pulser_eventids.csv',delimiter=',').astype(int)
+    known_pulser_ids['run785'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run785_pulser_eventids.csv',delimiter=',').astype(int)
+    known_pulser_ids['run786'] = numpy.array([])
+    known_pulser_ids['run787'] = numpy.array([])
+    known_pulser_ids['run788'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run788_pulser_eventids.csv',delimiter=',').astype(int)
+    known_pulser_ids['run789'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run789_pulser_eventids.csv',delimiter=',').astype(int)
+
+    known_pulser_ids['run792'] = \
         numpy.array([115156, 115228, 115256, 115276, 115283, 115315, 115330, 115371,\
         115447, 115612, 115872, 116230, 116262, 116462, 116473, 116479,\
         116486, 116511, 116524, 116603, 116619, 116624, 116633, 116760,\
@@ -141,8 +211,8 @@ def loadPulserEventids():
         121741, 121751, 121765, 121769, 121803, 121876, 121981, 122001,\
         122014, 122021, 122053, 122073, 122093, 122166, 122293, 122311,\
         122403, 122455, 122508, 122551, 122560, 122579, 122723, 122761,\
-        122797]),
-    'run793':
+        122797])
+    known_pulser_ids['run793'] = \
         numpy.array([    96607,  96632,  96657,  96684,  96762,  96820,  96875,  96962,\
         97532,  97550,  97583,  97623,  97636,  97661,  97681,  97698,\
         97720,  97739,  97761,  97782,  97803,  97824,  97846,  97876,\
@@ -218,7 +288,6 @@ def loadPulserEventids():
         115844, 115870, 115888, 115912, 115935, 115963, 115976, 115996,\
         116019, 116044, 116065, 116082, 116101, 116115, 116155, 116173,\
         116184])
-    }
 
     return known_pulser_ids
 
@@ -230,17 +299,16 @@ def loadIgnorableEventids():
     when making a template. 
     '''
 
-    ignore_eventids = {
-        'run793':numpy.array([ 96607,  96657,  96820,  96875,  98125,  98588,  99208, 100531,\
-                               101328, 101470, 101616, 101640, 101667, 102159, 102326, 102625,\
-                               103235, 103646, 103842, 103895, 103977, 104118, 104545, 105226,\
-                               105695, 105999, 106227, 106476, 106622, 106754, 106786, 106813,\
-                               106845, 107022, 107814, 108162, 110074, 110534, 110858, 111098,\
-                               111197, 111311, 111542, 111902, 111941, 112675, 112713, 112864,\
-                               112887, 113062, 113194, 113392, 113476, 113957, 114069, 114084,\
-                               114295, 114719, 114738, 114755, 114942, 115055, 115413, 115442,\
-                               115465, 115491, 115612, 116065])
-    }
+    ignore_eventids = {}
+    ignore_eventids['run793'] = numpy.array([ 96607,  96657,  96820,  96875,  98125,  98588,  99208, 100531,\
+                           101328, 101470, 101616, 101640, 101667, 102159, 102326, 102625,\
+                           103235, 103646, 103842, 103895, 103977, 104118, 104545, 105226,\
+                           105695, 105999, 106227, 106476, 106622, 106754, 106786, 106813,\
+                           106845, 107022, 107814, 108162, 110074, 110534, 110858, 111098,\
+                           111197, 111311, 111542, 111902, 111941, 112675, 112713, 112864,\
+                           112887, 113062, 113194, 113392, 113476, 113957, 114069, 114084,\
+                           114295, 114719, 114738, 114755, 114942, 115055, 115413, 115442,\
+                           115465, 115491, 115612, 116065])
     return ignore_eventids
 
 '''
@@ -257,9 +325,4 @@ if __name__ == '__main__':
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
-
-
-
-
-
 

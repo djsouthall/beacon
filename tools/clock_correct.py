@@ -2,6 +2,8 @@ import numpy
 import scipy.spatial
 import os
 import sys
+import csv
+
 
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
@@ -47,11 +49,12 @@ def getTimes(reader):
     times = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N) 
     trigtimes = numpy.frombuffer(reader.head_tree.GetV3(), numpy.dtype('float64'), N)
     eventids = numpy.frombuffer(reader.head_tree.GetV4(), numpy.dtype('float64'), N).astype(int)
+
     return times, subtimes, trigtimes, eventids
 
 
 
-def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=1.0, percent_cut=0.005, plot=True, verbose=True):
+def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=1.0, percent_cut=0.005, subtime_bounds = None, time_bounds = None, plot=True, verbose=True):
     '''
     This uses a nearest neighbour calculation to select the cal pulser events from underneath the
     noise.  Adjust the parameters until it works for you specific run.  
@@ -101,6 +104,18 @@ def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=
 
         times, subtimes, trigtimes, eventids = getTimes(reader)
 
+        if subtime_bounds is not None:
+            subtimes_cut = numpy.logical_and(subtimes > min(subtime_bounds), subtimes < max(subtime_bounds))
+        else:
+            subtimes_cut = numpy.ones_like(subtimes,dtype=bool)
+
+        if time_bounds is not None:
+            times_cut = numpy.logical_and(times > min(time_bounds), times < max(time_bounds))
+        else:
+            times_cut = numpy.ones_like(subtimes,dtype=bool)
+
+
+
         times_scaled       =    scale_times *    (times - min(times))    /    (max(times) - min(times))
         subtimes_scaled    = scale_subtimes * (subtimes - min(subtimes)) / (max(subtimes) - min(subtimes))
         points = numpy.vstack((times_scaled,subtimes_scaled)).T
@@ -108,7 +123,10 @@ def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=
         distance, index = tree.query(points,k=nearest_neighbor)
         distance = distance[:,nearest_neighbor-1]
 
-        indices = numpy.argsort(distance)[0:int(percent_cut*len(distance))]
+        indices = numpy.argsort(distance)[0:int(percent_cut*len(distance))]  #The actual output indices in eventids that are pulsers
+        
+        indices = indices[numpy.isin(indices,numpy.where(times_cut)[0][numpy.isin(numpy.where(times_cut)[0],numpy.where(subtimes_cut)[0])])]
+
         if plot == True:
             fig = plt.figure()
             plt.scatter(times,subtimes,c=distance,marker=',',s=(72./fig.dpi)**2)
@@ -136,7 +154,7 @@ def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=
         return 0
 
 
-def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=1.0, slope_bound=0.001, percent_cut=0.001, nominal_clock_rate=31.25e6, lower_rate_bound=31.2e6, upper_rate_bound=31.3e6, plot=True, verbose=True):
+def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=1.0, slope_bound=0.001, percent_cut=0.001, nominal_clock_rate=31.25e6, lower_rate_bound=31.2e6, upper_rate_bound=31.3e6,subtime_bounds = None, time_bounds = None, plot=True, verbose=True):
     '''
     This will attempt fit a pulser line within the selected run with a line, and then adjust the 
     clock rate to obtain the clock rate that results in a consistent cal pulser line.
@@ -197,7 +215,7 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
     '''
     try:
         run = reader.run
-        times, subtimes, trigtimes, eventids, indices = pulserLocator(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, percent_cut=percent_cut, plot=plot, verbose=verbose)
+        times, subtimes, trigtimes, eventids, indices = pulserLocator(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, percent_cut=percent_cut,subtime_bounds = subtime_bounds, time_bounds = time_bounds, plot=plot, verbose=verbose)
 
         clock_rate = nominal_clock_rate
         slope = 1000000.0
@@ -260,32 +278,63 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
         return 0
 
 #Below is known good percentages to identify pulser points.
-percent_cuts = {'run792':0.0011,
+percent_cuts = {'run782':0.028,
+                'run783':0.135,
+                'run784':0.135,
+                'run785':0.13,
+                'run788':0.008,
+                'run789':0.012,
+                'run792':0.0011,
                 'run793':0.003}
+timebounds_cut = {  'run788':(4400+1.56202e9,8000+1.56202e9),
+                    'run789':(600+1.56203e9,1300+1.56203e9)}
+subtimebounds_cut = {   'run788':(0.92e9,0.96e9),
+                        'run789':(9.88e8,9.92518e8)}
+
 
 if __name__ == '__main__':
     #plt.close('all')
     # If your data is elsewhere, pass it as an argument
     datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
-    runs = numpy.array([792])#numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793]) #Selects which run to examine
+    runs = numpy.array([790])#numpy.array([781,782,783,784,785,786,787,788,789,790])#numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793]) #Selects which run to examine
     nearest_neighbor = 10 #Adjust until works.
-    scale_subtimes = 10.0 #The larger this is the the less the nearest neighbor favors vertical lines.
+    scale_subtimes = 50.0 #The larger this is the the less the nearest neighbor favors vertical lines.
     scale_times = 1.0  #The larger this is the the less the nearest neighbor favors horizontal lines.
     slope_bound = 1.0e-9
-    percent_cut = 0.003
-    nominal_clock_rate = 31.25e6
-    lower_rate_bound = 31.2e6 #Don't make the bounds too large or the bisection method will overshoot and roll over.
-    upper_rate_bound = 31.3e6 #Don't make the bounds too large or the bisection method will overshoot and roll over.
+    percent_cut = 0.012
+    nominal_clock_rate = 31249810.0 #31.25e6
+    lower_rate_bound = 31.250e6 #Don't make the bounds too large or the bisection method will overshoot and roll over.
+    upper_rate_bound = 31.2495e6 #Don't make the bounds too large or the bisection method will overshoot and roll over.
     plot = True
     verbose = False
 
     all_adjusted_clock_rates = []
     good_runs = numpy.ones_like(runs,dtype=bool)
+
+
     for run_index, run in enumerate(runs):
         reader = Reader(datapath,run)
         try:
-            clock_rate, times, subtimes, trigtimes, eventids, indices = getClockCorrection(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, slope_bound=slope_bound, percent_cut=percent_cuts['run%i'%run], nominal_clock_rate=nominal_clock_rate, lower_rate_bound=lower_rate_bound, upper_rate_bound=upper_rate_bound, plot=plot, verbose=verbose)
+            if 'run%i'%run in list(timebounds_cut.keys()):
+                time_bounds = timebounds_cut['run%i'%run]
+            else:
+                time_bounds = None
+            if 'run%i'%run in list(subtimebounds_cut.keys()):
+                subtime_bounds = subtimebounds_cut['run%i'%run]
+            else:
+                subtime_bounds = None
+
+            if 'run%i'%run in list(percent_cuts.keys()):
+                clock_rate, times, subtimes, trigtimes, eventids, indices = getClockCorrection(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, slope_bound=slope_bound, percent_cut=percent_cuts['run%i'%run], nominal_clock_rate=nominal_clock_rate, lower_rate_bound=lower_rate_bound, upper_rate_bound=upper_rate_bound,subtime_bounds=subtime_bounds, time_bounds=time_bounds, plot=plot, verbose=verbose)
+            else:
+                print('run%i not in percent_cuts, using %f'%(run,percent_cut))
+                clock_rate, times, subtimes, trigtimes, eventids, indices = getClockCorrection(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, slope_bound=slope_bound, percent_cut=percent_cut, nominal_clock_rate=nominal_clock_rate, lower_rate_bound=lower_rate_bound, upper_rate_bound=upper_rate_bound,subtime_bounds=subtime_bounds, time_bounds=time_bounds, plot=plot, verbose=verbose)
             all_adjusted_clock_rates.append(clock_rate)
+
+            #indice_cut = times[indices] > (9000.0+1.562e9)
+            indice_cut = numpy.ones_like(indices)
+            numpy.savetxt('./run%i_pulser_eventids.csv'%run, numpy.sort(eventids[indices[indice_cut]]), delimiter=",")
+
         except Exception as e:
             print('Error in main clock correction loop.')
             print(e)
@@ -295,16 +344,22 @@ if __name__ == '__main__':
     print('Adjusted clockrates are:')
     for i in all_adjusted_clock_rates:
         print(i)
-    plt.figure()
-    cut = ~numpy.logical_or(all_adjusted_clock_rates == lower_rate_bound,all_adjusted_clock_rates == upper_rate_bound)
-    print('Mean adjusted clock rate = %f'%numpy.mean(all_adjusted_clock_rates[cut]))
-    plt.plot(runs[good_runs][cut],all_adjusted_clock_rates[cut]/1e6)
-    plt.axhline(nominal_clock_rate/1e6,c='r',linestyle='--',label='Nominal Value, %f MHz'%(nominal_clock_rate/1e6))
-    plt.ylabel('Adjusted Clock Rate (MHz)')
-    plt.xlabel('Run Number')
-    plt.legend()
+    
+    if len(all_adjusted_clock_rates) > 1:
+        plt.figure()
+        cut = ~numpy.logical_or(all_adjusted_clock_rates == lower_rate_bound,all_adjusted_clock_rates == upper_rate_bound)
+        print('Mean adjusted clock rate = %f'%numpy.mean(all_adjusted_clock_rates[cut]))
+        plt.plot(runs[good_runs][cut],all_adjusted_clock_rates[cut]/1e6)
+        plt.axhline(nominal_clock_rate/1e6,c='r',linestyle='--',label='Nominal Value, %f MHz'%(nominal_clock_rate/1e6))
+        plt.ylabel('Adjusted Clock Rate (MHz)')
+        plt.xlabel('Run Number')
+        plt.legend()
 
-    print(numpy.sort(eventids[indices]))
+    '''
+    a = trigtimes%clock_rate
+    b = eventids[numpy.logical_and(numpy.logical_and(a < 6249101,a > 6248700),numpy.logical_and(times < 8000+1.56202e9, times > 4400+1.56202e9))]
+    numpy.savetxt('./run%i_pulser_eventids.csv'%run, numpy.sort(b), delimiter=",")
+    '''
     '''
     This was a plot for Kaeli's poster.
     fig = plt.figure()
