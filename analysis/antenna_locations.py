@@ -26,7 +26,7 @@ import itertools
 pairs = list(itertools.combinations((0,1,2,3), 2))
 plt.ion()
 
-run_label = 'run793'
+run_label = 'run782'
 antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
 pulser_location = info.loadPulserLocationsENU()[run_label] #ENU
 
