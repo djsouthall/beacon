@@ -26,19 +26,30 @@ import itertools
 pairs = list(itertools.combinations((0,1,2,3), 2))
 plt.ion()
 
-run_label = 'run782'
-antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
-pulser_location = info.loadPulserLocationsENU()[run_label] #ENU
 
 c = 2.99700e8 #m/s
 
 if __name__ == '__main__':
     try:
+        if len(sys.argv) == 2:
+            run_label = 'run%i'%int(sys.argv[1])
+        else:
+            print('No run number given.  Defaulting to 793')
+            run_label = 'run793'
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
+        pulser_location = info.loadPulserLocationsENU()[run_label] #ENU
+
         print('Pulser Physical Location:')
-        print(pulser_location)
+        print(pulser_location,'\n')
+        
+        
+        
         labels = ['Physical','Hpol Phase Center','Vpol Phase Center']
+        print_prefixs = {   'Physical':'expected_time_differences_hpol' ,
+                            'Hpol Phase Center':'expected_time_differences_vpol' ,
+                            'Vpol Phase Center':'max_time_differences'}
         for index, antennas in enumerate([antennas_physical,antennas_phase_hpol,antennas_phase_vpol]):
-            print('\nCalculating expected time delays from %s location'%labels[index])
+            #print('\nCalculating expected time delays from %s location'%labels[index])
             tof = {}
             dof = {}
             for antenna, location in antennas.items():
@@ -53,7 +64,7 @@ if __name__ == '__main__':
                 dt.append(tof[pair[0]] - tof[pair[1]]) #Convention of 0 - 1 to match the time delays in frequency_domain_time_delays.py
                 max_dt.append(numpy.sign(tof[pair[0]] - tof[pair[1]])*(numpy.sqrt((antennas[pair[0]][0] - antennas[pair[1]][0])**2 + (antennas[pair[0]][1] - antennas[pair[1]][1])**2 + (antennas[pair[0]][2] - antennas[pair[1]][2])**2) / c)*1e9) #ns
 
-            print('\t',list(zip(pairs,dt)))
+            print(print_prefixs[labels[index]],' = ',list(zip(pairs,dt)))
             #print('\t',list(zip(pairs,max_dt)))
 
 

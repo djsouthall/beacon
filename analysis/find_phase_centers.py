@@ -53,40 +53,56 @@ ant3_physical_y = Antennas[3][1]
 ant3_physical_z = Antennas[3][2]
 
 #Limits 
-guess_range = 5.0 #Limit to how far from physical center the phase centers can be.  
-ant0_physical_limits_x = (Antennas[0][0] - guess_range ,Antennas[0][0] + guess_range)
-ant0_physical_limits_y = (Antennas[0][1] - guess_range ,Antennas[0][1] + guess_range)
-ant0_physical_limits_z = (Antennas[0][2] - guess_range ,Antennas[0][2] + guess_range)
+guess_range = None #Limit to how far from physical center the phase centers can be.  
 
-ant1_physical_limits_x = (Antennas[1][0] - guess_range ,Antennas[1][0] + guess_range)
-ant1_physical_limits_y = (Antennas[1][1] - guess_range ,Antennas[1][1] + guess_range)
-ant1_physical_limits_z = (Antennas[1][2] - guess_range ,Antennas[1][2] + guess_range)
+if guess_range is not None:
+    ant0_physical_limits_x = (Antennas[0][0] - guess_range ,Antennas[0][0] + guess_range)
+    ant0_physical_limits_y = (Antennas[0][1] - guess_range ,Antennas[0][1] + guess_range)
+    ant0_physical_limits_z = (Antennas[0][2] - guess_range ,Antennas[0][2] + guess_range)
 
-ant2_physical_limits_x = (Antennas[2][0] - guess_range ,Antennas[2][0] + guess_range)
-ant2_physical_limits_y = (Antennas[2][1] - guess_range ,Antennas[2][1] + guess_range)
-ant2_physical_limits_z = (Antennas[2][2] - guess_range ,Antennas[2][2] + guess_range)
+    ant1_physical_limits_x = (Antennas[1][0] - guess_range ,Antennas[1][0] + guess_range)
+    ant1_physical_limits_y = (Antennas[1][1] - guess_range ,Antennas[1][1] + guess_range)
+    ant1_physical_limits_z = (Antennas[1][2] - guess_range ,Antennas[1][2] + guess_range)
 
-ant3_physical_limits_x = (Antennas[3][0] - guess_range ,Antennas[3][0] + guess_range)
-ant3_physical_limits_y = (Antennas[3][1] - guess_range ,Antennas[3][1] + guess_range)
-ant3_physical_limits_z = (Antennas[3][2] - guess_range ,Antennas[3][2] + guess_range)
+    ant2_physical_limits_x = (Antennas[2][0] - guess_range ,Antennas[2][0] + guess_range)
+    ant2_physical_limits_y = (Antennas[2][1] - guess_range ,Antennas[2][1] + guess_range)
+    ant2_physical_limits_z = (Antennas[2][2] - guess_range ,Antennas[2][2] + guess_range)
+
+    ant3_physical_limits_x = (Antennas[3][0] - guess_range ,Antennas[3][0] + guess_range)
+    ant3_physical_limits_y = (Antennas[3][1] - guess_range ,Antennas[3][1] + guess_range)
+    ant3_physical_limits_z = (Antennas[3][2] - guess_range ,Antennas[3][2] + guess_range)
+else:
+    ant0_physical_limits_x = None
+    ant0_physical_limits_y = None
+    ant0_physical_limits_z = None
+
+    ant1_physical_limits_x = None
+    ant1_physical_limits_y = None
+    ant1_physical_limits_z = None
+
+    ant2_physical_limits_x = None
+    ant2_physical_limits_y = None
+    ant2_physical_limits_z = None
+
+    ant3_physical_limits_x = None
+    ant3_physical_limits_y = None
+    ant3_physical_limits_z = None
 
 c = 2.99700e8 #m/s
 
 #Measureables (6 baselines x 2 sites x 2 polarizations = 24)
 
-day5_measured_time_delays_hpol = [((0, 1), -14.224894169837777), ((0, 2), 19.877913870967042), ((0, 3), 33.41603125439723), ((1, 2), 34.01793900846452), ((1, 3), 47.58058297857065), ((2, 3), 13.49814216298322)]
-day5_measured_time_delays_errors_hpol = [((0, 1), 0.06242523254593814), ((0, 2), 0.06551777511545404), ((0, 3), 0.3474837161367034), ((1, 2), 0.10155187104093898), ((1, 3), 0.3618096657854842), ((2, 3), 0.3472850258299439)]
+day5_measured_time_delays_hpol = [((0, 1), -14.224921871745725), ((0, 2), 19.876589950811745), ((0, 3), 33.40912298266971), ((1, 2), 34.019589228664664), ((1, 3), 47.57044139896039), ((2, 3), 13.48957876430875)]
+day5_measured_time_delays_errors_hpol = [((0, 1), 0.06233491795311048), ((0, 2), 0.06382554973518859), ((0, 3), 0.33814236909528766), ((1, 2), 0.10214427694663512), ((1, 3), 0.3658870823486229), ((2, 3), 0.34880895137219037)]
 
-day5_measured_time_delays_vpol = [((0, 1), -10.883704486434414), ((0, 2), 17.344005103996537), ((0, 3), 38.23462324810745), ((1, 2), 28.064767462355917), ((1, 3), 49.041921011622634), ((2, 3), 20.96146716322024)]
-day5_measured_time_delays_errors_vpol = [((0, 1), 0.1194031290358806), ((0, 2), 0.048623147381227666), ((0, 3), 0.09075103566110058), ((1, 2), 0.07860361150323145), ((1, 3), 0.06454928284754104), ((2, 3), 0.0732093872343773)]
+day5_measured_time_delays_vpol = [((0, 1), -10.8811708733604), ((0, 2), 17.34400605219815), ((0, 3), 38.236602651330955), ((1, 2), 28.061713346561103), ((1, 3), 49.04098522640182), ((2, 3), 20.9601676263453)]
+day5_measured_time_delays_errors_vpol = [((0, 1), 0.11638830591906603), ((0, 2), 0.048620026672220505), ((0, 3), 0.08857784505147924), ((1, 2), 0.07591263744700386), ((1, 3), 0.06274341696668266), ((2, 3), 0.07334332990065455)]
 
+day6_measured_time_delays_hpol = [((0, 1), -13.58716769257573), ((0, 2), 19.158550981849476), ((0, 3), 30.77279240847105), ((1, 2), 32.69936857396089), ((1, 3), 44.18385816610001), ((2, 3), 11.27931686951937)]
+day6_measured_time_delays_errors_hpol = [((0, 1), 0.09531186417637323), ((0, 2), 0.12724109382433263), ((0, 3), 0.3875413892537076), ((1, 2), 0.12470147484877567), ((1, 3), 0.36688889196595226), ((2, 3), 0.34983579961273653)]
 
-day6_measured_time_delays_hpol = [((0, 1), -13.592091429151054), ((0, 2), 19.16001027052159), ((0, 3), 30.75389605307086), ((1, 2), 32.70726977544983), ((1, 3), 44.207337841605415), ((2, 3), 11.299536705693228)]
-day6_measured_time_delays_errors_hpol = [((0, 1), 0.09620101986130024), ((0, 2), 0.13301888847570267), ((0, 3), 0.39484710750876817), ((1, 2), 0.1262325763913089), ((1, 3), 0.360032335595451), ((2, 3), 0.33944838464119326)]
-
-day6_measured_time_delays_vpol = [((0, 1), -9.907815800005917), ((0, 2), 17.246090416069613), ((0, 3), 38.69389075198866), ((1, 2), 27.113051415306572), ((1, 3), 48.574239548950025), ((2, 3), 21.462514816608664)]
-day6_measured_time_delays_errors_vpol = [((0, 1), 0.09705042719954765), ((0, 2), 0.11589576468440983), ((0, 3), 0.10906867130376277), ((1, 2), 0.07376204794601858), ((1, 3), 0.079778528687297), ((2, 3), 0.06997973562561836)]
-
+day6_measured_time_delays_vpol = [((0, 1), -9.910919892043706), ((0, 2), 17.243676724603866), ((0, 3), 38.692527821047), ((1, 2), 27.114368394000184), ((1, 3), 48.56902487092354), ((2, 3), 21.457044552683175)]
+day6_measured_time_delays_errors_vpol = [((0, 1), 0.09570601760961257), ((0, 2), 0.11429843724284253), ((0, 3), 0.10545687811227517), ((1, 2), 0.07421032869730562), ((1, 3), 0.07877429114919211), ((2, 3), 0.07282936925867901)]
 
 def f(ant0_x, ant0_y, ant0_z, ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z):
     '''
@@ -148,6 +164,9 @@ if __name__ == '__main__':
             else:
                 print('Given mode not in options.  Defaulting to vpol')
                 mode = 'vpol'
+        else:
+            print('No mode given.  Defaulting to vpol')
+            mode = 'vpol'
 
         print('Performing calculations for %s'%mode)
         if mode == 'hpol':
