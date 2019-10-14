@@ -2,45 +2,74 @@
 This file is intended to hold any organizational information to centralize it to be imported by other scripts.
 
 This file itself may not be the most organized by hopefully it allows others to stay moreso. 
+
+A 'deploy_index' is used for many locations to denote the specific configuration of antennas and pulsers depending
+upon which deployment you are in.
+
+You can set what you want the default deployment to be by changing default_deploy at the top of this file.
+
+deploy_index = 0:
+    Before Oct 2019
+deploy_index = 1:
+    After Oct 2019
 '''
 import sys
 import os
 import numpy
 import pymap3d as pm
+default_deploy = 1 #The deployment time to use as the default.
 
-def loadAntennaZeroLocation():
+
+def loadAntennaZeroLocation(deploy_index=default_deploy):
     '''
     Loads antenna 0's location (which use used as the station location).
     Loads both the latitude, longtidue, elevation
     '''
-    A0Location = (37.5893,-118.2381,3894.12)#latitude,longtidue,elevation
+    if deploy_index == 0:
+        A0Location = (37.5893,-118.2381,3894.12)#latitude,longtidue,elevation  #ELEVATION GIVEN FROM GOOGLE EARTH given in m
+    elif deploy_index == 1:
+        A0Location = (37.589310, -118.237621, 3875.53)#latitude,longtidue,elevation #ELEVATION FROM GOOGLE EARTH given in m  
     return A0Location
 
-def loadAntennaLocationsENU():
+def loadAntennaLocationsENU(deploy_index=default_deploy):
     '''
     Loads the antenna locations and phase locations as best they are known.
     These are given in ENU relative to Antenna 0.
     '''
-    antennas_physical   = {0:(0.0,0.0,0.0),1:(-6.039,-1.618,2.275),2:(-1.272,-10.362,1.282),3:(3.411,-11.897,-0.432)} #ORIGINAL
-    '''
-    #These were determined using only run 793
-    antennas_phase_hpol = {0:(  -0.02557475,   0.03116954,   0.09699316),1:(-6.07239516,  -1.57654064,   2.40102979),2:(-1.03349923, -10.66185761,   0.41323144),3:( 3.0254727 , -11.41386618,   1.08350273)}#ADJUSTED HPOL
-    antennas_phase_vpol = {0:(-0.3113139 ,   0.37988811,   1.22224369),1:(-5.87779214,  -1.8179266 ,   1.68175401),2:(-1.57186065,  -9.98385335,   2.45102724),3:( 3.79236323, -12.37305718,  -1.80125484)}#ADJUSTED VPOL
-    '''
-    #These were determined in first attempt with day 5 and day 6 data with no bounds on phase positons.
-    antennas_phase_hpol = {0:(-1.05036701,  -2.83990607,   5.7301439),1:(-5.04455409,   1.80238432,  -3.37157069),2:(-0.70469931,  -9.35762227,  -1.46880603),3:( 0.62819922, -18.85449124,  14.09627911)}#ADJUSTED HPOL
-    antennas_phase_vpol = {0:( -1.97517555,  -4.78830899,  10.53874329),1:( -5.26414199,   0.06191184,  -1.6073464),2:( -1.17891238,  -8.69156208,   0.24012179),3:(  4.23558404, -11.0023696 ,  -4.13418962)}#ADJUSTED VPOL
+    if deploy_index == 0:
+        antennas_physical   = {0:(0.0,0.0,0.0),1:(-6.039,-1.618,2.275),2:(-1.272,-10.362,1.282),3:(3.411,-11.897,-0.432)} #ORIGINAL
+        '''
+        #These were determined using only run 793
+        antennas_phase_hpol = {0:(  -0.02557475,   0.03116954,   0.09699316),1:(-6.07239516,  -1.57654064,   2.40102979),2:(-1.03349923, -10.66185761,   0.41323144),3:( 3.0254727 , -11.41386618,   1.08350273)}#ADJUSTED HPOL
+        antennas_phase_vpol = {0:(-0.3113139 ,   0.37988811,   1.22224369),1:(-5.87779214,  -1.8179266 ,   1.68175401),2:(-1.57186065,  -9.98385335,   2.45102724),3:( 3.79236323, -12.37305718,  -1.80125484)}#ADJUSTED VPOL
+        '''
+        #These were determined in first attempt with day 5 and day 6 data with no bounds on phase positons.
+        antennas_phase_hpol = {0:( -1.05036701,  -2.83990607,   5.7301439) , 1:(-5.04455409,   1.80238432,  -3.37157069), 2:(-0.70469931,  -9.35762227,  -1.46880603),  3:( 0.62819922, -18.85449124,  14.09627911)}#ADJUSTED HPOL
+        antennas_phase_vpol = {0:( -1.97517555,  -4.78830899,  10.53874329), 1:( -5.26414199,   0.06191184,  -1.6073464), 2:( -1.17891238,  -8.69156208,   0.24012179), 3:(  4.23558404, -11.0023696 ,  -4.13418962)}#ADJUSTED VPOL
+    elif deploy_index == 1:
+
+        origin = loadAntennaZeroLocation(deploy_index = 1)
+        antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3890.77),2:(37.588909, -118.237719, 3881.02),3:(37.5889210, -118.2379850, 3887.42)} #ORIGINAL
+        antennas_physical = {}
+        for key, location in antennas_physical_latlon.items():
+            antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+
+        antennas_phase_hpol = antennas_physical.copy()
+        antennas_phase_vpol = antennas_physical.copy()
+
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
-
-
 
 
 def loadPulserPolarizations():
     '''
     Loads the polarizations used in each pulsing run.  Options are hpol, vpol, or both
+
+    This won't make sense for data taken in the October 2019 pulsing run.   Will need higher
+    resolution, i.e. time of day spans rather than run labels. 
     '''
     pulser_pol = {}
 
+    #Trip 1
     #Day 1
     #Site 1 37.4671° N, 117.7525° W
     pulser_pol['run734'] = 'vpol'
@@ -86,6 +115,19 @@ def loadPulserPolarizations():
     #Day 6 37° 35.166' N 118° 13.990' W 
     pulser_pol['run792'] = 'vpol'
     pulser_pol['run793'] = 'vpol'
+
+    #Trip 2
+    #Site 1a 37.5859361° N 118.233841 W 
+    pulser_pol['run1506'] = 'hpol'
+    pulser_pol['run1507'] = 'hpol'
+
+    #Site 2 37.58568583° N 118.225942 W 
+    pulser_pol['run1508'] = 'both'
+    pulser_pol['run1509'] = 'both'
+
+    #Site 3 37.592001861° N 118.2354480278 W 
+    pulser_pol['run1511'] = 'both'
+    
     
     return pulser_pol   
 
@@ -144,7 +186,27 @@ def loadPulserLocations():
     #Day 6 37° 35.166' N 118° 13.990' W 
     pulser_locations['run792'] = (37.5861,-118.2332,3779.52)
     pulser_locations['run793'] = (37.5861,-118.2332,3779.52)
-    
+
+
+    #Trip 2
+    #Site 1  37.5859361 N 118.233918056 W  (37.5859361, -118.233918056)
+    #Alt: 3762.9m (GPS)  3789.32 m (MSL) Google Earth: Alt: 3796.284
+    pulser_locations['run1504'] = (37.5859361, -118.233918056,3796.284)
+
+    #Site 1a 37.58595472° N 118.233841 W 
+    #Alt: 3763.1m (GPS)  3789.53 m (MSL) Google Earth: 3794.76
+    pulser_locations['run1506'] = (37.58595472, -118.233841,3794.76)
+    pulser_locations['run1507'] = (37.58595472, -118.233841,3794.76)
+
+    #Site 2 37.58568583° N 118.225942 W 
+    #Alt: 3690.70m (GPS)  3717.04m (MSL) Google Earth: 3729.228
+    pulser_locations['run1508'] = (37.58568583, -118.225942,3729.228)
+    pulser_locations['run1509'] = (37.58568583, -118.225942,3729.228)
+
+    #Site 3 37.592001861° N 118.2354480278 W 
+    #Alt: 3806.25m (GPS)  3832.55m (MSL) Google Earth: 3827.6784
+    pulser_locations['run1511'] = (37.592001861, -118.2354480278,3827.6784)
+
     return pulser_locations    
 
 def loadPulserLocationsENU():
@@ -186,6 +248,10 @@ def loadClockRates():
 def loadPulserEventids():
     '''
     Loads a dictionary containing the known eventids for pulsers.
+
+    If subsets of runs are known to be different, this dictionary may contain
+    an additional layer of keys seperating the events.  The code that uses this should
+    known how to handle this. 
     '''
     known_pulser_ids = {}
     known_pulser_ids['run781'] = numpy.array([])

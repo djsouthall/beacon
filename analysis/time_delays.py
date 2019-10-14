@@ -45,27 +45,34 @@ if __name__ == '__main__':
     datapath = os.environ['BEACON_DATA']
 
     if len(sys.argv) == 2:
-        if str(sys.argv[1]) in ['day5', 'day6']:
+        if str(sys.argv[1]) in ['trip1_day5', 'trip1_day6', 'trip2_site1a','trip2_site2','trip2_site3']:
             site = str(sys.argv[1])
         else:
-            print('Given site not in options.  Defaulting to day5')
-            site = 'day5'
+            print('Given site not in options.  Defaulting to trip2_site1a')
+            site = 'trip2_site1a'
     else:
-        print('No site given.  Defaulting to day5')
-        site = 'day5'
+        print('No site given.  Defaulting to trip2_site1a')
+        site = 'trip2_site1a'
 
 
-    if site == 'day5':
+    if site == 'trip1_day5':
         expected_time_differences_hpol  =  [((0, 1), -12.370633960780424), ((0, 2), 19.082452170088118), ((0, 3), 34.91110427374633), ((1, 2), 31.45308613086854), ((1, 3), 47.281738234526756), ((2, 3), 15.828652103658214)]
         expected_time_differences_vpol  =  [((0, 1), -14.20380849900198), ((0, 2), 19.858237233245745), ((0, 3), 33.29384923010252), ((1, 2), 34.062045732247725), ((1, 3), 47.4976577291045), ((2, 3), 13.435611996856778)]
         max_time_differences  =  [((0, 1), -10.781845180090386), ((0, 2), 17.31943377487096), ((0, 3), 38.26081567689971), ((1, 2), 28.101278954961344), ((1, 3), 49.042660856990096), ((2, 3), 20.941381902028752)]
         runs = numpy.array([782,783,784,785,788,789])
-    elif site == 'day6':
+    elif site == 'trip1_day6':
         expected_time_differences_hpol  =  [((0, 1), -13.508319251205194), ((0, 2), 17.170337798788978), ((0, 3), 33.424724259292816), ((1, 2), 30.67865704999417), ((1, 3), 46.93304351049801), ((2, 3), 16.254386460503838)]
         expected_time_differences_vpol  =  [((0, 1), -13.579241831790796), ((0, 2), 19.154835384631042), ((0, 3), 30.67772905831862), ((1, 2), 32.73407721642184), ((1, 3), 44.256970890109415), ((2, 3), 11.522893673687577)]
         max_time_differences  =  [((0, 1), -9.892282610593384), ((0, 2), 17.22764581086949), ((0, 3), 38.683274875513234), ((1, 2), 27.119928421462873), ((1, 3), 48.57555748610662), ((2, 3), 21.455629064643745)]
         runs = numpy.array([792,793])# SHOULD ALL BE FOR THE SAME SOURCE AS THEY WILL BE ADDED IN HIST
-    
+    elif site == 'trip2_site1a':
+        runs = numpy.array([1506,1507])
+    elif site == 'trip2_site2':
+        runs = numpy.array([1508,1509])
+    elif site == 'trip2_site3':
+        runs = numpy.array([1511])
+
+
     pols = []
     pol_info = info.loadPulserPolarizations()
     for run in runs:
