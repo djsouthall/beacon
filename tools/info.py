@@ -19,6 +19,15 @@ import numpy
 import pymap3d as pm
 default_deploy = 1 #The deployment time to use as the default.
 
+def pulserRuns():
+    '''
+    Returns
+    -------
+    pulser_runs : numpy.ndarray of ints
+        This is the list of known pulser runs as determined by the matching_times.py script.
+    '''
+    pulser_runs = numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793,1504,1506,1507,1508,1509,15011]) 
+    return pulser_runs
 
 def loadAntennaZeroLocation(deploy_index=default_deploy):
     '''
@@ -240,8 +249,12 @@ def loadClockRates():
     'run788'    :31249807.839061476,
     'run789'    :31249809.895620257,
     'run792'    :31249812.04283368,
-    'run793'    :31249809.22371152
-    }
+    'run793'    :31249809.22371152,
+    'run1506'   :31249822.962542757,
+    'run1507'   :31249815.193117745,
+    'run1508'   :31249811.59632718,
+    'run1509'   :31249810.666976035,
+    'run1511'   :31249840.967325963}
     clock_rates['default'] = numpy.mean([v for key,v in clock_rates.items()])
     return clock_rates
 

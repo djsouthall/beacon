@@ -10,24 +10,22 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret #Must be imported before matplotlib or else plots don't load.
+import tools.info as info
 
 import matplotlib.pyplot as plt
 from pprint import pprint
 plt.ion()
 
-def pulserRuns():
-    '''
-    Returns
-    -------
-    pulser_runs : numpy.ndarray of ints
-        This is the list of known pulser runs as determined by the matching_times.py script.
-    '''
-    pulser_runs = numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793]) 
-    return pulser_runs
 
-def getTimes(reader):
+
+def getTimes(reader,trigger_type=2):
     '''
-    This pulls timing information for each event from the reader object.
+    This pulls timing information for each event from the reader object..
+    
+    trigger_type:
+    1 Software
+    2 RF
+    3 GPS
 
     Parameters
     ----------
@@ -43,7 +41,7 @@ def getTimes(reader):
     trigtimes : numpy.ndarray of floats
         The trig_time values for each event from the Tree.
     '''
-    N = reader.head_tree.Draw("raw_approx_trigger_time_nsecs:raw_approx_trigger_time:trig_time:Entry$","trigger_type==2","goff") 
+    N = reader.head_tree.Draw("raw_approx_trigger_time_nsecs:raw_approx_trigger_time:trig_time:Entry$","trigger_type==%i"%trigger_type,"goff") 
     #ROOT.gSystem.ProcessEvents()
     subtimes = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N)
     times = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N) 
@@ -54,7 +52,7 @@ def getTimes(reader):
 
 
 
-def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=1.0, percent_cut=0.005, subtime_bounds = None, time_bounds = None, plot=True, verbose=True):
+def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=1.0, percent_cut=0.005, subtime_bounds = None, time_bounds = None, plot=True, verbose=True,trigger_type=None):
     '''
     This uses a nearest neighbour calculation to select the cal pulser events from underneath the
     noise.  Adjust the parameters until it works for you specific run.  
@@ -99,10 +97,13 @@ def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=
     '''
     try:
         run = reader.run
-        if run not in pulserRuns():
+        if run not in info.pulserRuns():
             print('WARNING:  The selected run is not in the known list of pulser runs.')
 
-        times, subtimes, trigtimes, eventids = getTimes(reader)
+        if trigger_type is None:
+            times, subtimes, trigtimes, eventids = getTimes(reader)
+        else:
+            times, subtimes, trigtimes, eventids = getTimes(reader,trigger_type=trigger_type)
 
         if subtime_bounds is not None:
             subtimes_cut = numpy.logical_and(subtimes > min(subtime_bounds), subtimes < max(subtime_bounds))
@@ -215,7 +216,11 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
     '''
     try:
         run = reader.run
-        times, subtimes, trigtimes, eventids, indices = pulserLocator(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, percent_cut=percent_cut,subtime_bounds = subtime_bounds, time_bounds = time_bounds, plot=plot, verbose=verbose)
+        trigger_type = 3
+        #1 Software
+        #2 RF
+        #3 GPS
+        times, subtimes, trigtimes, eventids, indices = pulserLocator(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, percent_cut=percent_cut,subtime_bounds = subtime_bounds, time_bounds = time_bounds, plot=plot, verbose=verbose, trigger_type = trigger_type)
 
         clock_rate = nominal_clock_rate
         slope = 1000000.0
@@ -285,7 +290,12 @@ percent_cuts = {'run782':0.028,
                 'run788':0.008,
                 'run789':0.012,
                 'run792':0.0011,
-                'run793':0.003}
+                'run793':0.003,
+                'run1506':1,
+                'run1507':1,
+                'run1508':1,
+                'run1509':1,
+                'run1511':1}
 timebounds_cut = {  'run788':(4400+1.56202e9,8000+1.56202e9),
                     'run789':(600+1.56203e9,1300+1.56203e9)}
 subtimebounds_cut = {   'run788':(0.92e9,0.96e9),
@@ -293,20 +303,21 @@ subtimebounds_cut = {   'run788':(0.92e9,0.96e9),
 
 
 if __name__ == '__main__':
-    #plt.close('all')
+    plt.close('all')
     # If your data is elsewhere, pass it as an argument
     datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
-    runs = numpy.array([790])#numpy.array([781,782,783,784,785,786,787,788,789,790])#numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793]) #Selects which run to examine
+    runs = numpy.array([1508,1509,1511])#numpy.array([781,782,783,784,785,786,787,788,789,790])#numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793]) #Selects which run to examine
     nearest_neighbor = 10 #Adjust until works.
     scale_subtimes = 50.0 #The larger this is the the less the nearest neighbor favors vertical lines.
     scale_times = 1.0  #The larger this is the the less the nearest neighbor favors horizontal lines.
     slope_bound = 1.0e-9
     percent_cut = 0.012
     nominal_clock_rate = 31249810.0 #31.25e6
-    lower_rate_bound = 31.250e6 #Don't make the bounds too large or the bisection method will overshoot and roll over.
-    upper_rate_bound = 31.2495e6 #Don't make the bounds too large or the bisection method will overshoot and roll over.
+    lower_rate_bound = 31.24e6 #Don't make the bounds too large or the bisection method will overshoot and roll over.
+    upper_rate_bound = 31.2499e6 #Don't make the bounds too large or the bisection method will overshoot and roll over.
     plot = True
     verbose = False
+    save = False
 
     all_adjusted_clock_rates = []
     good_runs = numpy.ones_like(runs,dtype=bool)
@@ -333,7 +344,8 @@ if __name__ == '__main__':
 
             #indice_cut = times[indices] > (9000.0+1.562e9)
             indice_cut = numpy.ones_like(indices)
-            numpy.savetxt('./run%i_pulser_eventids.csv'%run, numpy.sort(eventids[indices[indice_cut]]), delimiter=",")
+            if save == True:
+                numpy.savetxt('./run%i_pulser_eventids.csv'%run, numpy.sort(eventids[indices[indice_cut]]), delimiter=",")
 
         except Exception as e:
             print('Error in main clock correction loop.')
