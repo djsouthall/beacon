@@ -179,6 +179,7 @@ class FFTPrepper:
         the cross correlations are also returned.  These have timestep self.dt_ns_upsampled.
         '''
         self.reader.setEntry(eventid)
+        self.eventid = eventid
         raw_wfs_corr = numpy.zeros((8,len(self.waveform_times_corr))) #upsampled to nearest power of 2 then by 2 for correlation.
         if load_upsampled_waveforms:
             upsampled_waveforms = numpy.zeros((8,self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
@@ -203,6 +204,7 @@ class FFTPrepper:
         cross correlations).
         '''
         self.reader.setEntry(eventid)
+        self.eventid = eventid
         raw_wfs_corr = numpy.zeros((8,len(self.waveform_times_corr))) #upsampled to nearest power of 2 then by 2 for correlation.
         upsampled_waveforms = numpy.zeros((8,self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
         for channel in range(8):
@@ -261,16 +263,51 @@ class TimeDelayCalculator(FFTPrepper):
     --------
     examples.beacon_data_reader.reader
     '''
-    def calculateTimeDelays(self,eventid):
+    def calculateTimeDelays(self,eventid,align_method=0):
+        '''
+        Align method can be one of a few:
+        0: argmax of corrs (default)
+        1: argmax of hilbert of corrs
+
+        'max_corrs' corresponds to the value of the selected methods peak. 
+        '''
         try:
-            ffts = self.loadFilteredFFTs(eventid)
+            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True)
 
             corrs_fft = numpy.multiply((ffts[self.pairs[:,0]].T/numpy.std(ffts[self.pairs[:,0]],axis=1)).T,(numpy.conj(ffts[self.pairs[:,1]]).T/numpy.std(numpy.conj(ffts[self.pairs[:,1]]),axis=1)).T) / (len(self.waveform_times_corr)//2 + 1)
             corrs = numpy.fft.fftshift(numpy.fft.irfft(corrs_fft,axis=1,n=self.final_corr_length),axes=1) * (self.final_corr_length//2) #Upsampling and keeping scale
 
-            indices = numpy.argmax(corrs,axis=1)
-            max_corrs = numpy.max(corrs,axis=1)
 
+            if align_method == 0:
+                indices = numpy.argmax(corrs,axis=1)
+                max_corrs = numpy.max(corrs,axis=1)
+            elif align_method == 1:
+                corr_hilbert = numpy.abs(scipy.signal.hilbert(corrs,axis=1))
+                indices = numpy.argmax(corr_hilbert,axis=1)
+                max_corrs = numpy.max(corr_hilbert,axis=1)
+            elif align_method == 2:
+                indices = numpy.mean(numpy.vstack(numpy.argmax(corrs,axis=1), numpy.argmin(corrs,axis=1)),axis=1).astype(int)
+                max_corrs = numpy.max(corrs,axis=1)
+
+
+            if True:
+                if True:#numpy.any(self.corr_time_shifts[indices] > 2000):
+                    plt.figure()
+                    for channel, wf in enumerate(upsampled_waveforms):
+                        plt.plot(self.dt_ns_upsampled*numpy.arange(len(wf)),wf,label=str(channel))
+                    plt.legend()
+                    plt.figure()
+                    for channel, wf in enumerate(corrs):
+                        plt.plot(self.corr_time_shifts,wf,label=str(channel))
+                    plt.legend()
+                    plt.figure()
+                    try:
+                        for channel, wf in enumerate(corr_hilbert):
+                            plt.plot(self.corr_time_shifts,wf,label=str(channel))
+                        plt.legend()
+                    except:
+                        pass
+                    import pdb; pdb.set_trace()
             return self.corr_time_shifts[indices], max_corrs, self.pairs
         except Exception as e:
             print('Error in TimeDelayCalculator.calculateTimeDelays')
@@ -279,7 +316,7 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateMultipleTimeDelays(self,eventids):
+    def calculateMultipleTimeDelays(self,eventids, align_method=None):
         try:
             if ~numpy.all(eventids == numpy.sort(eventids)):
                 print('eventids NOT SORTED, WOULD BE FASTER IF SORTED.')
@@ -289,7 +326,10 @@ class TimeDelayCalculator(FFTPrepper):
             for event_index, eventid in enumerate(eventids):
                 sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
                 sys.stdout.flush()
-                time_shift, corr_value, pairs = self.calculateTimeDelays(eventid)
+                if align_method is None:
+                    time_shift, corr_value, pairs = self.calculateTimeDelays(eventid) #Using default of the other function
+                else:
+                    time_shift, corr_value, pairs = self.calculateTimeDelays(eventid,align_method=align_method)
                 timeshifts.append(time_shift)
                 corrs.append(corr_value)
             sys.stdout.write('\n')

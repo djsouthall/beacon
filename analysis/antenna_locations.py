@@ -36,7 +36,7 @@ if __name__ == '__main__':
         else:
             print('No run number given.  Defaulting to 793')
             run_label = 'run793'
-        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()# MAKE SURE TO PUT THE DEPLOY INDEX CORRECTLY
         pulser_location = info.loadPulserLocationsENU()[run_label] #ENU
 
         print('Pulser Physical Location:')
@@ -45,9 +45,9 @@ if __name__ == '__main__':
         
         
         labels = ['Physical','Hpol Phase Center','Vpol Phase Center']
-        print_prefixs = {   'Physical':'expected_time_differences_hpol' ,
-                            'Hpol Phase Center':'expected_time_differences_vpol' ,
-                            'Vpol Phase Center':'max_time_differences'}
+        print_prefixs = {   'Physical':'expected_time_differences_physical' ,
+                            'Hpol Phase Center':'expected_time_differences_hpol' ,
+                            'Vpol Phase Center':'expected_time_differences_vpol'}
         for index, antennas in enumerate([antennas_physical,antennas_phase_hpol,antennas_phase_vpol]):
             #print('\nCalculating expected time delays from %s location'%labels[index])
             tof = {}
@@ -65,6 +65,7 @@ if __name__ == '__main__':
                 max_dt.append(numpy.sign(tof[pair[0]] - tof[pair[1]])*(numpy.sqrt((antennas[pair[0]][0] - antennas[pair[1]][0])**2 + (antennas[pair[0]][1] - antennas[pair[1]][1])**2 + (antennas[pair[0]][2] - antennas[pair[1]][2])**2) / c)*1e9) #ns
 
             print(print_prefixs[labels[index]],' = ',list(zip(pairs,dt)))
+            print(print_prefixs[labels[index]].replace('expected','max'),' = ',list(zip(pairs,max_dt)))
             #print('\t',list(zip(pairs,max_dt)))
 
 

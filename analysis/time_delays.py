@@ -20,7 +20,7 @@ import tools.interpret #Must be imported before matplotlib or else plots don't l
 import tools.clock_correct as cc
 import tools.info as info
 from objects.fftmath import TimeDelayCalculator
-
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from pprint import pprint
@@ -44,37 +44,61 @@ if __name__ == '__main__':
     # If your data is elsewhere, pass it as an argument
     datapath = os.environ['BEACON_DATA']
 
-    if len(sys.argv) == 2:
-        if str(sys.argv[1]) in ['trip1_day5', 'trip1_day6', 'trip2_site1a','trip2_site2','trip2_site3']:
-            site = str(sys.argv[1])
-        else:
-            print('Given site not in options.  Defaulting to trip2_site1a')
-            site = 'trip2_site1a'
-    else:
-        print('No site given.  Defaulting to trip2_site1a')
-        site = 'trip2_site1a'
+    site = 1 #1,2,3
 
+    if site == 1:
+        runs = numpy.array([1507])
 
-    if site == 'trip1_day5':
-        expected_time_differences_hpol  =  [((0, 1), -12.370633960780424), ((0, 2), 19.082452170088118), ((0, 3), 34.91110427374633), ((1, 2), 31.45308613086854), ((1, 3), 47.281738234526756), ((2, 3), 15.828652103658214)]
-        expected_time_differences_vpol  =  [((0, 1), -14.20380849900198), ((0, 2), 19.858237233245745), ((0, 3), 33.29384923010252), ((1, 2), 34.062045732247725), ((1, 3), 47.4976577291045), ((2, 3), 13.435611996856778)]
-        max_time_differences  =  [((0, 1), -10.781845180090386), ((0, 2), 17.31943377487096), ((0, 3), 38.26081567689971), ((1, 2), 28.101278954961344), ((1, 3), 49.042660856990096), ((2, 3), 20.941381902028752)]
-        runs = numpy.array([782,783,784,785,788,789])
-    elif site == 'trip1_day6':
-        expected_time_differences_hpol  =  [((0, 1), -13.508319251205194), ((0, 2), 17.170337798788978), ((0, 3), 33.424724259292816), ((1, 2), 30.67865704999417), ((1, 3), 46.93304351049801), ((2, 3), 16.254386460503838)]
-        expected_time_differences_vpol  =  [((0, 1), -13.579241831790796), ((0, 2), 19.154835384631042), ((0, 3), 30.67772905831862), ((1, 2), 32.73407721642184), ((1, 3), 44.256970890109415), ((2, 3), 11.522893673687577)]
-        max_time_differences  =  [((0, 1), -9.892282610593384), ((0, 2), 17.22764581086949), ((0, 3), 38.683274875513234), ((1, 2), 27.119928421462873), ((1, 3), 48.57555748610662), ((2, 3), 21.455629064643745)]
-        runs = numpy.array([792,793])# SHOULD ALL BE FOR THE SAME SOURCE AS THEY WILL BE ADDED IN HIST
-    elif site == 'trip2_site1a':
-        runs = numpy.array([1506,1507])
-    elif site == 'trip2_site2':
-        runs = numpy.array([1508,1509])
-    elif site == 'trip2_site3':
+        expected_time_differences_physical  =  [((0, 1), -55.818082350306895), ((0, 2), 82.39553727998077), ((0, 3), 18.992683496782092), ((1, 2), 138.21361963028767), ((1, 3), 74.81076584708899), ((2, 3), -63.40285378319868)]
+        max_time_differences_physical  =  [((0, 1), -129.37157110284315), ((0, 2), 152.48216718324971), ((0, 3), 184.0463943150346), ((1, 2), 139.82851662731397), ((1, 3), 104.08254793314117), ((2, 3), -81.41340851163496)]
+        expected_time_differences_hpol  =  [((0, 1), -55.818082350306895), ((0, 2), 82.39553727998077), ((0, 3), 18.992683496782092), ((1, 2), 138.21361963028767), ((1, 3), 74.81076584708899), ((2, 3), -63.40285378319868)]
+        max_time_differences_hpol  =  [((0, 1), -129.37157110284315), ((0, 2), 152.48216718324971), ((0, 3), 184.0463943150346), ((1, 2), 139.82851662731397), ((1, 3), 104.08254793314117), ((2, 3), -81.41340851163496)]
+        expected_time_differences_vpol  =  [((0, 1), -55.818082350306895), ((0, 2), 82.39553727998077), ((0, 3), 18.992683496782092), ((1, 2), 138.21361963028767), ((1, 3), 74.81076584708899), ((2, 3), -63.40285378319868)]
+        max_time_differences_vpol  =  [((0, 1), -129.37157110284315), ((0, 2), 152.48216718324971), ((0, 3), 184.0463943150346), ((1, 2), 139.82851662731397), ((1, 3), 104.08254793314117), ((2, 3), -81.41340851163496)]
+
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=1)
+        pulser_location = info.loadPulserLocationsENU()['run1507'] #ENU
+    elif site == 2:
+        runs = numpy.array([1509])
+    
+        expected_time_differences_physical  =  [((0, 1), -96.21228508039667), ((0, 2), 21.36317970746586), ((0, 3), -56.5419782996255), ((1, 2), 117.57546478786253), ((1, 3), 39.67030678077117), ((2, 3), -77.90515800709136)]
+        max_time_differences_physical  =  [((0, 1), -129.37157110284315), ((0, 2), 152.48216718324971), ((0, 3), -184.0463943150346), ((1, 2), 139.82851662731397), ((1, 3), 104.08254793314117), ((2, 3), -81.41340851163496)]
+        expected_time_differences_hpol  =  [((0, 1), -96.21228508039667), ((0, 2), 21.36317970746586), ((0, 3), -56.5419782996255), ((1, 2), 117.57546478786253), ((1, 3), 39.67030678077117), ((2, 3), -77.90515800709136)]
+        max_time_differences_hpol  =  [((0, 1), -129.37157110284315), ((0, 2), 152.48216718324971), ((0, 3), -184.0463943150346), ((1, 2), 139.82851662731397), ((1, 3), 104.08254793314117), ((2, 3), -81.41340851163496)]
+        expected_time_differences_vpol  =  [((0, 1), -96.21228508039667), ((0, 2), 21.36317970746586), ((0, 3), -56.5419782996255), ((1, 2), 117.57546478786253), ((1, 3), 39.67030678077117), ((2, 3), -77.90515800709136)]
+        max_time_differences_vpol  =  [((0, 1), -129.37157110284315), ((0, 2), 152.48216718324971), ((0, 3), -184.0463943150346), ((1, 2), 139.82851662731397), ((1, 3), 104.08254793314117), ((2, 3), -81.41340851163496)]
+
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=1)
+        pulser_location = info.loadPulserLocationsENU()['run1509'] #ENU
+
+    elif site == 3:
         runs = numpy.array([1511])
 
+        expected_time_differences_physical  =  [((0, 1), -103.1812449168724), ((0, 2), -142.99918760162836), ((0, 3), -183.12401361615616), ((1, 2), -39.81794268475596), ((1, 3), -79.94276869928376), ((2, 3), -40.1248260145278)]
+        max_time_differences_physical  =  [((0, 1), -129.37157110284315), ((0, 2), -152.48216718324971), ((0, 3), -184.0463943150346), ((1, 2), -139.82851662731397), ((1, 3), -104.08254793314117), ((2, 3), -81.41340851163496)]
+        expected_time_differences_hpol  =  [((0, 1), -103.1812449168724), ((0, 2), -142.99918760162836), ((0, 3), -183.12401361615616), ((1, 2), -39.81794268475596), ((1, 3), -79.94276869928376), ((2, 3), -40.1248260145278)]
+        max_time_differences_hpol  =  [((0, 1), -129.37157110284315), ((0, 2), -152.48216718324971), ((0, 3), -184.0463943150346), ((1, 2), -139.82851662731397), ((1, 3), -104.08254793314117), ((2, 3), -81.41340851163496)]
+        expected_time_differences_vpol  =  [((0, 1), -103.1812449168724), ((0, 2), -142.99918760162836), ((0, 3), -183.12401361615616), ((1, 2), -39.81794268475596), ((1, 3), -79.94276869928376), ((2, 3), -40.1248260145278)]
+        max_time_differences_vpol  =  [((0, 1), -129.37157110284315), ((0, 2), -152.48216718324971), ((0, 3), -184.0463943150346), ((1, 2), -139.82851662731397), ((1, 3), -104.08254793314117), ((2, 3), -81.41340851163496)]
 
-    pols = []
-    pol_info = info.loadPulserPolarizations()
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=1)
+        pulser_location = info.loadPulserLocationsENU()['run1511'] #ENU
+
+    if True:
+        fig = plt.figure()
+        fig.canvas.set_window_title('Antenna Locations')
+        ax = fig.add_subplot(111, projection='3d')
+
+        for i, a in antennas_physical.items():
+            ax.scatter(a[0], a[1], a[2], marker='o',label=str(i))
+
+        ax.scatter(pulser_location[0], pulser_location[1], pulser_location[2], marker='o',label='Pulser Site %i'%site)
+
+        ax.set_xlabel('E (m)')
+        ax.set_ylabel('N (m)')
+        ax.set_zlabel('Relative Elevation (m)')
+        plt.legend()
+
     for run in runs:
         try:
             pols.append(pol_info['run%i'%run])
@@ -83,11 +107,13 @@ if __name__ == '__main__':
     
     ignore_eventids = True
     #Filter settings
-    final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
-    crit_freq_low_pass_MHz = 75
-    crit_freq_high_pass_MHz = 15
-    low_pass_filter_order = 6
-    high_pass_filter_order = 6
+    final_corr_length = 2**18 #Should be a factor of 2 for fastest performance
+    crit_freq_low_pass_MHz = None #This new pulser seems to peak in the region of 85 MHz or so
+    crit_freq_high_pass_MHz = None
+    low_pass_filter_order = None
+    high_pass_filter_order = None
+
+    align_method = 0 #0 = argmax, 1 = argmax of hilbert
 
     #Plotting info
     plot = True
@@ -115,15 +141,23 @@ if __name__ == '__main__':
         if 'run%i'%run in list(known_pulser_ids.keys()):
             try:
                 print('run%i\n'%run)
-                eventids = numpy.sort(known_pulser_ids['run%i'%run])
+                eventids = {}
+                eventids['hpol'] = numpy.sort(known_pulser_ids['run%i'%run]['hpol'])
+                eventids['vpol'] = numpy.sort(known_pulser_ids['run%i'%run]['vpol'])
+                all_eventids = numpy.sort(numpy.append(eventids['hpol'],eventids['vpol']))
+
                 if ignore_eventids == True:
                     if 'run%i'%run in list(ignorable_pulser_ids.keys()):
-                        eventids = eventids[~numpy.isin(eventids,ignorable_pulser_ids['run%i'%run])]
+                        eventids['hpol'] = eventids['hpol'][~numpy.isin(eventids['hpol'],ignorable_pulser_ids['run%i'%run])]
+                        eventids['vpol'] = eventids['vpol'][~numpy.isin(eventids['vpol'],ignorable_pulser_ids['run%i'%run])]
+                        all_eventids = all_eventids[~numpy.isin(all_eventids,ignorable_pulser_ids['run%i'%run])]
 
                 reader = Reader(datapath,run)
-                reader.setEntry(eventids[0])
+                reader.setEntry(all_eventids[0])
                 tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order)
-                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids)
+                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=align_method)
+
+                #??? Am  I appropriately selecting the correct events?  This is such a weird way to do this.  Why am I not doing it more seperately :c
 
                 for pair_index, pair in enumerate(pairs):
                     if pair in hpol_pairs:
@@ -159,6 +193,13 @@ if __name__ == '__main__':
             
             for pair_index in range(6):
                 bins_pm_ns = 20.0
+
+                bin_bounds = [numpy.min((numpy.mean(hpol_delays[pair_index]),numpy.mean(vpol_delays[pair_index]))) - bins_pm_ns, numpy.max((numpy.mean(hpol_delays[pair_index]),numpy.mean(vpol_delays[pair_index]))) + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_vpol)*50))
+                time_bins = numpy.arange(bin_bounds[0],bin_bounds[1],tdc.dt_ns_upsampled)
+
+
+
+
                 fig = plt.figure()
 
                 #HPOL Plot
@@ -170,10 +211,11 @@ if __name__ == '__main__':
                 fig.canvas.set_window_title('%i-%i Time Delays'%(i,j))
 
                 expected_time_difference_hpol = numpy.array(expected_time_differences_hpol)[[i in x[0] and j in x[0] for x in expected_time_differences_hpol]][0][1]
-                max_time_difference = numpy.array(max_time_differences)[[i in x[0] and j in x[0] for x in max_time_differences]][0][1]
+                max_time_difference = numpy.array(max_time_differences_physical)[[i in x[0] and j in x[0] for x in max_time_differences_physical]][0][1]
                 
-                bin_bounds = [expected_time_difference_hpol - bins_pm_ns,expected_time_difference_hpol + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_hpol)*50))
-                time_bins = numpy.arange(bin_bounds[0],bin_bounds[1],tdc.dt_ns_corr)
+                #bin_bounds = [expected_time_difference_hpol - bins_pm_ns,expected_time_difference_hpol + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_hpol)*50))
+                bin_bounds = [numpy.mean(hpol_delays[pair_index]) - bins_pm_ns,numpy.mean(hpol_delays[pair_index]) + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_hpol)*50))
+                time_bins = numpy.arange(bin_bounds[0],bin_bounds[1],tdc.dt_ns_upsampled)
 
                 plt.suptitle('t(Ant%i) - t(Ant%i)'%(i,j))
                 ax = plt.subplot(2,1,1)
@@ -184,25 +226,37 @@ if __name__ == '__main__':
                 #best_delay_hpol = numpy.mean(hpol_delays[pair_index])
                 best_delay_hpol = (bins[numpy.argmax(n)+1] + bins[numpy.argmax(n)])/2.0
 
-                #Fit Gaussian
-                popt, pcov = curve_fit(gaus,x,n,p0=[100,best_delay_hpol,2.0])
-                popt[2] = abs(popt[2]) #I want positive sigma.
-
-                plot_x = numpy.linspace(min(x),max(x),1000)
-                plt.plot(plot_x,gaus(plot_x,*popt),'--',label='fit')
-
-                time_differences_hpol.append(((i,j),popt[1]))
-                time_differences_errors_hpol.append(((i,j),popt[2]))
-
                 plt.xlabel('HPol Delay (ns)',fontsize=16)
                 plt.ylabel('Counts',fontsize=16)
                 plt.axvline(expected_time_difference_hpol,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference_hpol)
                 #plt.axvline(-expected_time_difference_hpol,c='r',linestyle='--')
-                #plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
+                plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
                 #plt.axvline(-max_time_difference,c='g',linestyle='--')
 
                 plt.axvline(best_delay_hpol,c='c',linestyle='--',label='Peak Bin Value = %f'%best_delay_hpol)
-                plt.axvline(popt[1],c='y',linestyle='--',label='Fit Center = %f'%popt[1])
+
+                try:
+                    #Fit Gaussian
+                    popt, pcov = curve_fit(gaus,x,n,p0=[100,best_delay_hpol,2.0])
+                    popt[2] = abs(popt[2]) #I want positive sigma.
+
+                    plot_x = numpy.linspace(min(x),max(x),1000)
+                    plt.plot(plot_x,gaus(plot_x,*popt),'--',label='fit')
+
+                    time_differences_hpol.append(((i,j),popt[1]))
+                    time_differences_errors_hpol.append(((i,j),popt[2]))
+
+                    plt.axvline(popt[1],c='y',linestyle='--',label='Fit Center = %f'%popt[1])
+                except Exception as e:
+                    print('Error trying to fit hpol data.')
+                    print(e)
+                    time_differences_hpol.append(((i,j),-999))
+                    time_differences_errors_hpol.append(((i,j),-999))
+
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    print(exc_type, fname, exc_tb.tb_lineno)
+
                 plt.legend(fontsize=16)
 
 
@@ -210,10 +264,9 @@ if __name__ == '__main__':
                 #VPOL Plot
 
                 expected_time_difference_vpol = numpy.array(expected_time_differences_vpol)[[i in x[0] and j in x[0] for x in expected_time_differences_vpol]][0][1]
-                max_time_difference = numpy.array(max_time_differences)[[i in x[0] and j in x[0] for x in max_time_differences]][0][1]
+                max_time_difference = numpy.array(max_time_differences_physical)[[i in x[0] and j in x[0] for x in max_time_differences_physical]][0][1]
                 
-                bin_bounds = [expected_time_difference_vpol - bins_pm_ns, expected_time_difference_vpol + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_vpol)*50))
-                time_bins = numpy.arange(bin_bounds[0],bin_bounds[1],tdc.dt_ns_corr)
+                #bin_bounds = [expected_time_difference_vpol - bins_pm_ns,expected_time_difference_vpol + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_vpol)*50))
 
                 plt.subplot(2,1,2)
                 n, bins, patches = plt.hist(vpol_delays[pair_index],label=('Channel %i and %i'%(2*i+1,2*j+1)),bins=time_bins)
@@ -223,24 +276,36 @@ if __name__ == '__main__':
                 #best_delay_vpol = numpy.mean(vpol_delays[pair_index])
                 best_delay_vpol = (bins[numpy.argmax(n)+1] + bins[numpy.argmax(n)])/2.0
 
-                #Fit Gaussian
-                popt, pcov = curve_fit(gaus,x,n,p0=[100,best_delay_vpol,2.0])
-                popt[2] = abs(popt[2]) #I want positive sigma.
-
-                plot_x = numpy.linspace(min(x),max(x),1000)
-                plt.plot(plot_x,gaus(plot_x,*popt),'--',label='fit')
-
-                time_differences_vpol.append(((i,j),popt[1]))
-                time_differences_errors_vpol.append(((i,j),popt[2]))
-
                 plt.xlabel('VPol Delay (ns)',fontsize=16)
                 plt.ylabel('Counts',fontsize=16)
                 plt.axvline(expected_time_difference_vpol,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference_vpol)
                 #plt.axvline(-expected_time_difference_vpol,c='r',linestyle='--')
-                #plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
+                plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
                 #plt.axvline(-max_time_difference,c='g',linestyle='--')
                 plt.axvline(best_delay_vpol,c='c',linestyle='--',label='Peak Bin Value = %f'%best_delay_vpol)
-                plt.axvline(popt[1],c='y',linestyle='--',label='Fit Center = %f'%popt[1])
+
+                try:
+                    #Fit Gaussian
+                    popt, pcov = curve_fit(gaus,x,n,p0=[100,best_delay_vpol,2.0])
+                    popt[2] = abs(popt[2]) #I want positive sigma.
+
+                    plot_x = numpy.linspace(min(x),max(x),1000)
+                    plt.plot(plot_x,gaus(plot_x,*popt),'--',label='fit')
+
+                    time_differences_vpol.append(((i,j),popt[1]))
+                    time_differences_errors_vpol.append(((i,j),popt[2]))
+                    plt.axvline(popt[1],c='y',linestyle='--',label='Fit Center = %f'%popt[1])
+
+                except Exception as e:
+                    print('Error trying to fit hpol data.')
+                    print(e)
+                    time_differences_vpol.append(((i,j),-999))
+                    time_differences_errors_vpol.append(((i,j),-999))
+
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    print(exc_type, fname, exc_tb.tb_lineno)
+
                 plt.legend(fontsize=16)
 
 

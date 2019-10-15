@@ -376,6 +376,18 @@ def loadPulserEventids():
         116019, 116044, 116065, 116082, 116101, 116115, 116155, 116173,\
         116184])
 
+    known_pulser_ids['run1507'] = {}
+    known_pulser_ids['run1507']['hpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1507_pulser_eventids_site_1a_bicone_hpol_16dB.csv',delimiter=',').astype(int)
+    known_pulser_ids['run1507']['vpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1507_pulser_eventids_site_1a_bicone_vpol_16dB.csv',delimiter=',').astype(int)
+
+    known_pulser_ids['run1509'] = {}
+    known_pulser_ids['run1509']['hpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1509_pulser_eventids_site_2_bicone_hpol_variabledB.csv',delimiter=',').astype(int)
+    known_pulser_ids['run1509']['vpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1509_pulser_eventids_site_2_bicone_vpol_variabledB.csv',delimiter=',').astype(int)
+
+    known_pulser_ids['run1511'] = {}
+    known_pulser_ids['run1511']['hpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1511_pulser_eventids_site_3_bicone_hpol_20dB.csv',delimiter=',').astype(int)
+    known_pulser_ids['run1511']['vpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1511_pulser_eventids_site_3_bicone_vpol_20dB.csv',delimiter=',').astype(int)
+
     return known_pulser_ids
 
 def loadIgnorableEventids():
