@@ -49,12 +49,20 @@ class FFTPrepper:
         Sets the order of the low pass filter to be applied to the data.
     high_pass_filter_order
         Sets the order of the high pass filter to be applied to the data.
+    waveform_index_range
+        Tuple of values.  If the first is None then the signals will be loaded from the beginning of their default buffer,
+        otherwise it will start at this index.  If the second is None then the window will go to the end of the default
+        buffer, otherwise it will end in this.  
+
+        Essentially waveforms will be loaded using wf = self.reader.wf(channel)[waveform_index_range[0]:waveform_index_range[1]]
+
+        Bounds will be adjusted based on buffer length (in case of overflow. )
     
     See Also
     --------
     examples.beacon_data_reader.reader
     '''
-    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None):
+    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False):
         try:
             self.reader = reader
             self.buffer_length = reader.header().buffer_length
@@ -68,7 +76,36 @@ class FFTPrepper:
             self.vpol_pairs = numpy.array(list(itertools.combinations((1,3,5,7), 2)))
             self.pairs = numpy.vstack((self.hpol_pairs,self.vpol_pairs)) 
 
-            self.prepForFFTs()
+            #Allowing for a subset of the waveform to be isolated.  Helpful to speed this up if you know where signals are in long traces.
+            waveform_index_range = list(waveform_index_range)
+            if waveform_index_range[0] is None:
+                waveform_index_range[0] = 0
+            if waveform_index_range[1] is None:
+                waveform_index_range[1] = self.buffer_length - 1
+
+            if not(waveform_index_range[0] < waveform_index_range[1]):
+                print('Given window range invalid, minimum index greater than or equal to max')
+                print('Setting full range.')
+                self.start_waveform_index = 0
+                self.end_waveform_index = self.buffer_length - 1
+            else:
+                if waveform_index_range[0] < 0:
+                    print('Negative start index given, setting to 0.')
+                    self.start_waveform_index = 0
+                else:
+                    self.start_waveform_index = waveform_index_range[0]
+                if waveform_index_range[1] >= self.buffer_length:
+                    print('Greater than or equal to buffer length given for end index, setting to buffer_length - 1.')
+                    self.end_waveform_index = self.buffer_length - 1
+                else:
+                    self.end_waveform_index = waveform_index_range[1]
+
+            #Resetting buffer length to account for new load in length. 
+            self.buffer_length = self.end_waveform_index - self.start_waveform_index + 1 
+
+            self.start_waveform_index = waveform_index_range[0]
+
+            self.prepForFFTs(plot=plot_filters)
 
         except Exception as e:
             print('Error in FFTPrepper.__init__()')
@@ -77,8 +114,14 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-           
-    def prepForFFTs(self):
+   
+    def wf(self,channel):
+        '''
+        This loads a wf but only the section that is selected by the start and end indices specified.
+        '''
+        return self.reader.wf(channel)[self.start_waveform_index:self.end_waveform_index+1]
+
+    def prepForFFTs(self,plot=False):
         '''
         This will get timing information from the reader and use it to determine values such as timestep
         that will be used when performing ffts later.  
@@ -109,7 +152,7 @@ class FFTPrepper:
             self.corr_time_shifts = numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1)*self.dt_ns_upsampled #This results in the maxiumum of an autocorrelation being located at a time shift of 0.0
 
             #Prepare Filters
-            self.filter_original = self.makeFilter(self.freqs_original,plot_filter=False)
+            self.filter_original = self.makeFilter(self.freqs_original,plot_filter=plot)
             self.filter_padded_to_power2 = self.makeFilter(self.freqs_padded_to_power2,plot_filter=False)
             self.filter_corr = self.makeFilter(self.freqs_corr,plot_filter=False)
 
@@ -184,7 +227,8 @@ class FFTPrepper:
         if load_upsampled_waveforms:
             upsampled_waveforms = numpy.zeros((8,self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
         for channel in range(8):
-            raw_wfs_corr[channel][0:self.buffer_length] = self.reader.wf(channel)
+            temp_raw_wf = self.wf(channel)
+            raw_wfs_corr[channel][0:self.buffer_length] = temp_raw_wf - numpy.mean(temp_raw_wf) #Subtracting dc offset so cross corrs behave well
             if load_upsampled_waveforms:
                 upsampled_waveforms[channel] = numpy.fft.irfft(numpy.multiply(self.filter_padded_to_power2,numpy.fft.rfft(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)])),n=self.final_corr_length//2) * ((self.final_corr_length//2)/len(self.waveform_times_padded_to_power2))
 
@@ -208,7 +252,7 @@ class FFTPrepper:
         raw_wfs_corr = numpy.zeros((8,len(self.waveform_times_corr))) #upsampled to nearest power of 2 then by 2 for correlation.
         upsampled_waveforms = numpy.zeros((8,self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
         for channel in range(8):
-            raw_wfs_corr[channel][0:self.buffer_length] = self.reader.wf(channel)
+            raw_wfs_corr[channel][0:self.buffer_length] = self.wf(channel)
             upsampled_waveforms[channel] = numpy.fft.irfft(numpy.multiply(self.filter_padded_to_power2,numpy.fft.rfft(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)])),n=self.final_corr_length//2) * ((self.final_corr_length//2)/len(self.waveform_times_padded_to_power2))
 
         ffts_corr = numpy.fft.rfft(raw_wfs_corr,axis=1) #Now upsampled
@@ -290,7 +334,7 @@ class TimeDelayCalculator(FFTPrepper):
                 max_corrs = numpy.max(corrs,axis=1)
 
 
-            if True:
+            if False:
                 if True:#numpy.any(self.corr_time_shifts[indices] > 2000):
                     plt.figure()
                     for channel, wf in enumerate(upsampled_waveforms):

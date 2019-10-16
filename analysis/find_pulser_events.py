@@ -33,7 +33,7 @@ if __name__ == '__main__':
     plt.close('all')
     # If your data is elsewhere, pass it as an argument
     datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
-    runs = numpy.array([1511])
+    runs = numpy.array([1509])
 
     event_min = 0
 
@@ -45,14 +45,12 @@ if __name__ == '__main__':
 
 
 
-        if True:
+        if False:
+            #USE THIS TO SAVE ONCE YOU HAVE SELECTED THE CORRECT EVENT RANGE.  
             #cut = numpy.logical_and(eventids > 4157, eventids < 5794)
-            cut = numpy.logical_and(eventids > 4157, eventids < 7215)
-            extra_text = 'site_2_bicone_vpol_variabledB'
+            cut = numpy.logical_and(eventids > 4208, eventids < 6033)
+            extra_text = 'site_2_bicone_vpol_17dB'
             numpy.savetxt('./run%i_pulser_eventids_%s.csv'%(run,extra_text), numpy.sort(eventids[cut]), delimiter=",")
-
-
-
 
         meas = {}
         for channel in range(8):
@@ -72,7 +70,7 @@ if __name__ == '__main__':
         if run == 1507:
             lines_of_interest = numpy.array([1035,1275,1755,10034,11714,12314,12914,15711,17354])
         elif run == 1509:
-            lines_of_interest = numpy.array([721,1201,1801,1401,3722,4082,4201])
+            lines_of_interest = numpy.array([721,1201,1801,2401,3722,4082,4201])
         elif run == 1511:
             lines_of_interest = numpy.array([892,2690,3892,5812])
 

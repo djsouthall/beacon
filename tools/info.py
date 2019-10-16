@@ -63,8 +63,8 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
         for key, location in antennas_physical_latlon.items():
             antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
 
-        antennas_phase_hpol = antennas_physical.copy()
-        antennas_phase_vpol = antennas_physical.copy()
+        antennas_phase_hpol = {0:(-6.01123726e-03, 7.37550549e-01, 2.88085760e+01) ,    1:(-3.14956097e+01, -1.13580771e+01, 1.86247154e+01),   2:(-1.06269887e+01, -4.66708351e+01, -6.19488049e+00),  3:(-3.20510558e+01, -4.23385866e+01, 1.76967745e+01)}#ADJUSTED HPOL
+        antennas_phase_vpol = {0:(-2.31968456, 1.45355277,  13.84268155),                1:( -33.72748811, -11.60742317, 9.90560093),            2:(  -8.74266512, -47.48026829, 11.51783433),           3:( -29.62824537, -42.1877183, 6.40520084)}#ADJUSTED VPOL
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
 
@@ -381,8 +381,8 @@ def loadPulserEventids():
     known_pulser_ids['run1507']['vpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1507_pulser_eventids_site_1a_bicone_vpol_16dB.csv',delimiter=',').astype(int)
 
     known_pulser_ids['run1509'] = {}
-    known_pulser_ids['run1509']['hpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1509_pulser_eventids_site_2_bicone_hpol_variabledB.csv',delimiter=',').astype(int)
-    known_pulser_ids['run1509']['vpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1509_pulser_eventids_site_2_bicone_vpol_variabledB.csv',delimiter=',').astype(int)
+    known_pulser_ids['run1509']['hpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1509_pulser_eventids_site_2_bicone_hpol_22dB.csv',delimiter=',').astype(int)
+    known_pulser_ids['run1509']['vpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1509_pulser_eventids_site_2_bicone_vpol_17dB.csv',delimiter=',').astype(int)
 
     known_pulser_ids['run1511'] = {}
     known_pulser_ids['run1511']['hpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1511_pulser_eventids_site_3_bicone_hpol_20dB.csv',delimiter=',').astype(int)

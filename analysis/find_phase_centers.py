@@ -27,7 +27,7 @@ antennas_physical = info.loadAntennaLocationsENU(deploy_index=1)[0]
 antenna_locs = numpy.array([antennas_physical[0],antennas_physical[1],antennas_physical[2],antennas_physical[3]])
 antenna_locs_3d = antenna_locs[pairs]
 
-A0Location = loadAntennaZeroLocation(deploy_index=1)#latitude,longtidue,elevation
+A0Location = info.loadAntennaZeroLocation(deploy_index=1)#latitude,longtidue,elevation
 pulser_locations = info.loadPulserLocationsENU() #ENU
 
 site1_pulser_location = pulser_locations['run1507']
@@ -91,17 +91,26 @@ c = 2.99700e8 #m/s
 
 #Measureables (6 baselines x 3 sites x 2 polarizations = 36)
 
-site1_measured_time_delays_hpol = [((0, 1), -14.224921871745725), ((0, 2), 19.876589950811745), ((0, 3), 33.40912298266971), ((1, 2), 34.019589228664664), ((1, 3), 47.57044139896039), ((2, 3), 13.48957876430875)]
-site1_measured_time_delays_errors_hpol = [((0, 1), 0.06233491795311048), ((0, 2), 0.06382554973518859), ((0, 3), 0.33814236909528766), ((1, 2), 0.10214427694663512), ((1, 3), 0.3658870823486229), ((2, 3), 0.34880895137219037)]
 
-site1_measured_time_delays_vpol = [((0, 1), -10.8811708733604), ((0, 2), 17.34400605219815), ((0, 3), 38.236602651330955), ((1, 2), 28.061713346561103), ((1, 3), 49.04098522640182), ((2, 3), 20.9601676263453)]
-site1_measured_time_delays_errors_vpol = [((0, 1), 0.11638830591906603), ((0, 2), 0.048620026672220505), ((0, 3), 0.08857784505147924), ((1, 2), 0.07591263744700386), ((1, 3), 0.06274341696668266), ((2, 3), 0.07334332990065455)]
 
-site2_measured_time_delays_hpol = [((0, 1), -13.58716769257573), ((0, 2), 19.158550981849476), ((0, 3), 30.77279240847105), ((1, 2), 32.69936857396089), ((1, 3), 44.18385816610001), ((2, 3), 11.27931686951937)]
-site2_measured_time_delays_errors_hpol = [((0, 1), 0.09531186417637323), ((0, 2), 0.12724109382433263), ((0, 3), 0.3875413892537076), ((1, 2), 0.12470147484877567), ((1, 3), 0.36688889196595226), ((2, 3), 0.34983579961273653)]
+site1_measured_time_delays_hpol = [((0, 1), -27.053132099394283), ((0, 2), 105.53573434852417), ((0, 3), 30.08809070857938), ((1, 2), 145.51448633239156), ((1, 3), 70.36538379164826), ((2, 3), -75.30671213626783)]
+site1_measured_time_delays_errors_hpol = [((0, 1), 0.049940419317735546), ((0, 2), 0.04451524800887434), ((0, 3), 0.04436462118733028), ((1, 2), 0.02611109734500819), ((1, 3), 0.029957540691833113), ((2, 3), 0.024498957055263823)]
 
-site2_measured_time_delays_vpol = [((0, 1), -9.910919892043706), ((0, 2), 17.243676724603866), ((0, 3), 38.692527821047), ((1, 2), 27.114368394000184), ((1, 3), 48.56902487092354), ((2, 3), 21.457044552683175)]
-site2_measured_time_delays_errors_vpol = [((0, 1), 0.09570601760961257), ((0, 2), 0.11429843724284253), ((0, 3), 0.10545687811227517), ((1, 2), 0.07421032869730562), ((1, 3), 0.07877429114919211), ((2, 3), 0.07282936925867901)]
+site1_measured_time_delays_vpol = [((0, 1), -38.00260225579561), ((0, 2), 101.75125074208155), ((0, 3), 42.84079069759988), ((1, 2), 139.7311771661454), ((1, 3), 80.813510732201), ((2, 3), -58.88512983235407)]
+site1_measured_time_delays_errors_vpol = [((0, 1), 0.029672793772042835), ((0, 2), 0.031483581625543926), ((0, 3), 0.035289050598712395), ((1, 2), 0.03016916157628555), ((1, 3), 0.03048344816865985), ((2, 3), 0.03221659467466419)]
+
+site2_measured_time_delays_hpol = [((0, 1), -82.1668079571178), ((0, 2), 40.52924990302058), ((0, 3), -44.79556385927719), ((1, 2), 109.76177884322139), ((1, 3), 37.43774146085787), ((2, 3), -85.16942184392973)]
+site2_measured_time_delays_errors_hpol = [((0, 1), 0.05940492985642724), ((0, 2), 0.05401962848166091), ((0, 3), 0.053629739039319266), ((1, 2), 0.04827978940049101), ((1, 3), 0.06416465723791487), ((2, 3), 0.04647844461537252)]
+
+site2_measured_time_delays_vpol = [((0, 1), -79.95072281742472), ((0, 2), 36.69241182459076), ((0, 3), -31.955840625431993), ((1, 2), 116.60680076925239), ((1, 3), 48.014757819207645), ((2, 3), -68.59702651834894)]
+site2_measured_time_delays_errors_vpol = [((0, 1), 0.04322954912532788), ((0, 2), 0.042846388825191005), ((0, 3), 0.040935002479091195), ((1, 2), 0.04706496853995274), ((1, 3), 0.03970422560921766), ((2, 3), 0.03766728653913236)]
+
+site3_measured_time_delays_hpol = [((0, 1), -81.46902043268355), ((0, 2), -130.58422457283476), ((0, 3), -177.12919403225192), ((1, 2), -49.264947052474426), ((1, 3), -82.45418396924151), ((2, 3), -33.39096291225481)]
+site3_measured_time_delays_errors_hpol = [((0, 1), 0.043725920483796865), ((0, 2), 0.054900873054177665), ((0, 3), 0.058695059566109445), ((1, 2), 0.04774585569696324), ((1, 3), 0.03522800606179125), ((2, 3), 0.05701787042277225)]
+
+site3_measured_time_delays_vpol = [((0, 1), -92.07269595912595), ((0, 2), -147.17878030502635), ((0, 3), -166.03925551194664), ((1, 2), -55.13493366555078), ((1, 3), -73.94166201041543), ((2, 3), -18.84385983782996)]
+site3_measured_time_delays_errors_vpol = [((0, 1), 0.032237057691814675), ((0, 2), 0.030132778733763417), ((0, 3), 0.03268367008475346), ((1, 2), 0.030870262323053385), ((1, 3), 0.03090586129896359), ((2, 3), 0.03267690656774697)]
+
 
 def f(ant0_x, ant0_y, ant0_z, ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z):
     '''
@@ -118,39 +127,67 @@ def f(ant0_x, ant0_y, ant0_z, ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, an
     site2_d2 = numpy.sqrt((site2_pulser_location[0] - ant2_x)**2 + (site2_pulser_location[1] - ant2_y)**2 + (site2_pulser_location[2] - ant2_z)**2 )
     site2_d3 = numpy.sqrt((site2_pulser_location[0] - ant3_x)**2 + (site2_pulser_location[1] - ant3_y)**2 + (site2_pulser_location[2] - ant3_z)**2 )
 
+    site3_d0 = numpy.sqrt((site3_pulser_location[0] - ant0_x)**2 + (site3_pulser_location[1] - ant0_y)**2 + (site3_pulser_location[2] - ant0_z)**2 )
+    site3_d1 = numpy.sqrt((site3_pulser_location[0] - ant1_x)**2 + (site3_pulser_location[1] - ant1_y)**2 + (site3_pulser_location[2] - ant1_z)**2 )
+    site3_d2 = numpy.sqrt((site3_pulser_location[0] - ant2_x)**2 + (site3_pulser_location[1] - ant2_y)**2 + (site3_pulser_location[2] - ant2_z)**2 )
+    site3_d3 = numpy.sqrt((site3_pulser_location[0] - ant3_x)**2 + (site3_pulser_location[1] - ant3_y)**2 + (site3_pulser_location[2] - ant3_z)**2 )
 
     #calculate differences in distances travelled and convert to expected time delays for known pairs.
     #Ant 0 - Ant 1
     site1_p0 = ((site1_d0 - site1_d1)/c)*1.0e9 #ns
     site2_p0 = ((site2_d0 - site2_d1)/c)*1.0e9 #ns
+    site3_p0 = ((site3_d0 - site3_d1)/c)*1.0e9 #ns
+
     #Ant 0 - Ant 2
     site1_p1 = ((site1_d0 - site1_d2)/c)*1.0e9 #ns
     site2_p1 = ((site2_d0 - site2_d2)/c)*1.0e9 #ns
+    site3_p1 = ((site3_d0 - site3_d2)/c)*1.0e9 #ns
+
     #Ant 0 - Ant 3
     site1_p2 = ((site1_d0 - site1_d3)/c)*1.0e9 #ns
     site2_p2 = ((site2_d0 - site2_d3)/c)*1.0e9 #ns
+    site3_p2 = ((site3_d0 - site3_d3)/c)*1.0e9 #ns
+
     #Ant 1 - Ant 2
     site1_p3 = ((site1_d1 - site1_d2)/c)*1.0e9 #ns
     site2_p3 = ((site2_d1 - site2_d2)/c)*1.0e9 #ns
+    site3_p3 = ((site3_d1 - site3_d2)/c)*1.0e9 #ns
+
     #Ant 1 - Ant 3
     site1_p4 = ((site1_d1 - site1_d3)/c)*1.0e9 #ns
     site2_p4 = ((site2_d1 - site2_d3)/c)*1.0e9 #ns
+    site3_p4 = ((site3_d1 - site3_d3)/c)*1.0e9 #ns
+
     #Ant 2 - Ant 3
     site1_p5 = ((site1_d2 - site1_d3)/c)*1.0e9 #ns
     site2_p5 = ((site2_d2 - site2_d3)/c)*1.0e9 #ns
+    site3_p5 = ((site3_d2 - site3_d3)/c)*1.0e9 #ns
+
     
     chi_2 =     ((site1_p0 - site1_measured_time_delays[0][1])**2)/site1_measured_time_delays_errors[0][1]**2 + \
                 ((site2_p0 - site2_measured_time_delays[0][1])**2)/site2_measured_time_delays_errors[0][1]**2 + \
+                ((site3_p0 - site3_measured_time_delays[0][1])**2)/site3_measured_time_delays_errors[0][1]**2 + \
+                \
                 ((site1_p1 - site1_measured_time_delays[1][1])**2)/site1_measured_time_delays_errors[1][1]**2 + \
                 ((site2_p1 - site2_measured_time_delays[1][1])**2)/site2_measured_time_delays_errors[1][1]**2 + \
+                ((site3_p1 - site3_measured_time_delays[1][1])**2)/site3_measured_time_delays_errors[1][1]**2 + \
+                \
                 ((site1_p2 - site1_measured_time_delays[2][1])**2)/site1_measured_time_delays_errors[2][1]**2 + \
                 ((site2_p2 - site2_measured_time_delays[2][1])**2)/site2_measured_time_delays_errors[2][1]**2 + \
+                ((site3_p2 - site3_measured_time_delays[2][1])**2)/site3_measured_time_delays_errors[2][1]**2 + \
+                \
                 ((site1_p3 - site1_measured_time_delays[3][1])**2)/site1_measured_time_delays_errors[3][1]**2 + \
                 ((site2_p3 - site2_measured_time_delays[3][1])**2)/site2_measured_time_delays_errors[3][1]**2 + \
+                ((site3_p3 - site3_measured_time_delays[3][1])**2)/site3_measured_time_delays_errors[3][1]**2 + \
+                \
                 ((site1_p4 - site1_measured_time_delays[4][1])**2)/site1_measured_time_delays_errors[4][1]**2 + \
                 ((site2_p4 - site2_measured_time_delays[4][1])**2)/site2_measured_time_delays_errors[4][1]**2 + \
+                ((site3_p4 - site3_measured_time_delays[4][1])**2)/site3_measured_time_delays_errors[4][1]**2 + \
+                \
                 ((site1_p5 - site1_measured_time_delays[5][1])**2)/site1_measured_time_delays_errors[5][1]**2 + \
-                ((site2_p5 - site2_measured_time_delays[5][1])**2)/site2_measured_time_delays_errors[5][1]**2
+                ((site2_p5 - site2_measured_time_delays[5][1])**2)/site2_measured_time_delays_errors[5][1]**2 + \
+                ((site3_p5 - site3_measured_time_delays[5][1])**2)/site3_measured_time_delays_errors[5][1]**2
+    
     return chi_2
 
 
@@ -171,16 +208,20 @@ if __name__ == '__main__':
         if mode == 'hpol':
             site1_measured_time_delays = site1_measured_time_delays_hpol
             site2_measured_time_delays = site2_measured_time_delays_hpol
+            site3_measured_time_delays = site3_measured_time_delays_hpol
 
             site1_measured_time_delays_errors = site1_measured_time_delays_errors_hpol
             site2_measured_time_delays_errors = site2_measured_time_delays_errors_hpol
+            site3_measured_time_delays_errors = site3_measured_time_delays_errors_hpol
 
         elif mode == 'vpol':
             site1_measured_time_delays = site1_measured_time_delays_vpol
             site2_measured_time_delays = site2_measured_time_delays_vpol
+            site3_measured_time_delays = site3_measured_time_delays_vpol
 
             site1_measured_time_delays_errors = site1_measured_time_delays_errors_vpol
             site2_measured_time_delays_errors = site2_measured_time_delays_errors_vpol
+            site3_measured_time_delays_errors = site3_measured_time_delays_errors_vpol
 
         initial_step = 0.1 #m
         m = Minuit(     f,\
