@@ -33,7 +33,7 @@ plt.ion()
 #The below are not ALL pulser points, but a set that has been precalculated and can be used
 #if you wish to skip the calculation finding them.
 
-known_pulser_ids = info.loadPulserEventids()
+known_pulser_ids = info.loadPulserEventids(remove_ignored=False)
 ignorable_pulser_ids = info.loadIgnorableEventids()
 
 def gaus(x,a,x0,sigma):
@@ -43,48 +43,79 @@ if __name__ == '__main__':
     #plt.close('all')
     # If your data is elsewhere, pass it as an argument
     datapath = os.environ['BEACON_DATA']
+    default_site = 1
+    
+    ignore_eventids = True
+    #Filter settings
+    final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
+    crit_freq_low_pass_MHz = None #This new pulser seems to peak in the region of 85 MHz or so
+    crit_freq_high_pass_MHz = None
+    low_pass_filter_order = None
+    high_pass_filter_order = None
+    plot_filters = True
 
-    site = 2 #1,2,3
+    #Plotting info
+    plot = True
+
+    if len(sys.argv) == 2:
+        if int(sys.argv[1]) in [1,2,3]:
+            site = int(sys.argv[1])
+        else:
+            print('Given site not in options.  Defaulting to %i'%default_site)
+            site = default_site
+    else:
+        print('No site given.  Defaulting to %i'%default_site)
+        site = default_site
+
 
     if site == 1:
+        align_method = 0 #0 = argmax, 1 = argmax of hilbert
+
+
         waveform_index_range = (1500,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
         runs = numpy.array([1507])
 
         expected_time_differences_physical  =  [((0, 1), -55.818082350306895), ((0, 2), 82.39553727998077), ((0, 3), 18.992683496782092), ((1, 2), 138.21361963028767), ((1, 3), 74.81076584708899), ((2, 3), -63.40285378319868)]
-        max_time_differences_physical       =  [((0, 1), -129.37157110284315), ((0, 2), 152.48216718324971), ((0, 3), 184.0463943150346), ((1, 2), 139.82851662731397), ((1, 3), 104.08254793314117), ((2, 3), -81.41340851163496)]
-        expected_time_differences_hpol      =  [((0, 1), -35.47177690595095), ((0, 2), 108.83202313787365), ((0, 3), 33.45791274886233), ((1, 2), 144.3038000438246), ((1, 3), 68.92968965481327), ((2, 3), -75.37411038901132)]
-        max_time_differences_hpol           =  [((0, 1), -117.57253015164835), ((0, 2), 199.79945873131018), ((0, 3), 182.9368882144855), ((1, 2), 159.96897164362179), ((1, 3), 103.43470153912793), ((2, 3), -108.04682609637669)]
-        expected_time_differences_vpol      =  [((0, 1), -37.990152954065024), ((0, 2), 101.7389687745067), ((0, 3), 42.8386244110543), ((1, 2), 139.72912172857173), ((1, 3), 80.82877736511932), ((2, 3), -58.900344363452405)]
-        max_time_differences_vpol           =  [((0, 1), -114.25548477497549), ((0, 2), 164.85913608592003), ((0, 3), 173.55926139620664), ((1, 2), 145.9655532247038), ((1, 3), 103.60943546953156), ((2, 3), -73.8872833107188)]
+        max_time_differences_physical  =  [((0, 1), -129.37157110284315), ((0, 2), 152.48216718324971), ((0, 3), 184.0463943150346), ((1, 2), 139.82851662731397), ((1, 3), 104.08254793314117), ((2, 3), -81.41340851163496)]
+        expected_time_differences_hpol  =  [((0, 1), -48.64981133952688), ((0, 2), 98.30134449320167), ((0, 3), 28.04902069144964), ((1, 2), 146.95115583272855), ((1, 3), 76.69883203097652), ((2, 3), -70.25232380175203)]
+        max_time_differences_hpol  =  [((0, 1), -126.12707694881749), ((0, 2), 161.95012224782622), ((0, 3), 175.32227710151258), ((1, 2), 152.8775395859053), ((1, 3), 115.57550659269941), ((2, 3), -83.00271992904541)]
+        expected_time_differences_vpol  =  [((0, 1), -39.7774564691897), ((0, 2), 103.04747677383648), ((0, 3), 33.348616734485404), ((1, 2), 142.82493324302618), ((1, 3), 73.1260732036751), ((2, 3), -69.69886003935108)]
+        max_time_differences_vpol  =  [((0, 1), -116.30631267571034), ((0, 2), 167.91381462435598), ((0, 3), 173.23375803172078), ((1, 2), 148.37193587533608), ((1, 3), 107.24435568878336), ((2, 3), -78.60480502528327)]
 
         antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=1)
         pulser_location = info.loadPulserLocationsENU()['run1507'] #ENU
 
 
     elif site == 2:
+        align_method = 0 #0 = argmax, 1 = argmax of hilbert 3 = argmin
+
         waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
         runs = numpy.array([1509])
-    
+
         expected_time_differences_physical  =  [((0, 1), -96.21228508039667), ((0, 2), 21.36317970746586), ((0, 3), -56.5419782996255), ((1, 2), 117.57546478786253), ((1, 3), 39.67030678077117), ((2, 3), -77.90515800709136)]
-        max_time_differences_physical       =  [((0, 1), -129.37157110284315), ((0, 2), 152.48216718324971), ((0, 3), -184.0463943150346), ((1, 2), 139.82851662731397), ((1, 3), 104.08254793314117), ((2, 3), -81.41340851163496)]
-        expected_time_differences_hpol      =  [((0, 1), -77.89425295277442), ((0, 2), 37.335590904617675), ((0, 3), -45.13016898587421), ((1, 2), 115.2298438573921), ((1, 3), 32.764083966900216), ((2, 3), -82.46575989049188)]
-        max_time_differences_hpol           =  [((0, 1), -117.57253015164835), ((0, 2), 199.79945873131018), ((0, 3), -182.9368882144855), ((1, 2), 159.96897164362179), ((1, 3), 103.43470153912793), ((2, 3), -108.04682609637669)]
-        expected_time_differences_vpol      =  [((0, 1), -79.94766634440975), ((0, 2), 36.669794086901675), ((0, 3), -31.937904190252084), ((1, 2), 116.61746043131143), ((1, 3), 48.00976215415767), ((2, 3), -68.60769827715376)]
-        max_time_differences_vpol           =  [((0, 1), -114.25548477497549), ((0, 2), 164.85913608592003), ((0, 3), -173.55926139620664), ((1, 2), 145.9655532247038), ((1, 3), 103.60943546953156), ((2, 3), -73.8872833107188)]
+        max_time_differences_physical  =  [((0, 1), -129.37157110284315), ((0, 2), 152.48216718324971), ((0, 3), -184.0463943150346), ((1, 2), 139.82851662731397), ((1, 3), 104.08254793314117), ((2, 3), -81.41340851163496)]
+        expected_time_differences_hpol  =  [((0, 1), -87.02691548238317), ((0, 2), 34.2401194012441), ((0, 3), -47.2064288815136), ((1, 2), 121.26703488362728), ((1, 3), 39.82048660086957), ((2, 3), -81.4465482827577)]
+        max_time_differences_hpol  =  [((0, 1), -126.12707694881749), ((0, 2), 161.95012224782622), ((0, 3), -175.32227710151258), ((1, 2), 152.8775395859053), ((1, 3), 115.57550659269941), ((2, 3), -83.00271992904541)]
+        expected_time_differences_vpol  =  [((0, 1), -82.68067312409039), ((0, 2), 38.11479814558243), ((0, 3), -36.25022423298833), ((1, 2), 120.79547126967282), ((1, 3), 46.43044889110206), ((2, 3), -74.36502237857076)]
+        max_time_differences_vpol  =  [((0, 1), -116.30631267571034), ((0, 2), 167.91381462435598), ((0, 3), -173.23375803172078), ((1, 2), 148.37193587533608), ((1, 3), 107.24435568878336), ((2, 3), -78.60480502528327)]
+
 
         antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=1)
         pulser_location = info.loadPulserLocationsENU()['run1509'] #ENU
 
     elif site == 3:
+        align_method = 0 #0 = argmax, 1 = argmax of hilbert
+
         waveform_index_range = (1250,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
         runs = numpy.array([1511])
 
         expected_time_differences_physical  =  [((0, 1), -103.1812449168724), ((0, 2), -142.99918760162836), ((0, 3), -183.12401361615616), ((1, 2), -39.81794268475596), ((1, 3), -79.94276869928376), ((2, 3), -40.1248260145278)]
         max_time_differences_physical  =  [((0, 1), -129.37157110284315), ((0, 2), -152.48216718324971), ((0, 3), -184.0463943150346), ((1, 2), -139.82851662731397), ((1, 3), -104.08254793314117), ((2, 3), -81.41340851163496)]
-        expected_time_differences_hpol  =  [((0, 1), -84.35806598120053), ((0, 2), -133.22678055149936), ((0, 3), -168.90310161472325), ((1, 2), -48.868714570298835), ((1, 3), -84.54503563352273), ((2, 3), -35.676321063223895)]
-        max_time_differences_hpol  =  [((0, 1), -117.57253015164835), ((0, 2), -199.79945873131018), ((0, 3), -182.9368882144855), ((1, 2), -159.96897164362179), ((1, 3), -103.43470153912793), ((2, 3), -108.04682609637669)]
-        expected_time_differences_vpol  =  [((0, 1), -92.07120804081342), ((0, 2), -147.18969061839812), ((0, 3), -166.02796586461704), ((1, 2), -55.1184825775847), ((1, 3), -73.95675782380363), ((2, 3), -18.838275246218927)]
-        max_time_differences_vpol  =  [((0, 1), -114.25548477497549), ((0, 2), -164.85913608592003), ((0, 3), -173.55926139620664), ((1, 2), -145.9655532247038), ((1, 3), -103.60943546953156), ((2, 3), -73.8872833107188)]
+        expected_time_differences_hpol  =  [((0, 1), -101.15104066991898), ((0, 2), -147.48113054454006), ((0, 3), -173.9731100821191), ((1, 2), -46.33008987462108), ((1, 3), -72.82206941220011), ((2, 3), -26.491979537579027)]
+        max_time_differences_hpol  =  [((0, 1), -126.12707694881749), ((0, 2), -161.95012224782622), ((0, 3), -175.32227710151258), ((1, 2), -152.8775395859053), ((1, 3), -115.57550659269941), ((2, 3), -83.00271992904541)]
+        expected_time_differences_vpol  =  [((0, 1), -99.18571126908932), ((0, 2), -151.7951737712349), ((0, 3), -171.08543756381596), ((1, 2), -52.60946250214556), ((1, 3), -71.89972629472663), ((2, 3), -19.290263792581072)]
+        max_time_differences_vpol  =  [((0, 1), -116.30631267571034), ((0, 2), -167.91381462435598), ((0, 3), -173.23375803172078), ((1, 2), -148.37193587533608), ((1, 3), -107.24435568878336), ((2, 3), -78.60480502528327)]
+
 
         antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=1)
         pulser_location = info.loadPulserLocationsENU()['run1511'] #ENU
@@ -115,22 +146,6 @@ if __name__ == '__main__':
             pols.append(pol_info['run%i'%run])
         except:
             continue
-    
-    ignore_eventids = True
-    #Filter settings
-    final_corr_length = 2**18 #Should be a factor of 2 for fastest performance
-    crit_freq_low_pass_MHz = None #This new pulser seems to peak in the region of 85 MHz or so
-    crit_freq_high_pass_MHz = 65
-    low_pass_filter_order = None
-    high_pass_filter_order = 6
-    plot_filters = True
-
-    
-
-    align_method = 0 #0 = argmax, 1 = argmax of hilbert
-
-    #Plotting info
-    plot = True
 
     all_hpol_delays = {} #This will store the time delay data across all runs
     all_vpol_delays = {} #This will store the time delay data across all runs
@@ -159,19 +174,14 @@ if __name__ == '__main__':
                 eventids['hpol'] = numpy.sort(known_pulser_ids['run%i'%run]['hpol'])
                 eventids['vpol'] = numpy.sort(known_pulser_ids['run%i'%run]['vpol'])
                 all_eventids = numpy.sort(numpy.append(eventids['hpol'],eventids['vpol']))
+
                 hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
                 vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
-
-                if ignore_eventids == True:
-                    if 'run%i'%run in list(ignorable_pulser_ids.keys()):
-                        eventids['hpol'] = eventids['hpol'][~numpy.isin(eventids['hpol'],ignorable_pulser_ids['run%i'%run])]
-                        eventids['vpol'] = eventids['vpol'][~numpy.isin(eventids['vpol'],ignorable_pulser_ids['run%i'%run])]
-                        all_eventids = all_eventids[~numpy.isin(all_eventids,ignorable_pulser_ids['run%i'%run])]
 
                 reader = Reader(datapath,run)
                 reader.setEntry(all_eventids[0])
                 tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filters)
-                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=align_method)
+                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=align_method,hilbert=True)
 
                 for pair_index, pair in enumerate(pairs):
                     if pair in hpol_pairs:

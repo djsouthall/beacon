@@ -19,7 +19,7 @@ sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret #Must be imported before matplotlib or else plots don't load.
 import tools.clock_correct as cc
 import tools.info as info
-from objects.fftmath import TimeDelayCalculator
+from objects.fftmath import FFTPrepper
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -35,6 +35,12 @@ if __name__ == '__main__':
     # If your data is elsewhere, pass it as an argument
     datapath = os.environ['BEACON_DATA']
     run = 1509
+    if run == 1507:
+        waveform_index_range = (1500,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
+    elif run == 1509:
+            waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
+    elif run == 1511:
+            waveform_index_range = (1250,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
 
     #Time delays greater than 50
     eventids_A = numpy.array([   2473, 2477, 2481, 2487, 2491, 2493, 2499, 2503, 2505, 2507, 2509,\
@@ -87,31 +93,42 @@ if __name__ == '__main__':
     cut_B = numpy.isin(all_eventids,eventids_B)
 
     print('Run %i'%run)
+    final_corr_length = 2**18 #Should be a factor of 2 for fastest performance
+    crit_freq_low_pass_MHz = 80 #This new pulser seems to peak in the region of 85 MHz or so
+    crit_freq_high_pass_MHz = 65
+    low_pass_filter_order = 3
+    high_pass_filter_order = 6
+    plot_filters = True
+
     reader = Reader(datapath,run)
+    prep = FFTPrepper(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters)
 
     wfs = {}
     rms = {}
-    channels = [0,4]
+    argmax = {}
+    channels = [0,2]
     for channel in channels:
-        wfs[channel] = numpy.zeros((len(all_eventids),reader.header().buffer_length))
+        wfs[channel] = numpy.zeros((len(all_eventids),prep.buffer_length))
         rms[channel] = numpy.zeros((len(all_eventids)))
+        argmax[channel] = numpy.zeros((len(all_eventids)))
 
-    t = reader.t()
+    t = prep.t()
     for event_index, eventid in enumerate(all_eventids):
         sys.stdout.write('(%i/%i)\r'%(event_index,len(all_eventids)))
         sys.stdout.flush()
-        reader.setEntry(eventid)
-        event_times = reader.t()
+        prep.setEntry(eventid)
+        event_times = prep.t()
         for channel in channels:
             channel=int(channel)
-            wfs[channel][event_index] = reader.wf(channel)
-            rms[channel][event_index] = numpy.std(reader.wf(channel))
-
-            fig = plt.figure()
-            plt.plot(t,reader.wf(channel))
-            plt.xlim(5000,5800)
-            import pdb;pdb.set_trace()
-            plt.close(fig)
+            wfs[channel][event_index] = prep.wf(channel)
+            rms[channel][event_index] = numpy.std(prep.wf(channel))
+            argmax[channel][event_index] = numpy.argmax(prep.wf(channel))
+            if False:
+                fig = plt.figure()
+                plt.plot(t,prep.wf(channel))
+                plt.xlim(5000,5800)
+                import pdb;pdb.set_trace()
+                plt.close(fig)
 
     alpha = 0.2
     split_plots = False
@@ -165,4 +182,26 @@ if __name__ == '__main__':
         plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
         plt.xlabel('rms')
         plt.ylabel('counts')
+        plt.legend()
+
+
+        plt.figure()
+        plt.subplot(2,1,1)
+        plt.scatter(eventids_A,argmax[channel][cut_A],color='r',alpha=0.5,label='td > 50 ns')
+        plt.scatter(eventids_B,argmax[channel][cut_B],color='b',alpha=0.5,label='td < 50 ns')
+        plt.minorticks_on()
+        plt.grid(b=True, which='major', color='k', linestyle='-')
+        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+        plt.xlabel('eventid')
+        plt.ylabel('argmax')
+        plt.legend()
+
+        plt.subplot(2,1,2)
+        plt.scatter(eventids_A,rms[channel][cut_A],color='r',alpha=0.5,label='td > 50 ns')
+        plt.scatter(eventids_B,rms[channel][cut_B],color='b',alpha=0.5,label='td < 50 ns')
+        plt.minorticks_on()
+        plt.grid(b=True, which='major', color='k', linestyle='-')
+        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+        plt.xlabel('eventid')
+        plt.ylabel('rms')
         plt.legend()

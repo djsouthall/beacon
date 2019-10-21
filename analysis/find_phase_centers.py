@@ -70,67 +70,99 @@ if guess_range is not None:
     ant3_physical_limits_x = (antennas_physical[3][0] - guess_range ,antennas_physical[3][0] + guess_range)
     ant3_physical_limits_y = (antennas_physical[3][1] - guess_range ,antennas_physical[3][1] + guess_range)
     ant3_physical_limits_z = (antennas_physical[3][2] - guess_range ,antennas_physical[3][2] + guess_range)
+    
+    puls1_z_limits          = (site1_pulser_location[2] - guess_range ,site1_pulser_location[2] + guess_range)
+    puls2_z_limits          = (site2_pulser_location[2] - guess_range ,site2_pulser_location[2] + guess_range)
+    puls3_z_limits          = (site3_pulser_location[2] - guess_range ,site3_pulser_location[2] + guess_range)
+
 else:
-    ant0_physical_limits_x = None
+    ant0_physical_limits_x = None 
     ant0_physical_limits_y = None
     ant0_physical_limits_z = None
 
     ant1_physical_limits_x = None
     ant1_physical_limits_y = None
-    ant1_physical_limits_z = None
+    ant1_physical_limits_z = (0.5,None)
 
     ant2_physical_limits_x = None
     ant2_physical_limits_y = None
-    ant2_physical_limits_z = None
+    ant2_physical_limits_z = (0.5,None)
 
     ant3_physical_limits_x = None
     ant3_physical_limits_y = None
-    ant3_physical_limits_z = None
+    ant3_physical_limits_z = (0.5,None)
 
-c = 2.99700e8 #m/s
+    puls1_z_limits          = (site1_pulser_location[2] - 300, site1_pulser_location[2] + 20)#(site1_pulser_location[2] - 20 ,site1_pulser_location[2] + 20)
+    puls2_z_limits          = (site2_pulser_location[2] - 300, site2_pulser_location[2] + 20)#(site1_pulser_location[2] - 20 ,site1_pulser_location[2] + 20)
+    puls3_z_limits          = (site3_pulser_location[2] - 300, site3_pulser_location[2] + 20)#(site1_pulser_location[2] - 20 ,site1_pulser_location[2] + 20)
+
+
+n = 1.0003 #Index of refraction of air
+c = 299792458/n #m/s
+
 
 #Measureables (6 baselines x 3 sites x 2 polarizations = 36)
+'''
+site1_measured_time_delays_hpol = [((0, 1), -31.50596658225331), ((0, 2), 112.29204025938702), ((0, 3), 32.248928504073355), ((1, 2), 141.11091746227595), ((1, 3), 69.13153350845035), ((2, 3), -74.99795442193404)]
+site1_measured_time_delays_errors_hpol = [((0, 1), 0.5820445560999024), ((0, 2), 0.40247139497220014), ((0, 3), 0.42569738988685707), ((1, 2), 0.39082979328625916), ((1, 3), 0.7415134220554188), ((2, 3), 0.5877255148788703)]
+
+site1_measured_time_delays_vpol = [((0, 1), -37.335566098781776), ((0, 2), 103.14898432141268), ((0, 3), 39.19824604415767), ((1, 2), 139.6802987989492), ((1, 3), 77.16843791624561), ((2, 3), -63.362824592555654)]
+site1_measured_time_delays_errors_vpol = [((0, 1), 0.45538449491888333), ((0, 2), 0.40495765028137637), ((0, 3), 0.41540945533255474), ((1, 2), 0.456427491280387), ((1, 3), 0.39227205895617356), ((2, 3), 0.4360430978356431)]
+
+#used argmin
+site2_measured_time_delays_hpol = [((0, 1), -72.57254966760061), ((0, 2), 43.731996686600134), ((0, 3), -46.33463302321706), ((1, 2), 114.85538839910733), ((1, 3), 34.70043293082059), ((2, 3), -82.85458351753215)]
+site2_measured_time_delays_errors_hpol = [((0, 1), 1.1717465180235311), ((0, 2), 0.6786179165840319), ((0, 3), 0.36293305414459476), ((1, 2), 0.3558863533818111), ((1, 3), 0.27042190659167975), ((2, 3), 0.7935424234041731)]
+
+site2_measured_time_delays_vpol = [((0, 1), -81.30840774663484), ((0, 2), 33.29805960105865), ((0, 3), -37.12525410979598), ((1, 2), 113.72069195864087), ((1, 3), 45.42737454563861), ((2, 3), -70.33621702538534)]
+site2_measured_time_delays_errors_vpol = [((0, 1), 0.6132982582319269), ((0, 2), 0.539600854639544), ((0, 3), 0.47499134267800347), ((1, 2), 0.5903966622377067), ((1, 3), 0.6131526958621443), ((2, 3), 0.5524757089532757)]
+
+site3_measured_time_delays_hpol = [((0, 1), -83.94528392503807), ((0, 2), -133.81057343891848), ((0, 3), -170.3800596579772), ((1, 2), -51.541646794480094), ((1, 3), -81.94080033449774), ((2, 3), -34.34775837342382)]
+site3_measured_time_delays_errors_hpol = [((0, 1), 1.1394211310301217), ((0, 2), 0.7388983029470965), ((0, 3), 0.4739267498989166), ((1, 2), 1.1151042745185153), ((1, 3), 0.26310842496261105), ((2, 3), 0.85338337359965)]
+
+site3_measured_time_delays_vpol = [((0, 1), -92.90894952599034), ((0, 2), -146.753746628771), ((0, 3), -168.69628317644583), ((1, 2), -54.27219772136395), ((1, 3), -75.38221290158118), ((2, 3), -21.586881578133063)]
+site3_measured_time_delays_errors_vpol = [((0, 1), 0.4098254478375821), ((0, 2), 0.38743367386411853), ((0, 3), 0.4443820434508988), ((1, 2), 0.40067940060880697), ((1, 3), 0.4256517070789963), ((2, 3), 0.4175103282819117)]
+'''
+
+site1_measured_time_delays_hpol = [((0, 1), -46.74361492556689), ((0, 2), 99.3655771932916), ((0, 3), 28.12886674113619), ((1, 2), 145.62691144105065), ((1, 3), 75.00828664661606), ((2, 3), -70.49396538776276)]
+site1_measured_time_delays_errors_hpol = [((0, 1), 1.004617619088465), ((0, 2), 0.5600890744591248), ((0, 3), 0.5654699954719372), ((1, 2), 0.6993129436497062), ((1, 3), 0.8840990755387067), ((2, 3), 0.5449783963164334)]
+
+site1_measured_time_delays_vpol = [((0, 1), -39.6501515898923), ((0, 2), 104.00705194659903), ((0, 3), 34.99880369633982), ((1, 2), 143.95645138714508), ((1, 3), 74.58377194219477), ((2, 3), -68.8109260444564)]
+site1_measured_time_delays_errors_vpol = [((0, 1), 0.5139310788454517), ((0, 2), 0.5444560732664553), ((0, 3), 0.6618302220560341), ((1, 2), 0.7273671115826105), ((1, 3), 1.4044000212141627), ((2, 3), 0.5731623616756774)]
 
 
+site2_measured_time_delays_hpol = [((0, 1), -85.6362865721698), ((0, 2), 33.35216757390571), ((0, 3), -47.247803495092114), ((1, 2), 121.68926776596173), ((1, 3), 38.089013155197364), ((2, 3), -79.77489660476738)]
+site2_measured_time_delays_errors_hpol = [((0, 1), 1.3991855251282468), ((0, 2), 2.0506323287800075), ((0, 3), 0.578684129791201), ((1, 2), 1.2607841691075659), ((1, 3), 0.9630827169040093), ((2, 3), 1.7899950766134167)]
 
-site1_measured_time_delays_hpol = [((0, 1), -27.053132099394283), ((0, 2), 105.53573434852417), ((0, 3), 30.08809070857938), ((1, 2), 145.51448633239156), ((1, 3), 70.36538379164826), ((2, 3), -75.30671213626783)]
-site1_measured_time_delays_errors_hpol = [((0, 1), 0.049940419317735546), ((0, 2), 0.04451524800887434), ((0, 3), 0.04436462118733028), ((1, 2), 0.02611109734500819), ((1, 3), 0.029957540691833113), ((2, 3), 0.024498957055263823)]
+site2_measured_time_delays_vpol = [((0, 1), -81.87169517607926), ((0, 2), 36.319617300484914), ((0, 3), -40.57365690370628), ((1, 2), 119.22949518976401), ((1, 3), 44.772064570869865), ((2, 3), -76.35524912975656)]
+site2_measured_time_delays_errors_vpol = [((0, 1), 0.4131751215838118), ((0, 2), 0.5200782620321024), ((0, 3), 1.004092788414462), ((1, 2), 0.9981381866793425), ((1, 3), 1.1949612507487604), ((2, 3), 0.7809621181636988)]
 
-site1_measured_time_delays_vpol = [((0, 1), -38.00260225579561), ((0, 2), 101.75125074208155), ((0, 3), 42.84079069759988), ((1, 2), 139.7311771661454), ((1, 3), 80.813510732201), ((2, 3), -58.88512983235407)]
-site1_measured_time_delays_errors_vpol = [((0, 1), 0.029672793772042835), ((0, 2), 0.031483581625543926), ((0, 3), 0.035289050598712395), ((1, 2), 0.03016916157628555), ((1, 3), 0.03048344816865985), ((2, 3), 0.03221659467466419)]
+site3_measured_time_delays_hpol = [((0, 1), -98.7292921127855), ((0, 2), -148.05651578297704), ((0, 3), -174.4545392939933), ((1, 2), -49.175762208847864), ((1, 3), -76.57822348706328), ((2, 3), -26.44206302397775)]
+site3_measured_time_delays_errors_hpol = [((0, 1), 1.3242371602917185), ((0, 2), 1.4917511712018567), ((0, 3), 1.2562783900243546), ((1, 2), 1.0256158780825804), ((1, 3), 1.005302612737222), ((2, 3), 1.7162891733977599)]
 
-site2_measured_time_delays_hpol = [((0, 1), -82.1668079571178), ((0, 2), 40.52924990302058), ((0, 3), -44.79556385927719), ((1, 2), 109.76177884322139), ((1, 3), 37.43774146085787), ((2, 3), -85.16942184392973)]
-site2_measured_time_delays_errors_hpol = [((0, 1), 0.05940492985642724), ((0, 2), 0.05401962848166091), ((0, 3), 0.053629739039319266), ((1, 2), 0.04827978940049101), ((1, 3), 0.06416465723791487), ((2, 3), 0.04647844461537252)]
-
-site2_measured_time_delays_vpol = [((0, 1), -79.95072281742472), ((0, 2), 36.69241182459076), ((0, 3), -31.955840625431993), ((1, 2), 116.60680076925239), ((1, 3), 48.014757819207645), ((2, 3), -68.59702651834894)]
-site2_measured_time_delays_errors_vpol = [((0, 1), 0.04322954912532788), ((0, 2), 0.042846388825191005), ((0, 3), 0.040935002479091195), ((1, 2), 0.04706496853995274), ((1, 3), 0.03970422560921766), ((2, 3), 0.03766728653913236)]
-
-site3_measured_time_delays_hpol = [((0, 1), -81.46902043268355), ((0, 2), -130.58422457283476), ((0, 3), -177.12919403225192), ((1, 2), -49.264947052474426), ((1, 3), -82.45418396924151), ((2, 3), -33.39096291225481)]
-site3_measured_time_delays_errors_hpol = [((0, 1), 0.043725920483796865), ((0, 2), 0.054900873054177665), ((0, 3), 0.058695059566109445), ((1, 2), 0.04774585569696324), ((1, 3), 0.03522800606179125), ((2, 3), 0.05701787042277225)]
-
-site3_measured_time_delays_vpol = [((0, 1), -92.07269595912595), ((0, 2), -147.17878030502635), ((0, 3), -166.03925551194664), ((1, 2), -55.13493366555078), ((1, 3), -73.94166201041543), ((2, 3), -18.84385983782996)]
-site3_measured_time_delays_errors_vpol = [((0, 1), 0.032237057691814675), ((0, 2), 0.030132778733763417), ((0, 3), 0.03268367008475346), ((1, 2), 0.030870262323053385), ((1, 3), 0.03090586129896359), ((2, 3), 0.03267690656774697)]
+site3_measured_time_delays_vpol = [((0, 1), -94.42573114632032), ((0, 2), -146.11242851886647), ((0, 3), -172.67984487643378), ((1, 2), -51.38556198060898), ((1, 3), -77.3233634764919), ((2, 3), -26.75595617693424)]
+site3_measured_time_delays_errors_vpol = [((0, 1), 0.3806854370258467), ((0, 2), 0.4789613211404254), ((0, 3), 0.817391338181048), ((1, 2), 0.6205804905412381), ((1, 3), 0.7876550285730572), ((2, 3), 0.6274695249295562)]
 
 
-def f(ant0_x, ant0_y, ant0_z, ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z):
+def f(ant0_x, ant0_y, ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, puls1_z, puls2_z, puls3_z):
     '''
     To generalize, look into from_array_func Minuit initializer.  
     '''
+    ant0_z = 0.0 #fixing this
     #Calculate distances from pulser to each antenna
-    site1_d0 = numpy.sqrt((site1_pulser_location[0] - ant0_x)**2 + (site1_pulser_location[1] - ant0_y)**2 + (site1_pulser_location[2] - ant0_z)**2 )
-    site1_d1 = numpy.sqrt((site1_pulser_location[0] - ant1_x)**2 + (site1_pulser_location[1] - ant1_y)**2 + (site1_pulser_location[2] - ant1_z)**2 )
-    site1_d2 = numpy.sqrt((site1_pulser_location[0] - ant2_x)**2 + (site1_pulser_location[1] - ant2_y)**2 + (site1_pulser_location[2] - ant2_z)**2 )
-    site1_d3 = numpy.sqrt((site1_pulser_location[0] - ant3_x)**2 + (site1_pulser_location[1] - ant3_y)**2 + (site1_pulser_location[2] - ant3_z)**2 )
+    site1_d0 = numpy.sqrt((site1_pulser_location[0] - ant0_x)**2 + (site1_pulser_location[1] - ant0_y)**2 + (puls1_z - ant0_z)**2 )
+    site1_d1 = numpy.sqrt((site1_pulser_location[0] - ant1_x)**2 + (site1_pulser_location[1] - ant1_y)**2 + (puls1_z - ant1_z)**2 )
+    site1_d2 = numpy.sqrt((site1_pulser_location[0] - ant2_x)**2 + (site1_pulser_location[1] - ant2_y)**2 + (puls1_z - ant2_z)**2 )
+    site1_d3 = numpy.sqrt((site1_pulser_location[0] - ant3_x)**2 + (site1_pulser_location[1] - ant3_y)**2 + (puls1_z - ant3_z)**2 )
 
-    site2_d0 = numpy.sqrt((site2_pulser_location[0] - ant0_x)**2 + (site2_pulser_location[1] - ant0_y)**2 + (site2_pulser_location[2] - ant0_z)**2 )
-    site2_d1 = numpy.sqrt((site2_pulser_location[0] - ant1_x)**2 + (site2_pulser_location[1] - ant1_y)**2 + (site2_pulser_location[2] - ant1_z)**2 )
-    site2_d2 = numpy.sqrt((site2_pulser_location[0] - ant2_x)**2 + (site2_pulser_location[1] - ant2_y)**2 + (site2_pulser_location[2] - ant2_z)**2 )
-    site2_d3 = numpy.sqrt((site2_pulser_location[0] - ant3_x)**2 + (site2_pulser_location[1] - ant3_y)**2 + (site2_pulser_location[2] - ant3_z)**2 )
+    site2_d0 = numpy.sqrt((site2_pulser_location[0] - ant0_x)**2 + (site2_pulser_location[1] - ant0_y)**2 + (puls2_z - ant0_z)**2 )
+    site2_d1 = numpy.sqrt((site2_pulser_location[0] - ant1_x)**2 + (site2_pulser_location[1] - ant1_y)**2 + (puls2_z - ant1_z)**2 )
+    site2_d2 = numpy.sqrt((site2_pulser_location[0] - ant2_x)**2 + (site2_pulser_location[1] - ant2_y)**2 + (puls2_z - ant2_z)**2 )
+    site2_d3 = numpy.sqrt((site2_pulser_location[0] - ant3_x)**2 + (site2_pulser_location[1] - ant3_y)**2 + (puls2_z - ant3_z)**2 )
 
-    site3_d0 = numpy.sqrt((site3_pulser_location[0] - ant0_x)**2 + (site3_pulser_location[1] - ant0_y)**2 + (site3_pulser_location[2] - ant0_z)**2 )
-    site3_d1 = numpy.sqrt((site3_pulser_location[0] - ant1_x)**2 + (site3_pulser_location[1] - ant1_y)**2 + (site3_pulser_location[2] - ant1_z)**2 )
-    site3_d2 = numpy.sqrt((site3_pulser_location[0] - ant2_x)**2 + (site3_pulser_location[1] - ant2_y)**2 + (site3_pulser_location[2] - ant2_z)**2 )
-    site3_d3 = numpy.sqrt((site3_pulser_location[0] - ant3_x)**2 + (site3_pulser_location[1] - ant3_y)**2 + (site3_pulser_location[2] - ant3_z)**2 )
+    site3_d0 = numpy.sqrt((site3_pulser_location[0] - ant0_x)**2 + (site3_pulser_location[1] - ant0_y)**2 + (puls3_z - ant0_z)**2 )
+    site3_d1 = numpy.sqrt((site3_pulser_location[0] - ant1_x)**2 + (site3_pulser_location[1] - ant1_y)**2 + (puls3_z - ant1_z)**2 )
+    site3_d2 = numpy.sqrt((site3_pulser_location[0] - ant2_x)**2 + (site3_pulser_location[1] - ant2_y)**2 + (puls3_z - ant2_z)**2 )
+    site3_d3 = numpy.sqrt((site3_pulser_location[0] - ant3_x)**2 + (site3_pulser_location[1] - ant3_y)**2 + (puls3_z - ant3_z)**2 )
 
     #calculate differences in distances travelled and convert to expected time delays for known pairs.
     #Ant 0 - Ant 1
@@ -224,10 +256,10 @@ if __name__ == '__main__':
             site3_measured_time_delays_errors = site3_measured_time_delays_errors_vpol
 
         initial_step = 0.1 #m
+
         m = Minuit(     f,\
                         ant0_x=ant0_physical_x,\
                         ant0_y=ant0_physical_y,\
-                        ant0_z=ant0_physical_z,\
                         ant1_x=ant1_physical_x,\
                         ant1_y=ant1_physical_y,\
                         ant1_z=ant1_physical_z,\
@@ -237,9 +269,11 @@ if __name__ == '__main__':
                         ant3_x=ant3_physical_x,\
                         ant3_y=ant3_physical_y,\
                         ant3_z=ant3_physical_z,\
+                        puls1_z=site1_pulser_location[2],\
+                        puls2_z=site2_pulser_location[2],\
+                        puls3_z=site3_pulser_location[2],\
                         error_ant0_x=initial_step,\
                         error_ant0_y=initial_step,\
-                        error_ant0_z=initial_step,\
                         error_ant1_x=initial_step,\
                         error_ant1_y=initial_step,\
                         error_ant1_z=initial_step,\
@@ -249,10 +283,12 @@ if __name__ == '__main__':
                         error_ant3_x=initial_step,\
                         error_ant3_y=initial_step,\
                         error_ant3_z=initial_step,\
+                        error_puls1_z=initial_step*5,\
+                        error_puls2_z=initial_step*5,\
+                        error_puls3_z=initial_step*5,\
                         errordef = 1.0,\
                         limit_ant0_x=ant0_physical_limits_x,\
                         limit_ant0_y=ant0_physical_limits_y,\
-                        limit_ant0_z=ant0_physical_limits_z,\
                         limit_ant1_x=ant1_physical_limits_x,\
                         limit_ant1_y=ant1_physical_limits_y,\
                         limit_ant1_z=ant1_physical_limits_z,\
@@ -261,7 +297,10 @@ if __name__ == '__main__':
                         limit_ant2_z=ant2_physical_limits_z,\
                         limit_ant3_x=ant3_physical_limits_x,\
                         limit_ant3_y=ant3_physical_limits_y,\
-                        limit_ant3_z=ant3_physical_limits_z)
+                        limit_ant3_z=ant3_physical_limits_z,\
+                        limit_puls1_z=puls1_z_limits,\
+                        limit_puls2_z=puls2_z_limits,\
+                        limit_puls3_z=puls3_z_limits)
         result = m.migrad()
         m.hesse()
         m.minos()
@@ -271,7 +310,7 @@ if __name__ == '__main__':
         #12 variables
         ant0_phase_x = m.values['ant0_x']
         ant0_phase_y = m.values['ant0_y']
-        ant0_phase_z = m.values['ant0_z']
+        ant0_phase_z = 0#m.values['ant0_z']
 
         ant1_phase_x = m.values['ant1_x']
         ant1_phase_y = m.values['ant1_y']
@@ -285,6 +324,11 @@ if __name__ == '__main__':
         ant3_phase_y = m.values['ant3_y']
         ant3_phase_z = m.values['ant3_z']
 
+        puls1_phase_z = m.values['puls1_z']
+        puls2_phase_z = m.values['puls2_z']
+        puls3_phase_z = m.values['puls3_z']
+        pulser_phase_locs = numpy.array([puls1_phase_z, puls2_phase_z, puls3_phase_z])
+        pulser_physical_locs = numpy.array([site1_pulser_location[2], site2_pulser_location[2], site3_pulser_location[2]])
         phase_locs = numpy.array([[ant0_phase_x,ant0_phase_y,ant0_phase_z],[ant1_phase_x,ant1_phase_y,ant1_phase_z],[ant2_phase_x,ant2_phase_y,ant2_phase_z],[ant3_phase_x,ant3_phase_y,ant3_phase_z]])
 
         print('Antenna Locations: \n%s'%str(antenna_locs))
@@ -292,7 +336,11 @@ if __name__ == '__main__':
 
         print('\nDifference (antenna_locs - phase_locs): \n%s'%str(antenna_locs - phase_locs))
 
-
+        print('New z values for pulsers:')
+        print(pulser_phase_locs)
+        print('Physical z values for pulsers:')
+        print(pulser_physical_locs)
+        info.plotStationAndPulsers() 
 
 
 

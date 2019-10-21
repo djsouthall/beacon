@@ -115,11 +115,25 @@ class FFTPrepper:
             print(exc_type, fname, exc_tb.tb_lineno)
 
    
-    def wf(self,channel):
+    def wf(self,channel,hilbert=False):
         '''
         This loads a wf but only the section that is selected by the start and end indices specified.
         '''
-        return self.reader.wf(channel)[self.start_waveform_index:self.end_waveform_index+1]
+        
+        if hilbert == True:
+            wf = numpy.abs(scipy.signal.hilbert(self.reader.wf(channel)[self.start_waveform_index:self.end_waveform_index+1]))
+        else:
+            wf = self.reader.wf(channel)[self.start_waveform_index:self.end_waveform_index+1]
+        return wf
+
+    def t(self):
+        '''
+        This loads a wf but only the section that is selected by the start and end indices specified.
+        '''
+        return self.reader.t()[self.start_waveform_index:self.end_waveform_index+1]
+
+    def setEntry(self, entry):
+        self.reader.setEntry(entry)
 
     def prepForFFTs(self,plot=False):
         '''
@@ -213,7 +227,7 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def loadFilteredFFTs(self, eventid, load_upsampled_waveforms=False):
+    def loadFilteredFFTs(self, eventid, load_upsampled_waveforms=False,hilbert=False):
         '''
         Loads the waveforms and applies filters.  These are filtered FFTs with lengths
         for the cross correlation. 
@@ -227,7 +241,7 @@ class FFTPrepper:
         if load_upsampled_waveforms:
             upsampled_waveforms = numpy.zeros((8,self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
         for channel in range(8):
-            temp_raw_wf = self.wf(channel)
+            temp_raw_wf = self.wf(channel,hilbert=hilbert)
             raw_wfs_corr[channel][0:self.buffer_length] = temp_raw_wf - numpy.mean(temp_raw_wf) #Subtracting dc offset so cross corrs behave well
             if load_upsampled_waveforms:
                 upsampled_waveforms[channel] = numpy.fft.irfft(numpy.multiply(self.filter_padded_to_power2,numpy.fft.rfft(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)])),n=self.final_corr_length//2) * ((self.final_corr_length//2)/len(self.waveform_times_padded_to_power2))
@@ -241,7 +255,7 @@ class FFTPrepper:
         else:
             return waveform_ffts_filtered_corr
 
-    def loadFilteredFFTsWithWaveforms(self,eventid):
+    def loadFilteredFFTsWithWaveforms(self,eventid,hilbert=False):
         '''
         Loads the waveforms and applies filters.  These are filtered FFTs with lengths
         for the cross correlation.  These should share dt with self.dt_ns_upsampled (same as
@@ -252,7 +266,7 @@ class FFTPrepper:
         raw_wfs_corr = numpy.zeros((8,len(self.waveform_times_corr))) #upsampled to nearest power of 2 then by 2 for correlation.
         upsampled_waveforms = numpy.zeros((8,self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
         for channel in range(8):
-            raw_wfs_corr[channel][0:self.buffer_length] = self.wf(channel)
+            raw_wfs_corr[channel][0:self.buffer_length] = self.wf(channel,hilbert=hilbert)
             upsampled_waveforms[channel] = numpy.fft.irfft(numpy.multiply(self.filter_padded_to_power2,numpy.fft.rfft(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)])),n=self.final_corr_length//2) * ((self.final_corr_length//2)/len(self.waveform_times_padded_to_power2))
 
         ffts_corr = numpy.fft.rfft(raw_wfs_corr,axis=1) #Now upsampled
@@ -260,7 +274,7 @@ class FFTPrepper:
 
         return waveform_ffts_filtered_corr, upsampled_waveforms
 
-    def loadFilteredWaveformsMultiple(self,eventids):
+    def loadFilteredWaveformsMultiple(self,eventids,hilbert=False):
         '''
         Hacky way to get multiple upsampled waveforms.  Helpful for initial passes at getting a template.
         '''
@@ -270,7 +284,7 @@ class FFTPrepper:
                 upsampled_waveforms['ch%i'%channel] = numpy.zeros((len(eventids),self.final_corr_length//2))
 
             for index, eventid in enumerate(eventids):
-                wfs = self.loadFilteredFFTsWithWaveforms(eventid)[1]
+                wfs = self.loadFilteredFFTsWithWaveforms(eventid,hilbert=hilbert)[1]
                 for channel in range(8):
                     upsampled_waveforms['ch%i'%channel][index] = wfs[channel]
 
@@ -307,16 +321,19 @@ class TimeDelayCalculator(FFTPrepper):
     --------
     examples.beacon_data_reader.reader
     '''
-    def calculateTimeDelays(self,eventid,align_method=0):
+    def calculateTimeDelays(self,eventid,align_method=0,hilbert=False):
         '''
         Align method can be one of a few:
         0: argmax of corrs (default)
         1: argmax of hilbert of corrs
+        2: Average of argmin and argmax
+        3: argmin of corrs
+        4: Pick the largest max peak preceding the max of the hilbert of corrs 
 
         'max_corrs' corresponds to the value of the selected methods peak. 
         '''
         try:
-            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True)
+            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert)
 
             corrs_fft = numpy.multiply((ffts[self.pairs[:,0]].T/numpy.std(ffts[self.pairs[:,0]],axis=1)).T,(numpy.conj(ffts[self.pairs[:,1]]).T/numpy.std(numpy.conj(ffts[self.pairs[:,1]]),axis=1)).T) / (len(self.waveform_times_corr)//2 + 1)
             corrs = numpy.fft.fftshift(numpy.fft.irfft(corrs_fft,axis=1,n=self.final_corr_length),axes=1) * (self.final_corr_length//2) #Upsampling and keeping scale
@@ -330,8 +347,47 @@ class TimeDelayCalculator(FFTPrepper):
                 indices = numpy.argmax(corr_hilbert,axis=1)
                 max_corrs = numpy.max(corr_hilbert,axis=1)
             elif align_method == 2:
-                indices = numpy.mean(numpy.vstack(numpy.argmax(corrs,axis=1), numpy.argmin(corrs,axis=1)),axis=1).astype(int)
+                indices = numpy.mean(numpy.vstack((numpy.argmax(corrs,axis=1), numpy.argmin(corrs,axis=1))),axis=0).astype(int)
                 max_corrs = numpy.max(corrs,axis=1)
+            elif align_method == 3:
+                indices = numpy.argmin(corrs,axis=1)
+                max_corrs = numpy.min(corrs,axis=1)
+            elif align_method == 4:
+                corr_hilbert = numpy.abs(scipy.signal.hilbert(corrs,axis=1))
+                max_indices = numpy.argmax(corr_hilbert,axis=1)
+                indices = numpy.zeros_like(max_indices)
+                max_corrs = numpy.zeros(len(max_indices))
+                for i, c in enumerate(corr_hilbert):
+                    indices[i] = numpy.argmax(c[0:max_indices[i]])
+                    max_corrs[i] = numpy.max(c[0:max_indices[i]])
+            elif align_method == 5:
+                threshold = 0.95*numpy.max(corrs,axis=1)#numpy.tile(0.9*numpy.max(corrs,axis=1),(numpy.shape(corrs)[1],1)).T
+                indices = numpy.zeros(numpy.shape(corrs)[0],dtype=int)
+                max_corrs = numpy.zeros(numpy.shape(corrs)[0])
+                for i, corr in enumerate(corrs):
+                    indices[i] = numpy.average(numpy.where(corr > threshold[i])[0],weights=corr[corr > threshold[i]]).astype(int)
+                    max_corrs[i] = numpy.max(corr[indices[i]])
+            elif align_method == 6:
+                corr_hilbert = numpy.abs(scipy.signal.hilbert(corrs,axis=1))
+                threshold = 0.98*numpy.max(corr_hilbert,axis=1)#numpy.tile(0.9*numpy.max(corrs,axis=1),(numpy.shape(corrs)[1],1)).T
+                indices = numpy.zeros(numpy.shape(corr_hilbert)[0],dtype=int)
+                max_corrs = numpy.zeros(numpy.shape(corr_hilbert)[0])
+                for i, corr in enumerate(corr_hilbert):
+                    indices[i] = numpy.average(numpy.where(corr > threshold[i])[0],weights=corr[corr > threshold[i]]).astype(int)
+                    max_corrs[i] = numpy.max(corr[indices[i]])
+            elif align_method == 7:
+                abs_corrs = numpy.fabs(corrs)
+                initial_indices = numpy.argmax(abs_corrs,axis=1)
+                #import pdb; pdb.set_trace()
+
+                indices = numpy.zeros(numpy.shape(corrs)[0],dtype=int)
+                max_corrs = numpy.zeros(numpy.shape(corrs)[0])
+                for i,index in enumerate(initial_indices):
+                    if corrs[i][index] > 0:
+                        indices[i] = index
+                    else:
+                        indices[i] = numpy.argmax(corrs[i][0:index]) #Choose highest peak before max.  
+                    max_corrs[i] = corrs[i][indices[i]]
 
 
             if False:
@@ -350,7 +406,10 @@ class TimeDelayCalculator(FFTPrepper):
                             plt.plot(self.corr_time_shifts,wf,label=str(channel))
                         plt.legend()
                     except:
-                        pass
+                        corr_hilbert = numpy.abs(scipy.signal.hilbert(corrs,axis=1))
+                        for channel, wf in enumerate(corr_hilbert):
+                            plt.plot(self.corr_time_shifts,wf,label=str(channel))
+                        plt.legend()
                     import pdb; pdb.set_trace()
             return self.corr_time_shifts[indices], max_corrs, self.pairs
         except Exception as e:
@@ -360,7 +419,7 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateMultipleTimeDelays(self,eventids, align_method=None):
+    def calculateMultipleTimeDelays(self,eventids, align_method=None,hilbert=False):
         try:
             if ~numpy.all(eventids == numpy.sort(eventids)):
                 print('eventids NOT SORTED, WOULD BE FASTER IF SORTED.')
@@ -371,9 +430,9 @@ class TimeDelayCalculator(FFTPrepper):
                 sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
                 sys.stdout.flush()
                 if align_method is None:
-                    time_shift, corr_value, pairs = self.calculateTimeDelays(eventid) #Using default of the other function
+                    time_shift, corr_value, pairs = self.calculateTimeDelays(eventid,hilbert=hilbert) #Using default of the other function
                 else:
-                    time_shift, corr_value, pairs = self.calculateTimeDelays(eventid,align_method=align_method)
+                    time_shift, corr_value, pairs = self.calculateTimeDelays(eventid,align_method=align_method,hilbert=hilbert)
                 timeshifts.append(time_shift)
                 corrs.append(corr_value)
             sys.stdout.write('\n')
