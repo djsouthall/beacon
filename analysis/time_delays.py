@@ -45,14 +45,17 @@ if __name__ == '__main__':
     datapath = os.environ['BEACON_DATA']
     default_site = 1
     
-    ignore_eventids = True
     #Filter settings
-    final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
-    crit_freq_low_pass_MHz = None #This new pulser seems to peak in the region of 85 MHz or so
-    crit_freq_high_pass_MHz = None
-    low_pass_filter_order = None
-    high_pass_filter_order = None
+    final_corr_length = 2**16 #Should be a factor of 2 for fastest performance
+    crit_freq_low_pass_MHz = 70 #This new pulser seems to peak in the region of 85 MHz or so
+    crit_freq_high_pass_MHz = 65
+    low_pass_filter_order = 8
+    high_pass_filter_order = 4
     plot_filters = True
+
+    hilbert = False #Apply hilbert envelope to wf before correlating
+    align_method = 0
+    
 
     #Plotting info
     plot = True
@@ -69,9 +72,6 @@ if __name__ == '__main__':
 
 
     if site == 1:
-        align_method = 0 #0 = argmax, 1 = argmax of hilbert
-
-
         waveform_index_range = (1500,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
         runs = numpy.array([1507])
 
@@ -87,8 +87,6 @@ if __name__ == '__main__':
 
 
     elif site == 2:
-        align_method = 0 #0 = argmax, 1 = argmax of hilbert 3 = argmin
-
         waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
         runs = numpy.array([1509])
 
@@ -104,8 +102,6 @@ if __name__ == '__main__':
         pulser_location = info.loadPulserLocationsENU()['run1509'] #ENU
 
     elif site == 3:
-        align_method = 0 #0 = argmax, 1 = argmax of hilbert
-
         waveform_index_range = (1250,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
         runs = numpy.array([1511])
 
@@ -181,7 +177,7 @@ if __name__ == '__main__':
                 reader = Reader(datapath,run)
                 reader.setEntry(all_eventids[0])
                 tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filters)
-                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=align_method,hilbert=True)
+                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=align_method,hilbert=hilbert,plot=True,hpol_cut=hpol_eventids_cut,vpol_cut=vpol_eventids_cut)
 
                 for pair_index, pair in enumerate(pairs):
                     if pair in hpol_pairs:
@@ -252,9 +248,9 @@ if __name__ == '__main__':
 
                 plt.xlabel('HPol Delay (ns)',fontsize=16)
                 plt.ylabel('Counts',fontsize=16)
-                plt.axvline(expected_time_difference_hpol,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference_hpol)
+                #plt.axvline(expected_time_difference_hpol,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference_hpol)
                 #plt.axvline(-expected_time_difference_hpol,c='r',linestyle='--')
-                plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
+                #plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
                 #plt.axvline(-max_time_difference,c='g',linestyle='--')
 
                 plt.axvline(best_delay_hpol,c='c',linestyle='--',label='Peak Bin Value = %f'%best_delay_hpol)
@@ -302,9 +298,9 @@ if __name__ == '__main__':
 
                 plt.xlabel('VPol Delay (ns)',fontsize=16)
                 plt.ylabel('Counts',fontsize=16)
-                plt.axvline(expected_time_difference_vpol,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference_vpol)
+                #plt.axvline(expected_time_difference_vpol,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference_vpol)
                 #plt.axvline(-expected_time_difference_vpol,c='r',linestyle='--')
-                plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
+                #plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
                 #plt.axvline(-max_time_difference,c='g',linestyle='--')
                 plt.axvline(best_delay_vpol,c='c',linestyle='--',label='Peak Bin Value = %f'%best_delay_vpol)
 

@@ -17,6 +17,8 @@ import sys
 import os
 import numpy
 import pymap3d as pm
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
 default_deploy = 1 #The deployment time to use as the default.
 
 def pulserRuns():
@@ -63,8 +65,8 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
         for key, location in antennas_physical_latlon.items():
             antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
 
-        antennas_phase_hpol = {0:(-6.01123726e-03, 7.37550549e-01, 2.88085760e+01) ,    1:(-3.14956097e+01, -1.13580771e+01, 1.86247154e+01),   2:(-1.06269887e+01, -4.66708351e+01, -6.19488049e+00),  3:(-3.20510558e+01, -4.23385866e+01, 1.76967745e+01)}#ADJUSTED HPOL
-        antennas_phase_vpol = {0:(-2.31968456, 1.45355277,  13.84268155),                1:( -33.72748811, -11.60742317, 9.90560093),            2:(  -8.74266512, -47.48026829, 11.51783433),           3:( -29.62824537, -42.1877183, 6.40520084)}#ADJUSTED VPOL
+        antennas_phase_hpol = {0:( -0.83957235,   0.39939848,   0.        ) ,    1:(-31.17877291, -12.61132886,  18.41508693),   2:( -7.21608884, -47.69952054,   1.27324944),  3:(-31.48346842, -42.28009668,   0.54161529)}#ADJUSTED HPOL
+        antennas_phase_vpol = {0:( -1.66766133,   2.47979807,   0.),     1:(-33.44499822, -11.67019343,   2.23364787),     2:( -7.01258413, -47.35628013,   4.50321678),   3:(-26.81118876, -40.33680987,  15.16694328)}#ADJUSTED VPOL
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
 
@@ -218,7 +220,7 @@ def loadPulserLocations():
 
     return pulser_locations    
 
-def loadPulserLocationsENU():
+def loadPulserLocationsENU(replace_z=None):
     '''
     Loads the latitude,longtidue,elevation locations of the antennas.
     See loadPulserLocationsENU for these locations converted to
@@ -229,10 +231,46 @@ def loadPulserLocationsENU():
     pulser_locations_ENU = {}
     pulser_locations = loadPulserLocations()
 
+    hpol_ENU_z = numpy.array([ -65.78325898, -247.0147524,  -229.94943484]) #site 1, site 2, site 3
+    vpol_ENU_z = numpy.array([ -85.27473717, -225.47197368, -117.68244619])
+
+
     origin = loadAntennaZeroLocation()
     for key, location in pulser_locations.items():
         pulser_locations_ENU[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
     return pulser_locations_ENU
+
+def plotStationAndPulsers(plot_phase=False):
+    '''
+    Currently only intended to plot the most recent station with the three pulsers that we used for it.
+    '''
+    antennas_physical, antennas_phase_hpol, antennas_phase_vpol = loadAntennaLocationsENU(deploy_index=1)
+
+    fig = plt.figure()
+    fig.canvas.set_window_title('Antenna Locations')
+    ax = fig.add_subplot(111, projection='3d')
+
+    for i, a in antennas_physical.items():
+        ax.scatter(a[0], a[1], a[2], marker='o',label='Physical %i'%i)
+
+    if plot_phase == True:
+        for i, a in antennas_phase_hpol.items():
+            ax.scatter(a[0], a[1], a[2], marker='o',label='Hpol Phase Center %i'%i)
+
+        for i, a in antennas_phase_vpol.items():
+            ax.scatter(a[0], a[1], a[2], marker='o',label='Vpol Phase Center %i'%i)
+
+    pulser_locations = loadPulserLocationsENU()
+
+
+    for site, key in enumerate(['run1507','run1509','run1511']):
+        site += 1
+        ax.scatter(pulser_locations[key][0], pulser_locations[key][1], pulser_locations[key][2], marker='o',label='Pulser Site %i'%site)
+
+    ax.set_xlabel('E (m)')
+    ax.set_ylabel('N (m)')
+    ax.set_zlabel('Relative Elevation (m)')
+    plt.legend()
 
 
 
@@ -258,7 +296,50 @@ def loadClockRates():
     clock_rates['default'] = numpy.mean([v for key,v in clock_rates.items()])
     return clock_rates
 
-def loadPulserEventids():
+
+def loadIgnorableEventids():
+    '''
+    This function loads dictionaries containing eventids that one may want to ignore.
+
+    For instance eventids that are known pulser event ids but ones you want to ignore
+    when making a template. 
+    '''
+
+    ignore_eventids = {}
+    ignore_eventids['run793'] = numpy.array([ 96607,  96657,  96820,  96875,  98125,  98588,  99208, 100531,\
+                           101328, 101470, 101616, 101640, 101667, 102159, 102326, 102625,\
+                           103235, 103646, 103842, 103895, 103977, 104118, 104545, 105226,\
+                           105695, 105999, 106227, 106476, 106622, 106754, 106786, 106813,\
+                           106845, 107022, 107814, 108162, 110074, 110534, 110858, 111098,\
+                           111197, 111311, 111542, 111902, 111941, 112675, 112713, 112864,\
+                           112887, 113062, 113194, 113392, 113476, 113957, 114069, 114084,\
+                           114295, 114719, 114738, 114755, 114942, 115055, 115413, 115442,\
+                           115465, 115491, 115612, 116065])
+    #For some reason there is a shift in arrival times that makes these different than later events?
+    ignore_eventids['run1509'] = numpy.array([  2473, 2475, 2477, 2479, 2481, 2483, 2485, 2487, 2489, 2491, 2493,\
+                                               2495, 2497, 2499, 2501, 2503, 2505, 2507, 2509, 2511, 2513, 2515,\
+                                               2517, 2519, 2521, 2523, 2525, 2527, 2529, 2531, 2533, 2535, 2537,\
+                                               2539, 2541, 2543, 2545, 2547, 2549, 2551, 2553, 2555, 2557, 2559,\
+                                               2561, 2563, 2565, 2567, 2569, 2571, 2573, 2575, 2577, 2579, 2581,\
+                                               2583, 2585, 2587, 2589, 2591, 2593, 2595, 2597, 2599, 2601, 2603,\
+                                               2605, 2607, 2609, 2611, 2613, 2615, 2617, 2619, 2621, 2623, 2625,\
+                                               2627, 2629, 2631, 2633, 2635, 2637, 2639, 2641, 2643, 2645, 2647,\
+                                               2649, 2651, 2653, 2655, 2657, 2659, 2661, 2663, 2665, 2667, 2669,\
+                                               2671, 2673, 2675, 2677, 2679, 2681, 2683, 2685, 2687, 2689, 2691,\
+                                               2693, 2695, 2697, 2699, 2701, 2703, 2705, 2707, 2709, 2711, 2713,\
+                                               2715, 2717, 2719, 2721, 2723, 2725, 2727, 2729, 2731, 2733, 2735,\
+                                               2737, 2739, 2741, 2743, 2745, 2747, 2749, 2751, 2753, 2755, 2757,\
+                                               2759, 2761, 2763, 2765, 2767, 2769, 2771, 2773, 2775, 2777, 2779,\
+                                               2781, 2783, 2785, 2787, 2789, 2791, 2793, 2795, 2797, 2799, 2801,\
+                                               2803, 2805, 2807, 2809, 2811, 2813, 2815, 2817, 2819, 2821, 2823,\
+                                               2825, 2827, 2829, 2831, 2833, 2835, 2837, 2839, 2841, 2843, 2845,\
+                                               2847, 2849, 2851, 2853, 2855, 2857, 2859])
+    ignore_eventids['run1507'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1507_pulser_ignoreids.csv',delimiter=',').astype(int)
+    ignore_eventids['run1509'] = numpy.sort(numpy.append(ignore_eventids['run1509'],numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1509_pulser_ignoreids.csv',delimiter=',').astype(int)))
+    ignore_eventids['run1511'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1511_pulser_ignoreids.csv',delimiter=',').astype(int)
+    return ignore_eventids
+
+def loadPulserEventids(remove_ignored=False):
     '''
     Loads a dictionary containing the known eventids for pulsers.
 
@@ -388,27 +469,18 @@ def loadPulserEventids():
     known_pulser_ids['run1511']['hpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1511_pulser_eventids_site_3_bicone_hpol_20dB.csv',delimiter=',').astype(int)
     known_pulser_ids['run1511']['vpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1511_pulser_eventids_site_3_bicone_vpol_20dB.csv',delimiter=',').astype(int)
 
+    if remove_ignored == True:
+        ignore_events = loadIgnorableEventids()
+        for key in numpy.array(list(known_pulser_ids.keys()))[numpy.isin(numpy.array(list(known_pulser_ids.keys())),numpy.array(list(ignore_events.keys())))]:
+            if type(known_pulser_ids[key]) is dict:
+                for kkey,val in known_pulser_ids[key].items():
+                    known_pulser_ids[key][kkey] = known_pulser_ids[key][kkey][~numpy.isin(known_pulser_ids[key][kkey],ignore_events[key])]
+            else:
+                known_pulser_ids[key] = known_pulser_ids[key][~numpy.isin(known_pulser_ids[key],ignore_events[key])]
+    #import pdb; pdb.set_trace()
     return known_pulser_ids
 
-def loadIgnorableEventids():
-    '''
-    This function loads dictionaries containing eventids that one may want to ignore.
 
-    For instance eventids that are known pulser event ids but ones you want to ignore
-    when making a template. 
-    '''
-
-    ignore_eventids = {}
-    ignore_eventids['run793'] = numpy.array([ 96607,  96657,  96820,  96875,  98125,  98588,  99208, 100531,\
-                           101328, 101470, 101616, 101640, 101667, 102159, 102326, 102625,\
-                           103235, 103646, 103842, 103895, 103977, 104118, 104545, 105226,\
-                           105695, 105999, 106227, 106476, 106622, 106754, 106786, 106813,\
-                           106845, 107022, 107814, 108162, 110074, 110534, 110858, 111098,\
-                           111197, 111311, 111542, 111902, 111941, 112675, 112713, 112864,\
-                           112887, 113062, 113194, 113392, 113476, 113957, 114069, 114084,\
-                           114295, 114719, 114738, 114755, 114942, 115055, 115413, 115442,\
-                           115465, 115491, 115612, 116065])
-    return ignore_eventids
 
 '''
 MAKE AN EXPECTED PULSER TIME DELAY FUNCTION

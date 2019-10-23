@@ -114,23 +114,43 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-   
-    def wf(self,channel,hilbert=False):
+    def rfftWrapper(self, waveform_times, *args, **kwargs):
+        '''
+        This basically just does an rfft but also converts linear to dB like units. 
+        '''
+        spec = numpy.fft.rfft(*args, **kwargs)
+        real_power_multiplier = 2.0*numpy.ones_like(spec) #The factor of 2 because rfft lost half of the power except for dc and Nyquist bins (handled below).
+        if len(numpy.shape(spec)) != 1:
+            real_power_multiplier[:,[0,-1]] = 1.0
+        else:
+            real_power_multiplier[[0,-1]] = 1.0
+        spec_dbish = 10.0*numpy.log10( real_power_multiplier*spec * numpy.conj(spec) / len(waveform_times)) #10 because doing power in log.  Dividing by N to match monutau. 
+        freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
+        return freqs, spec_dbish, spec
+
+    def wf(self,channel,apply_filter=False,hilbert=False):
         '''
         This loads a wf but only the section that is selected by the start and end indices specified.
+
         '''
-        
-        if hilbert == True:
-            wf = numpy.abs(scipy.signal.hilbert(self.reader.wf(channel)[self.start_waveform_index:self.end_waveform_index+1]))
+        temp_wf = self.reader.wf(channel)[self.start_waveform_index:self.end_waveform_index+1]
+        if apply_filter == True:
+            wf = numpy.fft.irfft(numpy.multiply(self.filter_original,numpy.fft.rfft(temp_wf)),n=self.buffer_length) #Might need additional normalization
         else:
-            wf = self.reader.wf(channel)[self.start_waveform_index:self.end_waveform_index+1]
+            wf = temp_wf
+
+        if hilbert == True:
+            wf = numpy.abs(scipy.signal.hilbert(wf))
+
         return wf
 
     def t(self):
         '''
-        This loads a wf but only the section that is selected by the start and end indices specified.
+        This loads a times but only the section that is selected by the start and end indices specified.
+
+        This will also roll the starting point to zero. 
         '''
-        return self.reader.t()[self.start_waveform_index:self.end_waveform_index+1]
+        return self.reader.t()[self.start_waveform_index:self.end_waveform_index+1] - self.reader.t()[self.start_waveform_index]
 
     def setEntry(self, entry):
         self.reader.setEntry(entry)
@@ -145,7 +165,7 @@ class FFTPrepper:
             self.reader.setEntry(self.eventid)
 
             #Below are for the original times of the waveforms and correspond frequencies.
-            self.waveform_times_original = self.reader.t()
+            self.waveform_times_original = self.t()
             self.dt_ns_original = self.waveform_times_original[1]-self.waveform_times_original[0] #ns
             self.freqs_original = numpy.fft.rfftfreq(len(self.waveform_times_original), d=self.dt_ns_original/1.0e9)
             self.df_original = self.freqs_original[1] - self.freqs_original[0]
@@ -167,8 +187,8 @@ class FFTPrepper:
 
             #Prepare Filters
             self.filter_original = self.makeFilter(self.freqs_original,plot_filter=plot)
-            self.filter_padded_to_power2 = self.makeFilter(self.freqs_padded_to_power2,plot_filter=False)
-            self.filter_corr = self.makeFilter(self.freqs_corr,plot_filter=False)
+            #self.filter_padded_to_power2 = self.makeFilter(self.freqs_padded_to_power2,plot_filter=False)
+            #self.filter_corr = self.makeFilter(self.freqs_corr,plot_filter=False)
 
 
         except Exception as e:
@@ -227,52 +247,49 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def loadFilteredFFTs(self, eventid, load_upsampled_waveforms=False,hilbert=False):
+    def loadFilteredFFTs(self, eventid, hilbert=False, load_upsampled_waveforms=False):
         '''
-        Loads the waveforms and applies filters.  These are filtered FFTs with lengths
+        Loads the waveforms (with pre applied filters) and upsamples them for
         for the cross correlation. 
-
-        If load_upsampled_waveforms is True than the waveforms with the same timestep as
-        the cross correlations are also returned.  These have timestep self.dt_ns_upsampled.
         '''
-        self.reader.setEntry(eventid)
-        self.eventid = eventid
-        raw_wfs_corr = numpy.zeros((8,len(self.waveform_times_corr))) #upsampled to nearest power of 2 then by 2 for correlation.
-        if load_upsampled_waveforms:
-            upsampled_waveforms = numpy.zeros((8,self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
-        for channel in range(8):
-            temp_raw_wf = self.wf(channel,hilbert=hilbert)
-            raw_wfs_corr[channel][0:self.buffer_length] = temp_raw_wf - numpy.mean(temp_raw_wf) #Subtracting dc offset so cross corrs behave well
+        try:
+            self.reader.setEntry(eventid)
+            self.eventid = eventid
+            raw_wfs_corr = numpy.zeros((8,len(self.waveform_times_corr))) #upsampled to nearest power of 2 then by 2 for correlation.
             if load_upsampled_waveforms:
-                upsampled_waveforms[channel] = numpy.fft.irfft(numpy.multiply(self.filter_padded_to_power2,numpy.fft.rfft(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)])),n=self.final_corr_length//2) * ((self.final_corr_length//2)/len(self.waveform_times_padded_to_power2))
+                upsampled_waveforms = numpy.zeros((8,self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
+            for channel in range(8):
+                if load_upsampled_waveforms:
+                    temp_raw_wf = self.wf(channel,hilbert=False,apply_filter=True) #apply hilbert after upsample
+                else:
+                    temp_raw_wf = self.wf(channel,hilbert=hilbert,apply_filter=True)
 
+                temp_raw_wf = temp_raw_wf - numpy.mean(temp_raw_wf) #Subtracting dc offset so cross corrs behave well
 
-        ffts_corr = numpy.fft.rfft(raw_wfs_corr,axis=1) #Now upsampled
-        waveform_ffts_filtered_corr = numpy.multiply(ffts_corr,self.filter_corr)
+                if hilbert == True:
+                    raw_wfs_corr[channel][0:self.buffer_length] = numpy.abs(scipy.signal.hilbert(temp_raw_wf))
+                else:
+                    raw_wfs_corr[channel][0:self.buffer_length] = temp_raw_wf
+                
+                if load_upsampled_waveforms:
+                    temp_upsampled = numpy.fft.irfft(numpy.fft.rfft(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)]),n=self.final_corr_length//2) * ((self.final_corr_length//2)/len(self.waveform_times_padded_to_power2))
+                    if hilbert == True:
+                        upsampled_waveforms[channel] = numpy.abs(scipy.signal.hilbert(temp_upsampled))
+                    else:
+                        upsampled_waveforms[channel] = temp_upsampled
 
-        if load_upsampled_waveforms:
-            return waveform_ffts_filtered_corr, upsampled_waveforms
-        else:
-            return waveform_ffts_filtered_corr
+            waveform_ffts_filtered_corr = numpy.fft.rfft(raw_wfs_corr,axis=1) #Now upsampled
 
-    def loadFilteredFFTsWithWaveforms(self,eventid,hilbert=False):
-        '''
-        Loads the waveforms and applies filters.  These are filtered FFTs with lengths
-        for the cross correlation.  These should share dt with self.dt_ns_upsampled (same as
-        cross correlations).
-        '''
-        self.reader.setEntry(eventid)
-        self.eventid = eventid
-        raw_wfs_corr = numpy.zeros((8,len(self.waveform_times_corr))) #upsampled to nearest power of 2 then by 2 for correlation.
-        upsampled_waveforms = numpy.zeros((8,self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
-        for channel in range(8):
-            raw_wfs_corr[channel][0:self.buffer_length] = self.wf(channel,hilbert=hilbert)
-            upsampled_waveforms[channel] = numpy.fft.irfft(numpy.multiply(self.filter_padded_to_power2,numpy.fft.rfft(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)])),n=self.final_corr_length//2) * ((self.final_corr_length//2)/len(self.waveform_times_padded_to_power2))
-
-        ffts_corr = numpy.fft.rfft(raw_wfs_corr,axis=1) #Now upsampled
-        waveform_ffts_filtered_corr = numpy.multiply(ffts_corr,self.filter_corr)
-
-        return waveform_ffts_filtered_corr, upsampled_waveforms
+            if load_upsampled_waveforms:
+                return waveform_ffts_filtered_corr, upsampled_waveforms
+            else:
+                return waveform_ffts_filtered_corr
+        except Exception as e:
+            print('Error in TimeDelayCalculator.loadFilteredFFTs')
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def loadFilteredWaveformsMultiple(self,eventids,hilbert=False):
         '''
@@ -284,13 +301,103 @@ class FFTPrepper:
                 upsampled_waveforms['ch%i'%channel] = numpy.zeros((len(eventids),self.final_corr_length//2))
 
             for index, eventid in enumerate(eventids):
-                wfs = self.loadFilteredFFTsWithWaveforms(eventid,hilbert=hilbert)[1]
+                wfs = self.loadFilteredFFTs(eventid, hilbert=hilbert, load_upsampled_waveforms=True)[1]
                 for channel in range(8):
                     upsampled_waveforms['ch%i'%channel][index] = wfs[channel]
 
             return upsampled_waveforms
         except Exception as e:
             print('Error in TimeDelayCalculator.loadFilteredWaveformsMultiple')
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def calculateGroupDelays(self, eventid, apply_filter=False, plot=False,event_type=None):
+        '''
+        This will calculate the group delay curve for a given event. 
+        event_type specifies which channels to plot.  If 'hpol' the even channels are plotted,
+        if 'vpol' then odd, and if None then all are (if plot=True).  All channels are computed
+        regardless of this setting, this is solely for display.
+        '''
+        try:
+            self.reader.setEntry(eventid)
+            self.eventid = eventid
+
+            wfs = numpy.zeros((8,self.buffer_length))
+            ffts_dBish = numpy.zeros((8,len(self.freqs_original)))
+            ffts = numpy.zeros((8,len(self.freqs_original)),dtype=numpy.complex64)
+            group_delays = numpy.zeros((8,len(self.freqs_original)-1))
+            phases = numpy.zeros((8,len(self.freqs_original)))
+
+            for channel in range(8):
+                temp_raw_wf = self.wf(channel,hilbert=False,apply_filter=apply_filter) 
+                wfs[channel] = temp_raw_wf - numpy.mean(temp_raw_wf) #Subtracting dc offset
+                freqs, ffts_dBish[channel], ffts[channel] = self.rfftWrapper(self.t(),wfs[channel])
+    
+                if channel == 0:
+                    #Doesn't need to be calculated several times.
+                    group_delay_freqs = numpy.diff(freqs) + freqs[0:len(freqs)-1]
+                    omega = 2.0*numpy.pi*freqs
+
+                phases[channel] = numpy.unwrap(numpy.angle(ffts[channel]))
+                group_delays[channel] = (-numpy.diff(phases[channel])/numpy.diff(omega)) * 1e9
+
+
+            if plot == True:
+                plt.figure()
+
+                xlim = (60e6,85e6)
+
+                if event_type == 'hpol':
+                    channels = numpy.arange(4)*2
+                elif event_type == 'vpol':
+                    channels = numpy.arange(4)*2 + 1
+                else:
+                    channels = numpy.arange(8)
+
+                for channel in channels:
+                    channel = int(channel)
+
+                    plt.subplot(3,1,1)
+                    cut = numpy.logical_and(freqs>= xlim[0],freqs<= xlim[1])
+                    plt.plot(freqs[cut]/1e6,ffts_dBish[channel][cut],label=str(channel))
+                    plt.ylabel('Magnitude (dB ish)')
+                    plt.legend()
+                    plt.xlabel('MHz')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    
+
+                    plt.subplot(3,1,2)
+                    cut = numpy.logical_and(freqs>= xlim[0],freqs<= xlim[1])
+                    plt.plot(freqs[cut]/1e6,phases[channel][cut],label=str(channel))
+                    plt.ylabel('Unwrapped Phase (rad)')
+                    plt.legend()
+                    plt.xlabel('MHz')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+                    plt.subplot(3,1,3)
+                    cut = numpy.logical_and(group_delay_freqs>= xlim[0],group_delay_freqs<= xlim[1])
+                    plt.plot(group_delay_freqs[cut]/1e6,group_delays[channel][cut],label=str(channel))
+                    plt.ylabel('Group Delay (ns)')
+                    plt.legend()
+                    plt.xlabel('MHz')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            return group_delay_freqs, group_delays
+
+
+
+
+        except Exception as e:
+            print('Error in TimeDelayCalculator.loadFilteredFFTs')
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -321,14 +428,17 @@ class TimeDelayCalculator(FFTPrepper):
     --------
     examples.beacon_data_reader.reader
     '''
-    def calculateTimeDelays(self,eventid,align_method=0,hilbert=False):
+    def calculateTimeDelays(self, eventid, return_full_corrs=False, align_method=0, hilbert=False):
         '''
         Align method can be one of a few:
         0: argmax of corrs (default)
         1: argmax of hilbert of corrs
         2: Average of argmin and argmax
         3: argmin of corrs
-        4: Pick the largest max peak preceding the max of the hilbert of corrs 
+        4: Pick the largest max peak preceding the max of the hilbert of corrs
+        5: Pick the average indices of values > 95% peak height in corrs
+        6: Pick the average indices of values > 98% peak height in hilbert of corrs
+        7: Gets argmax of abs(corrs) and then finds highest positive peak before this value
 
         'max_corrs' corresponds to the value of the selected methods peak. 
         '''
@@ -411,7 +521,10 @@ class TimeDelayCalculator(FFTPrepper):
                             plt.plot(self.corr_time_shifts,wf,label=str(channel))
                         plt.legend()
                     import pdb; pdb.set_trace()
-            return self.corr_time_shifts[indices], max_corrs, self.pairs
+            if return_full_corrs == True:
+                return self.corr_time_shifts[indices], max_corrs, self.pairs, corrs
+            else:
+                return self.corr_time_shifts[indices], max_corrs, self.pairs
         except Exception as e:
             print('Error in TimeDelayCalculator.calculateTimeDelays')
             print(e)
@@ -419,25 +532,91 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateMultipleTimeDelays(self,eventids, align_method=None,hilbert=False):
+    def calculateMultipleTimeDelays(self,eventids, align_method=None,hilbert=False,plot=False,hpol_cut=None,vpol_cut=None):
         try:
             if ~numpy.all(eventids == numpy.sort(eventids)):
                 print('eventids NOT SORTED, WOULD BE FASTER IF SORTED.')
             timeshifts = []
-            corrs = []
+            max_corrs = []
             print('Calculating time delays:')
+            if plot == True:
+                print('Warning!  This likely will run out of ram and fail. ')
+                figs = []
+                axs = []
+                for pair in self.pairs:
+                    fig = plt.figure()
+                    fig.canvas.set_window_title('%s%i-%i x-corr'%(['H','V'][pair[0]%2],pair[0]//2,pair[1]//2))
+                    plt.ylabel('%s x-corr'%str(pair))
+                    figs.append(fig)
+                    axs.append(plt.gca())
             for event_index, eventid in enumerate(eventids):
                 sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
                 sys.stdout.flush()
                 if align_method is None:
-                    time_shift, corr_value, pairs = self.calculateTimeDelays(eventid,hilbert=hilbert) #Using default of the other function
+                    if plot == True:
+                        time_shift, corr_value, pairs, corrs = self.calculateTimeDelays(eventid,hilbert=hilbert,return_full_corrs=True) #Using default of the other function
+                    else:
+                        time_shift, corr_value, pairs = self.calculateTimeDelays(eventid,hilbert=hilbert,return_full_corrs=False) #Using default of the other function
                 else:
-                    time_shift, corr_value, pairs = self.calculateTimeDelays(eventid,align_method=align_method,hilbert=hilbert)
+                    if plot == True:
+                        time_shift, corr_value, pairs, corrs = self.calculateTimeDelays(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=True)
+                    else:
+                        time_shift, corr_value, pairs = self.calculateTimeDelays(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=False)
                 timeshifts.append(time_shift)
-                corrs.append(corr_value)
+                max_corrs.append(corr_value)
+                if plot == True:
+                    for index, pair in enumerate(self.pairs):
+                        #plotting less points by plotting subset of data
+                        time_mid = self.corr_time_shifts[numpy.argmax(corrs[index])]
+                        
+                        half_window = 150 #ns
+                        index_cut_min = numpy.max(numpy.append(numpy.where(self.corr_time_shifts < time_mid - half_window)[0],0))
+                        index_cut_max = numpy.min(numpy.append(numpy.where(self.corr_time_shifts > time_mid + half_window)[0],len(self.corr_time_shifts) - 1))
+                        '''
+                        index_loc = numpy.where(corrs[index] > 0.2*max(corrs[index]))[0] #Indices of values greater than some threshold
+                        index_cut_min = numpy.min(index_loc)
+                        index_cut_max = numpy.max(index_loc)
+                        '''
+                        if hpol_cut is not None:
+                            if len(hpol_cut) == len(eventids):
+                                if numpy.logical_and(hpol_cut[event_index], pair[0]%2 == 0):
+                                    axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.2)
+                                    if abs(time_mid > 300):
+                                        fig = plt.figure()
+                                        plt.suptitle(str(eventid))
+                                        plt.subplot(2,1,1)
+                                        plt.plot(self.corr_time_shifts,corrs[index])
+                                        plt.axvline(time_mid,c='r',linestyle='--')
+                                        plt.subplot(2,1,2)
+                                        plt.plot(self.t(),self.wf(int(pair[0]),apply_filter=True,hilbert=False),label=str(int(pair[0])))
+                                        plt.plot(self.t(),self.wf(int(pair[1]),apply_filter=True,hilbert=False),label=str(int(pair[1])))
+                                        plt.legend()
+                                        import pdb; pdb.set_trace()
+                                        plt.close(fig)
+                        else:
+                            axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.2)
+                        if vpol_cut is not None:
+                            if len(vpol_cut) == len(eventids):
+                                if numpy.logical_and(vpol_cut[event_index], pair[0]%2 != 0):
+                                    axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.2)
+                                    if abs(time_mid > 300):
+                                        fig = plt.figure()
+                                        plt.suptitle(str(eventid))
+                                        plt.subplot(2,1,1)
+                                        plt.plot(self.corr_time_shifts,corrs[index])
+                                        plt.axvline(time_mid,c='r',linestyle='--')
+                                        plt.subplot(2,1,2)
+                                        plt.plot(self.t(),self.wf(int(pair[0]),apply_filter=True,hilbert=False),label=str(int(pair[0])))
+                                        plt.plot(self.t(),self.wf(int(pair[1]),apply_filter=True,hilbert=False),label=str(int(pair[1])))
+                                        plt.legend()
+                                        import pdb; pdb.set_trace()
+                                        plt.close(fig)
+                        else:
+                            axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.2)
+
             sys.stdout.write('\n')
             sys.stdout.flush()
-            return numpy.array(timeshifts).T, numpy.array(corrs).T, self.pairs
+            return numpy.array(timeshifts).T, numpy.array(max_corrs).T, self.pairs
 
         except Exception as e:
             print('Error in TimeDelayCalculator.calculateMultipleTimeDelays')
@@ -758,43 +937,40 @@ def alignToTemplate(eventids,_upsampled_waveforms,_waveforms_corr, _template, _f
 
 if __name__ == '__main__':
     datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
-    runs = numpy.array([793])#numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793]) #Selects which run to examine
-    #The below are not ALL pulser points, but a set that has been precalculated and can be used
-    #if you wish to skip the calculation finding them.
-
-    known_pulser_ids = info.loadPulserEventids()
-    ignorable_pulser_ids = info.loadIgnorableEventids()
+    run = 1507
+    waveform_index_range = (1500,None)
 
     #Filter settings
-    final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
-    crit_freq_low_pass_MHz = 80
-    crit_freq_high_pass_MHz = 20
-    low_pass_filter_order = 6
-    high_pass_filter_order = 6
-    use_filter = False
-    align_method = 3
-    #1. Looks for best alignment within window after cfd trigger, cfd applied on hilbert envelope.
-    #2. Of the peaks in the correlation plot within range of the max peak, choose the peak with the minimum index.
-    #3. Align to maximum correlation value.
+    final_corr_length = 2**16 #Should be a factor of 2 for fastest performance
+    crit_freq_low_pass_MHz = 70 #This new pulser seems to peak in the region of 85 MHz or so
+    crit_freq_high_pass_MHz = 65
+    low_pass_filter_order = 8
+    high_pass_filter_order = 4
+    use_filter = True
+    plot_filters= True
 
-    #Main loop
-    for run_index, run in enumerate(runs):
-        if 'run%i'%run in list(known_pulser_ids.keys()):
-            try:
-                if 'run%i'%run in list(ignorable_pulser_ids.keys()):
-                    eventids = numpy.sort(known_pulser_ids['run%i'%run][~numpy.isin(known_pulser_ids['run%i'%run],ignorable_pulser_ids['run%i'%run])])
-                else:
-                    eventids = numpy.sort(known_pulser_ids['run%i'%run])
+    known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
+    eventids = {}
+    eventids['hpol'] = numpy.sort(known_pulser_ids['run%i'%run]['hpol'])
+    eventids['vpol'] = numpy.sort(known_pulser_ids['run%i'%run]['vpol'])
+    all_eventids = numpy.sort(numpy.append(eventids['hpol'],eventids['vpol']))
 
-                reader = Reader(datapath,run)
+    hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
+    vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
 
-                tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, initial_template_id=0)
-                out = tct.alignToTemplate(0, align_method)
+    reader = Reader(datapath,run)
+    prep = FFTPrepper(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters)
+    
 
-                #The above should result in wf and rolled_wf to be the same because correlating with self.
-            except Exception as e:
-                print('Error in main loop.')
-                print(e)
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                print(exc_type, fname, exc_tb.tb_lineno)
+
+    eventid = all_eventids[0]
+    if numpy.isin(eventid,eventids['hpol']):
+        event_type = 'hpol'
+    elif numpy.isin(eventid,eventids['vpol']):
+        event_type = 'vpol'
+    else:
+        event_type = None
+
+    group_delay_freqs, group_delays = prep.calculateGroupDelays(eventid, apply_filter=False, plot=True,event_type=event_type)
+
+
