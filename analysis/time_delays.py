@@ -53,7 +53,7 @@ if __name__ == '__main__':
     high_pass_filter_order = 4
     plot_filters = True
 
-    hilbert = False #Apply hilbert envelope to wf before correlating
+    hilbert = True #Apply hilbert envelope to wf before correlating
     align_method = 0
     
 
@@ -248,6 +248,10 @@ if __name__ == '__main__':
 
                 plt.xlabel('HPol Delay (ns)',fontsize=16)
                 plt.ylabel('Counts',fontsize=16)
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
                 #plt.axvline(expected_time_difference_hpol,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference_hpol)
                 #plt.axvline(-expected_time_difference_hpol,c='r',linestyle='--')
                 #plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)
@@ -298,6 +302,10 @@ if __name__ == '__main__':
 
                 plt.xlabel('VPol Delay (ns)',fontsize=16)
                 plt.ylabel('Counts',fontsize=16)
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
                 #plt.axvline(expected_time_difference_vpol,c='r',linestyle='--',label='Expected Time Difference = %f'%expected_time_difference_vpol)
                 #plt.axvline(-expected_time_difference_vpol,c='r',linestyle='--')
                 #plt.axvline(max_time_difference,c='g',linestyle='--',label='max Time Difference = %f'%max_time_difference)

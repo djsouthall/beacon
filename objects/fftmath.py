@@ -62,7 +62,7 @@ class FFTPrepper:
     --------
     examples.beacon_data_reader.reader
     '''
-    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False):
+    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,tukey_alpha=0.1,tukey_default=True):
         try:
             self.reader = reader
             self.buffer_length = reader.header().buffer_length
@@ -75,6 +75,9 @@ class FFTPrepper:
             self.hpol_pairs = numpy.array(list(itertools.combinations((0,2,4,6), 2)))
             self.vpol_pairs = numpy.array(list(itertools.combinations((1,3,5,7), 2)))
             self.pairs = numpy.vstack((self.hpol_pairs,self.vpol_pairs)) 
+
+            self.tukey_default = tukey_default #This sets the default in self.wf whether to use tukey or not. 
+
 
             #Allowing for a subset of the waveform to be isolated.  Helpful to speed this up if you know where signals are in long traces.
             waveform_index_range = list(waveform_index_range)
@@ -103,6 +106,8 @@ class FFTPrepper:
             #Resetting buffer length to account for new load in length. 
             self.buffer_length = self.end_waveform_index - self.start_waveform_index + 1 
 
+            self.tukey = scipy.signal.tukey(self.buffer_length, alpha=tukey_alpha, sym=True)
+
             self.start_waveform_index = waveform_index_range[0]
 
             self.prepForFFTs(plot=plot_filters)
@@ -128,12 +133,17 @@ class FFTPrepper:
         freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
         return freqs, spec_dbish, spec
 
-    def wf(self,channel,apply_filter=False,hilbert=False):
+    def wf(self,channel,apply_filter=False,hilbert=False,tukey=self.tukey_default):
         '''
         This loads a wf but only the section that is selected by the start and end indices specified.
 
+        If tukey is True to loaded wf will have tapered edges of the waveform on the 1% level to help
+        with edge effects.  This will be applied before hilbert if hilbert is true, and before
+        the filter.
         '''
         temp_wf = self.reader.wf(channel)[self.start_waveform_index:self.end_waveform_index+1]
+        if tukey == True:
+            temp_wf = numpy.multiply( temp_wf , self.tukey  )
         if apply_filter == True:
             wf = numpy.fft.irfft(numpy.multiply(self.filter_original,numpy.fft.rfft(temp_wf)),n=self.buffer_length) #Might need additional normalization
         else:
@@ -277,6 +287,18 @@ class FFTPrepper:
                         upsampled_waveforms[channel] = numpy.abs(scipy.signal.hilbert(temp_upsampled))
                     else:
                         upsampled_waveforms[channel] = temp_upsampled
+            
+            if False:
+                plt.figure()
+                plt.title(str(eventid))
+                for channel in range(8):
+                    plt.plot(raw_wfs_corr[channel])
+                plt.figure()
+                plt.title(str(eventid))
+                for channel in range(8):
+                    plt.plot(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)])
+                    
+                import pdb; pdb.set_trace()
 
             waveform_ffts_filtered_corr = numpy.fft.rfft(raw_wfs_corr,axis=1) #Now upsampled
 
@@ -545,8 +567,14 @@ class TimeDelayCalculator(FFTPrepper):
                 axs = []
                 for pair in self.pairs:
                     fig = plt.figure()
+                    plt.suptitle(str(self.reader.run))
                     fig.canvas.set_window_title('%s%i-%i x-corr'%(['H','V'][pair[0]%2],pair[0]//2,pair[1]//2))
                     plt.ylabel('%s x-corr'%str(pair))
+                    plt.xlabel('Time Delay (ns)')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
                     figs.append(fig)
                     axs.append(plt.gca())
             for event_index, eventid in enumerate(eventids):
@@ -652,13 +680,12 @@ class TemplateCompareTool(FFTPrepper):
     --------
     examples.beacon_data_reader.reader
     '''
-    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, initial_template_id=None):
-        super().__init__(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order)
+    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False, initial_template_id=None):
+        super().__init__(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range, plot_filters=plot_filters)
         self.corr_index_to_delay_index = -numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1) #Negative because with how it is programmed you would want to roll the template the normal amount, but I will be rolling the waveforms.
 
         try:
             self.setTemplateToEvent(initial_template_id)
-            print('Event %i set as template'%self.template_eventid)
         except Exception as e:
             print('Error in TemplateCompareTool.__init__')
             print(e)
@@ -672,6 +699,7 @@ class TemplateCompareTool(FFTPrepper):
         '''
         try:
             if eventid is not None:
+                print('Event %i set as template'%eventid)
                 pass
             else:
                 print('None given as eventid, setting event 0 as template.')
@@ -735,7 +763,7 @@ class TemplateCompareTool(FFTPrepper):
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def alignToTemplate(self, eventid, align_method):
+    def alignToTemplate(self, eventid, align_method=0):
         '''
         Attempts to align the waveforms from eventid with the internally
         defined template.  This may use one of several methods of aligning
@@ -747,7 +775,14 @@ class TemplateCompareTool(FFTPrepper):
         try:
             corrs, corrs_fft, upsampled_waveforms = self.crossCorrelateWithTemplate(eventid,load_upsampled_waveforms=True)
 
-            if align_method == 1:
+            if align_method == 0:
+                #Align to maximum correlation value.
+                index_delays = numpy.argmax(corrs,axis=1) #These are the indices within corr that are max.
+                max_corrs = []
+                for index, corr in enumerate(corrs):
+                    max_corrs.append(corr[index_delays[index]])
+                max_corrs = numpy.array(max_corrs)
+            elif align_method == 1:
                 #Looks for best alignment within window after cfd trigger, cfd applied on hilber envelope.
                 corr_hilbert = numpy.abs(scipy.signal.hilbert(corrs,axis=1))
                 index_delays = []
@@ -774,13 +809,6 @@ class TemplateCompareTool(FFTPrepper):
                 index_delays = numpy.array(index_delays)
                 max_corrs = numpy.array(max_corrs)
 
-            elif align_method == 3:
-                #Align to maximum correlation value.
-                index_delays = numpy.argmax(corrs,axis=1) #These are the indices within corr that are max.
-                max_corrs = []
-                for index, corr in enumerate(corrs):
-                    max_corrs.append(corr[index_delays[index]])
-                max_corrs = numpy.array(max_corrs)
             else:
                 print('Given align_method invalid.  This will probably break.')
 
@@ -798,142 +826,57 @@ class TemplateCompareTool(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def averageAlignedSignalsPerChannel(self, eventids, align_method=0, template_eventid=None, plot=False):
+        '''
+        This will use alignToTemplate to align an events within a channel to the current set template.
+        This means that you should set the template with either setTemplateToEvent or setTemplateToCustom
+        in advance.  template_eventid will call setTemplateToEvent if given.  align_method is passed to
+        alignToTemplate to align signals within the channel.
 
+        Note that the template is stored as a conjugated fft cross-correlation ready version of the template.
+        '''
+        if template_eventid is not None:
+            self.setTemplateToEvent(template_eventid)
 
-def alignToTemplate(eventids,_upsampled_waveforms,_waveforms_corr, _template, _final_corr_length, _waveform_times_corr, _filter_y_corr=None, align_method=1, plot_wf=False, template_pre_filtered=False):
-    '''
-    _waveforms_corr should be a 2d array where each row is a waveform of a different event, already zero padded for cross correlation
-    (i.e. must be over half zeros on the right side).
-
-    _upsampled_waveforms are the waveforms that have been upsampled (BUT WERE NOT ORIGINALLY PADDED BY A FACTOR OF 2).  These are
-    the waveforms that will be aligned based on the time delays from correlations performed with _waveforms_corr.
-        
-    If a filter is given then it will be applied to all signals.  It is assumed the upsampled signals are already filtered.
-
-    This given _template must be in the same form upsampled nature as _waveforms_corr. 
-
-    #1. Looks for best alignment within window after cfd trigger, cfd applied on hilbert envelope.
-    #2. Of the peaks in the correlation plot within range of the max peak, choose the peak with the minimum index.
-    #3. Align to maximum correlation value.
-    '''
-    try:
-        #Prepare template correlation storage
-        max_corrs = numpy.zeros(len(eventids))
-        index_delays = numpy.zeros(len(eventids),dtype=int) #Within the correlations for max corr
-        corr_index_to_delay_index = -numpy.arange(-(_final_corr_length-1)//2,(_final_corr_length-1)//2 + 1) #Negative because with how it is programmed you would want to roll the template the normal amount, but I will be rolling the waveforms.
-        rolled_wf = numpy.zeros_like(_upsampled_waveforms)
-
-        if numpy.logical_and(_filter_y_corr is not None,template_pre_filtered == False):
-            template_fft = numpy.multiply(numpy.fft.rfft(_template),_filter_y_corr)
-            #template_fft = numpy.multiply(numpy.fft.rfft(_waveforms_corr[_template_event_index]),_filter_y_corr)
-        else:
-            template_fft = numpy.fft.rfft(_template)
-            #template_fft = numpy.fft.rfft(_waveforms_corr[_template_event_index])
-            
-        scaled_conj_template_fft = numpy.conj(template_fft)/numpy.std(numpy.conj(template_fft)) 
+        averaged_waveforms = numpy.zeros((8,self.final_corr_length//2))
+        if plot == True:
+            figs = []
+            axs = []
+            for channel in range(8):
+                fig = plt.figure()
+                fig.canvas.set_window_title('Ch %i Aligned Waveforms'%channel)
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.xlabel('t (ns)')
+                plt.ylabel('Ch %i Amp (Adu)'%channel)
+                figs.append(fig)
+                axs.append(plt.gca())
 
         for event_index, eventid in enumerate(eventids):
-            sys.stdout.write('(%i/%i)\r'%(event_index,len(eventids)))
-            sys.stdout.flush()
-            reader.setEntry(eventid)
+            sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
+            max_corrs, upsampled_waveforms, rolled_wfs = self.alignToTemplate(eventid, align_method=align_method)
+            averaged_waveforms += rolled_wfs/len(eventids)
 
-            if _filter_y_corr is not None:
-                fft = numpy.multiply(numpy.fft.rfft(_waveforms_corr[event_index]),_filter_y_corr)
-            else:
-                fft = numpy.fft.rfft(_waveforms_corr[event_index])
+            if plot == True:
+                for channel in range(8):
+                    ax = axs[channel]
+                    ax.plot(rolled_wfs[channel],alpha=0.2)
 
-            corr_fft = numpy.multiply((fft/numpy.std(fft)),(scaled_conj_template_fft)) / (len(_waveform_times_corr)//2 + 1)
-            corr = numpy.fft.fftshift(numpy.fft.irfft(corr_fft,n=_final_corr_length)) * (_final_corr_length//2 + 1) #Upsampling and keeping scale
-            
+        if plot == True:
+            fig = plt.figure()
+            fig.canvas.set_window_title('Average Waveforms')
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            plt.xlabel('t (ns)')
+            plt.ylabel('Adu')
+            for channel in range(8):
+                plt.plot(averaged_waveforms[channel],alpha=0.7,label=str(channel))
+            plt.legend()
 
-            if align_method == 1:
-                #Looks for best alignment within window after cfd trigger, cfd applied on hilber envelope.
-                corr_hilbert = numpy.abs(scipy.signal.hilbert(corr))
-                cfd_indices = numpy.where(corr_hilbert/numpy.max(corr_hilbert) > 0.5)[0]
-                cfd_indices = cfd_indices[0:int(0.50*len(cfd_indices))] #Top 50% close past 50% max rise
-                index_delays[event_index] = cfd_indices[numpy.argmax(corr[cfd_indices])]
-
-                max_corrs[event_index] = corr[index_delays[event_index]]
-                rolled_wf[event_index] = numpy.roll(_upsampled_waveforms[event_index],corr_index_to_delay_index[index_delays[event_index]])
-
-            elif align_method == 2:
-                #Of the peaks in the correlation plot within range of the max peak, choose the peak with the minimum index.
-                index_delays[event_index] = min(scipy.signal.find_peaks(corr,height = 0.8*max(corr),distance=int(0.05*len(corr)))[0])
-
-                max_corrs[event_index] = corr[index_delays[event_index]]
-                rolled_wf[event_index] = numpy.roll(_upsampled_waveforms[event_index],corr_index_to_delay_index[index_delays[event_index]])
-
-            elif align_method == 3:
-                #Align to maximum correlation value.
-                index_delays[event_index] = numpy.argmax(corr) #These are the indices within corr that are max.
-                max_corrs[event_index] = corr[index_delays[event_index]]
-                rolled_wf[event_index] = numpy.roll(_upsampled_waveforms[event_index],corr_index_to_delay_index[index_delays[event_index]])
+        return averaged_waveforms
         
-
-        if False:
-            #Use weighted averages for the correlations in the template
-            upsampled_template_out = numpy.average(rolled_wf,axis=0,weights = max_corrs)
-            upsampled_template_better = numpy.average(rolled_wf[max_corrs > 0.7],axis=0,weights = max_corrs[max_corrs > 0.7])
-            upsampled_template_worse = numpy.average(rolled_wf[max_corrs <= 0.7],axis=0,weights = max_corrs[max_corrs <= 0.7])
-        else:
-            #DON'T Use weighted averages for the correlations in the template.
-            upsampled_template_out = numpy.average(rolled_wf,axis=0)
-            upsampled_template_better = numpy.average(rolled_wf[max_corrs > 0.7],axis=0)
-            upsampled_template_worse = numpy.average(rolled_wf[max_corrs <= 0.7],axis=0)
-
-        #import pdb;pdb.set_trace()
-        #The template at this stage is in the upsampled waveforms which did not have the factor of 2 zeros added.  To make it an exceptable form
-        #To be ran back into this function, it must be downsampled to the length before the factor of 2 was added.  Then add a factor of 2 of zeros.
-        downsampled_template_out = numpy.zeros(numpy.shape(_waveforms_corr)[1])
-        downsampled_template_out[0:numpy.shape(_waveforms_corr)[1]//2] = numpy.fft.irfft(numpy.fft.rfft(upsampled_template_out), n = numpy.shape(_waveforms_corr)[1]//2) * ((numpy.shape(_waveforms_corr)[1]//2)/numpy.shape(_upsampled_waveforms)[1])  #This can then be fed back into this function
-
-        downsampled_template_worse = numpy.zeros(numpy.shape(_waveforms_corr)[1])
-        downsampled_template_worse[0:numpy.shape(_waveforms_corr)[1]//2] = numpy.fft.irfft(numpy.fft.rfft(upsampled_template_worse), n = numpy.shape(_waveforms_corr)[1]//2) * ((numpy.shape(_waveforms_corr)[1]//2)/numpy.shape(_upsampled_waveforms)[1])  #This can then be fed back into this function
-
-        downsampled_template_better = numpy.zeros(numpy.shape(_waveforms_corr)[1])
-        downsampled_template_better[0:numpy.shape(_waveforms_corr)[1]//2] = numpy.fft.irfft(numpy.fft.rfft(upsampled_template_better), n = numpy.shape(_waveforms_corr)[1]//2) * ((numpy.shape(_waveforms_corr)[1]//2)/numpy.shape(_upsampled_waveforms)[1])  #This can then be fed back into this function
-
-
-        if plot_wf:
-            plt.figure()
-            plt.title('Aligned Waveforms')
-            for event_index, eventid in enumerate(eventids):
-                plt.plot(numpy.linspace(0,1,len(rolled_wf[event_index])),rolled_wf[event_index],alpha=0.5)
-            plt.plot(numpy.linspace(0,1,len(downsampled_template_out[0:len(downsampled_template_out)//2])),downsampled_template_out[0:len(downsampled_template_out)//2],color='r',linestyle='--')
-            plt.ylabel('Adu',fontsize=16)
-            plt.xlabel('Time (arb)',fontsize=16)
-
-            plt.figure()
-            for event_index, eventid in enumerate(eventids):
-                if max_corrs[event_index] < 0.70:
-                    plt.subplot(2,1,1)
-                    plt.plot(numpy.linspace(0,1,len(rolled_wf[event_index])),rolled_wf[event_index],alpha=0.5)
-                else:
-                    plt.subplot(2,1,2)
-                    plt.plot(numpy.linspace(0,1,len(rolled_wf[event_index])),rolled_wf[event_index],alpha=0.5)
-            plt.subplot(2,1,1)
-            #plt.plot(numpy.linspace(0,1,len(downsampled_template_out[0:len(downsampled_template_out)//2])),downsampled_template_out[0:len(downsampled_template_out)//2],color='r',linestyle='--')
-            plt.plot(numpy.linspace(0,1,len(downsampled_template_worse[0:len(downsampled_template_worse)//2])),downsampled_template_worse[0:len(downsampled_template_worse)//2],color='r',linestyle='--')
-            plt.ylabel('Adu',fontsize=16)
-            plt.xlabel('Time (arb)',fontsize=16)
-
-            plt.subplot(2,1,2)
-            #plt.plot(numpy.linspace(0,1,len(downsampled_template_out[0:len(downsampled_template_out)//2])),downsampled_template_out[0:len(downsampled_template_out)//2],color='r',linestyle='--')
-            plt.plot(numpy.linspace(0,1,len(downsampled_template_better[0:len(downsampled_template_better)//2])),downsampled_template_better[0:len(downsampled_template_better)//2],color='r',linestyle='--')
-            plt.ylabel('Adu',fontsize=16)
-            plt.xlabel('Time (arb)',fontsize=16)
-
-
-
-            #plt.legend(fontsize=16)
-        return index_delays, max_corrs, downsampled_template_out
-    except Exception as e:
-        print('Error in alignToTemplate')
-        print(e)
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        print(exc_type, fname, exc_tb.tb_lineno)
-
 
 if __name__ == '__main__':
     datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
@@ -959,10 +902,41 @@ if __name__ == '__main__':
     vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
 
     reader = Reader(datapath,run)
+    tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters)
+
+    hpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['hpol'], align_method=0, template_eventid=eventids['hpol'][0], plot=False)
+    vpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['vpol'], align_method=0, template_eventid=eventids['vpol'][0], plot=True)
+
+    averaged_waveforms = numpy.zeros_like(hpol_waveforms)
+    for channel in range(8):
+        if channel%2 == 0:
+            averaged_waveforms[channel] = hpol_waveforms[channel]
+        elif channel%2 == 1:
+            averaged_waveforms[channel] = vpol_waveforms[channel]
+
+    fig = plt.figure()
+    fig.canvas.set_window_title('Hpol and Vpol Average Waveforms')
+    plt.minorticks_on()
+    plt.grid(b=True, which='major', color='k', linestyle='-')
+    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+    plt.xlabel('t (ns)')
+    plt.ylabel('Adu')
+    for channel in range(8):
+        plt.plot(averaged_waveforms[channel],alpha=0.7,label=str(channel))
+    plt.legend()
+
+    '''
+    So:
+    Find average waveform for each signal using the above code (in some other script).  The using that
+    apply the group delay code (below), which will need to be generalized to work for given waveforms
+    rather than just eventid.  There should be two: calculateGroupDelays and calculateGroupDelaysForEvent,
+    the latter just calls the former for with a particular events waveforms.  This way it can easily be
+    called for, but is more generically available.  
+    '''
+
+
+    '''
     prep = FFTPrepper(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters)
-    
-
-
     eventid = all_eventids[0]
     if numpy.isin(eventid,eventids['hpol']):
         event_type = 'hpol'
@@ -972,5 +946,5 @@ if __name__ == '__main__':
         event_type = None
 
     group_delay_freqs, group_delays = prep.calculateGroupDelays(eventid, apply_filter=False, plot=True,event_type=event_type)
-
+    '''
 
