@@ -17,7 +17,7 @@ import scipy
 import scipy.interpolate
 sys.path.append('/home/dsouthall/Beacon')
 #from pySmithPlot.smithplot import SmithAxes
-import pyBeaconKit.utils.constants as constants
+import tools.constants as constants
 pylab.ion()
 
 # CALCULATION FUNCTIONS
@@ -493,7 +493,7 @@ if __name__ == '__main__':
     print('This module contains functions helpful for working with field fox data.')
     #pylab.close('all')
 
-
+    '''
     freqs = numpy.arange(2.0e6,350.0e6,1000) #Hz
 
     fig = pylab.figure()
@@ -564,3 +564,4 @@ if __name__ == '__main__':
 
 
     
+    '''

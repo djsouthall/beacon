@@ -226,7 +226,7 @@ class FFTPrepper:
             #The above is used in the frequency domain for cross correlations.  But these are typically upsampled in the frequency domain to given better time
             #resolution information for time shifts.  The below correspond to the upsampled times.
             self.dt_ns_upsampled = 1.0e9/(2*(self.final_corr_length//2 + 1)*self.df_corr)
-            self.corr_time_shifts = numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1)*self.dt_ns_upsampled #This results in the maxiumum of an autocorrelation being located at a time shift of 0.0
+            self.corr_time_shifts = self.calculateTimeShifts(self.final_corr_length,self.dt_ns_upsampled)#This results in the maxiumum of an autocorrelation being located at a time shift of 0.0
 
             #Prepare Filters
             self.filter_original = self.makeFilter(self.freqs_original,plot_filter=plot)
@@ -238,6 +238,9 @@ class FFTPrepper:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+    def calculateTimeShifts(self, final_corr_length, dt):
+        return numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1)*self.dt_ns_upsampled
 
 
     def makeFilter(self,freqs, plot_filter=False):
@@ -625,9 +628,9 @@ class TimeDelayCalculator(FFTPrepper):
                         plt.legend()
                     import pdb; pdb.set_trace()
             if return_full_corrs == True:
-                return self.corr_time_shifts[indices], max_corrs, self.pairs, corrs
+                return indices, self.corr_time_shifts[indices], max_corrs, self.pairs, corrs
             else:
-                return self.corr_time_shifts[indices], max_corrs, self.pairs
+                return indices, self.corr_time_shifts[indices], max_corrs, self.pairs
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -651,7 +654,7 @@ class TimeDelayCalculator(FFTPrepper):
         '''
         try:
             ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert)
-            return calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=return_full_corrs, align_method=align_method)
+            return self.calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=return_full_corrs, align_method=align_method)
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -687,14 +690,14 @@ class TimeDelayCalculator(FFTPrepper):
                 sys.stdout.flush()
                 if align_method is None:
                     if plot == True:
-                        time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=True) #Using default of the other function
+                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=True) #Using default of the other function
                     else:
-                        time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=False) #Using default of the other function
+                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=False) #Using default of the other function
                 else:
                     if plot == True:
-                        time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=True)
+                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=True)
                     else:
-                        time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=False)
+                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=False)
                 timeshifts.append(time_shift)
                 max_corrs.append(corr_value)
                 if plot == True:
@@ -1064,7 +1067,7 @@ if __name__ == '__main__':
         plt.legend()
 
         tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False)
-        corr_time_shifts, max_corrs, pairs, corrs = tdc.calculateTimeDelays(numpy.fft.rfft(averaged_waveforms,axis=1), averaged_waveforms, return_full_corrs=True, align_method=0)
+        indices, corr_time_shifts, max_corrs, pairs, corrs = tdc.calculateTimeDelays(numpy.fft.rfft(averaged_waveforms,axis=1), averaged_waveforms, return_full_corrs=True, align_method=0)
 
         for cfd_thresh in [0.1,0.75,0.95]:
             rolls = []

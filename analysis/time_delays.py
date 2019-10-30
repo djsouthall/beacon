@@ -29,6 +29,8 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 plt.ion()
 
+cable_delays = info.loadCableDelays()
+
 
 #The below are not ALL pulser points, but a set that has been precalculated and can be used
 #if you wish to skip the calculation finding them.
@@ -46,7 +48,7 @@ if __name__ == '__main__':
     default_site = 1
     
     #Filter settings
-    final_corr_length = 2**16 #Should be a factor of 2 for fastest performance
+    final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
     crit_freq_low_pass_MHz = 70 #This new pulser seems to peak in the region of 85 MHz or so
     crit_freq_high_pass_MHz = 65
     low_pass_filter_order = 8

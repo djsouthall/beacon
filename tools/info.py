@@ -65,10 +65,30 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
         for key, location in antennas_physical_latlon.items():
             antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
 
-        antennas_phase_hpol = {0:( -0.83957235,   0.39939848,   0.        ) ,    1:(-31.17877291, -12.61132886,  18.41508693),   2:( -7.21608884, -47.69952054,   1.27324944),  3:(-31.48346842, -42.28009668,   0.54161529)}#ADJUSTED HPOL
-        antennas_phase_vpol = {0:( -1.66766133,   2.47979807,   0.),     1:(-33.44499822, -11.67019343,   2.23364787),     2:( -7.01258413, -47.35628013,   4.50321678),   3:(-26.81118876, -40.33680987,  15.16694328)}#ADJUSTED VPOL
+        antennas_phase_hpol = {0:(  0.        ,   0.        ,   0.        ) ,    1:(-30.46323775, -12.52208649,   4.46999022),   2:( -9.60219054, -46.82872785,  -0.67713143),  3:(-30.58041715, -42.17715115,  13.79782586)}#ADJUSTED HPOL
+        antennas_phase_vpol = {0:(  0.        ,   0.        ,   0.),     1:(-30.64956888, -12.54918813,   5.82636563),     2:(-10.0159635 , -46.86937298,  -1.43651148),   3:(-30.3944812 , -42.53609774,  13.95834976)}#ADJUSTED VPOL
+
+        #Not currently used.  
+        antennas_phase_hpol_hesse = {0:(  0.        ,   0.        ,   0.        ) ,    1:(0.19, 0.23, 1.5),   2:(0.30, 0.14, 1.4),  3:(0.26, 0.20, 1.3)}
+        antennas_phase_vpol_hesse = {0:(  0.        ,   0.        ,   0.        ) ,    1:(0.20 , 0.23 , 1.5),   2:(0.29 , 0.14 , 1.5),  3:(0.26 , 0.20 , 1.4)}
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
+
+def loadCableDelays(return_raw=False):
+    '''
+    This are calculated using group_delay.py via the group delay.  They correspond to the length of the LMR400
+    cable that extends from the observatory to the antennas and accounts for the majority of systematic delay
+    between signals.  This should be accounted for in interferometric uses.
+    '''
+    cable_delays =  {'hpol': numpy.array([423.37836156, 428.43979143, 415.47714969, 423.58803498]), \
+                     'vpol': numpy.array([428.59277751, 430.16685915, 423.56765695, 423.50469285])}
+    
+    if return_raw == False:
+        min_delay = min((min(cable_delays['hpol']),min(cable_delays['vpol'])))
+        cable_delays['hpol'] -= min_delay
+        cable_delays['vpol'] -= min_delay
+
+    return cable_delays
 
 
 def loadPulserPolarizations():
@@ -222,11 +242,13 @@ def loadPulserLocations():
 
 def loadPulserLocationsENU(replace_z=None):
     '''
-    Loads the latitude,longtidue,elevation locations of the antennas.
-    See loadPulserLocationsENU for these locations converted to
+    Loads the locations of the antennas converted to
     be relative to antenna 0.
 
-    These are repeated if that pulser is used for multiply runs. 
+    These are repeated if that pulser is used for multiple runs. 
+
+    This is depricated and does not all for the antennas to have different 
+    phase centers. loadPulserPhaseLocationsENU is better.
     '''
     pulser_locations_ENU = {}
     pulser_locations = loadPulserLocations()
@@ -240,32 +262,97 @@ def loadPulserLocationsENU(replace_z=None):
         pulser_locations_ENU[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
     return pulser_locations_ENU
 
-def plotStationAndPulsers(plot_phase=False):
+def loadPulserPhaseLocationsENU(replace_z=None):
+    '''
+    Loads the locations of the antennas converted to
+    be relative to antenna 0.
+
+    These are repeated if that pulser is used for multiple runs.  
+
+    The output will be a dictionary with keys 'physical','hpol', and 'vpol'
+    corresponding to the best known physical locations, and current best fit
+    for phase centers.
+    '''
+    pulser_locations_ENU = {}
+    pulser_locations = loadPulserLocations()
+
+    pulser_locations_ENU['physical'] = {}
+
+    origin = loadAntennaZeroLocation()
+    for key, location in pulser_locations.items():
+        pulser_locations_ENU['physical'][key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+
+    pulser_locations_ENU['hpol'] = {'run1507':[301 ,-385, -80],\
+                                    'run1509':[968,-444,-152],\
+                                    'run1511':[182, 319, -36]}
+
+    pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[6 ,7 ,5] ,\
+                                                'run1509':[25,10,5] ,\
+                                                'run1511':[7 ,11,5]}
+
+    pulser_locations_ENU['vpol'] = {'run1507':[304,-385, -77],\
+                                    'run1509':[963,-442,-149],\
+                                    'run1511':[183, 318, -34]}
+
+    pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[6 ,7 ,5] ,\
+                                                'run1509':[25,10,5] ,\
+                                                'run1511':[7 ,11,5]}
+
+    return pulser_locations_ENU
+
+
+
+def plotStationAndPulsers(plot_phase=False:
     '''
     Currently only intended to plot the most recent station with the three pulsers that we used for it.
     '''
     antennas_physical, antennas_phase_hpol, antennas_phase_vpol = loadAntennaLocationsENU(deploy_index=1)
+
+    colors = ['b','g','r','c']
+    pulser_colors = ['m','y','k']
 
     fig = plt.figure()
     fig.canvas.set_window_title('Antenna Locations')
     ax = fig.add_subplot(111, projection='3d')
 
     for i, a in antennas_physical.items():
-        ax.scatter(a[0], a[1], a[2], marker='o',label='Physical %i'%i)
+        ax.scatter(a[0], a[1], a[2], marker='o',color=colors[i],label='Physical %i'%i,alpha=0.8)
 
     if plot_phase == True:
         for i, a in antennas_phase_hpol.items():
-            ax.scatter(a[0], a[1], a[2], marker='o',label='Hpol Phase Center %i'%i)
-
+            ax.plot([antennas_physical[i][0],antennas_phase_hpol[i][0]],[antennas_physical[i][1],antennas_phase_hpol[i][1]],[antennas_physical[i][2],antennas_phase_hpol[i][2]],color=colors[i],linestyle='--',alpha=0.5)
+            ax.scatter(a[0], a[1], a[2], marker='*',color=colors[i],label='%s Phase Center %i'%('Hpol', i),alpha=0.8)
         for i, a in antennas_phase_vpol.items():
-            ax.scatter(a[0], a[1], a[2], marker='o',label='Vpol Phase Center %i'%i)
+            ax.plot([antennas_physical[i][0],antennas_phase_vpol[i][0]],[antennas_physical[i][1],antennas_phase_vpol[i][1]],[antennas_physical[i][2],antennas_phase_vpol[i][2]],color=colors[i],linestyle='--',alpha=0.5)
+            ax.scatter(a[0], a[1], a[2], marker='^',color=colors[i],label='%s Phase Center %i'%('Vpol', i),alpha=0.8)
 
-    pulser_locations = loadPulserLocationsENU()
 
 
+
+    pulser_locations = loadPulserPhaseLocationsENU()
     for site, key in enumerate(['run1507','run1509','run1511']):
         site += 1
-        ax.scatter(pulser_locations[key][0], pulser_locations[key][1], pulser_locations[key][2], marker='o',label='Pulser Site %i'%site)
+        ax.scatter(pulser_locations['physical'][key][0], pulser_locations['physical'][key][1], pulser_locations['physical'][key][2], color=pulser_colors[site-1], marker='o',label='Physical Pulser Site %i'%site,alpha=0.8)
+
+    if plot_phase == True:
+        ax.plot([pulser_locations['hpol']['run1507'][0],pulser_locations['physical']['run1507'][0]],[pulser_locations['hpol']['run1507'][1],pulser_locations['physical']['run1507'][1]],[pulser_locations['hpol']['run1507'][2],pulser_locations['physical']['run1507'][2]],color=pulser_colors[0],linestyle='--',alpha=0.5)
+        ax.scatter( pulser_locations['hpol']['run1507'][0] , pulser_locations['hpol']['run1507'][1] , pulser_locations['hpol']['run1507'][2] , color=pulser_colors[0] , marker='*',alpha=0.8)
+
+        ax.plot([pulser_locations['hpol']['run1509'][0],pulser_locations['physical']['run1509'][0]],[pulser_locations['hpol']['run1509'][1],pulser_locations['physical']['run1509'][1]],[pulser_locations['hpol']['run1509'][2],pulser_locations['physical']['run1509'][2]],color=pulser_colors[1],linestyle='--',alpha=0.5)
+        ax.scatter( pulser_locations['hpol']['run1509'][0] , pulser_locations['hpol']['run1509'][1] , pulser_locations['hpol']['run1509'][2] , color=pulser_colors[1] , marker='*',alpha=0.8)
+
+        ax.plot([pulser_locations['hpol']['run1511'][0],pulser_locations['physical']['run1511'][0]],[pulser_locations['hpol']['run1511'][1],pulser_locations['physical']['run1511'][1]],[pulser_locations['hpol']['run1511'][2],pulser_locations['physical']['run1511'][2]],color=pulser_colors[2],linestyle='--',alpha=0.5)
+        ax.scatter( pulser_locations['hpol']['run1511'][0] , pulser_locations['hpol']['run1511'][1] , pulser_locations['hpol']['run1511'][2] , color=pulser_colors[2] , marker='*',alpha=0.8)
+
+        ax.plot([pulser_locations['vpol']['run1507'][0],pulser_locations['physical']['run1507'][0]],[pulser_locations['vpol']['run1507'][1],pulser_locations['physical']['run1507'][1]],[pulser_locations['vpol']['run1507'][2],pulser_locations['physical']['run1507'][2]],color=pulser_colors[0],linestyle='--',alpha=0.5)
+        ax.scatter( pulser_locations['vpol']['run1507'][0] , pulser_locations['vpol']['run1507'][1] , pulser_locations['vpol']['run1507'][2] , color=pulser_colors[0] , marker='^',alpha=0.8)
+
+        ax.plot([pulser_locations['vpol']['run1509'][0],pulser_locations['physical']['run1509'][0]],[pulser_locations['vpol']['run1509'][1],pulser_locations['physical']['run1509'][1]],[pulser_locations['vpol']['run1509'][2],pulser_locations['physical']['run1509'][2]],color=pulser_colors[1],linestyle='--',alpha=0.5)
+        ax.scatter( pulser_locations['vpol']['run1509'][0] , pulser_locations['vpol']['run1509'][1] , pulser_locations['vpol']['run1509'][2] , color=pulser_colors[1] , marker='^',alpha=0.8)
+
+        ax.plot([pulser_locations['vpol']['run1511'][0],pulser_locations['physical']['run1511'][0]],[pulser_locations['vpol']['run1511'][1],pulser_locations['physical']['run1511'][1]],[pulser_locations['vpol']['run1511'][2],pulser_locations['physical']['run1511'][2]],color=pulser_colors[2],linestyle='--',alpha=0.5)
+        ax.scatter( pulser_locations['vpol']['run1511'][0] , pulser_locations['vpol']['run1511'][1] , pulser_locations['vpol']['run1511'][2] , color=pulser_colors[2] , marker='^',alpha=0.8)
+
 
     ax.set_xlabel('E (m)')
     ax.set_ylabel('N (m)')
@@ -489,6 +576,7 @@ MAKE AN EXPECTED PULSER TIME DELAY FUNCTION
 if __name__ == '__main__':
     try:
         print('Loaded run info dictionaries.')
+        plt.ion()
 
     except Exception as e:
         print('Error in main loop.')
