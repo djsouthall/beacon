@@ -30,8 +30,6 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 plt.ion()
 
-def gaus(x,a,x0,sigma):
-    return a*numpy.exp(-(x-x0)**2.0/(2.0*sigma**2.0))
 
 if __name__ == '__main__':
     try:

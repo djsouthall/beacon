@@ -240,7 +240,7 @@ def loadPulserLocations():
 
     return pulser_locations    
 
-def loadPulserLocationsENU(replace_z=None):
+def loadPulserLocationsENU():
     '''
     Loads the locations of the antennas converted to
     be relative to antenna 0.
@@ -253,16 +253,12 @@ def loadPulserLocationsENU(replace_z=None):
     pulser_locations_ENU = {}
     pulser_locations = loadPulserLocations()
 
-    hpol_ENU_z = numpy.array([ -65.78325898, -247.0147524,  -229.94943484]) #site 1, site 2, site 3
-    vpol_ENU_z = numpy.array([ -85.27473717, -225.47197368, -117.68244619])
-
-
     origin = loadAntennaZeroLocation()
     for key, location in pulser_locations.items():
         pulser_locations_ENU[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
     return pulser_locations_ENU
 
-def loadPulserPhaseLocationsENU(replace_z=None):
+def loadPulserPhaseLocationsENU():
     '''
     Loads the locations of the antennas converted to
     be relative to antenna 0.
@@ -302,7 +298,7 @@ def loadPulserPhaseLocationsENU(replace_z=None):
 
 
 
-def plotStationAndPulsers(plot_phase=False:
+def plotStationAndPulsers(plot_phase=False):
     '''
     Currently only intended to plot the most recent station with the three pulsers that we used for it.
     '''
