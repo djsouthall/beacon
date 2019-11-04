@@ -30,6 +30,8 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 plt.ion()
 
+def gaus(x,a,x0,sigma):
+    return a*numpy.exp(-(x-x0)**2.0/(2.0*sigma**2.0))
 
 if __name__ == '__main__':
     try:
@@ -99,10 +101,13 @@ if __name__ == '__main__':
 
         #Filter settings
         final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
-        crit_freq_low_pass_MHz = None#70 #This new pulser seems to peak in the region of 85 MHz or so
-        crit_freq_high_pass_MHz = None#20
-        low_pass_filter_order = None#12
-        high_pass_filter_order = None#8
+        
+        crit_freq_low_pass_MHz = 80 #This new pulser seems to peak in the region of 85 MHz or so
+        low_pass_filter_order = 12
+        
+        crit_freq_high_pass_MHz = 30
+        high_pass_filter_order = 8
+        
         use_filter = True
         plot_filters= True
 
@@ -153,7 +158,7 @@ if __name__ == '__main__':
 
 
 
-        if True:
+        if False:
             #plot x correlations and selected centers.
             fig = plt.figure()
             fig.canvas.set_window_title('xcorrs for Average Waveforms')
@@ -191,7 +196,7 @@ if __name__ == '__main__':
                 plt.plot(times, averaged_waveforms[channel],alpha=0.7,label=str(channel))
             plt.legend()
 
-        if True:
+        if False:
             #Calculating group delays and plotting, then rolling waveforms by the group delays to see how this would work as a metric.
             group_delay_freqs, group_delays, weighted_group_delays = tct.calculateGroupDelays(times, averaged_waveforms, plot=True,event_type=None,group_delay_band=(45e6,80e6))
 
@@ -302,7 +307,7 @@ if __name__ == '__main__':
 
 
         #Determining errors by aligning waveforms independant of averages, then fitting distrobutions of time delays matching the selected peaks from averages.
-        time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=0,hilbert=False,plot=True,hpol_cut=hpol_eventids_cut,vpol_cut=vpol_eventids_cut)
+        time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=0,hilbert=False,plot=False,hpol_cut=hpol_eventids_cut,vpol_cut=vpol_eventids_cut)
 
         hpol_pairs  = numpy.array(list(itertools.combinations((0,2,4,6), 2)))
         vpol_pairs  = numpy.array(list(itertools.combinations((1,3,5,7), 2)))

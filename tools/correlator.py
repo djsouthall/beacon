@@ -25,6 +25,7 @@ import matplotlib
 from scipy.fftpack import fft
 import datetime as dt
 import inspect
+from ast import literal_eval
 plt.ion()
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -68,6 +69,9 @@ class Correlator:
             self.c = 299792458/n #m/s
             self.reader = reader
             self.reader.setEntry(0)
+
+            self.figs = []
+            self.axs = []
 
             self.n_phi = n_phi
             self.range_phi_deg = range_phi_deg
@@ -322,6 +326,7 @@ class Correlator:
 
             if plot_filter == True:
                 fig = plt.figure()
+                ax = fig.gca()
                 fig.canvas.set_window_title('Filter')
                 numpy.seterr(divide = 'ignore') 
                 plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y)),color='k',label='final filter')
@@ -340,6 +345,9 @@ class Correlator:
                 plt.xlim(0,200)
                 plt.ylim(-50,10)
                 plt.legend()
+
+                self.figs.append(fig)
+                self.axs.append(ax)
 
             return filter_y
         except Exception as e:
@@ -415,15 +423,14 @@ class Correlator:
         '''
         try:
             #Prepare grids of thetas and phis
-            thetas  = numpy.tile(self.thetas_rad,(self.n_phi,1)).T
-            phis    = numpy.tile(self.phis_rad,(self.n_theta,1))
+            thetas  = numpy.tile(self.thetas_rad,(self.n_phi,1)).T  #Each row is a different theta (zenith)
+            phis    = numpy.tile(self.phis_rad,(self.n_theta,1))    #Each column is a different phi (azimuth)
 
             #Source direction is the direction FROM BEACON you look to see the source.
             signal_source_direction        = numpy.zeros((self.n_theta, self.n_phi, 3))
             signal_source_direction[:,:,0] = numpy.multiply( numpy.cos(phis) , numpy.sin(thetas) )
             signal_source_direction[:,:,1] = numpy.multiply( numpy.sin(phis) , numpy.sin(thetas) )
             signal_source_direction[:,:,2] = numpy.cos(thetas)
-
             #Propogate direction is the direction FROM THE SOURCE that the ray travels towards BEACON.  
             signal_propogate_direction = - signal_source_direction
 
@@ -458,6 +465,7 @@ class Correlator:
             #Should double check when using these via rolling signals.
             #Calculate indices in corr for each direction.
             center = len(self.times_resampled)
+
             self.delay_indices_hpol_0subtract1 = numpy.rint((self.t_hpol_0subtract1/self.dt_resampled + center)).astype(int)
             self.delay_indices_hpol_0subtract2 = numpy.rint((self.t_hpol_0subtract2/self.dt_resampled + center)).astype(int)
             self.delay_indices_hpol_0subtract3 = numpy.rint((self.t_hpol_0subtract3/self.dt_resampled + center)).astype(int)
@@ -478,7 +486,85 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False):
+    def interactivePlotter(self, event):
+        '''
+        This hopefully will make a plot when called by a double clock in the map.
+        '''
+        if event.dblclick == True:
+            try:
+                event_ax = event.inaxes
+                pol = event_ax.get_title().split('-')[2]
+                eventid = int(event_ax.get_title().split('-')[1])
+                hilbert = literal_eval(event_ax.get_title().split('-')[3].split('=')[1])
+
+                theta_index = numpy.argmin( abs(self.thetas_deg - event.ydata) )
+                phi_index = numpy.argmin( abs(self.phis_deg - event.xdata) )
+                if pol == 'hpol':
+                    channels = numpy.array([0,2,4,6])
+                    waveforms = self.wf(eventid, channels,div_std=False,hilbert=hilbert,apply_filter=self.apply_filter)
+                    t_best_0subtract1 = self.t_hpol_0subtract1[theta_index,phi_index]
+                    t_best_0subtract2 = self.t_hpol_0subtract2[theta_index,phi_index]
+                    t_best_0subtract3 = self.t_hpol_0subtract3[theta_index,phi_index]
+                elif pol == 'vpol':
+                    channels = numpy.array([1,3,5,7])
+                    waveforms = self.wf(eventid, channels,div_std=False,hilbert=hilbert,apply_filter=self.apply_filter)
+                    t_best_0subtract1 = self.t_vpol_0subtract1[theta_index,phi_index]
+                    t_best_0subtract2 = self.t_vpol_0subtract2[theta_index,phi_index]
+                    t_best_0subtract3 = self.t_vpol_0subtract3[theta_index,phi_index]
+
+                #Determine how many indices to roll each waveform.
+                print(event.xdata,event.ydata)
+                roll0 = 0
+                roll1 = int(numpy.rint(t_best_0subtract1/self.dt_resampled))
+                roll2 = int(numpy.rint(t_best_0subtract2/self.dt_resampled))
+                roll3 = int(numpy.rint(t_best_0subtract3/self.dt_resampled))
+
+                print(roll1,roll2,roll3)
+
+
+                try:
+                    plt.close(self.popout_fig)
+                except:
+                    pass #Just maintaining only one popout at a time.
+                self.popout_fig = plt.figure()
+                self.popout_ax = self.popout_fig.gca()
+                plt.suptitle('%s\nAzimuth = %0.3f, Zenith = %0.3f'%(event_ax.get_title().replace('-',' ').title(), event.xdata,event.ydata))
+                plt.subplot(2,1,1)
+                
+                plt.plot(self.times_resampled, waveforms[0],label='Ch%i'%channels[0])
+                plt.plot(self.times_resampled, waveforms[1],label='Ch%i'%(channels[1]))
+                plt.plot(self.times_resampled, waveforms[2],label='Ch%i'%(channels[2]))
+                plt.plot(self.times_resampled, waveforms[3],label='Ch%i'%(channels[3]))
+
+                plt.ylabel('adu')
+                plt.xlabel('Time (ns)')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.legend()
+
+                plt.subplot(2,1,2)
+                
+                plt.plot(self.times_resampled, waveforms[0],label='Ch%i'%channels[0])
+                plt.plot(self.times_resampled + t_best_0subtract1, waveforms[1],label='Ch%i, shifted %0.2f ns'%(channels[1], t_best_0subtract1))
+                plt.plot(self.times_resampled + t_best_0subtract2, waveforms[2],label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
+                plt.plot(self.times_resampled + t_best_0subtract3, waveforms[3],label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
+
+                plt.ylabel('adu')
+                plt.xlabel('Time (ns)')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.legend()
+
+            except Exception as e:
+                print('\nError in %s'%inspect.stack()[0][3])
+                print(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+
+    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False):
         '''
         Makes the cross correlation make for the given event.
 
@@ -494,6 +580,9 @@ class Correlator:
             Plot the cross-correlations for each baseline.
         hilbert : bool
             Enables performing calculations with Hilbert envelopes of waveforms. 
+        interactive : bool
+            Enables an interactive correlation map, where double clicking will result in a plot
+            of waveforms aligned using the corresponding time delays of that location.
         '''
         try:
             if hilbert == True:
@@ -568,7 +657,10 @@ class Correlator:
                 print('Invalid polarization option.  Returning nothing.')
                 return
 
+
+
             if plot_corr:
+                
                 fig = plt.figure()
                 fig.canvas.set_window_title('Correlations')
                 center = len(self.times_resampled)
@@ -584,10 +676,13 @@ class Correlator:
                 plt.plot(shifts,corr13,alpha=0.7,label='corr13')
                 plt.plot(shifts,corr23,alpha=0.7,label='corr23')
                 plt.legend()
+                self.figs.append(fig)
+                self.axs.append(fig.gca())
             if plot_map:
                 fig = plt.figure()
-                fig.canvas.set_window_title('r%i-e%i %s Correlation Map'%(reader.run,eventid,pol.title()))
+                fig.canvas.set_window_title('r%i-e%i-%s Correlation Map'%(reader.run,eventid,pol.title()))
                 ax = fig.add_subplot(1,1,1)
+                ax.set_title('%i-%i-%s-Hilbert=%s'%(reader.run,eventid,pol,str(hilbert))) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
                 im = ax.imshow(mean_corr_values, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
                 cbar = fig.colorbar(im)
                 cbar.set_label('Mean Correlation Value')
@@ -606,7 +701,16 @@ class Correlator:
 
                 radius = 5.0 #Degrees I think?  Should eventually represent error. 
                 circle = plt.Circle((phi_best, theta_best), radius, edgecolor='lime',linewidth=2,fill=False)
+                ax.axvline(phi_best,c='lime',linewidth=1)
+                ax.axhline(theta_best,c='lime',linewidth=1)
+
                 ax.add_artist(circle)
+                if interactive == True:
+                    fig.canvas.mpl_connect('button_press_event',self.interactivePlotter)
+
+                self.figs.append(fig)
+                self.axs.append(ax)
+
                 
                 return mean_corr_values, fig, ax
             else:
@@ -617,7 +721,32 @@ class Correlator:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+
     def averagedMap(self, eventids, pol, plot_map=True, hilbert=False):
+        '''
+        Does the same thing as map, but averages over all eventids given.  Mostly helpful for 
+        repeated sources such as background sources or pulsers.
+
+        Parameters
+        ----------
+        eventids : numpy.ndarray of ints
+            The entry numbers to include in the calculation.
+        pol : str
+            The polarization you wish to plot.  Options: 'hpol', 'vpol', 'both'
+        plot_map : bool
+            Whether to actually plot the results.  
+        plot_corr : bool
+            Plot the cross-correlations for each baseline.
+        hilbert : bool
+            Enables performing calculations with Hilbert envelopes of waveforms. 
+        
+        '''
+        if pol == 'both':
+            hpol_result = self.averagedMap(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert)
+            vpol_result = self.averagedMap(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert)
+            return hpol_result, vpol_result
+
         total_mean_corr_values = numpy.zeros((self.n_theta, self.n_phi))
         for event_index, eventid in enumerate(eventids):
             sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
@@ -631,13 +760,23 @@ class Correlator:
         theta_best  = self.thetas_deg[a1]
         phi_best    = self.phis_deg[a2]
 
-        t_best_0subtract1 = self.t_vpol_0subtract1[a1,a2]
-        t_best_0subtract2 = self.t_vpol_0subtract2[a1,a2]
-        t_best_0subtract3 = self.t_vpol_0subtract3[a1,a2]
-        t_best_1subtract2 = self.t_vpol_1subtract2[a1,a2]
-        t_best_1subtract3 = self.t_vpol_1subtract3[a1,a2]
-        t_best_2subtract3 = self.t_vpol_2subtract3[a1,a2]
-
+        if pol == 'hpol':
+            t_best_0subtract1  = self.t_hpol_0subtract1[a1,a2]
+            t_best_0subtract2  = self.t_hpol_0subtract2[a1,a2]
+            t_best_0subtract3  = self.t_hpol_0subtract3[a1,a2]
+            t_best_1subtract2  = self.t_hpol_1subtract2[a1,a2]
+            t_best_1subtract3  = self.t_hpol_1subtract3[a1,a2]
+            t_best_2subtract3  = self.t_hpol_2subtract3[a1,a2]
+        elif pol == 'vpol':
+            t_best_0subtract1  = self.t_vpol_0subtract1[a1,a2]
+            t_best_0subtract2  = self.t_vpol_0subtract2[a1,a2]
+            t_best_0subtract3  = self.t_vpol_0subtract3[a1,a2]
+            t_best_1subtract2  = self.t_vpol_1subtract2[a1,a2]
+            t_best_1subtract3  = self.t_vpol_1subtract3[a1,a2]
+            t_best_2subtract3  = self.t_vpol_2subtract3[a1,a2]
+        else:
+            print('Invalid polarization option.  Returning nothing.')
+            return
 
 
         if plot_map:
@@ -662,7 +801,11 @@ class Correlator:
 
             radius = 5.0 #Degrees I think?  Should eventually represent error. 
             circle = plt.Circle((phi_best, theta_best), radius, edgecolor='lime',linewidth=2,fill=False)
+            ax.axvline(phi_best,c='lime',linewidth=1)
+            ax.axhline(theta_best,c='lime',linewidth=1)
             ax.add_artist(circle)
+            self.figs.append(fig)
+            self.axs.append(ax)
             
             return total_mean_corr_values, fig, ax
         else:
@@ -680,6 +823,10 @@ if __name__=="__main__":
         mode = 'vpol'
 
     datapath = os.environ['BEACON_DATA']
+
+    all_figs = []
+    all_axs = []
+    all_cors = []
 
     for run in [1507,1509,1511]:
 
@@ -711,20 +858,23 @@ if __name__=="__main__":
         vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
 
         cor = Correlator(reader,  upsample=2**14, n_phi=361, n_theta=361, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False)
-
-        if False:
-            eventid = eventids[mode][0]
-            mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False)
-
-            pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
-            pulser_locations_ENU = pulser_locations_ENU/numpy.linalg.norm(pulser_locations_ENU)
-            pulser_theta = numpy.degrees(numpy.arccos(pulser_locations_ENU[2]))
-            pulser_phi = numpy.degrees(numpy.arctan(pulser_locations_ENU[1]/pulser_locations_ENU[0]))
-            print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
-
-            ax.axvline(pulser_phi,c='r')
-            ax.axhline(pulser_theta,c='r')
         if True:
+            for mode in ['hpol','vpol']:
+                eventid = eventids[mode][0]
+                mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, interactive=True)
+
+                pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
+                pulser_locations_ENU = pulser_locations_ENU/numpy.linalg.norm(pulser_locations_ENU)
+                pulser_theta = numpy.degrees(numpy.arccos(pulser_locations_ENU[2]))
+                pulser_phi = numpy.degrees(numpy.arctan(pulser_locations_ENU[1]/pulser_locations_ENU[0]))
+                print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
+
+                ax.axvline(pulser_phi,c='r')
+                ax.axhline(pulser_theta,c='r')
+
+                all_figs.append(fig)
+                all_axs.append(ax)
+        if False:
             mean_corr_values, fig, ax = cor.averagedMap(eventids[mode], mode, plot_map=True, hilbert=False)
 
             pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
@@ -735,3 +885,10 @@ if __name__=="__main__":
 
             ax.axvline(pulser_phi,c='r')
             ax.axhline(pulser_theta,c='r')
+
+            all_figs.append(fig)
+            all_axs.append(ax)
+        all_cors.append(cor)
+
+        
+        
