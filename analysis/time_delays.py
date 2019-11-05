@@ -35,7 +35,7 @@ cable_delays = info.loadCableDelays()
 #The below are not ALL pulser points, but a set that has been precalculated and can be used
 #if you wish to skip the calculation finding them.
 
-known_pulser_ids = info.loadPulserEventids(remove_ignored=False)
+known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
 ignorable_pulser_ids = info.loadIgnorableEventids()
 
 def gaus(x,a,x0,sigma):
@@ -49,14 +49,17 @@ if __name__ == '__main__':
     
     #Filter settings
     final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
-    crit_freq_low_pass_MHz = 70 #This new pulser seems to peak in the region of 85 MHz or so
-    crit_freq_high_pass_MHz = 65
-    low_pass_filter_order = 8
-    high_pass_filter_order = 4
+    plot_multiple = False
+    crit_freq_low_pass_MHz = 70#None#70 #This new pulser seems to peak in the region of 85 MHz or so
+    low_pass_filter_order = 4#None#8
+
+    crit_freq_high_pass_MHz = 30#None#50
+    high_pass_filter_order = 8#None#8
+    
     plot_filters = True
 
-    hilbert = True #Apply hilbert envelope to wf before correlating
-    align_method = 0
+    hilbert = False #Apply hilbert envelope to wf before correlating
+    align_method = 8
     
 
     #Plotting info
@@ -179,7 +182,7 @@ if __name__ == '__main__':
                 reader = Reader(datapath,run)
                 reader.setEntry(all_eventids[0])
                 tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filters)
-                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=align_method,hilbert=hilbert,plot=True,hpol_cut=hpol_eventids_cut,vpol_cut=vpol_eventids_cut)
+                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=hpol_eventids_cut,vpol_cut=vpol_eventids_cut)
 
                 for pair_index, pair in enumerate(pairs):
                     if pair in hpol_pairs:
@@ -292,6 +295,9 @@ if __name__ == '__main__':
                 expected_time_difference_vpol = numpy.array(expected_time_differences_vpol)[[i in x[0] and j in x[0] for x in expected_time_differences_vpol]][0][1]
                 max_time_difference = numpy.array(max_time_differences_physical)[[i in x[0] and j in x[0] for x in max_time_differences_physical]][0][1]
                 
+                bin_bounds = [numpy.mean(vpol_delays[pair_index]) - bins_pm_ns,numpy.mean(vpol_delays[pair_index]) + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_vpol)*50))
+                time_bins = numpy.arange(bin_bounds[0],bin_bounds[1],tdc.dt_ns_upsampled)
+
                 #bin_bounds = [expected_time_difference_vpol - bins_pm_ns,expected_time_difference_vpol + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_vpol)*50))
 
                 plt.subplot(2,1,2)
@@ -339,16 +345,10 @@ if __name__ == '__main__':
                 plt.legend(fontsize=16)
 
 
-
-            print('time_differences_hpol')
-            print(time_differences_hpol)
-            print('time_differences_errors_hpol')
-            print(time_differences_errors_hpol)
-
-            print('time_differences_vpol')
-            print(time_differences_vpol)
-            print('time_differences_errors_vpol')
-            print(time_differences_errors_vpol)
+            print('site%i_measured_time_delays_hpol = '%site, time_differences_hpol)
+            print('site%i_measured_time_delays_errors_hpol = '%site, time_differences_errors_hpol)
+            print('site%i_measured_time_delays_vpol = '%site, time_differences_vpol)
+            print('site%i_measured_time_delays_errors_vpol = '%site, time_differences_errors_vpol)
 
         except Exception as e:
             print('Error in plotting.')

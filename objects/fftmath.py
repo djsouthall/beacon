@@ -606,7 +606,36 @@ class TimeDelayCalculator(FFTPrepper):
                     else:
                         indices[i] = numpy.argmax(corrs[i][0:index]) #Choose highest peak before max.  
                     max_corrs[i] = corrs[i][indices[i]]
+            elif align_method == 8:
+                '''
+                Apply cfd to waveforms to get first pass guess at delays,
+                then pick the best correlation near that. 
+                '''
+                run = int(self.reader.run)
+                if run == 1507:
+                    cfd_thresh = 0.8
+                elif run == 1509:
+                    cfd_thresh = 0.8
+                elif run == 1511:
+                    cfd_thresh = 0.3
+                else:
+                    cfd_thresh = 0.75
 
+                cfd_trig_times = []
+                #times = self.dt_ns_upsampled*numpy.arange(numpy.shape(upsampled_waveforms)[1])
+                for index, wf in enumerate(upsampled_waveforms):
+                    cfd_trig_times.append(min(numpy.where(wf > max(wf)*cfd_thresh)[0])*self.dt_ns_upsampled)
+
+                time_delays_cfd = numpy.zeros(len(self.pairs))
+                time_windows_oneside = 5 #ns3
+
+                indices = numpy.zeros(numpy.shape(corrs)[0],dtype=int)
+                max_corrs = numpy.zeros(numpy.shape(corrs)[0])
+                for pair_index, pair in enumerate(self.pairs):
+                    time_delays_cfd = cfd_trig_times[int(min(pair))] - cfd_trig_times[int(max(pair))]
+                    cut = numpy.logical_and(self.corr_time_shifts < time_delays_cfd + time_windows_oneside, self.corr_time_shifts >time_delays_cfd - time_windows_oneside)
+                    indices[pair_index] = numpy.argmax( numpy.multiply( cut , corrs[pair_index] ) )
+                    max_corrs[pair_index] = corrs[pair_index][indices[pair_index]]
 
             if False:
                 if True:#numpy.any(self.corr_time_shifts[indices] > 2000):
@@ -761,7 +790,7 @@ class TimeDelayCalculator(FFTPrepper):
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-    
+
 
 class TemplateCompareTool(FFTPrepper):
     '''
@@ -1013,10 +1042,13 @@ if __name__ == '__main__':
 
         #Filter settings
         final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
+        
         crit_freq_low_pass_MHz = 70 #This new pulser seems to peak in the region of 85 MHz or so
-        crit_freq_high_pass_MHz = None#20
         low_pass_filter_order = 12
+        
         high_pass_filter_order = None#8
+        crit_freq_high_pass_MHz = None#20
+
         use_filter = True
         plot_filters= True
 

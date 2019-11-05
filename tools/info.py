@@ -65,12 +65,13 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
         for key, location in antennas_physical_latlon.items():
             antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
 
-        antennas_phase_hpol = {0:(  0.        ,   0.        ,   0.        ) ,    1:(-30.46323775, -12.52208649,   4.46999022),   2:( -9.60219054, -46.82872785,  -0.67713143),  3:(-30.58041715, -42.17715115,  13.79782586)}#ADJUSTED HPOL
-        antennas_phase_vpol = {0:(  0.        ,   0.        ,   0.),     1:(-30.64956888, -12.54918813,   5.82636563),     2:(-10.0159635 , -46.86937298,  -1.43651148),   3:(-30.3944812 , -42.53609774,  13.95834976)}#ADJUSTED VPOL
+        #Errors not currently used.  
 
-        #Not currently used.  
-        antennas_phase_hpol_hesse = {0:(  0.        ,   0.        ,   0.        ) ,    1:(0.19, 0.23, 1.5),   2:(0.30, 0.14, 1.4),  3:(0.26, 0.20, 1.3)}
-        antennas_phase_vpol_hesse = {0:(  0.        ,   0.        ,   0.        ) ,    1:(0.20 , 0.23 , 1.5),   2:(0.29 , 0.14 , 1.5),  3:(0.26 , 0.20 , 1.4)}
+    antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.349887, -12.520570, 10.753629], 2 : [-10.496292, -46.298628, -0.334372], 3 : [-31.124854, -42.056826, 14.776026]}
+    antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.035752, 0.046289, 0.239341], 2 : [0.063521, 0.032997, 0.283964], 3 : [0.058470, 0.043713, 0.255710]}
+    antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-29.960398, -12.608634, 10.895405], 2 : [-9.982091, -46.228866, 0.876122], 3 : [-31.128984, -41.741933, 15.179322]}
+    antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.045188, 0.062678, 0.276056], 2 : [0.072194, 0.043210, 0.271999], 3 : [0.070741, 0.056980, 0.289406]}
+
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
 
@@ -278,21 +279,11 @@ def loadPulserPhaseLocationsENU():
     for key, location in pulser_locations.items():
         pulser_locations_ENU['physical'][key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
 
-    pulser_locations_ENU['hpol'] = {'run1507':[301 ,-385, -80],\
-                                    'run1509':[968,-444,-152],\
-                                    'run1511':[182, 319, -36]}
 
-    pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[6 ,7 ,5] ,\
-                                                'run1509':[25,10,5] ,\
-                                                'run1511':[7 ,11,5]}
-
-    pulser_locations_ENU['vpol'] = {'run1507':[304,-385, -77],\
-                                    'run1509':[963,-442,-149],\
-                                    'run1511':[183, 318, -34]}
-
-    pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[6 ,7 ,5] ,\
-                                                'run1509':[25,10,5] ,\
-                                                'run1511':[7 ,11,5]}
+    pulser_locations_ENU['vpol'] = {'run1507':[280.171819, -376.224547, -82.018381], 'run1509':[1008.832290, -483.685542, -154.403108], 'run1511':[179.273859, 328.028886, -38.847228]}
+    pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[1.099226, 1.238948, 2.118661], 'run1509':[5.458069, 2.390357, 3.465286], 'run1511':[1.283664, 2.062469, 2.092156]}
+    pulser_locations_ENU['hpol'] = {'run1507':[270.325989, -369.305536, -88.422813], 'run1509':[1041.533882, -496.500108, -160.787578], 'run1511':[180.014966, 338.520785, -45.229000]}
+    pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[1.364553, 1.511306, 2.595445], 'run1509':[8.300165, 3.606328, 4.038400], 'run1511':[2.147045, 3.527524, 3.173865]}
 
     return pulser_locations_ENU
 
@@ -417,9 +408,27 @@ def loadIgnorableEventids():
                                                2803, 2805, 2807, 2809, 2811, 2813, 2815, 2817, 2819, 2821, 2823,\
                                                2825, 2827, 2829, 2831, 2833, 2835, 2837, 2839, 2841, 2843, 2845,\
                                                2847, 2849, 2851, 2853, 2855, 2857, 2859])
+    ignore_eventids['run1511'] = numpy.array([1052, 1162, 1198, 1224, 1230, 1232, 1242, 1244, 1262, 1264, 1286,\
+                                        1310, 1328, 1330, 1346, 1350, 1370, 1372, 1382, 1416, 1420, 1426,\
+                                        1428, 1434, 1442, 1458, 1462, 1464, 1470, 1482, 1492, 1494, 1502,\
+                                        1504, 1506, 1528, 1536, 1538, 1574, 1592, 1614, 1636, 1644, 1654,\
+                                        1668, 1670, 1672, 1680, 1684, 1686, 1694, 1698, 1710, 1726, 1734,\
+                                        1736, 1738, 1742, 1774, 1776, 1782, 1786, 1794, 1798, 1804, 1826,\
+                                        1832, 1838, 1848, 1860, 1862, 1868, 1876, 1880, 1882, 1888, 1890,\
+                                        1892, 1894, 1908, 1912, 1950, 1960, 1962, 1964, 1974, 1992, 2004,\
+                                        2012, 2014, 2018, 2030, 2034, 2048, 2050, 2054, 2058, 2066, 2068,\
+                                        2070, 2076, 2078, 2096, 2100, 2108, 2120, 2124, 2126, 2134, 2146,\
+                                        2152, 2162, 2176, 2182, 2184, 2186, 2196, 2200, 2202, 2216, 2220,\
+                                        2230, 2236, 2242, 2248, 2258, 2266, 2270, 2280, 2302, 2304, 2316,\
+                                        2330, 2348, 2352, 2356, 2360, 2362, 2368, 2372, 2376, 2388, 2390,\
+                                        2392, 2394, 2396, 2398, 2400, 2406, 2408, 2416, 2426, 2428, 2442,\
+                                        2452, 2458, 2466, 2470, 2472, 2476, 2484, 2486, 2498, 2504, 2516,\
+                                        2530, 2532, 2534, 2542, 2546, 2570, 2592, 2594, 2596, 2598, 2600,\
+                                        2602, 2608, 2620, 2622, 2624, 2636, 2638, 2650, 2660, 2664, 2670,\
+                                        2686, 2692, 2698, 2700, 2702, 2706, 2716, 2718, 2740, 2750, 2754])
     ignore_eventids['run1507'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1507_pulser_ignoreids.csv',delimiter=',').astype(int)
     ignore_eventids['run1509'] = numpy.sort(numpy.append(ignore_eventids['run1509'],numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1509_pulser_ignoreids.csv',delimiter=',').astype(int)))
-    ignore_eventids['run1511'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1511_pulser_ignoreids.csv',delimiter=',').astype(int)
+    ignore_eventids['run1511'] = numpy.sort(numpy.append(ignore_eventids['run1511'],numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1511_pulser_ignoreids.csv',delimiter=',').astype(int)))
     return ignore_eventids
 
 def loadPulserEventids(remove_ignored=False):

@@ -513,14 +513,10 @@ class Correlator:
                     t_best_0subtract3 = self.t_vpol_0subtract3[theta_index,phi_index]
 
                 #Determine how many indices to roll each waveform.
-                print(event.xdata,event.ydata)
                 roll0 = 0
                 roll1 = int(numpy.rint(t_best_0subtract1/self.dt_resampled))
                 roll2 = int(numpy.rint(t_best_0subtract2/self.dt_resampled))
                 roll3 = int(numpy.rint(t_best_0subtract3/self.dt_resampled))
-
-                print(roll1,roll2,roll3)
-
 
                 try:
                     plt.close(self.popout_fig)
@@ -564,7 +560,36 @@ class Correlator:
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 print(exc_type, fname, exc_tb.tb_lineno)
 
-    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False):
+    def mapMax(self, map_values, max_method=0):
+        '''
+        Determines the indices in the given map of the optimal source direction.
+
+        Parameters
+        ----------
+        map_values : numpy.ndarray of floats
+            The correlation map.
+        max_method : int
+            The index of the method you would like to use.
+            0 : argmax of map. (Default).
+            1 : Averages each point in the map with the four surrounding points (by rolling map by 1 index in each direction and summing).
+
+        Returns
+        -------
+        row_index : int
+            The selected row.
+        col_index : int
+            The selected column.
+        '''
+        if max_method == 0:
+            row_index, column_index = numpy.unravel_index(map_values.argmax(),numpy.shape(map_values))
+        elif max_method == 1:
+            #Calculates sum of each point plus surrounding four points to get max.
+            rounded_corr_values = (map_values + numpy.roll(map_values,1,axis=0) + numpy.roll(map_values,-1,axis=0) + numpy.roll(map_values,1,axis=1) + numpy.roll(map_values,-1,axis=1))/5.0
+            row_index, column_index = numpy.unravel_index(rounded_corr_values.argmax(),numpy.shape(rounded_corr_values))
+        return row_index, column_index
+
+
+    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None):
         '''
         Makes the cross correlation make for the given event.
 
@@ -583,6 +608,8 @@ class Correlator:
         interactive : bool
             Enables an interactive correlation map, where double clicking will result in a plot
             of waveforms aligned using the corresponding time delays of that location.
+        max_method : bool
+            Determines how the most probable source direction is from the map.
         '''
         try:
             if hilbert == True:
@@ -611,8 +638,11 @@ class Correlator:
 
                 mean_corr_values = numpy.mean(numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] ),axis=0)
 
-                a1, a2 = numpy.unravel_index(mean_corr_values.argmax(),numpy.shape(mean_corr_values))
-                
+                if max_method is not None:
+                    a1, a2 = self.mapMax(mean_corr_values,max_method=max_method)
+                else:
+                    a1, a2 = self.mapMax(mean_corr_values)
+
                 theta_best  = self.thetas_deg[a1]
                 phi_best    = self.phis_deg[a2]
 
@@ -641,8 +671,12 @@ class Correlator:
                 corr_value_2subtract3 = corr23[self.delay_indices_vpol_2subtract3]
 
                 mean_corr_values = numpy.mean(numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] ),axis=0)
-                a1, a2 = numpy.unravel_index(mean_corr_values.argmax(),numpy.shape(mean_corr_values))
                 
+                if max_method is not None:
+                    a1, a2 = self.mapMax(mean_corr_values,max_method=max_method)
+                else:
+                    a1, a2 = self.mapMax(mean_corr_values)
+
                 theta_best  = self.thetas_deg[a1]
                 phi_best    = self.phis_deg[a2]
 
@@ -723,7 +757,7 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False):
+    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None):
         '''
         Does the same thing as map, but averages over all eventids given.  Mostly helpful for 
         repeated sources such as background sources or pulsers.
@@ -740,7 +774,8 @@ class Correlator:
             Plot the cross-correlations for each baseline.
         hilbert : bool
             Enables performing calculations with Hilbert envelopes of waveforms. 
-        
+        max_method : bool
+            Determines how the most probable source direction is from the map.
         '''
         if pol == 'both':
             hpol_result = self.averagedMap(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert)
@@ -754,8 +789,10 @@ class Correlator:
             total_mean_corr_values += self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert)/len(eventids)
         print('')
 
-
-        a1, a2 = numpy.unravel_index(total_mean_corr_values.argmax(),numpy.shape(total_mean_corr_values))
+        if max_method is not None:
+            a1, a2 = self.mapMax(total_mean_corr_values,max_method=max_method)
+        else:
+            a1, a2 = self.mapMax(total_mean_corr_values)
         
         theta_best  = self.thetas_deg[a1]
         phi_best    = self.phis_deg[a2]
@@ -811,7 +848,10 @@ class Correlator:
         else:
             return total_mean_corr_values
 
-if __name__=="__main__":
+def testMain():
+    '''
+    This was used for testing.
+    '''
     if len(sys.argv) == 2:
         if str(sys.argv[1]) in ['vpol', 'hpol']:
             mode = str(sys.argv[1])
@@ -857,7 +897,7 @@ if __name__=="__main__":
         hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
         vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
 
-        cor = Correlator(reader,  upsample=2**14, n_phi=361, n_theta=361, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False)
+        cor = Correlator(reader,  upsample=2**15, n_phi=361, n_theta=361, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False)
         if True:
             for mode in ['hpol','vpol']:
                 eventid = eventids[mode][0]
@@ -890,5 +930,105 @@ if __name__=="__main__":
             all_axs.append(ax)
         all_cors.append(cor)
 
-        
-        
+if __name__=="__main__":
+    crit_freq_low_pass_MHz = 60 #This new pulser seems to peak in the region of 85 MHz or so
+    low_pass_filter_order = 4
+
+    crit_freq_high_pass_MHz = 30
+    high_pass_filter_order = 4
+    plot_filter=True
+
+    max_method = 0
+    
+    if len(sys.argv) == 3:
+        run = int(sys.argv[1])
+        eventid = int(sys.argv[2])
+    
+        datapath = os.environ['BEACON_DATA']
+
+        all_figs = []
+        all_axs = []
+        all_cors = []
+
+        if run == 1507:
+            waveform_index_range = (1500,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
+        elif run == 1509:
+            waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
+        elif run == 1511:
+            waveform_index_range = (1250,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
+        else:
+            waveform_index_range = (None,None)
+
+        reader = Reader(datapath,run)
+
+        cor = Correlator(reader,  upsample=2**15, n_phi=420, n_theta=420, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter)
+
+        for mode in ['hpol','vpol']:
+            mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, interactive=True)
+            all_figs.append(fig)
+            all_axs.append(ax)
+
+        all_cors.append(cor)
+    else:
+        datapath = os.environ['BEACON_DATA']
+
+        all_figs = []
+        all_axs = []
+        all_cors = []
+
+        for run in [1507,1509,1511]:
+
+            if run == 1507:
+                waveform_index_range = (1500,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
+            elif run == 1509:
+                waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
+            elif run == 1511:
+                waveform_index_range = (1250,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
+            else:
+                waveform_index_range = (None,None)
+
+            reader = Reader(datapath,run)
+            plot_filter=True
+
+            known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
+            eventids = {}
+            eventids['hpol'] = numpy.sort(known_pulser_ids['run%i'%run]['hpol'])
+            eventids['vpol'] = numpy.sort(known_pulser_ids['run%i'%run]['vpol'])
+            all_eventids = numpy.sort(numpy.append(eventids['hpol'],eventids['vpol']))
+
+            hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
+            vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
+
+            cor = Correlator(reader,  upsample=2**15, n_phi=420, n_theta=420, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter)
+            if True:
+                for mode in ['hpol','vpol']:
+                    eventid = eventids[mode][0]
+                    mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method)
+
+                    pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
+                    pulser_locations_ENU = pulser_locations_ENU/numpy.linalg.norm(pulser_locations_ENU)
+                    pulser_theta = numpy.degrees(numpy.arccos(pulser_locations_ENU[2]))
+                    pulser_phi = numpy.degrees(numpy.arctan(pulser_locations_ENU[1]/pulser_locations_ENU[0]))
+                    print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
+
+                    ax.axvline(pulser_phi,c='r')
+                    ax.axhline(pulser_theta,c='r')
+
+                    all_figs.append(fig)
+                    all_axs.append(ax)
+            if False:
+                for mode in ['hpol','vpol']:
+                    mean_corr_values, fig, ax = cor.averagedMap(eventids[mode], mode, plot_map=True, hilbert=False, max_method=max_method)
+
+                    pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
+                    pulser_locations_ENU = pulser_locations_ENU/numpy.linalg.norm(pulser_locations_ENU)
+                    pulser_theta = numpy.degrees(numpy.arccos(pulser_locations_ENU[2]))
+                    pulser_phi = numpy.degrees(numpy.arctan(pulser_locations_ENU[1]/pulser_locations_ENU[0]))
+                    print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
+
+                    ax.axvline(pulser_phi,c='r')
+                    ax.axhline(pulser_theta,c='r')
+
+                all_figs.append(fig)
+                all_axs.append(ax)
+            all_cors.append(cor)
