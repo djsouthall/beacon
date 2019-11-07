@@ -931,12 +931,14 @@ def testMain():
         all_cors.append(cor)
 
 if __name__=="__main__":
-    crit_freq_low_pass_MHz = 60 #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = 4
+    crit_freq_low_pass_MHz = None#60 #This new pulser seems to peak in the region of 85 MHz or so
+    low_pass_filter_order = None#4
 
-    crit_freq_high_pass_MHz = 30
-    high_pass_filter_order = 4
+    crit_freq_high_pass_MHz = None
+    high_pass_filter_order = None
     plot_filter=True
+
+    upsample = 2**15
 
     max_method = 0
     
@@ -961,7 +963,7 @@ if __name__=="__main__":
 
         reader = Reader(datapath,run)
 
-        cor = Correlator(reader,  upsample=2**15, n_phi=420, n_theta=420, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter)
+        cor = Correlator(reader,  upsample=upsample, n_phi=420, n_theta=420, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter)
 
         for mode in ['hpol','vpol']:
             mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, interactive=True)
@@ -988,7 +990,7 @@ if __name__=="__main__":
                 waveform_index_range = (None,None)
 
             reader = Reader(datapath,run)
-            plot_filter=True
+            plot_filter=run==1507 #True once
 
             known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
             eventids = {}
@@ -999,7 +1001,7 @@ if __name__=="__main__":
             hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
             vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
 
-            cor = Correlator(reader,  upsample=2**15, n_phi=420, n_theta=420, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter)
+            cor = Correlator(reader,  upsample=upsample, n_phi=420, n_theta=420, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter)
             if True:
                 for mode in ['hpol','vpol']:
                     eventid = eventids[mode][0]

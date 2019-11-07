@@ -637,6 +637,42 @@ class TimeDelayCalculator(FFTPrepper):
                     indices[pair_index] = numpy.argmax( numpy.multiply( cut , corrs[pair_index] ) )
                     max_corrs[pair_index] = corrs[pair_index][indices[pair_index]]
 
+                if False:
+                    times = numpy.arange(len(wf))*self.dt_ns_upsampled
+                    for pair_index, pair in enumerate(self.pairs):
+                        plt.figure()
+                        plt.subplot(2,1,1)
+                        a = pair[0]
+                        b = pair[1]
+                        plt.plot(times, upsampled_waveforms[a],color='b',label='Ch %i'%a,alpha=0.9)
+                        plt.plot(times, upsampled_waveforms[b],color='r',label='Ch %i'%b,alpha=0.9)
+                        plt.axvline(cfd_trig_times[a],color='b',linestyle='--',label='Ch %i, CFD Trig %0.2f'%(a,cfd_thresh),alpha=0.7)
+                        plt.axvline(cfd_trig_times[b],color='r',linestyle='--',label='Ch %i, CFD Trig %0.2f'%(b,cfd_thresh),alpha=0.7)
+                        plt.ylabel('Upsampled Waveforms (Adu)')
+                        plt.xlabel('Time (ns)')
+                        plt.minorticks_on()
+                        plt.grid(b=True, which='major', color='k', linestyle='-')
+                        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                        plt.legend()
+
+                        time_delays_cfd = cfd_trig_times[a] - cfd_trig_times[b]
+                        cut = numpy.logical_and(self.corr_time_shifts < time_delays_cfd + time_windows_oneside, self.corr_time_shifts >time_delays_cfd - time_windows_oneside)
+
+                        min(self.corr_time_shifts[self.corr_time_shifts > time_delays_cfd - time_windows_oneside])
+
+                        plt.subplot(2,1,2)
+                        plt.plot(self.corr_time_shifts, corrs[pair_index],color='k',label='Cross Correlation')
+                        plt.axvspan(min(self.corr_time_shifts), min(self.corr_time_shifts[self.corr_time_shifts > time_delays_cfd - time_windows_oneside]), label = 'Excluding Outside CFD Time %0.2f +- %0.1f ns'%(time_delays_cfd,time_windows_oneside),color='k',alpha=0.2)
+                        plt.axvspan(max(self.corr_time_shifts[self.corr_time_shifts < time_delays_cfd + time_windows_oneside]),max(self.corr_time_shifts),color='k',alpha=0.2)
+                        plt.axvline(self.corr_time_shifts[indices[pair_index]],label='Selected Time Delay = %0.3f'%self.corr_time_shifts[indices[pair_index]])
+                        plt.ylabel('Cross Correlation')
+                        plt.xlabel('Time (ns)')
+                        plt.minorticks_on()
+                        plt.grid(b=True, which='major', color='k', linestyle='-')
+                        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                        plt.legend()
+                    import pdb; pdb.set_trace()
+
             if False:
                 if True:#numpy.any(self.corr_time_shifts[indices] > 2000):
                     plt.figure()

@@ -236,7 +236,7 @@ if __name__ == '__main__':
             site3_measured_time_delays_errors = site3_measured_time_delays_errors_vpol
 
 
-        def f(ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, puls1_x, puls1_y, puls1_z, puls2_x, puls2_y, puls2_z, puls3_x, puls3_y, puls3_z):
+        def rawChi2(ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, puls1_x, puls1_y, puls1_z, puls2_x, puls2_y, puls2_z, puls3_x, puls3_y, puls3_z, cable_delay_ant0, cable_delay_ant1, cable_delay_ant2, cable_delay_ant3):
             #To generalize, look into from_array_func Minuit initializer.  
             try:
                 #fixing the locations of antenna zero.
@@ -266,34 +266,34 @@ if __name__ == '__main__':
                 #calculate differences in distances (already converted to ns) travelled and convert to expected time delays for known pairs.
                 #Here I add cable delays, because I am looking at physical distance + delay to measurement to match the measured time differences.
                 #Ant 0 - Ant 1
-                site1_p0 = (site1_d0 + cable_delays[0]) - (site1_d1 + cable_delays[1])
-                site2_p0 = (site2_d0 + cable_delays[0]) - (site2_d1 + cable_delays[1])
-                site3_p0 = (site3_d0 + cable_delays[0]) - (site3_d1 + cable_delays[1])
+                site1_p0 = (site1_d0 + cable_delay_ant0) - (site1_d1 + cable_delay_ant1)
+                site2_p0 = (site2_d0 + cable_delay_ant0) - (site2_d1 + cable_delay_ant1)
+                site3_p0 = (site3_d0 + cable_delay_ant0) - (site3_d1 + cable_delay_ant1)
 
                 #Ant 0 - Ant 2
-                site1_p1 = (site1_d0 + cable_delays[0]) - (site1_d2 + cable_delays[2])
-                site2_p1 = (site2_d0 + cable_delays[0]) - (site2_d2 + cable_delays[2])
-                site3_p1 = (site3_d0 + cable_delays[0]) - (site3_d2 + cable_delays[2])
+                site1_p1 = (site1_d0 + cable_delay_ant0) - (site1_d2 + cable_delay_ant2)
+                site2_p1 = (site2_d0 + cable_delay_ant0) - (site2_d2 + cable_delay_ant2)
+                site3_p1 = (site3_d0 + cable_delay_ant0) - (site3_d2 + cable_delay_ant2)
 
                 #Ant 0 - Ant 3
-                site1_p2 = (site1_d0 + cable_delays[0]) - (site1_d3 + cable_delays[3])
-                site2_p2 = (site2_d0 + cable_delays[0]) - (site2_d3 + cable_delays[3])
-                site3_p2 = (site3_d0 + cable_delays[0]) - (site3_d3 + cable_delays[3])
+                site1_p2 = (site1_d0 + cable_delay_ant0) - (site1_d3 + cable_delay_ant3)
+                site2_p2 = (site2_d0 + cable_delay_ant0) - (site2_d3 + cable_delay_ant3)
+                site3_p2 = (site3_d0 + cable_delay_ant0) - (site3_d3 + cable_delay_ant3)
 
                 #Ant 1 - Ant 2
-                site1_p3 = (site1_d1 + cable_delays[1]) - (site1_d2 + cable_delays[2])
-                site2_p3 = (site2_d1 + cable_delays[1]) - (site2_d2 + cable_delays[2])
-                site3_p3 = (site3_d1 + cable_delays[1]) - (site3_d2 + cable_delays[2])
+                site1_p3 = (site1_d1 + cable_delay_ant1) - (site1_d2 + cable_delay_ant2)
+                site2_p3 = (site2_d1 + cable_delay_ant1) - (site2_d2 + cable_delay_ant2)
+                site3_p3 = (site3_d1 + cable_delay_ant1) - (site3_d2 + cable_delay_ant2)
 
                 #Ant 1 - Ant 3
-                site1_p4 = (site1_d1 + cable_delays[1]) - (site1_d3 + cable_delays[3])
-                site2_p4 = (site2_d1 + cable_delays[1]) - (site2_d3 + cable_delays[3])
-                site3_p4 = (site3_d1 + cable_delays[1]) - (site3_d3 + cable_delays[3])
+                site1_p4 = (site1_d1 + cable_delay_ant1) - (site1_d3 + cable_delay_ant3)
+                site2_p4 = (site2_d1 + cable_delay_ant1) - (site2_d3 + cable_delay_ant3)
+                site3_p4 = (site3_d1 + cable_delay_ant1) - (site3_d3 + cable_delay_ant3)
 
                 #Ant 2 - Ant 3
-                site1_p5 = (site1_d2 + cable_delays[2]) - (site1_d3 + cable_delays[3])
-                site2_p5 = (site2_d2 + cable_delays[2]) - (site2_d3 + cable_delays[3])
-                site3_p5 = (site3_d2 + cable_delays[2]) - (site3_d3 + cable_delays[3])
+                site1_p5 = (site1_d2 + cable_delay_ant2) - (site1_d3 + cable_delay_ant3)
+                site2_p5 = (site2_d2 + cable_delay_ant2) - (site2_d3 + cable_delay_ant3)
+                site3_p5 = (site3_d2 + cable_delay_ant2) - (site3_d3 + cable_delay_ant3)
 
 
                 if False:
@@ -316,6 +316,46 @@ if __name__ == '__main__':
                     print('site1_p5 = %0.3f \t site1_measured_time_delays[5][1] = %0.3f \t diff = %0.3f'%(site1_p5, site1_measured_time_delays[5][1], site1_p5 - site1_measured_time_delays[5][1]))
                     print('site2_p5 = %0.3f \t site2_measured_time_delays[5][1] = %0.3f \t diff = %0.3f'%(site2_p5, site2_measured_time_delays[5][1], site2_p5 - site2_measured_time_delays[5][1]))
                     print('site3_p5 = %0.3f \t site3_measured_time_delays[5][1] = %0.3f \t diff = %0.3f'%(site3_p5, site3_measured_time_delays[5][1], site3_p5 - site3_measured_time_delays[5][1]))
+
+                chi_2 =     ((site1_p0 - site1_measured_time_delays[0][1])**2)/site1_measured_time_delays_errors[0][1]**2 + \
+                            ((site2_p0 - site2_measured_time_delays[0][1])**2)/site2_measured_time_delays_errors[0][1]**2 + \
+                            ((site3_p0 - site3_measured_time_delays[0][1])**2)/site3_measured_time_delays_errors[0][1]**2 + \
+                            \
+                            ((site1_p1 - site1_measured_time_delays[1][1])**2)/site1_measured_time_delays_errors[1][1]**2 + \
+                            ((site2_p1 - site2_measured_time_delays[1][1])**2)/site2_measured_time_delays_errors[1][1]**2 + \
+                            ((site3_p1 - site3_measured_time_delays[1][1])**2)/site3_measured_time_delays_errors[1][1]**2 + \
+                            \
+                            ((site1_p2 - site1_measured_time_delays[2][1])**2)/site1_measured_time_delays_errors[2][1]**2 + \
+                            ((site2_p2 - site2_measured_time_delays[2][1])**2)/site2_measured_time_delays_errors[2][1]**2 + \
+                            ((site3_p2 - site3_measured_time_delays[2][1])**2)/site3_measured_time_delays_errors[2][1]**2 + \
+                            \
+                            ((site1_p3 - site1_measured_time_delays[3][1])**2)/site1_measured_time_delays_errors[3][1]**2 + \
+                            ((site2_p3 - site2_measured_time_delays[3][1])**2)/site2_measured_time_delays_errors[3][1]**2 + \
+                            ((site3_p3 - site3_measured_time_delays[3][1])**2)/site3_measured_time_delays_errors[3][1]**2 + \
+                            \
+                            ((site1_p4 - site1_measured_time_delays[4][1])**2)/site1_measured_time_delays_errors[4][1]**2 + \
+                            ((site2_p4 - site2_measured_time_delays[4][1])**2)/site2_measured_time_delays_errors[4][1]**2 + \
+                            ((site3_p4 - site3_measured_time_delays[4][1])**2)/site3_measured_time_delays_errors[4][1]**2 + \
+                            \
+                            ((site1_p5 - site1_measured_time_delays[5][1])**2)/site1_measured_time_delays_errors[5][1]**2 + \
+                            ((site2_p5 - site2_measured_time_delays[5][1])**2)/site2_measured_time_delays_errors[5][1]**2 + \
+                            ((site3_p5 - site3_measured_time_delays[5][1])**2)/site3_measured_time_delays_errors[5][1]**2
+
+                return chi_2
+            except Exception as e:
+                print('Error in rawChi2')
+                print(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+
+        def adjustedChi2(ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, puls1_x, puls1_y, puls1_z, puls2_x, puls2_y, puls2_z, puls3_x, puls3_y, puls3_z, cable_delay_ant0, cable_delay_ant1, cable_delay_ant2, cable_delay_ant3):
+            #To generalize, look into from_array_func Minuit initializer.  
+            try:
+                #fixing the locations of antenna zero.
+                ant0_x = 0.0
+                ant0_y = 0.0
+                ant0_z = 0.0
 
                 #This will weight against differences that result in longer baselines than measured.   I.e. smaller number if current baseline > measured.  Large for current < measured. 
                 w = lambda measured, current : numpy.exp(measured - current)**2
@@ -349,57 +389,35 @@ if __name__ == '__main__':
                                                     '2-3':3690.7-3806.25,\
                                                     '1-3':3763.1-3806.25}
                 measured_pulser_relative_heights_error = 5.0 #m
+                
+                chi_2 = rawChi2(ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, puls1_x, puls1_y, puls1_z, puls2_x, puls2_y, puls2_z, puls3_x, puls3_y, puls3_z, cable_delay_ant0, cable_delay_ant1, cable_delay_ant2, cable_delay_ant3)
 
-                chi_2 =     ((site1_p0 - site1_measured_time_delays[0][1])**2)/site1_measured_time_delays_errors[0][1]**2 + \
-                            ((site2_p0 - site2_measured_time_delays[0][1])**2)/site2_measured_time_delays_errors[0][1]**2 + \
-                            ((site3_p0 - site3_measured_time_delays[0][1])**2)/site3_measured_time_delays_errors[0][1]**2 + \
-                            \
-                            ((site1_p1 - site1_measured_time_delays[1][1])**2)/site1_measured_time_delays_errors[1][1]**2 + \
-                            ((site2_p1 - site2_measured_time_delays[1][1])**2)/site2_measured_time_delays_errors[1][1]**2 + \
-                            ((site3_p1 - site3_measured_time_delays[1][1])**2)/site3_measured_time_delays_errors[1][1]**2 + \
-                            \
-                            ((site1_p2 - site1_measured_time_delays[2][1])**2)/site1_measured_time_delays_errors[2][1]**2 + \
-                            ((site2_p2 - site2_measured_time_delays[2][1])**2)/site2_measured_time_delays_errors[2][1]**2 + \
-                            ((site3_p2 - site3_measured_time_delays[2][1])**2)/site3_measured_time_delays_errors[2][1]**2 + \
-                            \
-                            ((site1_p3 - site1_measured_time_delays[3][1])**2)/site1_measured_time_delays_errors[3][1]**2 + \
-                            ((site2_p3 - site2_measured_time_delays[3][1])**2)/site2_measured_time_delays_errors[3][1]**2 + \
-                            ((site3_p3 - site3_measured_time_delays[3][1])**2)/site3_measured_time_delays_errors[3][1]**2 + \
-                            \
-                            ((site1_p4 - site1_measured_time_delays[4][1])**2)/site1_measured_time_delays_errors[4][1]**2 + \
-                            ((site2_p4 - site2_measured_time_delays[4][1])**2)/site2_measured_time_delays_errors[4][1]**2 + \
-                            ((site3_p4 - site3_measured_time_delays[4][1])**2)/site3_measured_time_delays_errors[4][1]**2 + \
-                            \
-                            ((site1_p5 - site1_measured_time_delays[5][1])**2)/site1_measured_time_delays_errors[5][1]**2 + \
-                            ((site2_p5 - site2_measured_time_delays[5][1])**2)/site2_measured_time_delays_errors[5][1]**2 + \
-                            ((site3_p5 - site3_measured_time_delays[5][1])**2)/site3_measured_time_delays_errors[5][1]**2 + \
-                            \
-                            ((current_baselines['01'] - measured_baselines['01'])**2)/baseline_weights['01'] + \
-                            ((current_baselines['02'] - measured_baselines['02'])**2)/baseline_weights['02'] + \
-                            ((current_baselines['03'] - measured_baselines['03'])**2)/baseline_weights['03'] + \
-                            ((current_baselines['12'] - measured_baselines['12'])**2)/baseline_weights['12'] + \
-                            ((current_baselines['13'] - measured_baselines['13'])**2)/baseline_weights['13'] + \
-                            ((current_baselines['23'] - measured_baselines['23'])**2)/baseline_weights['23'] + \
-                            \
-                            (((puls1_z - puls2_z) - (measured_pulser_relative_heights['1-2']))**2.0) / measured_pulser_relative_heights_error**2.0 +\
-                            (((puls2_z - puls3_z) - (measured_pulser_relative_heights['2-3']))**2.0) / measured_pulser_relative_heights_error**2.0 +\
-                            (((puls1_z - puls3_z) - (measured_pulser_relative_heights['1-3']))**2.0) / measured_pulser_relative_heights_error**2.0
+                chi_2 += ((current_baselines['01'] - measured_baselines['01'])**2)/baseline_weights['01'] + \
+                         ((current_baselines['02'] - measured_baselines['02'])**2)/baseline_weights['02'] + \
+                         ((current_baselines['03'] - measured_baselines['03'])**2)/baseline_weights['03'] + \
+                         ((current_baselines['12'] - measured_baselines['12'])**2)/baseline_weights['12'] + \
+                         ((current_baselines['13'] - measured_baselines['13'])**2)/baseline_weights['13'] + \
+                         ((current_baselines['23'] - measured_baselines['23'])**2)/baseline_weights['23'] + \
+                         \
+                         (((puls1_z - puls2_z) - (measured_pulser_relative_heights['1-2']))**2.0) / measured_pulser_relative_heights_error**2.0 +\
+                         (((puls2_z - puls3_z) - (measured_pulser_relative_heights['2-3']))**2.0) / measured_pulser_relative_heights_error**2.0 +\
+                         (((puls1_z - puls3_z) - (measured_pulser_relative_heights['1-3']))**2.0) / measured_pulser_relative_heights_error**2.0
 
                 return chi_2
             except Exception as e:
-                print('Error in f')
+                print('Error in adjustedChi2')
                 print(e)
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 print(exc_type, fname, exc_tb.tb_lineno)
 
 
-        initial_chi_2 = f(ant1_physical_x,ant1_physical_y,ant1_physical_z,ant2_physical_x,ant2_physical_y,ant2_physical_z,ant3_physical_x,ant3_physical_y,ant3_physical_z,site1_pulser_location[0],site1_pulser_location[1],site1_pulser_location[2],site2_pulser_location[0],site2_pulser_location[1],site2_pulser_location[2],site3_pulser_location[0],site3_pulser_location[1],site3_pulser_location[2])
+        initial_chi_2 = adjustedChi2(ant1_physical_x,ant1_physical_y,ant1_physical_z,ant2_physical_x,ant2_physical_y,ant2_physical_z,ant3_physical_x,ant3_physical_y,ant3_physical_z,site1_pulser_location[0],site1_pulser_location[1],site1_pulser_location[2],site2_pulser_location[0],site2_pulser_location[1],site2_pulser_location[2],site3_pulser_location[0],site3_pulser_location[1],site3_pulser_location[2],cable_delays[0], cable_delays[1], cable_delays[2], cable_delays[3])
         print('Initial Chi^2 is %0.3f'%(initial_chi_2))
 
         initial_step = 0.01 #m
         #-12 ft on pulser locations relative to antennas to account for additional mast elevation.
-        m = Minuit(     f,\
+        m = Minuit(     adjustedChi2,\
                         ant1_x=ant1_physical_x,\
                         ant1_y=ant1_physical_y,\
                         ant1_z=ant1_physical_z,\
@@ -418,6 +436,10 @@ if __name__ == '__main__':
                         puls3_x=site3_pulser_location[0],\
                         puls3_y=site3_pulser_location[1],\
                         puls3_z=site3_pulser_location[2] - 12.0*0.3048,\
+                        cable_delay_ant0=cable_delays[0],\
+                        cable_delay_ant1=cable_delays[1],\
+                        cable_delay_ant2=cable_delays[2],\
+                        cable_delay_ant3=cable_delays[3],\
                         error_ant1_x=initial_step,\
                         error_ant1_y=initial_step,\
                         error_ant1_z=initial_step/2.0,\
@@ -436,6 +458,10 @@ if __name__ == '__main__':
                         error_puls3_x=initial_step,\
                         error_puls3_y=initial_step,\
                         error_puls3_z=initial_step,\
+                        error_cable_delay_ant0=0.1,\
+                        error_cable_delay_ant1=0.1,\
+                        error_cable_delay_ant2=0.1,\
+                        error_cable_delay_ant3=0.1,\
                         errordef = 1.0,\
                         limit_ant1_x=ant1_physical_limits_x,\
                         limit_ant1_y=ant1_physical_limits_y,\
@@ -454,10 +480,37 @@ if __name__ == '__main__':
                         limit_puls2_z=puls2_z_limits,\
                         limit_puls3_x=puls3_x_limits,\
                         limit_puls3_y=puls3_y_limits,\
-                        limit_puls3_z=puls3_z_limits)
+                        limit_puls3_z=puls3_z_limits,\
+                        limit_cable_delay_ant0=(None,None),\
+                        limit_cable_delay_ant1=(None,None),\
+                        limit_cable_delay_ant2=(None,None),\
+                        limit_cable_delay_ant3=(None,None),\
+                        fix_ant1_x=False,\
+                        fix_ant1_y=False,\
+                        fix_ant1_z=False,\
+                        fix_ant2_x=False,\
+                        fix_ant2_y=False,\
+                        fix_ant2_z=False,\
+                        fix_ant3_x=False,\
+                        fix_ant3_y=False,\
+                        fix_ant3_z=False,\
+                        fix_puls1_x=False,\
+                        fix_puls1_y=False,\
+                        fix_puls1_z=False,\
+                        fix_puls2_x=False,\
+                        fix_puls2_y=False,\
+                        fix_puls2_z=False,\
+                        fix_puls3_x=False,\
+                        fix_puls3_y=False,\
+                        fix_puls3_z=False,\
+                        fix_cable_delay_ant0=True,\
+                        fix_cable_delay_ant1=True,\
+                        fix_cable_delay_ant2=True,\
+                        fix_cable_delay_ant3=True)
 
 
-        result = m.migrad()
+        result = m.migrad(resume=False)
+
         m.hesse()
         m.minos()
         pprint(m.get_fmin())
@@ -489,6 +542,153 @@ if __name__ == '__main__':
         puls3_phase_x = m.values['puls3_x']
         puls3_phase_y = m.values['puls3_y']
         puls3_phase_z = m.values['puls3_z']
+
+        if True:
+            print('\n\nATTEMPTING SECOND CHI^2 WITH FIRST AS INPUT\n')
+            initial_chi_2 = rawChi2(m.values['ant1_x'], m.values['ant1_y'], m.values['ant1_z'], m.values['ant2_x'], m.values['ant2_y'], m.values['ant2_z'], m.values['ant3_x'], m.values['ant3_y'], m.values['ant3_z'], m.values['puls1_x'], m.values['puls1_y'], m.values['puls1_z'], m.values['puls2_x'], m.values['puls2_y'], m.values['puls2_z'], m.values['puls3_x'], m.values['puls3_y'], m.values['puls3_z'],m.values['cable_delay_ant0'], m.values['cable_delay_ant1'], m.values['cable_delay_ant2'], m.values['cable_delay_ant3'])
+            print('Initial Chi^2 is %0.3f\n'%(initial_chi_2))
+            initial_step = 10.0
+
+            m = Minuit(     rawChi2,\
+                            ant1_x=m.values['ant1_x'],\
+                            ant1_y=m.values['ant1_y'],\
+                            ant1_z=m.values['ant1_z'],\
+                            ant2_x=m.values['ant2_x'],\
+                            ant2_y=m.values['ant2_y'],\
+                            ant2_z=m.values['ant2_z'],\
+                            ant3_x=m.values['ant3_x'],\
+                            ant3_y=m.values['ant3_y'],\
+                            ant3_z=m.values['ant3_z'],\
+                            puls1_x=m.values['puls1_x'],\
+                            puls1_y=m.values['puls1_y'],\
+                            puls1_z=m.values['puls1_z'],\
+                            puls2_x=m.values['puls2_x'],\
+                            puls2_y=m.values['puls2_y'],\
+                            puls2_z=m.values['puls2_z'],\
+                            puls3_x=m.values['puls3_x'],\
+                            puls3_y=m.values['puls3_y'],\
+                            puls3_z=m.values['puls3_z'],\
+                            cable_delay_ant0=m.values['cable_delay_ant0'],\
+                            cable_delay_ant1=m.values['cable_delay_ant1'],\
+                            cable_delay_ant2=m.values['cable_delay_ant2'],\
+                            cable_delay_ant3=m.values['cable_delay_ant3'],\
+                            error_ant1_x=initial_step,\
+                            error_ant1_y=initial_step,\
+                            error_ant1_z=initial_step,\
+                            error_ant2_x=initial_step,\
+                            error_ant2_y=initial_step,\
+                            error_ant2_z=initial_step,\
+                            error_ant3_x=initial_step,\
+                            error_ant3_y=initial_step,\
+                            error_ant3_z=initial_step,\
+                            error_puls1_x=initial_step,\
+                            error_puls1_y=initial_step,\
+                            error_puls1_z=initial_step,\
+                            error_puls2_x=initial_step,\
+                            error_puls2_y=initial_step,\
+                            error_puls2_z=initial_step,\
+                            error_puls3_x=initial_step,\
+                            error_puls3_y=initial_step,\
+                            error_puls3_z=initial_step,\
+                            error_cable_delay_ant0=1.0,\
+                            error_cable_delay_ant1=1.0,\
+                            error_cable_delay_ant2=1.0,\
+                            error_cable_delay_ant3=1.0,\
+                            errordef = 1.0,\
+                            limit_ant1_x=(None,None),\
+                            limit_ant1_y=(None,None),\
+                            limit_ant1_z=(None,None),\
+                            limit_ant2_x=(None,None),\
+                            limit_ant2_y=(None,None),\
+                            limit_ant2_z=(None,None),\
+                            limit_ant3_x=(None,None),\
+                            limit_ant3_y=(None,None),\
+                            limit_ant3_z=(None,None),\
+                            limit_puls1_x=(None,None),\
+                            limit_puls1_y=(None,None),\
+                            limit_puls1_z=(None,None),\
+                            limit_puls2_x=(None,None),\
+                            limit_puls2_y=(None,None),\
+                            limit_puls2_z=(None,None),\
+                            limit_puls3_x=(None,None),\
+                            limit_puls3_y=(None,None),\
+                            limit_puls3_z=(None,None),
+                            limit_cable_delay_ant0=(None,None),\
+                            limit_cable_delay_ant1=(None,None),\
+                            limit_cable_delay_ant2=(None,None),\
+                            limit_cable_delay_ant3=(None,None),\
+                            fix_ant1_x=False,\
+                            fix_ant1_y=False,\
+                            fix_ant1_z=False,\
+                            fix_ant2_x=False,\
+                            fix_ant2_y=False,\
+                            fix_ant2_z=False,\
+                            fix_ant3_x=False,\
+                            fix_ant3_y=False,\
+                            fix_ant3_z=False,\
+                            fix_puls1_x=False,\
+                            fix_puls1_y=False,\
+                            fix_puls1_z=False,\
+                            fix_puls2_x=False,\
+                            fix_puls2_y=False,\
+                            fix_puls2_z=False,\
+                            fix_puls3_x=False,\
+                            fix_puls3_y=False,\
+                            fix_puls3_z=False,\
+                            fix_cable_delay_ant0=True,\
+                            fix_cable_delay_ant1=True,\
+                            fix_cable_delay_ant2=True,\
+                            fix_cable_delay_ant3=True)
+
+
+            m.tol = m.tol/100
+            result = m.migrad(resume=False)
+
+            m.hesse()
+            m.minos()
+            pprint(m.get_fmin())
+            print(result)
+
+            #12 variables
+            ant0_phase_x = 0.0#m.values['ant0_x']
+            ant0_phase_y = 0.0#m.values['ant0_y']
+            ant0_phase_z = 0.0#m.values['ant0_z']
+
+            ant1_phase_x = m.values['ant1_x']
+            ant1_phase_y = m.values['ant1_y']
+            ant1_phase_z = m.values['ant1_z']
+
+            ant2_phase_x = m.values['ant2_x']
+            ant2_phase_y = m.values['ant2_y']
+            ant2_phase_z = m.values['ant2_z']
+
+            ant3_phase_x = m.values['ant3_x']
+            ant3_phase_y = m.values['ant3_y']
+            ant3_phase_z = m.values['ant3_z']
+
+            puls1_phase_x = m.values['puls1_x']
+            puls1_phase_y = m.values['puls1_y']
+            puls1_phase_z = m.values['puls1_z']
+            puls2_phase_x = m.values['puls2_x']
+            puls2_phase_y = m.values['puls2_y']
+            puls2_phase_z = m.values['puls2_z']
+            puls3_phase_x = m.values['puls3_x']
+            puls3_phase_y = m.values['puls3_y']
+            puls3_phase_z = m.values['puls3_z']
+
+            cable_delay_ant0 = m.values['cable_delay_ant0']
+            print('New cable delay, ant 0', cable_delay_ant0)
+            print('cable_delays[0] - cable_delay_ant0 = ',cable_delays[0] - cable_delay_ant0)
+            cable_delay_ant1 = m.values['cable_delay_ant1']
+            print('New cable delay, ant 1', cable_delay_ant1)
+            print('cable_delays[1] - cable_delay_ant1 = ',cable_delays[1] - cable_delay_ant1)
+            cable_delay_ant2 = m.values['cable_delay_ant2']
+            print('New cable delay, ant 2', cable_delay_ant2)
+            print('cable_delays[2] - cable_delay_ant2 = ',cable_delays[2] - cable_delay_ant2)
+            cable_delay_ant3 = m.values['cable_delay_ant3']
+            print('New cable delay, ant 3', cable_delay_ant3)
+            print('cable_delays[3] - cable_delay_ant3 = ',cable_delays[3] - cable_delay_ant3)
+
 
         phase_locs = numpy.array([[ant0_phase_x,ant0_phase_y,ant0_phase_z],[ant1_phase_x,ant1_phase_y,ant1_phase_z],[ant2_phase_x,ant2_phase_y,ant2_phase_z],[ant3_phase_x,ant3_phase_y,ant3_phase_z]])
 
@@ -522,12 +722,14 @@ if __name__ == '__main__':
 
 
         print('Copy-Paste Prints:\n------------')
+        print('')
         print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, phase_locs[0][0],phase_locs[0][1],phase_locs[0][2],  phase_locs[1][0],phase_locs[1][1],phase_locs[1][2],  phase_locs[2][0],phase_locs[2][1],phase_locs[2][2],  phase_locs[3][0],phase_locs[3][1],phase_locs[3][2]))
         print('antennas_phase_%s_hesse = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, 0.0 ,0.0 ,0.0 ,  m.errors['ant1_x'],m.errors['ant1_y'],m.errors['ant1_z'],  m.errors['ant2_x'],m.errors['ant2_y'],m.errors['ant2_z'],  m.errors['ant3_x'],m.errors['ant3_y'],m.errors['ant3_z']))
-
+        print('')
         print('pulser_locations_ENU[\'%s\'] = {\'run1507\':[%f, %f, %f], \'run1509\':[%f, %f, %f], \'run1511\':[%f, %f, %f]}'%(mode,m.values['puls1_x'], m.values['puls1_y'], m.values['puls1_z'], m.values['puls2_x'], m.values['puls2_y'], m.values['puls2_z'], m.values['puls3_x'], m.values['puls3_y'], m.values['puls3_z']))
         print('pulser_locations_ENU[\'%s_hesse_error\'] = {\'run1507\':[%f, %f, %f], \'run1509\':[%f, %f, %f], \'run1511\':[%f, %f, %f]}'%(mode,m.errors['puls1_x'], m.errors['puls1_y'], m.errors['puls1_z'], m.errors['puls2_x'], m.errors['puls2_y'], m.errors['puls2_z'], m.errors['puls3_x'], m.errors['puls3_y'], m.errors['puls3_z']))
-
+        print('')
+        print('cable delays\n\'%s\' : numpy.array(['%mode,m.values['cable_delay_ant0'],',',m.values['cable_delay_ant1'],',',m.values['cable_delay_ant2'],',',m.values['cable_delay_ant3'],'])')
 
 
         if True:
