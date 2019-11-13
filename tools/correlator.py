@@ -24,9 +24,11 @@ import math
 import matplotlib
 from scipy.fftpack import fft
 import datetime as dt
-import inspect
 from ast import literal_eval
+import astropy.units as apu
+from astropy.coordinates import SkyCoord
 plt.ion()
+import inspect
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -128,6 +130,8 @@ class Correlator:
             self.phis_deg = numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi)
             self.thetas_rad = numpy.radians(self.thetas_deg)
             self.phis_rad = numpy.radians(self.phis_deg)
+
+            self.A0_latlonel = info.loadAntennaZeroLocation() #Used for conversion to RA and Dec coordinates.
 
             antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
 
@@ -560,7 +564,7 @@ class Correlator:
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 print(exc_type, fname, exc_tb.tb_lineno)
 
-    def mapMax(self, map_values, max_method=0):
+    def mapMax(self, map_values, max_method=0, verbose=False):
         '''
         Determines the indices in the given map of the optimal source direction.
 
@@ -579,6 +583,22 @@ class Correlator:
             The selected row.
         col_index : int
             The selected column.
+        theta_best : float 
+            The corresponding values for this parameters for row_index and col_index.
+        phi_best : float   
+            The corresponding values for this parameters for row_index and col_index.
+        t_best_0subtract1 : float
+            The corresponding values for this parameters for row_index and col_index.
+        t_best_0subtract2 : float
+            The corresponding values for this parameters for row_index and col_index.
+        t_best_0subtract3 : float
+            The corresponding values for this parameters for row_index and col_index.
+        t_best_1subtract2 : float
+            The corresponding values for this parameters for row_index and col_index.
+        t_best_1subtract3 : float
+            The corresponding values for this parameters for row_index and col_index.
+        t_best_2subtract3 : float
+            The corresponding values for this parameters for row_index and col_index.
         '''
         if max_method == 0:
             row_index, column_index = numpy.unravel_index(map_values.argmax(),numpy.shape(map_values))
@@ -586,7 +606,44 @@ class Correlator:
             #Calculates sum of each point plus surrounding four points to get max.
             rounded_corr_values = (map_values + numpy.roll(map_values,1,axis=0) + numpy.roll(map_values,-1,axis=0) + numpy.roll(map_values,1,axis=1) + numpy.roll(map_values,-1,axis=1))/5.0
             row_index, column_index = numpy.unravel_index(rounded_corr_values.argmax(),numpy.shape(rounded_corr_values))
-        return row_index, column_index
+
+        theta_best  = self.thetas_deg[row_index]
+        phi_best    = self.phis_deg[column_index]
+
+        t_best_0subtract1 = self.t_hpol_0subtract1[row_index,column_index]
+        t_best_0subtract2 = self.t_hpol_0subtract2[row_index,column_index]
+        t_best_0subtract3 = self.t_hpol_0subtract3[row_index,column_index]
+        t_best_1subtract2 = self.t_hpol_1subtract2[row_index,column_index]
+        t_best_1subtract3 = self.t_hpol_1subtract3[row_index,column_index]
+        t_best_2subtract3 = self.t_hpol_2subtract3[row_index,column_index]
+
+        if verbose == True:
+            print("From the correlation plot:")
+            print("Best zenith angle:",theta_best)
+            print("Best azimuth angle:",phi_best)
+            print('Predicted time delays %run between A0 and A1:', t_best_0subtract1)
+            print('Predicted time delays between A0 and A2:', t_best_0subtract2)
+            print('Predicted time delays between A0 and A3:', t_best_0subtract3)
+            print('Predicted time delays between A1 and A2:', t_best_1subtract2)
+            print('Predicted time delays between A1 and A3:', t_best_1subtract3)
+            print('Predicted time delays between A2 and A3:', t_best_2subtract3)
+
+        return row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3
+
+    def altAzToRaDec(eventid, alt,az):
+        '''
+        This will setEntry to the correct eventid such that it can use time information to understand the current alt-az and how it relates to Ra Dec.
+
+        This function has not yet been completed. 
+        '''
+        self.reader.setEntry(eventid)
+
+        time = 0
+
+        coords_altaz = SkyCoord(alt= alt * apu.deg , az = az * apu.deg, obstime = time, frame = 'altaz', location = ant0_loc)
+        coords_radec = coords_altaz.icrs
+        print('THIS FUNCTION IS NOT WORKING YET.')
+
 
 
     def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None):
@@ -637,21 +694,11 @@ class Correlator:
                 corr_value_2subtract3 = corr23[self.delay_indices_hpol_2subtract3]
 
                 mean_corr_values = numpy.mean(numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] ),axis=0)
-
-                if max_method is not None:
-                    a1, a2 = self.mapMax(mean_corr_values,max_method=max_method)
-                else:
-                    a1, a2 = self.mapMax(mean_corr_values)
-
-                theta_best  = self.thetas_deg[a1]
-                phi_best    = self.phis_deg[a2]
-
-                t_best_0subtract1 = self.t_hpol_0subtract1[a1,a2]
-                t_best_0subtract2 = self.t_hpol_0subtract2[a1,a2]
-                t_best_0subtract3 = self.t_hpol_0subtract3[a1,a2]
-                t_best_1subtract2 = self.t_hpol_1subtract2[a1,a2]
-                t_best_1subtract3 = self.t_hpol_1subtract3[a1,a2]
-                t_best_2subtract3 = self.t_hpol_2subtract3[a1,a2]
+                if plot_corr == True:
+                    if max_method is not None:
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True)
+                    else:
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True)
 
             elif pol == 'vpol':
                 waveforms = self.wf(eventid, numpy.array([1,3,5,7]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter) #Div by std and resampled waveforms normalizes the correlations
@@ -672,20 +719,11 @@ class Correlator:
 
                 mean_corr_values = numpy.mean(numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] ),axis=0)
                 
-                if max_method is not None:
-                    a1, a2 = self.mapMax(mean_corr_values,max_method=max_method)
-                else:
-                    a1, a2 = self.mapMax(mean_corr_values)
-
-                theta_best  = self.thetas_deg[a1]
-                phi_best    = self.phis_deg[a2]
-
-                t_best_0subtract1 = self.t_vpol_0subtract1[a1,a2]
-                t_best_0subtract2 = self.t_vpol_0subtract2[a1,a2]
-                t_best_0subtract3 = self.t_vpol_0subtract3[a1,a2]
-                t_best_1subtract2 = self.t_vpol_1subtract2[a1,a2]
-                t_best_1subtract3 = self.t_vpol_1subtract3[a1,a2]
-                t_best_2subtract3 = self.t_vpol_2subtract3[a1,a2]
+                if plot_corr == True:
+                    if max_method is not None:
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True)
+                    else:
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True)
 
             else:
                 print('Invalid polarization option.  Returning nothing.')
@@ -714,24 +752,16 @@ class Correlator:
                 self.axs.append(fig.gca())
             if plot_map:
                 fig = plt.figure()
-                fig.canvas.set_window_title('r%i-e%i-%s Correlation Map'%(reader.run,eventid,pol.title()))
+                fig.canvas.set_window_title('r%i-e%i-%s Correlation Map'%(self.reader.run,eventid,pol.title()))
                 ax = fig.add_subplot(1,1,1)
-                ax.set_title('%i-%i-%s-Hilbert=%s'%(reader.run,eventid,pol,str(hilbert))) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
+                ax.set_title('%i-%i-%s-Hilbert=%s'%(self.reader.run,eventid,pol,str(hilbert))) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
                 im = ax.imshow(mean_corr_values, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
                 cbar = fig.colorbar(im)
                 cbar.set_label('Mean Correlation Value')
                 plt.xlabel('Azimuth Angle (Degrees)')
                 plt.ylabel('Zenith Angle (Degrees)')
 
-                print("From the correlation plot:")
-                print("Best zenith angle:",theta_best)
-                print("Best azimuth angle:",phi_best)
-                print('Predicted time delays %run between A0 and A1:', t_best_0subtract1)
-                print('Predicted time delays between A0 and A2:', t_best_0subtract2)
-                print('Predicted time delays between A0 and A3:', t_best_0subtract3)
-                print('Predicted time delays between A1 and A2:', t_best_1subtract2)
-                print('Predicted time delays between A1 and A3:', t_best_1subtract3)
-                print('Predicted time delays between A2 and A3:', t_best_2subtract3)
+                
 
                 radius = 5.0 #Degrees I think?  Should eventually represent error. 
                 circle = plt.Circle((phi_best, theta_best), radius, edgecolor='lime',linewidth=2,fill=False)
@@ -789,52 +819,38 @@ class Correlator:
             total_mean_corr_values += self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert)/len(eventids)
         print('')
 
-        if max_method is not None:
-            a1, a2 = self.mapMax(total_mean_corr_values,max_method=max_method)
-        else:
-            a1, a2 = self.mapMax(total_mean_corr_values)
-        
-        theta_best  = self.thetas_deg[a1]
-        phi_best    = self.phis_deg[a2]
-
-        if pol == 'hpol':
-            t_best_0subtract1  = self.t_hpol_0subtract1[a1,a2]
-            t_best_0subtract2  = self.t_hpol_0subtract2[a1,a2]
-            t_best_0subtract3  = self.t_hpol_0subtract3[a1,a2]
-            t_best_1subtract2  = self.t_hpol_1subtract2[a1,a2]
-            t_best_1subtract3  = self.t_hpol_1subtract3[a1,a2]
-            t_best_2subtract3  = self.t_hpol_2subtract3[a1,a2]
-        elif pol == 'vpol':
-            t_best_0subtract1  = self.t_vpol_0subtract1[a1,a2]
-            t_best_0subtract2  = self.t_vpol_0subtract2[a1,a2]
-            t_best_0subtract3  = self.t_vpol_0subtract3[a1,a2]
-            t_best_1subtract2  = self.t_vpol_1subtract2[a1,a2]
-            t_best_1subtract3  = self.t_vpol_1subtract3[a1,a2]
-            t_best_2subtract3  = self.t_vpol_2subtract3[a1,a2]
-        else:
-            print('Invalid polarization option.  Returning nothing.')
-            return
-
 
         if plot_map:
+            if max_method is not None:
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,max_method=max_method,verbose=True)
+            else:
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,verbose=True)        
+
+            if pol == 'hpol':
+                t_best_0subtract1  = self.t_hpol_0subtract1[row_index,column_index]
+                t_best_0subtract2  = self.t_hpol_0subtract2[row_index,column_index]
+                t_best_0subtract3  = self.t_hpol_0subtract3[row_index,column_index]
+                t_best_1subtract2  = self.t_hpol_1subtract2[row_index,column_index]
+                t_best_1subtract3  = self.t_hpol_1subtract3[row_index,column_index]
+                t_best_2subtract3  = self.t_hpol_2subtract3[row_index,column_index]
+            elif pol == 'vpol':
+                t_best_0subtract1  = self.t_vpol_0subtract1[row_index,column_index]
+                t_best_0subtract2  = self.t_vpol_0subtract2[row_index,column_index]
+                t_best_0subtract3  = self.t_vpol_0subtract3[row_index,column_index]
+                t_best_1subtract2  = self.t_vpol_1subtract2[row_index,column_index]
+                t_best_1subtract3  = self.t_vpol_1subtract3[row_index,column_index]
+                t_best_2subtract3  = self.t_vpol_2subtract3[row_index,column_index]
+            else:
+                print('Invalid polarization option.  Returning nothing.')
+                return
             fig = plt.figure()
-            fig.canvas.set_window_title('r%i %s Averaged Correlation Map'%(reader.run,pol.title()))
+            fig.canvas.set_window_title('r%i %s Averaged Correlation Map'%(self.reader.run,pol.title()))
             ax = fig.add_subplot(1,1,1)
             im = ax.imshow(total_mean_corr_values, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
             cbar = fig.colorbar(im)
             cbar.set_label('Mean Correlation Value')
             plt.xlabel('Azimuth Angle (Degrees)')
             plt.ylabel('Zenith Angle (Degrees)')
-
-            print('From the correlation plot:')
-            print('Best zenith angle:',theta_best)
-            print('Best azimuth angle:',phi_best)
-            print('Predicted time delays %run between A0 and A1:', t_best_0subtract1)
-            print('Predicted time delays between A0 and A2:', t_best_0subtract2)
-            print('Predicted time delays between A0 and A3:', t_best_0subtract3)
-            print('Predicted time delays between A1 and A2:', t_best_1subtract2)
-            print('Predicted time delays between A1 and A3:', t_best_1subtract3)
-            print('Predicted time delays between A2 and A3:', t_best_2subtract3)
 
             radius = 5.0 #Degrees I think?  Should eventually represent error. 
             circle = plt.Circle((phi_best, theta_best), radius, edgecolor='lime',linewidth=2,fill=False)
@@ -847,6 +863,86 @@ class Correlator:
             return total_mean_corr_values, fig, ax
         else:
             return total_mean_corr_values
+
+    def histMapPeak(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, use_weight=False):
+        '''
+        This will loop over eventids and makes a histogram from of location of maximum correlation
+        value in the corresponding correlation maps. 
+
+        Parameters
+        ----------
+        eventids : numpy.ndarray of ints
+            The entry numbers to include in the calculation.
+        pol : str
+            The polarization you wish to plot.  Options: 'hpol', 'vpol', 'both'
+        plot_map : bool
+            Whether to actually plot the results.  
+        plot_corr : bool
+            Plot the cross-correlations for each baseline.
+        hilbert : bool
+            Enables performing calculations with Hilbert envelopes of waveforms. 
+        max_method : bool
+            Determines how the most probable source direction is from the map.
+        '''
+        hist = numpy.zeros((self.n_theta, self.n_phi))
+        for event_index, eventid in enumerate(eventids):
+            sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
+            sys.stdout.flush()
+            m = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert)/len(eventids)
+            if max_method is not None:
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map)
+            else:
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map)        
+
+            if use_weight == True:
+                hist[row_index,column_index] += m[row_index,column_index]
+            else:
+                hist[row_index,column_index] += 1
+
+        if plot_map:
+            fig = plt.figure()
+            fig.canvas.set_window_title('r%i %s Peak Correlation Map Hist'%(self.reader.run,pol.title()))
+            ax = fig.add_subplot(1,1,1)
+            im = ax.imshow(hist, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.winter,norm=matplotlib.colors.LogNorm()) #cmap=plt.cm.jet)
+            cbar = fig.colorbar(im)
+            cbar.set_label('Counts (Maybe Weighted)')
+            plt.xlabel('Azimuth Angle (Degrees)')
+            plt.ylabel('Zenith Angle (Degrees)')
+
+            return hist
+
+    def beamMap(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None):
+        '''
+        Makes the beam summed map which can be used to educate the user as to which beam might be good to detect a similar signal
+        to the one loaded.  The beamforming algorithm is currently implemented in roughly the same way as the phased array logic:
+        16 sample powersums at 8 sample spacing.  
+
+        Parameters
+        ----------
+        eventid : int
+            The entry number you wish to plot the correlation map for.
+        pol : str
+            The polarization you wish to plot.  Options: 'hpol', 'vpol', 'both'
+        plot_map : bool
+            Whether to actually plot the results.  
+        plot_corr : bool
+            Plot the cross-correlations for each baseline.
+        hilbert : bool
+            Enables performing calculations with Hilbert envelopes of waveforms. 
+        interactive : bool
+            Enables an interactive correlation map, where double clicking will result in a plot
+            of waveforms aligned using the corresponding time delays of that location.
+        max_method : bool
+            Determines how the most probable source direction is from the map.
+        '''
+        try:
+            print('This function has not yet been programmed.')
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
 def testMain():
     '''
