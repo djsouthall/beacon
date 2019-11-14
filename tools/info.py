@@ -15,11 +15,16 @@ deploy_index = 1:
 '''
 import sys
 import os
+import inspect
 import numpy
+sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
+import tools.field_fox as ff
 import pymap3d as pm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+import scipy.interpolate
 default_deploy = 1 #The deployment time to use as the default.
+
 
 def pulserRuns():
     '''
@@ -29,6 +34,7 @@ def pulserRuns():
         This is the list of known pulser runs as determined by the matching_times.py script.
     '''
     pulser_runs = numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793,1504,1506,1507,1508,1509,15011]) 
+    
     return pulser_runs
 
 def loadAntennaZeroLocation(deploy_index=default_deploy):

@@ -48,7 +48,36 @@ def loadTriggerTypes(reader):
         print(exc_type, fname, exc_tb.tb_lineno)
     return trigger_types
 
-def createFile(reader):
+def getTimes(reader):
+    '''
+    This pulls timing information for each event from the reader object..
+    
+    Parameters
+    ----------
+    reader : examples.beacon_data_reader.Reader
+        This is the reader for the selected run.
+
+    Returns
+    -------
+    times : numpy.ndarray of floats
+        The raw_approx_trigger_time values for each event from the Tree.
+    subtimes : numpy.ndarray of floats
+        The raw_approx_trigger_time_nsecs values for each event from the Tree. 
+    trigtimes : numpy.ndarray of floats
+        The trig_time values for each event from the Tree.
+    '''
+    N = reader.head_tree.Draw("raw_approx_trigger_time_nsecs:raw_approx_trigger_time:trig_time:Entry$","","goff") 
+    #ROOT.gSystem.ProcessEvents()
+    subtimes = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N)
+    times = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N) 
+    trigtimes = numpy.frombuffer(reader.head_tree.GetV3(), numpy.dtype('float64'), N)
+    eventids = numpy.frombuffer(reader.head_tree.GetV4(), numpy.dtype('float64'), N).astype(int)
+
+    return times, subtimes, trigtimes, eventids
+
+
+
+def createFile(reader,redo_defaults=False):
     '''
     This will make an hdf5 file for the run specified by the reader.
     If the file already exists then this will check if the file has
@@ -61,6 +90,10 @@ def createFile(reader):
     ----------
     reader : examples.beacon_data_reader.Reader
         This is the reader for the selected run.
+    redo_defaults : bool
+        If True then this will replace the values of any default fields by determining them again.
+        This will not effect any additional datasets added.  This is by defualt False, but sometimes
+        if an error was made it may be worthwhile to enable and rerun. 
     '''
     try:
         run = int(reader.run)
@@ -70,22 +103,50 @@ def createFile(reader):
         header_keys_to_copy = []
         h = interpret.getHeaderDict(reader)
 
-        initial_expected_datasets = numpy.array(['trigger_types']) #expand as more things are added.  This should only include datasets that this function will add.
+        initial_expected_datasets = numpy.array(['trigger_types','times','subtimes','trigtimes']) #expand as more things are added.  This should only include datasets that this function will add.
         initial_expected_attrs    = numpy.array(['N','run'])
         if os.path.exists(filename):
             print('%s already exists, checking if setup is up to date.'%filename )
 
             with h5py.File(filename, 'a') as file:
                 try:
-                    for key in initial_expected_datasets[~numpy.isin(initial_expected_datasets,list(file.keys()))]:
+                    times_loaded = False
+                    if redo_defaults == False:
+                        attempt_list = initial_expected_datasets[~numpy.isin(initial_expected_datasets,list(file.keys()))]
+                    else:
+                        attempt_list = initial_expected_datasets
+                    for key in attempt_list:
                         print('Attempting to add content for key: %s'%key)
                         if key == 'trigger_types':
-                            file.create_dataset('trigger_types', (N,), dtype=numpy.uint8, compression='gzip', compression_opts=9, shuffle=True)
+                            if ('trigger_types' in list(file.keys())) == False:
+                                file.create_dataset('trigger_types', (N,), dtype=numpy.uint8, compression='gzip', compression_opts=9, shuffle=True)
                             file['trigger_types'][...] = loadTriggerTypes(reader)
+                        elif key in ['times','subtimes','trigtimes']:
+                            if times_loaded == False:
+                                times_loaded = True
+                                times, subtimes, trigtimes, eventids = getTimes(reader)
+                                if key == 'times':
+                                    if ('times'  in list(file.keys())) == False:
+                                        file.create_dataset('times', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                    file['times'][...] = times
+                                elif key == 'subtimes':
+                                    if ('subtimes'  in list(file.keys())) == False:
+                                        file.create_dataset('subtimes', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                    file['subtimes'][...] = subtimes
+                                elif key == 'trigtimes':
+                                    if ('trigtimes'  in list(file.keys())) == False:
+                                        file.create_dataset('trigtimes', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                    file['trigtimes'][...] = trigtimes
+
                         else:
                             print('key: %s currently has no hardcoded support in this loop.'%key)
 
-                    for key in initial_expected_attrs[~numpy.isin(initial_expected_attrs,list(file.attrs.keys()))]:
+                    if redo_defaults == False:
+                        attempt_list = initial_expected_attrs[~numpy.isin(initial_expected_attrs,list(file.attrs.keys()))]
+                    else:
+                        attempt_list = initial_expected_attrs
+
+                    for key in attempt_list:
                         print('Attempting to add content for key: %s'%key)
                         if key == 'N':
                             file.attrs['N'] = N
@@ -127,6 +188,19 @@ def createFile(reader):
 
                 file.create_dataset('trigger_types', (N,), dtype=numpy.uint8, compression='gzip', compression_opts=9, shuffle=True)
                 file['trigger_types'][...] = loadTriggerTypes(reader)
+
+                times, subtimes, trigtimes, eventids = getTimes(reader)
+
+                file.create_dataset('times', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                file['times'][...] = times
+
+                file.create_dataset('subtimes', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                file['subtimes'][...] = subtimes
+
+                file.create_dataset('trigtimes', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                file['trigtimes'][...] = trigtimes
+
+
         return filename
 
     except Exception as e:

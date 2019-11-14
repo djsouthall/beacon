@@ -199,7 +199,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def overwriteAntennaLocations(self, A0_physical,A1_physical,A2_physical,A3_physical,A0_hpol,A1_hpol,A2_hpol,A3_hpol,A0_vpol,A1_vpol,A2_vpol,A3_vpol):
+    def overwriteAntennaLocations(self, A0_physical,A1_physical,A2_physical,A3_physical,A0_hpol,A1_hpol,A2_hpol,A3_hpol,A0_vpol,A1_vpol,A2_vpol,A3_vpol,verbose=False):
         '''
         Allows you to set the antenna physical and phase positions, if the default values saved in info.py are not
         what you want. Will then recalculate time delays corresponding to arrival directions.
@@ -230,22 +230,34 @@ class Correlator:
             The ENU coordinates of the vpol phase center location for antenna 3.
         '''
         try:
-            self.A0_physical = numpy.asarray(A0_physical)
-            self.A1_physical = numpy.asarray(A1_physical)
-            self.A2_physical = numpy.asarray(A2_physical)
-            self.A3_physical = numpy.asarray(A3_physical)
+            if A0_physical is not None:
+                self.A0_physical = numpy.asarray(A0_physical)
+            if A1_physical is not None:
+                self.A1_physical = numpy.asarray(A1_physical)
+            if A2_physical is not None:
+                self.A2_physical = numpy.asarray(A2_physical)
+            if A3_physical is not None:
+                self.A3_physical = numpy.asarray(A3_physical)
 
-            self.A0_hpol = numpy.asarray(A0_hpol)
-            self.A1_hpol = numpy.asarray(A1_hpol)
-            self.A2_hpol = numpy.asarray(A2_hpol)
-            self.A3_hpol = numpy.asarray(A3_hpol)
+            if A0_hpol is not None:
+                self.A0_hpol = numpy.asarray(A0_hpol)
+            if A1_hpol is not None:
+                self.A1_hpol = numpy.asarray(A1_hpol)
+            if A2_hpol is not None:
+                self.A2_hpol = numpy.asarray(A2_hpol)
+            if A3_hpol is not None:
+                self.A3_hpol = numpy.asarray(A3_hpol)
 
-            self.A0_vpol = numpy.asarray(A0_vpol)
-            self.A1_vpol = numpy.asarray(A1_vpol)
-            self.A2_vpol = numpy.asarray(A2_vpol)
-            self.A3_vpol = numpy.asarray(A3_vpol)
-
-            print('Rerunning time delay prep with antenna positions.')
+            if A0_vpol is not None:
+                self.A0_vpol = numpy.asarray(A0_vpol)
+            if A1_vpol is not None:
+                self.A1_vpol = numpy.asarray(A1_vpol)
+            if A2_vpol is not None:
+                self.A2_vpol = numpy.asarray(A2_vpol)
+            if A3_vpol is not None:
+                self.A3_vpol = numpy.asarray(A3_vpol)
+            if verbose:
+                print('Rerunning time delay prep with antenna positions.')
             self.generateTimeIndices()
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -382,11 +394,13 @@ class Correlator:
             Enables performing calculations with Hilbert envelopes of waveforms. 
         '''
         try:
+            eventid = int(eventid)
             self.reader.setEntry(eventid)
             channels = numpy.sort(numpy.asarray(channels))
             temp_waveforms = numpy.zeros((len(channels),self.buffer_length))
             for channel_index, channel in enumerate(channels):
-                temp_wf = numpy.asarray(self.reader.wf(int(channel)))[self.start_waveform_index:self.end_waveform_index+1]
+                channel = int(channel)
+                temp_wf = numpy.asarray(self.reader.wf(channel))[self.start_waveform_index:self.end_waveform_index+1]
                 temp_wf = temp_wf - numpy.mean(temp_wf)
                 if apply_filter == True:
                     temp_wf = numpy.fft.irfft(numpy.multiply(self.filter,numpy.fft.rfft(temp_wf)),n=self.buffer_length) #Might need additional normalization
@@ -470,6 +484,9 @@ class Correlator:
             #Calculate indices in corr for each direction.
             center = len(self.times_resampled)
 
+            #THESE BREAK IF OUTSIDE OF SIGNAL LENGTH I THINK
+            
+
             self.delay_indices_hpol_0subtract1 = numpy.rint((self.t_hpol_0subtract1/self.dt_resampled + center)).astype(int)
             self.delay_indices_hpol_0subtract2 = numpy.rint((self.t_hpol_0subtract2/self.dt_resampled + center)).astype(int)
             self.delay_indices_hpol_0subtract3 = numpy.rint((self.t_hpol_0subtract3/self.dt_resampled + center)).astype(int)
@@ -483,6 +500,8 @@ class Correlator:
             self.delay_indices_vpol_1subtract2 = numpy.rint((self.t_vpol_1subtract2/self.dt_resampled + center)).astype(int)
             self.delay_indices_vpol_1subtract3 = numpy.rint((self.t_vpol_1subtract3/self.dt_resampled + center)).astype(int)
             self.delay_indices_vpol_2subtract3 = numpy.rint((self.t_vpol_2subtract3/self.dt_resampled + center)).astype(int)
+
+
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -694,7 +713,7 @@ class Correlator:
                 corr_value_2subtract3 = corr23[self.delay_indices_hpol_2subtract3]
 
                 mean_corr_values = numpy.mean(numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] ),axis=0)
-                if plot_corr == True:
+                if plot_map == True:
                     if max_method is not None:
                         row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True)
                     else:
@@ -709,17 +728,41 @@ class Correlator:
                 corr12 = (numpy.asarray(scipy.signal.correlate(waveforms[1],waveforms[2])))/(len(self.times_resampled))
                 corr13 = (numpy.asarray(scipy.signal.correlate(waveforms[1],waveforms[3])))/(len(self.times_resampled))
                 corr23 = (numpy.asarray(scipy.signal.correlate(waveforms[2],waveforms[3])))/(len(self.times_resampled))
+                try:
+                    corr_value_0subtract1 = corr01[self.delay_indices_vpol_0subtract1]
+                except:
+                    print('Error in corr_value_0subtract1')
+                    import pdb; pdb.set_trace()
+                try:
+                    corr_value_0subtract2 = corr02[self.delay_indices_vpol_0subtract2]
+                except:
+                    print('Error in corr_value_0subtract2')
+                    import pdb; pdb.set_trace()
+                try:
+                    corr_value_0subtract3 = corr03[self.delay_indices_vpol_0subtract3]
+                except:
+                    print('Error in corr_value_0subtract3')
+                    import pdb; pdb.set_trace()
+                try:
+                    corr_value_1subtract2 = corr12[self.delay_indices_vpol_1subtract2]
+                except:
+                    print('Error in corr_value_1subtract2')
+                    import pdb; pdb.set_trace()
+                try:
+                    corr_value_1subtract3 = corr13[self.delay_indices_vpol_1subtract3]
+                except:
+                    print('Error in corr_value_1subtract3')
+                    import pdb; pdb.set_trace()
+                try:
+                    corr_value_2subtract3 = corr23[self.delay_indices_vpol_2subtract3]
+                except:
+                    print('Error in corr_value_2subtract3')
+                    import pdb; pdb.set_trace()
 
-                corr_value_0subtract1 = corr01[self.delay_indices_vpol_0subtract1]
-                corr_value_0subtract2 = corr02[self.delay_indices_vpol_0subtract2]
-                corr_value_0subtract3 = corr03[self.delay_indices_vpol_0subtract3]
-                corr_value_1subtract2 = corr12[self.delay_indices_vpol_1subtract2]
-                corr_value_1subtract3 = corr13[self.delay_indices_vpol_1subtract3]
-                corr_value_2subtract3 = corr23[self.delay_indices_vpol_2subtract3]
 
                 mean_corr_values = numpy.mean(numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] ),axis=0)
                 
-                if plot_corr == True:
+                if plot_map == True:
                     if max_method is not None:
                         row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True)
                     else:
