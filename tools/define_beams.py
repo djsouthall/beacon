@@ -166,98 +166,7 @@ class BeamMaker(Correlator):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def powerSum(self, in_waveforms, rolls):
-        '''
-        This creates indices for summing assuming that waveforms have already been rolled.
-
-        Rolls should match waveform.shape()[0] in length. 
-        '''
-        try:
-            power_sum_step = 8
-            N_original = int(len(self.t()))
-            N_new = int(numpy.ceil(N_original/power_sum_step)*power_sum_step)
-
-            waveforms = numpy.zeros((4,N_new))
-
-            for waveform_index, waveform in enumerate(in_waveforms):
-                waveforms[waveform_index][0:N_original] = numpy.roll(waveform, rolls[waveform_index])
-            summed_waveforms = numpy.sum(waveforms,axis=0)
-            power = summed_waveforms**2
-
-
-
-            binned_8_indices_A = numpy.arange(N_new).reshape((-1,power_sum_step)).astype(int)
-            binned_8_indices_B = numpy.roll(numpy.arange(N_new).reshape((-1,power_sum_step)),-1,axis=0).astype(int)
-            power_sum = numpy.sum(power[binned_8_indices_A],axis=1) + numpy.sum(power[binned_8_indices_B],axis=1)
-
-            if False:
-                plt.figure()
-                plt.plot(power_sum)
-
-            return numpy.max(power_sum)
-        except Exception as e:
-            print('\nError in %s'%inspect.stack()[0][3])
-            print(e)
-            import pdb; pdb.set_trace()
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
-
-    @profile
-    def makeFakeBeamMap(self, eventid, pol, beam_theta, beam_phi, plot_map=True, plot_corr=False, hilbert=False, normalize=False):
-        '''
-        This will generate fake signals from each of the directions normally available in the correlation map.  It will then apply beamforming assuming 
-        the beam is centered on theta, phi. 
-        '''
-        try:
-            t_0subtract1, t_0subtract2, t_0subtract3 = bm.roundToNearestSample(numpy.asarray(bm.interpolateTimeGrid(pol, beam_theta, beam_phi)))
-            rolls = [0, (t_0subtract1/self.dt_resampled).astype(int) , (t_0subtract2/self.dt_resampled).astype(int) , (t_0subtract3/self.dt_resampled).astype(int)]
-
-            max_powers = numpy.zeros((self.n_theta, self.n_phi))
-
-            for theta_index, theta in enumerate(self.thetas_rad):
-                sys.stdout.write('theta = %0.2f\r'%(numpy.rad2deg(theta)))
-                sys.stdout.flush()
-                for phi_index, phi in enumerate(self.phis_rad):
-                    wf = self.makeFakeSignalFromDir(eventid, pol, theta, phi, hilbert = hilbert)
-                    max_powers[theta_index,phi_index] = self.powerSum(wf, rolls)
-                    #import pdb; pdb.set_trace()
-            if normalize == True:
-                max_powers /= numpy.max(max_powers)
-
-            if plot_map:
-                fig = plt.figure()
-                fig.canvas.set_window_title('Zenith = %0.2f, Az = %0.2f Beam Map'%(numpy.rad2deg(beam_theta),numpy.rad2deg(beam_phi)))
-                ax = fig.add_subplot(1,1,1)
-                im = ax.imshow(max_powers, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
-                cbar = fig.colorbar(im)
-                plt.title('Sensitivity Map For Beam Centered at Zenith = %0.2f, Az = %0.2f\nwith time delays: t_0subtract1 = %0.2f, t_0subtract2 = %0.2f, t_0subtract3 = %0.2f'%(numpy.rad2deg(beam_theta),numpy.rad2deg(beam_theta),t_0subtract1,t_0subtract2,t_0subtract3))
-                if normalize == True:
-                    cbar.set_label('Normalized Beam Powersum')
-                else:
-                    cbar.set_label('Beam Powersum')
-                plt.xlabel('Azimuth Angle (Degrees)')
-                plt.ylabel('Zenith Angle (Degrees)')
-
-                radius = 5.0 #Degrees I think?  Should eventually represent error. 
-                circle = plt.Circle((numpy.rad2deg(beam_phi), numpy.rad2deg(beam_theta)), radius, edgecolor='lime',linewidth=2,fill=False)
-                ax.axvline(numpy.rad2deg(beam_phi),c='lime',linewidth=1)
-                ax.axhline(numpy.rad2deg(beam_theta),c='lime',linewidth=1)
-
-                ax.add_artist(circle)
-
-                self.figs.append(fig)
-                self.axs.append(ax)
-            return max_powers
-        except Exception as e:
-            print('\nError in %s'%inspect.stack()[0][3])
-            print(e)
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
-
-    @profile
-    def makeFakeBeamMapFaster(self, eventid, pol, beam_theta, beam_phi, plot_map=True, plot_corr=False, hilbert=False, normalize=False, use_single_wf=True):
+    def makeFakeBeamMap(self, eventid, pol, beam_theta, beam_phi, plot_map=True, plot_corr=False, hilbert=False, normalize=False, use_single_wf=True):
         '''
         This will generate fake signals from each of the directions normally available in the correlation map.  It will then apply beamforming assuming 
         the beam is centered on theta, phi. 
@@ -348,33 +257,6 @@ class BeamMaker(Correlator):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-
-
-
-
-    def makeFakeSignalsMap(self, eventid, pol, t_0subtract1, t_0subtract2, t_0subtract3, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None):
-        '''
-        This will call self.map, but with fake waveforms created using the first channel in the specified pol.  It will load that
-        signal, and then roll it by the given time delays to given ideal alignment at the desired location.
-        '''
-        try:
-            if pol == 'hpol':
-                waveforms = self.wf(eventid, numpy.array([0,0,0,0]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter) #Div by std and resampled waveforms normalizes the correlations
-            elif pol == 'vpol':
-                waveforms = self.wf(eventid, numpy.array([1,1,1,1]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter) #Div by std and resampled waveforms normalizes the correlations
-
-            waveforms[1] = numpy.roll(waveforms[1],numpy.round(-t_0subtract1/self.dt_resampled).astype(int))
-            waveforms[2] = numpy.roll(waveforms[2],numpy.round(-t_0subtract2/self.dt_resampled).astype(int))
-            waveforms[3] = numpy.roll(waveforms[3],numpy.round(-t_0subtract3/self.dt_resampled).astype(int))
-
-            return self.map(eventid, pol, plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, interactive=interactive, max_method=max_method, waveforms=waveforms)        
-        except Exception as e:
-            print('\nError in %s'%inspect.stack()[0][3])
-            print(e)
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
-
 if __name__=="__main__":
     #plt.close('all')
     use_pulser=False
@@ -406,9 +288,7 @@ if __name__=="__main__":
         eventid = eventids[mode][0]
 
 
-        #bm.makeFakeSignalFromDir(eventid, mode, numpy.deg2rad(100.0), numpy.deg2rad(0.0), hilbert=False)
         max_powers = bm.makeFakeBeamMap(eventid, mode, numpy.deg2rad(100.0), numpy.deg2rad(0.0), plot_map=True, plot_corr=False, hilbert=False)
-        max_powers = bm.makeFakeBeamMapFaster(eventid, mode, numpy.deg2rad(100.0), numpy.deg2rad(0.0), plot_map=True, plot_corr=False, hilbert=False)
         #max_powers = bm.makeFakeBeamMap(eventid, mode, numpy.deg2rad(100.0), numpy.deg2rad(3.24), plot_map=True, plot_corr=False, hilbert=False)
         #max_powers = bm.makeFakeBeamMap(eventid, mode, numpy.deg2rad(100.0), numpy.deg2rad(0.0), plot_map=True, plot_corr=False, hilbert=True)
 
