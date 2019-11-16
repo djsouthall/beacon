@@ -65,7 +65,7 @@ class Correlator:
     range_theta_deg : tuple of floats with len = 2  
         The specified range of zenith angles to probe.
     '''
-    def __init__(self, reader,  upsample=2**14, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None)):
+    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None)):
         try:
             n = 1.0003 #Index of refraction of air  #Should use https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.453-11-201507-S!!PDF-E.pdf 
             self.c = 299792458/n #m/s
@@ -111,8 +111,10 @@ class Correlator:
 
             #Resetting buffer length to account for new load in length. 
             self.buffer_length = self.end_waveform_index - self.start_waveform_index + 1 
-
-            self.upsample = upsample
+            if upsample is None:
+                self.upsample = self.buffer_length
+            else:
+                self.upsample = upsample
             self.prepareTimes()
 
             self.crit_freq_low_pass_MHz = crit_freq_low_pass_MHz
@@ -665,7 +667,7 @@ class Correlator:
 
 
 
-    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None):
+    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None):
         '''
         Makes the cross correlation make for the given event.
 
@@ -686,6 +688,10 @@ class Correlator:
             of waveforms aligned using the corresponding time delays of that location.
         max_method : bool
             Determines how the most probable source direction is from the map.
+        waveforms : numpy.ndarray
+            Giving values for waveforms will supercede loading waveforms for the given eventid.  It should only be used as a workaround
+            for specific purposes (like giving fake signals for testing).  If the waveforms are not of reasonable format then this may
+            break.
         '''
         try:
             if hilbert == True:
@@ -696,7 +702,8 @@ class Correlator:
                 return hpol_result, vpol_result
 
             elif pol == 'hpol':
-                waveforms = self.wf(eventid, numpy.array([0,2,4,6]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter) #Div by std and resampled waveforms normalizes the correlations
+                if waveforms is None:
+                    waveforms = self.wf(eventid, numpy.array([0,2,4,6]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter) #Div by std and resampled waveforms normalizes the correlations
 
                 corr01 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[1])))/(len(self.times_resampled))
                 corr02 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[2])))/(len(self.times_resampled))
@@ -720,7 +727,8 @@ class Correlator:
                         row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True)
 
             elif pol == 'vpol':
-                waveforms = self.wf(eventid, numpy.array([1,3,5,7]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter) #Div by std and resampled waveforms normalizes the correlations
+                if waveforms is None:
+                    waveforms = self.wf(eventid, numpy.array([1,3,5,7]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter) #Div by std and resampled waveforms normalizes the correlations
 
                 corr01 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[1])))/(len(self.times_resampled))
                 corr02 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[2])))/(len(self.times_resampled))

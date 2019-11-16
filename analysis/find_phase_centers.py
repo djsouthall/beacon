@@ -9,10 +9,12 @@ import os
 import sys
 import csv
 from iminuit import Minuit
-
+sys.path.append(os.environ['BEACON_INSTALL_DIR'])
+from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import objects.station as bc
 import tools.info as info
+from tools.correlator import Correlator
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -411,6 +413,31 @@ if __name__ == '__main__':
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 print(exc_type, fname, exc_tb.tb_lineno)
 
+        datapath = os.environ['BEACON_DATA']
+        reader = Reader(datapath,1645)
+        cor = Correlator(reader,  upsample=2**12, n_phi=360, n_theta=180, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False)
+        def adjustedChi2_2(ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, puls1_x, puls1_y, puls1_z, puls2_x, puls2_y, puls2_z, puls3_x, puls3_y, puls3_z, cable_delay_ant0, cable_delay_ant1, cable_delay_ant2, cable_delay_ant3):
+            #To generalize, look into from_array_func Minuit initializer.  
+            try:
+                #fixing the locations of antenna zero.
+                ant0_x = 0.0
+                ant0_y = 0.0
+                ant0_z = 0.0
+                #overwriteAntennaLocations(self, A0_physical,A1_physical,A2_physical,A3_physical,A0_hpol,A1_hpol,A2_hpol,A3_hpol,A0_vpol,A1_vpol,A2_vpol,A3_vpol)
+                cor.overwriteAntennaLocations(None,None,None,None,[ant0_x,ant0_y,ant0_z],[ant1_x,ant1_y,ant1_z],[ant2_x,ant2_y,ant2_z],[ant3_x,ant3_y,ant3_z],[ant0_x,ant0_y,ant0_z],[ant1_x,ant1_y,ant1_z],[ant2_x,ant2_y,ant2_z],[ant3_x,ant3_y,ant3_z])
+                
+                chi_2 = rawChi2(ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, puls1_x, puls1_y, puls1_z, puls2_x, puls2_y, puls2_z, puls3_x, puls3_y, puls3_z, cable_delay_ant0, cable_delay_ant1, cable_delay_ant2, cable_delay_ant3)
+                a = ((1-numpy.max(cor.map(43,mode,plot_map=False)))**2)/0.1**2 #Assuming it should be able to get a cross corr close to 0.1 of 1.
+                chi_2 += a
+
+                return chi_2
+            except Exception as e:
+                print('Error in adjustedChi2')
+                print(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+
 
         initial_chi_2 = adjustedChi2(ant1_physical_x,ant1_physical_y,ant1_physical_z,ant2_physical_x,ant2_physical_y,ant2_physical_z,ant3_physical_x,ant3_physical_y,ant3_physical_z,site1_pulser_location[0],site1_pulser_location[1],site1_pulser_location[2],site2_pulser_location[0],site2_pulser_location[1],site2_pulser_location[2],site3_pulser_location[0],site3_pulser_location[1],site3_pulser_location[2],cable_delays[0], cable_delays[1], cable_delays[2], cable_delays[3])
         print('Initial Chi^2 is %0.3f'%(initial_chi_2))
@@ -544,6 +571,153 @@ if __name__ == '__main__':
         puls3_phase_z = m.values['puls3_z']
 
         if True:
+            print('\n\nATTEMPTING SECOND CHI^2 WITH aligned signals in one event\n')
+            initial_chi_2 = adjustedChi2_2(m.values['ant1_x'], m.values['ant1_y'], m.values['ant1_z'], m.values['ant2_x'], m.values['ant2_y'], m.values['ant2_z'], m.values['ant3_x'], m.values['ant3_y'], m.values['ant3_z'], m.values['puls1_x'], m.values['puls1_y'], m.values['puls1_z'], m.values['puls2_x'], m.values['puls2_y'], m.values['puls2_z'], m.values['puls3_x'], m.values['puls3_y'], m.values['puls3_z'],m.values['cable_delay_ant0'], m.values['cable_delay_ant1'], m.values['cable_delay_ant2'], m.values['cable_delay_ant3'])
+            print('Initial Chi^2 is %0.3f\n'%(initial_chi_2))
+            initial_step = 10.0
+
+            m = Minuit(     adjustedChi2_2,\
+                            ant1_x=m.values['ant1_x'],\
+                            ant1_y=m.values['ant1_y'],\
+                            ant1_z=m.values['ant1_z'],\
+                            ant2_x=m.values['ant2_x'],\
+                            ant2_y=m.values['ant2_y'],\
+                            ant2_z=m.values['ant2_z'],\
+                            ant3_x=m.values['ant3_x'],\
+                            ant3_y=m.values['ant3_y'],\
+                            ant3_z=m.values['ant3_z'],\
+                            puls1_x=m.values['puls1_x'],\
+                            puls1_y=m.values['puls1_y'],\
+                            puls1_z=m.values['puls1_z'],\
+                            puls2_x=m.values['puls2_x'],\
+                            puls2_y=m.values['puls2_y'],\
+                            puls2_z=m.values['puls2_z'],\
+                            puls3_x=m.values['puls3_x'],\
+                            puls3_y=m.values['puls3_y'],\
+                            puls3_z=m.values['puls3_z'],\
+                            cable_delay_ant0=m.values['cable_delay_ant0'],\
+                            cable_delay_ant1=m.values['cable_delay_ant1'],\
+                            cable_delay_ant2=m.values['cable_delay_ant2'],\
+                            cable_delay_ant3=m.values['cable_delay_ant3'],\
+                            error_ant1_x=initial_step,\
+                            error_ant1_y=initial_step,\
+                            error_ant1_z=initial_step,\
+                            error_ant2_x=initial_step,\
+                            error_ant2_y=initial_step,\
+                            error_ant2_z=initial_step,\
+                            error_ant3_x=initial_step,\
+                            error_ant3_y=initial_step,\
+                            error_ant3_z=initial_step,\
+                            error_puls1_x=initial_step,\
+                            error_puls1_y=initial_step,\
+                            error_puls1_z=initial_step,\
+                            error_puls2_x=initial_step,\
+                            error_puls2_y=initial_step,\
+                            error_puls2_z=initial_step,\
+                            error_puls3_x=initial_step,\
+                            error_puls3_y=initial_step,\
+                            error_puls3_z=initial_step,\
+                            error_cable_delay_ant0=1.0,\
+                            error_cable_delay_ant1=1.0,\
+                            error_cable_delay_ant2=1.0,\
+                            error_cable_delay_ant3=1.0,\
+                            errordef = 1.0,\
+                            limit_ant1_x=(None,None),\
+                            limit_ant1_y=(None,None),\
+                            limit_ant1_z=(None,None),\
+                            limit_ant2_x=(None,None),\
+                            limit_ant2_y=(None,None),\
+                            limit_ant2_z=(None,None),\
+                            limit_ant3_x=(None,None),\
+                            limit_ant3_y=(None,None),\
+                            limit_ant3_z=(None,None),\
+                            limit_puls1_x=(None,None),\
+                            limit_puls1_y=(None,None),\
+                            limit_puls1_z=(None,None),\
+                            limit_puls2_x=(None,None),\
+                            limit_puls2_y=(None,None),\
+                            limit_puls2_z=(None,None),\
+                            limit_puls3_x=(None,None),\
+                            limit_puls3_y=(None,None),\
+                            limit_puls3_z=(None,None),
+                            limit_cable_delay_ant0=(None,None),\
+                            limit_cable_delay_ant1=(None,None),\
+                            limit_cable_delay_ant2=(None,None),\
+                            limit_cable_delay_ant3=(None,None),\
+                            fix_ant1_x=False,\
+                            fix_ant1_y=False,\
+                            fix_ant1_z=False,\
+                            fix_ant2_x=False,\
+                            fix_ant2_y=False,\
+                            fix_ant2_z=False,\
+                            fix_ant3_x=False,\
+                            fix_ant3_y=False,\
+                            fix_ant3_z=False,\
+                            fix_puls1_x=False,\
+                            fix_puls1_y=False,\
+                            fix_puls1_z=False,\
+                            fix_puls2_x=False,\
+                            fix_puls2_y=False,\
+                            fix_puls2_z=False,\
+                            fix_puls3_x=False,\
+                            fix_puls3_y=False,\
+                            fix_puls3_z=False,\
+                            fix_cable_delay_ant0=True,\
+                            fix_cable_delay_ant1=True,\
+                            fix_cable_delay_ant2=True,\
+                            fix_cable_delay_ant3=True)
+
+            m.tol = m.tol/100
+            result = m.migrad(resume=False)
+
+            m.hesse()
+            m.minos()
+            pprint(m.get_fmin())
+            print(result)
+
+            #12 variables
+            ant0_phase_x = 0.0#m.values['ant0_x']
+            ant0_phase_y = 0.0#m.values['ant0_y']
+            ant0_phase_z = 0.0#m.values['ant0_z']
+
+            ant1_phase_x = m.values['ant1_x']
+            ant1_phase_y = m.values['ant1_y']
+            ant1_phase_z = m.values['ant1_z']
+
+            ant2_phase_x = m.values['ant2_x']
+            ant2_phase_y = m.values['ant2_y']
+            ant2_phase_z = m.values['ant2_z']
+
+            ant3_phase_x = m.values['ant3_x']
+            ant3_phase_y = m.values['ant3_y']
+            ant3_phase_z = m.values['ant3_z']
+
+            puls1_phase_x = m.values['puls1_x']
+            puls1_phase_y = m.values['puls1_y']
+            puls1_phase_z = m.values['puls1_z']
+            puls2_phase_x = m.values['puls2_x']
+            puls2_phase_y = m.values['puls2_y']
+            puls2_phase_z = m.values['puls2_z']
+            puls3_phase_x = m.values['puls3_x']
+            puls3_phase_y = m.values['puls3_y']
+            puls3_phase_z = m.values['puls3_z']
+
+            cable_delay_ant0 = m.values['cable_delay_ant0']
+            print('New cable delay, ant 0', cable_delay_ant0)
+            print('cable_delays[0] - cable_delay_ant0 = ',cable_delays[0] - cable_delay_ant0)
+            cable_delay_ant1 = m.values['cable_delay_ant1']
+            print('New cable delay, ant 1', cable_delay_ant1)
+            print('cable_delays[1] - cable_delay_ant1 = ',cable_delays[1] - cable_delay_ant1)
+            cable_delay_ant2 = m.values['cable_delay_ant2']
+            print('New cable delay, ant 2', cable_delay_ant2)
+            print('cable_delays[2] - cable_delay_ant2 = ',cable_delays[2] - cable_delay_ant2)
+            cable_delay_ant3 = m.values['cable_delay_ant3']
+            print('New cable delay, ant 3', cable_delay_ant3)
+            print('cable_delays[3] - cable_delay_ant3 = ',cable_delays[3] - cable_delay_ant3)
+            out_corr, out_fig, out_ax = cor.map(43,mode,plot_map=True, interactive=True)
+
+
+        if False:
             print('\n\nATTEMPTING SECOND CHI^2 WITH FIRST AS INPUT\n')
             initial_chi_2 = rawChi2(m.values['ant1_x'], m.values['ant1_y'], m.values['ant1_z'], m.values['ant2_x'], m.values['ant2_y'], m.values['ant2_z'], m.values['ant3_x'], m.values['ant3_y'], m.values['ant3_z'], m.values['puls1_x'], m.values['puls1_y'], m.values['puls1_z'], m.values['puls2_x'], m.values['puls2_y'], m.values['puls2_z'], m.values['puls3_x'], m.values['puls3_y'], m.values['puls3_z'],m.values['cable_delay_ant0'], m.values['cable_delay_ant1'], m.values['cable_delay_ant2'], m.values['cable_delay_ant3'])
             print('Initial Chi^2 is %0.3f\n'%(initial_chi_2))
