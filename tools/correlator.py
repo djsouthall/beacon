@@ -128,6 +128,10 @@ class Correlator:
             else:
                 self.apply_filter = True
 
+            self.range_theta_deg = range_theta_deg
+            self.n_theta = n_theta
+            self.range_phi_deg = range_phi_deg
+            self.n_phi = n_phi
             self.thetas_deg = numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta)
             self.phis_deg = numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi)
             self.thetas_rad = numpy.radians(self.thetas_deg)
