@@ -47,25 +47,69 @@ def loadInterpolatedPhaseResponse2ndStage(goal_freqs, upsample = 2**14, plot=Fal
     Essentially the bigger, the more precise the interpolation will be. 
     '''
     try:
-        response = numpy.zeros((8,len(goal_freqs)))
+        phase_response = numpy.zeros((8,len(goal_freqs)))
         if plot == True:
             plt.figure()
         for channel in numpy.arange(8):
+            
+            #Below is loading in the signals and making them into complex numbers
             phase_filename = os.environ['BEACON_ANALYSIS_DIR'] + 'data/calibration/beacon_amp_chain_sparams/' + 'beacon_2ndStage_ch%i_s21phase.csv'%channel
+            mag_filename = os.environ['BEACON_ANALYSIS_DIR'] + 'data/calibration/beacon_amp_chain_sparams/' + 'beacon_2ndStage_ch%i_s21mag.csv'%channel
             freqs, phase = ff.readerFieldFox(phase_filename,header=17) #Phase in degrees
+            freqs, logmag = ff.readerFieldFox(mag_filename,header=17) 
+            nyquist = 0.5*(freqs[1]-freqs[0])
             phase = numpy.unwrap(numpy.deg2rad(phase))
-            phase = numpy.rad2deg(phase - phase[freqs/1e6 >= 50][0]) #Align at 50Mhz
+            mag = ff.logMagToLin(logmag)
+            real,imag = ff.magPhaseToReIm(mag,phase) #phase in degrees
 
+            response_fft = numpy.add(real,imag*1j)
+
+            #Now with the response I try to extend it to zero (added ~ 3 sample, as lowest freq is 2Mhz and sampling of 0.62 MHz)
+            freqs_to_zero = numpy.linspace(0,freqs[-1],len(freqs)+3,endpoint=True) #The original did not include 0 Mhz, which I think messes up ffts. 
+            response_fft_to_zero = scipy.interpolate.interp1d(numpy.append(0,freqs),numpy.append(0,response_fft),fill_value=0.0,bounds_error=False,kind='linear')(freqs_to_zero)
+            tukey = scipy.signal.tukey(len(response_fft_to_zero), alpha=0.005, sym=True)
+            response_fft_to_zero = numpy.multiply(tukey,response_fft_to_zero)
+            
+            '''
+            #response_fft_to_zero = scipy.signal.hilbert(response_fft_to_zero.imag) - 1j*scipy.signal.hilbert(response_fft_to_zero.real)
+
+            #Getting the time domain version, and shifting.
+            response = numpy.fft.fftshift(numpy.fft.irfft(response_fft_to_zero))
+
+            plt.figure()
+            plt.plot(response)
+            #plt.plot(numpy.fft.fftshift(numpy.fft.irfft(response_fft)))
+
+            while 2*len(response) <= upsample:
+                N = len(response)
+                response = numpy.append(numpy.zeros(N),numpy.append(response,numpy.zeros(N)))
+
+            response_fft_new = numpy.fft.rfft(numpy.fft.fftshift(response))
+            freqs_new = (freqs_to_zero[-1])*(numpy.arange(len(response_fft_new))/len(response_fft_new))
+                
+            plt.figure()
+            plt.plot(freqs/1e6,10*numpy.log10(abs(response_fft)),label='Old')
+            plt.plot(freqs_to_zero/1e6,10*numpy.log10(abs(response_fft_to_zero)),label='New')
+            plt.plot(freqs_new/1e6,10*numpy.log10(abs(response_fft_new)),label='Newest')
+            plt.legend()
+            plt.xlabel('Freqs (MHz)')
+            plt.ylabel('dBish')
+            import pdb; pdb.set_trace()
             #Do I need to resample this to make the interpolation accurate enough?
 
-            output_phase = scipy.interpolate.interp1d(freqs,phase,fill_value=0.0,bounds_error=False,kind='cubic')(goal_freqs)
-            response[channel] = output_phase
+
+            '''
+
+            phase = numpy.angle(response_fft_to_zero)
+            phase = numpy.rad2deg(phase - phase[freqs_to_zero/1e6 >= 50][0]) #Align at 50Mhz
+            output_phase = scipy.interpolate.interp1d(freqs_to_zero,phase,fill_value=0.0,bounds_error=False,kind='linear')(goal_freqs)
+            phase_response[channel] = output_phase
+            
             if plot == True:
-                plt.plot(freqs,phase,label='Ch%i Raw'%channel)
+                plt.plot(freqs_to_zero,phase,label='Ch%i Raw'%channel)
                 plt.scatter(goal_freqs,output_phase,s=4,label='Ch%i Interp'%channel)
 
-
-        return goal_freqs, response 
+        return goal_freqs, phase_response 
     except Exception as e:
         print('\nError in %s'%inspect.stack()[0][3])
         print(e)
@@ -154,6 +198,10 @@ if __name__ == '__main__':
                     freqs, phase = ff.readerFieldFox(filename,header=17) #
                     phase = numpy.unwrap(numpy.deg2rad(phase)) #radians
                     phase = phase - phase[freqs/1e6 >= 50][0] #Align at 50Mhz
+
+
+                    #I should calculate the group delays for my interpolated phase response values and see how that looks.
+                    #Is my interpoaltion reproducing the same differences I see in the original data.
 
                     group_delay_freqs = numpy.diff(freqs) + freqs[0:len(freqs)-1]
                     omega = 2.0*numpy.pi*freqs            
