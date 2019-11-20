@@ -42,14 +42,14 @@ def gaus(x,a,x0,sigma):
     return a*numpy.exp(-(x-x0)**2.0/(2.0*sigma**2.0))
 
 if __name__ == '__main__':
-    #plt.close('all')
+    plt.close('all')
     # If your data is elsewhere, pass it as an argument
     datapath = os.environ['BEACON_DATA']
     default_site = 1
     
     #Filter settings
-    final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
-    plot_multiple = False
+    final_corr_length = 2**15 #Should be a factor of 2 for fastest performance
+    apply_phase_response = True
     crit_freq_low_pass_MHz = 70#None#70 #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = 4#None#8
 
@@ -57,6 +57,7 @@ if __name__ == '__main__':
     high_pass_filter_order = 8#None#8
     
     plot_filters = True
+    plot_multiple = False
 
     hilbert = False #Apply hilbert envelope to wf before correlating
     align_method = 8
@@ -181,7 +182,7 @@ if __name__ == '__main__':
 
                 reader = Reader(datapath,run)
                 reader.setEntry(all_eventids[0])
-                tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filters)
+                tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filters,apply_phase_response=apply_phase_response)
                 time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=hpol_eventids_cut,vpol_cut=vpol_eventids_cut)
 
                 for pair_index, pair in enumerate(pairs):

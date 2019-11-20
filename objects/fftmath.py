@@ -667,7 +667,7 @@ class TimeDelayCalculator(FFTPrepper):
                     indices[pair_index] = numpy.argmax( numpy.multiply( cut , corrs[pair_index] ) )
                     max_corrs[pair_index] = corrs[pair_index][indices[pair_index]]
 
-                if False:
+                if True:
                     times = numpy.arange(len(wf))*self.dt_ns_upsampled
                     for pair_index, pair in enumerate(self.pairs):
                         plt.figure()
@@ -1108,7 +1108,7 @@ if __name__ == '__main__':
         apply_phase_response = True
 
         #Filter settings
-        final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
+        final_corr_length = 2**16 #Should be a factor of 2 for fastest performance (I think)
         
         crit_freq_low_pass_MHz = None#70 #This new pulser seems to peak in the region of 85 MHz or so
         low_pass_filter_order = None#12

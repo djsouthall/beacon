@@ -35,7 +35,7 @@ def gaus(x,a,x0,sigma):
 
 if __name__ == '__main__':
     try:
-         #plt.close('all')
+        plt.close('all')
         # If your data is elsewhere, pass it as an argument
         datapath = os.environ['BEACON_DATA']
         default_site = 1
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         if site == 1:
             waveform_index_range = (1500,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
             run = 1507
-            cfd_thresh = 0.8
+            cfd_thresh = 0.95
 
             expected_time_differences_physical  =  [((0, 1), -55.818082350306895), ((0, 2), 82.39553727998077), ((0, 3), 18.992683496782092), ((1, 2), 138.21361963028767), ((1, 3), 74.81076584708899), ((2, 3), -63.40285378319868)]
             max_time_differences_physical  =  [((0, 1), -129.37157110284315), ((0, 2), 152.48216718324971), ((0, 3), 184.0463943150346), ((1, 2), 139.82851662731397), ((1, 3), 104.08254793314117), ((2, 3), -81.41340851163496)]
@@ -101,14 +101,21 @@ if __name__ == '__main__':
 
         #Filter settings
         final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
-        
-        crit_freq_low_pass_MHz = 80 #This new pulser seems to peak in the region of 85 MHz or so
-        low_pass_filter_order = 12
-        
-        crit_freq_high_pass_MHz = 30
-        high_pass_filter_order = 8
-        
+        crit_freq_low_pass_MHz = None#70#None#70 #This new pulser seems to peak in the region of 85 MHz or so
+        low_pass_filter_order = None#4#None#8
+
+        crit_freq_high_pass_MHz = None#30#None#50
+        high_pass_filter_order = None#8#None#8
+
+        apply_phase_response = True
         use_filter = True
+        
+        plot_filters = True
+        plot_multiple = False
+
+        hilbert = False #Apply hilbert envelope to wf before correlating
+        #align_method = 8
+        
         plot_filters= True
 
         known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
@@ -126,7 +133,7 @@ if __name__ == '__main__':
 
         #Set up tempalte compare tool used for making averaged waveforms for first pass alignment. 
         reader = Reader(datapath,run)
-        tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters)
+        tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters,apply_phase_response=apply_phase_response)
 
         #First pass alignment to make templates.  
         times, hpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['hpol'], align_method=0, template_eventid=eventids['hpol'][0], plot=False,event_type='hpol')
@@ -147,7 +154,7 @@ if __name__ == '__main__':
         averaged_waveforms_ffts_freqs = numpy.fft.rfftfreq(len(tct.waveform_times_corr),(tct.waveform_times_corr[1]-tct.waveform_times_corr[0])/1.0e9)
 
         #Set up time delay calculator used to determine time delays between averaged waveforms and later all waveforms internally.
-        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False)
+        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response)
         indices, corr_time_shifts, max_corrs, pairs, corrs = tdc.calculateTimeDelays(averaged_waveforms_ffts, averaged_waveforms, return_full_corrs=True, align_method=0)
 
 
