@@ -17,9 +17,11 @@ sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
+import analysis.phase_response as pr
 import tools.interpret #Must be imported before matplotlib or else plots don't load.
 import tools.clock_correct as cc
 import tools.info as info
+
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -63,7 +65,7 @@ class FFTPrepper:
     --------
     examples.beacon_data_reader.reader
     '''
-    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,tukey_alpha=0.1,tukey_default=True):
+    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,tukey_alpha=0.1,tukey_default=True,apply_phase_response=False):
         try:
             self.reader = reader
             self.buffer_length = reader.header().buffer_length
@@ -111,7 +113,7 @@ class FFTPrepper:
 
             self.start_waveform_index = waveform_index_range[0]
 
-            self.prepForFFTs(plot=plot_filters)
+            self.prepForFFTs(plot=plot_filters,apply_phase_response=apply_phase_response)
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -143,6 +145,9 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+
+
+
     def wf(self,channel,apply_filter=False,hilbert=False,tukey=None):
         '''
         This loads a wf but only the section that is selected by the start and end indices specified.
@@ -158,7 +163,7 @@ class FFTPrepper:
             if tukey == True:
                 temp_wf = numpy.multiply( temp_wf , self.tukey  )
             if apply_filter == True:
-                wf = numpy.fft.irfft(numpy.multiply(self.filter_original,numpy.fft.rfft(temp_wf)),n=self.buffer_length) #Might need additional normalization
+                wf = numpy.fft.irfft(numpy.multiply(self.filter_original[channel],numpy.fft.rfft(temp_wf)),n=self.buffer_length) #Might need additional normalization
             else:
                 wf = temp_wf
 
@@ -198,7 +203,7 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def prepForFFTs(self,plot=False):
+    def prepForFFTs(self,plot=False,apply_phase_response=False):
         '''
         This will get timing information from the reader and use it to determine values such as timestep
         that will be used when performing ffts later.  
@@ -229,26 +234,39 @@ class FFTPrepper:
             self.corr_time_shifts = self.calculateTimeShifts(self.final_corr_length,self.dt_ns_upsampled)#This results in the maxiumum of an autocorrelation being located at a time shift of 0.0
 
             #Prepare Filters
-            self.filter_original = self.makeFilter(self.freqs_original,plot_filter=plot)
+            self.filter_original = self.makeFilter(self.freqs_original,plot_filter=plot,apply_phase_response=apply_phase_response)
             #self.filter_padded_to_power2 = self.makeFilter(self.freqs_padded_to_power2,plot_filter=False)
             #self.filter_corr = self.makeFilter(self.freqs_corr,plot_filter=False)
+            
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+    
+    def prepPhaseFilter(self, goal_freqs, plot=False):
+        '''
+        This will load the phase responses for the second stage board and preamps (preamps meaned)
+        and create the additional portion of the filter that will be applied to signals.  This
+        ideally will make the signals more impulsive.
+        '''
+        phase_response_2nd_stage = pr.loadInterpolatedPhaseResponse2ndStage(goal_freqs, plot=plot)[1]
+        phase_response_preamp = pr.loadInterpolatedPhaseResponseMeanPreamp(goal_freqs, plot=plot)[1]
+
+        return numpy.exp(-1j*(phase_response_2nd_stage + phase_response_preamp)) #One row per channel.
 
     def calculateTimeShifts(self, final_corr_length, dt):
         return numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1)*self.dt_ns_upsampled
 
 
-    def makeFilter(self,freqs, plot_filter=False):
+    def makeFilter(self,freqs, plot_filter=False,apply_phase_response=False):
         '''
         This will make a frequency domain filter based on the given specifications. 
         '''
         try:
             filter_x = freqs
+            
             if numpy.logical_and(self.low_pass_filter_order is not None, self.crit_freq_low_pass_MHz is not None):
                 b, a = scipy.signal.butter(self.low_pass_filter_order, self.crit_freq_low_pass_MHz*1e6, 'low', analog=True)
                 filter_x_low_pass, filter_y_low_pass = scipy.signal.freqs(b, a,worN=freqs)
@@ -286,6 +304,18 @@ class FFTPrepper:
                 plt.ylim(-50,10)
                 plt.legend()
 
+            filter_y = numpy.tile(filter_y,(8,1))
+            if apply_phase_response == True:
+                phase_response_filter = self.prepPhaseFilter(filter_x)
+                if False:
+                    plt.figure()
+                    for channel in range(8):
+                        plt.subplot(3,1,1)
+                        plt.plot(filter_x,phase_response_filter[channel])
+                        plt.subplot(3,1,2)
+                        plt.plot(filter_x,numpy.log(phase_response_filter[channel])/(-1j))
+                    import pdb; pdb.set_trace()
+                filter_y = numpy.multiply(phase_response_filter,filter_y)
             return filter_y
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -855,9 +885,9 @@ class TemplateCompareTool(FFTPrepper):
     --------
     examples.beacon_data_reader.reader
     '''
-    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False, initial_template_id=None):
+    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False, initial_template_id=None,apply_phase_response=False):
         try:
-            super().__init__(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range, plot_filters=plot_filters)
+            super().__init__(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range, plot_filters=plot_filters,apply_phase_response=apply_phase_response)
             self.corr_index_to_delay_index = -numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1) #Negative because with how it is programmed you would want to roll the template the normal amount, but I will be rolling the waveforms.
             self.setTemplateToEvent(initial_template_id)
         except Exception as e:
@@ -1075,12 +1105,13 @@ if __name__ == '__main__':
         datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
         run = 1507
         waveform_index_range = (1500,None)
+        apply_phase_response = True
 
         #Filter settings
         final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
         
-        crit_freq_low_pass_MHz = 70 #This new pulser seems to peak in the region of 85 MHz or so
-        low_pass_filter_order = 12
+        crit_freq_low_pass_MHz = None#70 #This new pulser seems to peak in the region of 85 MHz or so
+        low_pass_filter_order = None#12
         
         high_pass_filter_order = None#8
         crit_freq_high_pass_MHz = None#20
@@ -1098,13 +1129,20 @@ if __name__ == '__main__':
         vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
 
         reader = Reader(datapath,run)
-        tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters)
+        
+        tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters,apply_phase_response=True)
+        times, hpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['hpol'], align_method=0, template_eventid=eventids['hpol'][0], plot=True,event_type='hpol')
+        tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters,apply_phase_response=False)
+        times, hpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['hpol'], align_method=0, template_eventid=eventids['hpol'][0], plot=True,event_type='hpol')
+
+        #times, vpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['vpol'], align_method=0, template_eventid=eventids['vpol'][0], plot=True,event_type='vpol')
 
         #group_delay_freqs, group_delays, weighted_group_delays = tct.calculateGroupDelaysFromEvent( eventids['hpol'][0], apply_filter=False, plot=True,event_type='hpol')
         
-        times, hpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['hpol'], align_method=0, template_eventid=eventids['hpol'][0], plot=False,event_type='hpol')
-        times, vpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['vpol'], align_method=0, template_eventid=eventids['vpol'][0], plot=False,event_type='vpol')
 
+
+
+        '''
         averaged_waveforms = numpy.zeros_like(hpol_waveforms)
         for channel in range(8):
             if channel%2 == 0:
@@ -1137,7 +1175,7 @@ if __name__ == '__main__':
             plt.plot(times, numpy.roll(averaged_waveforms[channel],roll),alpha=0.7,label=str(channel))
         plt.legend()
 
-        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False)
+        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response)
         indices, corr_time_shifts, max_corrs, pairs, corrs = tdc.calculateTimeDelays(numpy.fft.rfft(averaged_waveforms,axis=1), averaged_waveforms, return_full_corrs=True, align_method=0)
 
         for cfd_thresh in [0.1,0.75,0.95]:
@@ -1166,7 +1204,7 @@ if __name__ == '__main__':
                 roll = rolls[channel]
                 plt.plot(times, numpy.roll(averaged_waveforms[channel],roll)/max(averaged_waveforms[channel]),alpha=0.7,label=str(channel))
                 plt.legend()
-
+        '''
 
 
         '''
