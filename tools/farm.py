@@ -20,21 +20,21 @@ if __name__ == "__main__":
     ###------------###
 
     username = 'dsouthall'
-    mem = '16G'
-    partition = 'kicp'
+    #mem = '16G'
+    partition = 'broadwl'
 
-    runs = numpy.array([1507,1509,1511])#numpy.arange(1645,1700)
+    runs = numpy.arange(1500,1750)
 
     ###--------###
     ### Script ###
     ###--------###
 
     for run in runs:
-        jobname = 'beacon_%i'%run
+        jobname = 'bcn%i'%run
 
         batch = 'sbatch --partition=%s --job-name=%s '%(partition,jobname)
 
-        command = os.environ['BEACON_ANALYSIS_DIR'] + 'analysis/rf_bg_search.py %i'%(run)
+        command = os.environ['BEACON_ANALYSIS_DIR'] + 'tools/data_handler.py %i redo'%(run)#'analysis/rf_bg_search.py %i'%(run)
 
         command_queue = batch + command
     
