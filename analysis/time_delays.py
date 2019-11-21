@@ -48,19 +48,19 @@ if __name__ == '__main__':
     default_site = 1
     
     #Filter settings
-    final_corr_length = 2**15 #Should be a factor of 2 for fastest performance
+    final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
     apply_phase_response = True
-    crit_freq_low_pass_MHz = 70#None#70 #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = 4#None#8
+    crit_freq_low_pass_MHz = None#70 #This new pulser seems to peak in the region of 85 MHz or so
+    low_pass_filter_order = None#8
 
     crit_freq_high_pass_MHz = 30#None#50
-    high_pass_filter_order = 8#None#8
+    high_pass_filter_order = 5#None#8
     
     plot_filters = True
-    plot_multiple = False
+    plot_multiple = True
 
     hilbert = False #Apply hilbert envelope to wf before correlating
-    align_method = 8
+    align_method = 0
     
 
     #Plotting info

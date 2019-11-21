@@ -115,7 +115,7 @@ if __name__ == '__main__':
 
             ant2_physical_limits_x = None#None
             ant2_physical_limits_y = None#(None,0.0)
-            ant2_physical_limits_z = None#None
+            ant2_physical_limits_z = None
 
             ant3_physical_limits_x = None#(None,0.0)
             ant3_physical_limits_y = None#(None,0.0)
@@ -138,6 +138,24 @@ if __name__ == '__main__':
         n = 1.0003 #Index of refraction of air  #Should use https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.453-11-201507-S!!PDF-E.pdf 
         c = 299792458/n #m/s
 
+        #calculated with align_method=8, crit_freq_low_pass_MHz = None,  low_pass_filter_order = None, crit_freq_high_pass_MHz = 30, high_pass_filter_order = 5
+        #These were calculated with channel 2 flipped to test if that might be a problem.
+        site1_measured_time_delays_hpol =  [((0, 1), -33.67217794735314), ((0, 2), 105.45613390568445), ((0, 3), 30.139256769961403), ((1, 2), 139.22210622057898), ((1, 3), 64.03028824157775), ((2, 3), -75.19181797900121)]
+        site1_measured_time_delays_errors_hpol =  [((0, 1), 0.031264789180457886), ((0, 2), 0.031264789180457886), ((0, 3), 0.015632394590228943), ((1, 2), 0.031264789180457886), ((1, 3), 0.015632394590228943), ((2, 3), 0.015632394590228943)]
+        site1_measured_time_delays_vpol =  [((0, 1), -38.04924843261725), ((0, 2), 101.73562399320996), ((0, 3), 36.36094981687252), ((1, 2), 139.78487242582722), ((1, 3), 74.50399261703114), ((2, 3), -65.34340938715698)]
+        site1_measured_time_delays_errors_vpol =  [((0, 1), 0.031264789180457886), ((0, 2), 0.031264789180457886), ((0, 3), 0.031264789180457886), ((1, 2), 0.031264789180457886), ((1, 3), 0.031264789180457886), ((2, 3), 0.031264789180457886)]
+
+        site2_measured_time_delays_hpol =  [((0, 1), -75.67357058767381), ((0, 2), 40.63430060469886), ((0, 3), -44.603959202234826), ((1, 2), 116.27661403806135), ((1, 3), 31.225897156995508), ((2, 3), -85.14448834399977)]                      
+        site2_measured_time_delays_errors_hpol =  [((0, 1), 6.642145291152699), ((0, 2), 0.015628577155653408), ((0, 3), 0.031257154311306816), ((1, 2), 6.657773868308352), ((1, 3), 6.642145291152699), ((2, 3), 0.015628577155653408)]            
+        site2_measured_time_delays_vpol =  [((0, 1), -79.95580072832284), ((0, 2), 36.75841347009681), ((0, 3), -38.38378549428477), ((1, 2), 116.62044273548572), ((1, 3), 41.665786696971985), ((2, 3), -75.11094181007027)]                       
+        site2_measured_time_delays_errors_vpol =  [((0, 1), 0.015628577155653408), ((0, 2), 0.031257154311306816), ((0, 3), 0.031257154311306816), ((1, 2), 0.015628577155653408), ((1, 3), 0.015628577155653408), ((2, 3), 0.031257154311306816)]
+
+        site3_measured_time_delays_hpol =  [((0, 1), -88.02014654064), ((0, 2), -143.62662406045482), ((0, 3), -177.19680779079835), ((1, 2), -55.51270605688091), ((1, 3), -88.89534686135659), ((2, 3), -33.32012649585307)]                       
+        site3_measured_time_delays_errors_hpol =  [((0, 1), 5.954487896303949), ((0, 2), 0.18754292586784088), ((0, 3), 0.031257154311306816), ((1, 2), 6.142030822171789), ((1, 3), 5.923230741992642), ((2, 3), 0.2188000801791477)]               
+        site3_measured_time_delays_vpol =  [((0, 1), -92.05231944679858), ((0, 2), -147.1274253433212), ((0, 3), -172.476977489791), ((1, 2), -55.10636305083391), ((1, 3), -80.36214373436982), ((2, 3), -25.34955214646983)]                       
+        site3_measured_time_delays_errors_vpol =  [((0, 1), 0.07814288577826704), ((0, 2), 0.04688573146696022), ((0, 3), 0.07814288577826704), ((1, 2), 0.031257154311306816), ((1, 3), 0.031257154311306816), ((2, 3), 0.031257154311306816)] 
+
+        '''
         #calculated with align_method=8, crit_freq_low_pass_MHz = 70,  low_pass_filter_order = 4, crit_freq_high_pass_MHz = 30, high_pass_filter_order = 8
 
         site1_measured_time_delays_hpol =  [((0, 1), -40.440209498791944), ((0, 2), 105.33057271920997), ((0, 3), 30.018460817451853), ((1, 2), 145.63622318088764), ((1, 3), 70.52602999210539), ((2, 3), -75.24411224605574)]
@@ -154,7 +172,7 @@ if __name__ == '__main__':
         site3_measured_time_delays_errors_hpol =  [((0, 1), 0.07569115457117638), ((0, 2), 0.09531589022367223), ((0, 3), 0.08541377337608434), ((1, 2), 0.05342651878917397), ((1, 3), 0.05980764593661971), ((2, 3), 0.07215334859645393)]
         site3_measured_time_delays_vpol =  [((0, 1), -92.07069739611525), ((0, 2), -147.16128683129963), ((0, 3), -172.5843775008375), ((1, 2), -55.11372813134522), ((1, 3), -80.44018591398685), ((2, 3), -25.427294958856226)]
         site3_measured_time_delays_errors_vpol =  [((0, 1), 0.03150407914721276), ((0, 2), 0.03635356075580606), ((0, 3), 0.03701344081619418), ((1, 2), 0.033491276265193035), ((1, 3), 0.0330274920797608), ((2, 3), 0.03873217143470215)]
-
+        '''
         '''
         #calculated with align_method=8, crit_freq_low_pass_MHz = None,  low_pass_filter_order = None, crit_freq_high_pass_MHz = None, high_pass_filter_order = None
 
@@ -390,7 +408,7 @@ if __name__ == '__main__':
                 measured_pulser_relative_heights = {'1-2':3763.1-3690.7,\
                                                     '2-3':3690.7-3806.25,\
                                                     '1-3':3763.1-3806.25}
-                measured_pulser_relative_heights_error = 5.0 #m
+                measured_pulser_relative_heights_error = 2.5 #m
                 
                 chi_2 = rawChi2(ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, puls1_x, puls1_y, puls1_z, puls2_x, puls2_y, puls2_z, puls3_x, puls3_y, puls3_z, cable_delay_ant0, cable_delay_ant1, cable_delay_ant2, cable_delay_ant3)
 
@@ -570,7 +588,7 @@ if __name__ == '__main__':
         puls3_phase_y = m.values['puls3_y']
         puls3_phase_z = m.values['puls3_z']
 
-        if True:
+        if False:
             print('\n\nATTEMPTING SECOND CHI^2 WITH aligned signals in one event\n')
             initial_chi_2 = adjustedChi2_2(m.values['ant1_x'], m.values['ant1_y'], m.values['ant1_z'], m.values['ant2_x'], m.values['ant2_y'], m.values['ant2_z'], m.values['ant3_x'], m.values['ant3_y'], m.values['ant3_z'], m.values['puls1_x'], m.values['puls1_y'], m.values['puls1_z'], m.values['puls2_x'], m.values['puls2_y'], m.values['puls2_z'], m.values['puls3_x'], m.values['puls3_y'], m.values['puls3_z'],m.values['cable_delay_ant0'], m.values['cable_delay_ant1'], m.values['cable_delay_ant2'], m.values['cable_delay_ant3'])
             print('Initial Chi^2 is %0.3f\n'%(initial_chi_2))
@@ -717,7 +735,7 @@ if __name__ == '__main__':
             out_corr, out_fig, out_ax = cor.map(43,mode,plot_map=True, interactive=True)
 
 
-        if False:
+        if True:
             print('\n\nATTEMPTING SECOND CHI^2 WITH FIRST AS INPUT\n')
             initial_chi_2 = rawChi2(m.values['ant1_x'], m.values['ant1_y'], m.values['ant1_z'], m.values['ant2_x'], m.values['ant2_y'], m.values['ant2_z'], m.values['ant3_x'], m.values['ant3_y'], m.values['ant3_z'], m.values['puls1_x'], m.values['puls1_y'], m.values['puls1_z'], m.values['puls2_x'], m.values['puls2_y'], m.values['puls2_z'], m.values['puls3_x'], m.values['puls3_y'], m.values['puls3_z'],m.values['cable_delay_ant0'], m.values['cable_delay_ant1'], m.values['cable_delay_ant2'], m.values['cable_delay_ant3'])
             print('Initial Chi^2 is %0.3f\n'%(initial_chi_2))

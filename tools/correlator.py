@@ -14,6 +14,7 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
 import tools.info as info
+import analysis.phase_response as pr
 
 import matplotlib.pyplot as plt
 import scipy.signal
@@ -65,7 +66,7 @@ class Correlator:
     range_theta_deg : tuple of floats with len = 2  
         The specified range of zenith angles to probe.
     '''
-    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None)):
+    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None),apply_phase_response=False):
         try:
             n = 1.0003 #Index of refraction of air  #Should use https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.453-11-201507-S!!PDF-E.pdf 
             self.c = 299792458/n #m/s
@@ -122,7 +123,7 @@ class Correlator:
             self.low_pass_filter_order = low_pass_filter_order
             self.high_pass_filter_order = high_pass_filter_order
 
-            self.filter = self.makeFilter(plot_filter=plot_filter)
+            self.filter = self.makeFilter(plot_filter=plot_filter,apply_phase_response=apply_phase_response)
             if numpy.all(self.filter == 1.0):
                 self.apply_filter = False
             else:
@@ -323,7 +324,19 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def makeFilter(self,plot_filter=False):
+    def prepPhaseFilter(self, goal_freqs, plot=False):
+        '''
+        This will load the phase responses for the second stage board and preamps (preamps meaned)
+        and create the additional portion of the filter that will be applied to signals.  This
+        ideally will make the signals more impulsive.
+        '''
+        phase_response_2nd_stage = pr.loadInterpolatedPhaseResponse2ndStage(goal_freqs, plot=plot)[1]
+        phase_response_preamp = pr.loadInterpolatedPhaseResponseMeanPreamp(goal_freqs, plot=plot)[1]
+
+        return numpy.exp(-1j*(phase_response_2nd_stage + phase_response_preamp)) #One row per channel.
+
+
+    def makeFilter(self,plot_filter=False,apply_phase_response=False):
         '''
         This will make a frequency domain filter based on the given specifications. 
         '''
@@ -370,7 +383,18 @@ class Correlator:
 
                 self.figs.append(fig)
                 self.axs.append(ax)
-
+            filter_y = numpy.tile(filter_y,(8,1))
+            if apply_phase_response == True:
+                phase_response_filter = self.prepPhaseFilter(filter_x)
+                if False:
+                    plt.figure()
+                    for channel in range(8):
+                        plt.subplot(3,1,1)
+                        plt.plot(filter_x,phase_response_filter[channel])
+                        plt.subplot(3,1,2)
+                        plt.plot(filter_x,numpy.log(phase_response_filter[channel])/(-1j))
+                    import pdb; pdb.set_trace()
+                filter_y = numpy.multiply(phase_response_filter,filter_y)
             return filter_y
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -409,7 +433,7 @@ class Correlator:
                 temp_wf = numpy.asarray(self.reader.wf(channel))[self.start_waveform_index:self.end_waveform_index+1]
                 temp_wf = temp_wf - numpy.mean(temp_wf)
                 if apply_filter == True:
-                    temp_wf = numpy.fft.irfft(numpy.multiply(self.filter,numpy.fft.rfft(temp_wf)),n=self.buffer_length) #Might need additional normalization
+                    temp_wf = numpy.fft.irfft(numpy.multiply(self.filter[channel],numpy.fft.rfft(temp_wf)),n=self.buffer_length) #Might need additional normalization
                 if hilbert == True:
                     temp_wf = abs(scipy.signal.hilbert(temp_wf))
                 if div_std:
@@ -570,12 +594,12 @@ class Correlator:
 
                 plt.subplot(2,1,2)
                 
-                plt.plot(self.times_resampled, waveforms[0],label='Ch%i'%channels[0])
-                plt.plot(self.times_resampled + t_best_0subtract1, waveforms[1],label='Ch%i, shifted %0.2f ns'%(channels[1], t_best_0subtract1))
-                plt.plot(self.times_resampled + t_best_0subtract2, waveforms[2],label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
-                plt.plot(self.times_resampled + t_best_0subtract3, waveforms[3],label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
+                plt.plot(self.times_resampled, waveforms[0]/max(waveforms[0]),label='Ch%i'%channels[0])
+                plt.plot(self.times_resampled + t_best_0subtract1, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], t_best_0subtract1))
+                plt.plot(self.times_resampled + t_best_0subtract2, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
+                plt.plot(self.times_resampled + t_best_0subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
 
-                plt.ylabel('adu')
+                plt.ylabel('Normalized adu')
                 plt.xlabel('Time (ns)')
                 plt.minorticks_on()
                 plt.grid(b=True, which='major', color='k', linestyle='-')
@@ -1035,8 +1059,10 @@ def testMain():
         crit_freq_low_pass_MHz = None#70 #This new pulser seems to peak in the region of 85 MHz or so
         low_pass_filter_order = None#12
 
-        crit_freq_high_pass_MHz = None#55
-        high_pass_filter_order = None#4
+        crit_freq_high_pass_MHz = 30#None#55
+        high_pass_filter_order = 5#None#4
+        apply_phase_response = True
+
         plot_filter=True
 
         known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
@@ -1048,7 +1074,7 @@ def testMain():
         hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
         vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
 
-        cor = Correlator(reader,  upsample=2**15, n_phi=361, n_theta=361, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False)
+        cor = Correlator(reader,  upsample=2**15, n_phi=361, n_theta=361, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response)
         if True:
             for mode in ['hpol','vpol']:
                 eventid = eventids[mode][0]
@@ -1085,9 +1111,12 @@ if __name__=="__main__":
     crit_freq_low_pass_MHz = None#60 #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = None#4
 
-    crit_freq_high_pass_MHz = None
-    high_pass_filter_order = None
+    crit_freq_high_pass_MHz = 30#None
+    high_pass_filter_order = 5#None
     plot_filter=True
+    apply_phase_response=True
+    n_phi = 720
+    n_theta = 720
 
     upsample = 2**15
 
@@ -1114,7 +1143,7 @@ if __name__=="__main__":
 
         reader = Reader(datapath,run)
 
-        cor = Correlator(reader,  upsample=upsample, n_phi=420, n_theta=420, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter)
+        cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
 
         for mode in ['hpol','vpol']:
             mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, interactive=True)
@@ -1152,7 +1181,7 @@ if __name__=="__main__":
             hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
             vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
 
-            cor = Correlator(reader,  upsample=upsample, n_phi=420, n_theta=420, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter)
+            cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
             if True:
                 for mode in ['hpol','vpol']:
                     eventid = eventids[mode][0]

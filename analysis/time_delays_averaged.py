@@ -111,7 +111,7 @@ if __name__ == '__main__':
         use_filter = True
         
         plot_filters = True
-        plot_multiple = False
+        plot_multiple = True
 
         hilbert = False #Apply hilbert envelope to wf before correlating
         #align_method = 8
@@ -311,6 +311,7 @@ if __name__ == '__main__':
                 roll = rolls[channel]
                 plt.plot(times, numpy.roll(averaged_waveforms[channel],roll)/max(averaged_waveforms[channel]),alpha=0.7,label=str(channel))
                 plt.legend()
+                #plt.xlim(0,1000)
 
 
         #Determining errors by aligning waveforms independant of averages, then fitting distrobutions of time delays matching the selected peaks from averages.

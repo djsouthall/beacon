@@ -265,7 +265,7 @@ if __name__ == '__main__':
                         plt.subplot(2,1,comp_index+1)
                         plt.plot(group_delay_freqs/1e6, group_delay,label=label)
                         plt.ylabel(ylabel)
-                        plt.legend(loc='upper center',fontsize=10)
+                        plt.legend(loc='upper right',fontsize=10)
                         plt.minorticks_on()
                         plt.grid(b=True, which='major', color='k', linestyle='-')
                         plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)

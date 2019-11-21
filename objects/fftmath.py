@@ -157,9 +157,9 @@ class FFTPrepper:
         the filter.
         '''
         try:
+            temp_wf = self.reader.wf(channel)[self.start_waveform_index:self.end_waveform_index+1]
             if tukey is None:
                 tukey = self.tukey_default
-            temp_wf = self.reader.wf(channel)[self.start_waveform_index:self.end_waveform_index+1]
             if tukey == True:
                 temp_wf = numpy.multiply( temp_wf , self.tukey  )
             if apply_filter == True:
@@ -782,8 +782,10 @@ class TimeDelayCalculator(FFTPrepper):
 
                     figs.append(fig)
                     axs.append(plt.gca())
+            1_percent_event = int(len(eventids)/100)
             for event_index, eventid in enumerate(eventids):
-                sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
+                if event_index%1_percent_event == 0:
+                    sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
                 sys.stdout.flush()
                 if align_method is None:
                     if plot == True:
