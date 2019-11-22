@@ -126,8 +126,9 @@ def createFile(reader,redo_defaults=False):
                     for key in attempt_list:
                         print('Attempting to add content for key: %s'%key)
                         if key == 'eventids':
-                            if ('eventids' in list(file.keys())) == False:
-                                file.create_dataset('eventids', (N,), dtype='i', compression='gzip', compression_opts=9, shuffle=True)
+                            #if ('eventids' in list(file.keys())) == False:
+                            del file['eventids']
+                            file.create_dataset('eventids', (N,), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
                             file['eventids'][...] = eventids
                         elif key == 'trigger_types':
                             if ('trigger_types' in list(file.keys())) == False:
@@ -217,7 +218,7 @@ def createFile(reader,redo_defaults=False):
                 #When adding things to here, ensure they are also added and handled above as well
                 #for when the file already exists. 
                 times, subtimes, trigtimes, eventids = getTimes(reader)
-                file.create_dataset('eventids', (N,), dtype='i', compression='gzip', compression_opts=9, shuffle=True)
+                file.create_dataset('eventids', (N,), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
                 file['eventids'][...] = eventids
 
                 file.create_dataset('times', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
@@ -232,7 +233,6 @@ def createFile(reader,redo_defaults=False):
 
                 file.create_dataset('trigger_types', (N,), dtype=numpy.uint8, compression='gzip', compression_opts=9, shuffle=True)
                 file['trigger_types'][...] = loadTriggerTypes(reader)
-
 
                 #Used for gating obvious backgrounds like known CW
                 file.create_dataset('inband_peak_freq_MHz', (N,8), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
@@ -290,12 +290,16 @@ if __name__=="__main__":
     else:
         plt.close('all')
         redo_defaults = False
-        runs = numpy.array([1645])#numpy.arange(1645,1700)
+        runs = numpy.arange(1645,1650)
 
-        for run in runs:
+        bins = numpy.linspace(10,100,91)
+        width = numpy.diff(bins)
+        center = (bins[:-1] + bins[1:]) / 2
+        hist = numpy.zeros((8,len(bins)-1))
+        for run_index, run in enumerate(runs):
             run = int(run)
-
             reader = Reader(datapath,run)
+            '''
             trigger_types = loadTriggerTypes(reader)
             print('\nReader:')
             d = interpret.getReaderDict(reader)
@@ -306,16 +310,24 @@ if __name__=="__main__":
             print('\nStatus:')
             s = interpret.getStatusDict(reader)
             pprint(s)
-
+            '''
             filename = createFile(reader,redo_defaults=redo_defaults)
-
             with h5py.File(filename, 'r') as file:
                 cut = file['trigger_types'][:] == 2
                 for channel in range(8):
-                    peaks = file['inband_peak_freq_MHz'][:,int(channel)][cut]
-                    e = numpy.where(cut)[0]
-                    plt.figure()
-                    plt.hist(peaks,bins=200)
-                    plt.xlabel('MHz')
-                    plt.ylabel('Counts')
-                    print(e[peaks == 0])
+                    hist[channel] += numpy.histogram(file['inband_peak_freq_MHz'][:,int(channel)][cut],bins=bins)[0]
+            
+
+        fig, ax = plt.subplots()
+        
+        plt.minorticks_on()
+        plt.grid(b=True, which='major', color='k', linestyle='-')
+        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+        
+        for channel in range(8):
+            ax.bar(center, hist[channel], align='center', width=width,label='ch%i'%channel,alpha=0.7)
+
+        plt.legend()
+        plt.ylabel('Counts')
+        plt.xlabel('Peak Inband Freq (MHz)')
+        #ax.set_xticks(bins)
