@@ -19,6 +19,7 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 import numpy
 import h5py
 import matplotlib.pyplot as plt
+import scipy.interpolate
 
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
@@ -266,6 +267,71 @@ def createFile(reader,redo_defaults=False):
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
 
+def getEventTimes(reader,plot=False):
+    '''
+    This will hopefully do the appropriate math to determine the real time
+    of each event in a run.
+    '''
+    try:
+        #Get Values from Header Tree
+        N = reader.head_tree.Draw("trig_time:readout_time:pps_counter","","goff") 
+        trig_time = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N)
+        readout_time_head = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N) 
+        pps_counter = numpy.frombuffer(reader.head_tree.GetV3(), numpy.dtype('float64'), N)
+
+        #Not using Tree because I want these per event. (there will be repeated values)
+        readout_time_status = numpy.zeros(reader.N())
+        latched_pps_time = numpy.zeros(reader.N())
+        for eventid in range(reader.N()):
+            reader.setEntry(eventid)
+            readout_time_status[eventid] =  getattr(reader.status(),'readout_time')
+            latched_pps_time[eventid] =  getattr(reader.status(),'latched_pps_time')
+
+        unique_latched_pps, indices = numpy.unique(latched_pps_time,return_index=True)
+        sample_rate = numpy.diff(unique_latched_pps)
+        inter_trig_time = (trig_time[indices][:-1] + trig_time[indices][1:]) / 2.0
+
+        bad_derivatives = sample_rate > 3.15e7 #Ones where a sample was missed or something went wrong.
+
+        f_interpolate_rate = scipy.interpolate.interp1d(inter_trig_time[~bad_derivatives],sample_rate[~bad_derivatives],bounds_error=False,fill_value='extrapolate')
+
+        fractional_second = (trig_time - latched_pps_time)/f_interpolate_rate(trig_time) #THe fraction into the second (beyond pps_counter) this event was.
+        second = pps_counter + fractional_second
+        #This will then need to be correlated with readout time to get the real world signal that these corresponds to.
+        #Right now these correspond to the number of second since the pps immediately prior to the run starting. 
+        #Will also need to make some exceptions to handle the first few events which appear weird for some reason. 
+
+        if plot == True:
+
+            plt.figure()
+            plt.plot(inter_trig_time[~bad_derivatives],sample_rate[~bad_derivatives])
+            plt.xlabel('inter_trig_time')
+            plt.ylabel('Sample Rate (Hz)')
+
+            plt.figure()
+            plt.plot(trig_time,f_interpolate_rate(trig_time))
+            plt.xlabel('trig_time')
+            plt.ylabel('Interpolated Clock Rate (Hz)')
+
+            plt.figure()
+            plt.plot(trig_time,latched_pps_time)
+            plt.xlabel('trig_time')
+            plt.ylabel('latched_pps_time')
+
+            plt.figure()
+            plt.plot(second)
+            plt.ylabel('second (s)')
+            plt.xlabel('eventid')
+
+        return seconds
+
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+
 if __name__=="__main__":
     datapath = os.environ['BEACON_DATA']
 
@@ -290,7 +356,8 @@ if __name__=="__main__":
     else:
         plt.close('all')
         redo_defaults = False
-        runs = numpy.arange(1645,1650)
+
+        runs = [1645]#numpy.arange(1645,1650)
 
         bins = numpy.linspace(10,100,91)
         width = numpy.diff(bins)
@@ -299,7 +366,7 @@ if __name__=="__main__":
         for run_index, run in enumerate(runs):
             run = int(run)
             reader = Reader(datapath,run)
-            '''
+            #'''
             trigger_types = loadTriggerTypes(reader)
             print('\nReader:')
             d = interpret.getReaderDict(reader)
@@ -310,24 +377,26 @@ if __name__=="__main__":
             print('\nStatus:')
             s = interpret.getStatusDict(reader)
             pprint(s)
-            '''
+            #'''
             filename = createFile(reader,redo_defaults=redo_defaults)
             with h5py.File(filename, 'r') as file:
                 cut = file['trigger_types'][:] == 2
                 for channel in range(8):
                     hist[channel] += numpy.histogram(file['inband_peak_freq_MHz'][:,int(channel)][cut],bins=bins)[0]
+
+                getEventTimes(reader,plot=True) #WHAT I AM CURRENTLY WORKING ON
+
+        if False:
+            fig, ax = plt.subplots()
             
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            
+            for channel in range(8):
+                ax.bar(center, hist[channel], align='center', width=width,label='ch%i'%channel,alpha=0.7)
 
-        fig, ax = plt.subplots()
-        
-        plt.minorticks_on()
-        plt.grid(b=True, which='major', color='k', linestyle='-')
-        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-        
-        for channel in range(8):
-            ax.bar(center, hist[channel], align='center', width=width,label='ch%i'%channel,alpha=0.7)
-
-        plt.legend()
-        plt.ylabel('Counts')
-        plt.xlabel('Peak Inband Freq (MHz)')
-        #ax.set_xticks(bins)
+            plt.legend()
+            plt.ylabel('Counts')
+            plt.xlabel('Peak Inband Freq (MHz)')
+            #ax.set_xticks(bins)
