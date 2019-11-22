@@ -782,9 +782,9 @@ class TimeDelayCalculator(FFTPrepper):
 
                     figs.append(fig)
                     axs.append(plt.gca())
-            1_percent_event = int(len(eventids)/100)
+            one_percent_event = int(len(eventids)/100)
             for event_index, eventid in enumerate(eventids):
-                if event_index%1_percent_event == 0:
+                if event_index%one_percent_event == 0:
                     sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
                 sys.stdout.flush()
                 if align_method is None:

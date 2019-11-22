@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 '''
-This class is adopted from a script originally written by Kaeli Hughes and as been significantly
-restructured/altered for my BEACON analysis framework.  
-
-The purpose of this script is toprovide tools for plotting cross correlation maps for 
-interpretting signal directions of BEACON signals.
-
+This script is meant to determine where each map points for each event and then save these values to file. 
 '''
 import os
 import sys
