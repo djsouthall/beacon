@@ -323,9 +323,8 @@ def createFile(reader,redo_defaults=False):
                     for key in attempt_list:
                         print('Attempting to add content for key: %s'%key)
                         if key == 'eventids':
-                            #if ('eventids' in list(file.keys())) == False:
-                            del file['eventids']
-                            file.create_dataset('eventids', (N,), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
+                            if ('eventids' in list(file.keys())) == False:
+                                file.create_dataset('eventids', (N,), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
                             file['eventids'][...] = eventids
                         elif key == 'trigger_type':
                             if ('trigger_type' in list(file.keys())) == False:
