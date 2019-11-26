@@ -20,10 +20,12 @@ import numpy
 import h5py
 import matplotlib.pyplot as plt
 import scipy.interpolate
+import scipy.signal
 
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
 import tools.info as info
+import pdb
 
 
 analysis_data_dir = '/home/dsouthall/scratch-midway2/beacon/'
@@ -267,63 +269,182 @@ def createFile(reader,redo_defaults=False):
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
 
-def getEventTimes(reader,plot=False):
+def getEventTimes(reader,plot=False,smooth_window=101):
     '''
     This will hopefully do the appropriate math to determine the real time
     of each event in a run.
+
+    Smoothing will be performed on the rates using the specified smooth window.
+    To disable this set the smooth window to None.
     '''
     try:
         #Get Values from Header Tree
-        N = reader.head_tree.Draw("trig_time:readout_time:pps_counter","","goff") 
-        trig_time = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N)
-        readout_time_head = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N) 
-        pps_counter = numpy.frombuffer(reader.head_tree.GetV3(), numpy.dtype('float64'), N)
+        N = reader.head_tree.Draw("readout_time:readout_time_ns","","goff") 
+        readout_time_head = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N) + numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N)/1e9  
 
+        N = reader.head_tree.Draw("trig_time:pps_counter:trigger_type","","goff") 
+        trig_time = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N)
+        pps_counter = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N)
+        trigger_type = numpy.frombuffer(reader.head_tree.GetV3(), numpy.dtype('float64'), N)
+
+        #Get Values from Status Tree
+        N = reader.status_tree.Draw("latched_pps_time","","goff") 
+        _latched_pps_time = numpy.frombuffer(reader.status_tree.GetV1(), numpy.dtype('float64'), N)
+        
+        latched_pps_time = _latched_pps_time[numpy.searchsorted(_latched_pps_time,trig_time,side='left') - 1]
+        
+
+        '''
         #Not using Tree because I want these per event. (there will be repeated values)
         readout_time_status = numpy.zeros(reader.N())
-        latched_pps_time = numpy.zeros(reader.N())
+        #latched_pps_time = numpy.zeros(reader.N())
         for eventid in range(reader.N()):
             reader.setEntry(eventid)
             readout_time_status[eventid] =  getattr(reader.status(),'readout_time')
-            latched_pps_time[eventid] =  getattr(reader.status(),'latched_pps_time')
+            #latched_pps_time[eventid] =  getattr(reader.status(),'latched_pps_time')
 
+        '''
         unique_latched_pps, indices = numpy.unique(latched_pps_time,return_index=True)
+        #Sorting unique values by index
+        indices = numpy.sort(indices)
+        unique_latched_pps = latched_pps_time[indices]
+
+        #Sometimes the beginning of the run can not be properly handled.  The latched pps will start very high.
+        #I ignore these values and then hope to get the resulting values later by interpolating at a later stage. 
+        problematic_latched_pps_cut = numpy.append(numpy.diff(unique_latched_pps) < 0,False)
+
+        indices = indices[~problematic_latched_pps_cut]
+        unique_latched_pps = unique_latched_pps[~problematic_latched_pps_cut]
+
+        #Getting first pass sample rate
         sample_rate = numpy.diff(unique_latched_pps)
         inter_trig_time = (trig_time[indices][:-1] + trig_time[indices][1:]) / 2.0
-
+                
         bad_derivatives = sample_rate > 3.15e7 #Ones where a sample was missed or something went wrong.
 
-        f_interpolate_rate = scipy.interpolate.interp1d(inter_trig_time[~bad_derivatives],sample_rate[~bad_derivatives],bounds_error=False,fill_value='extrapolate')
+        #The below will smooth out the rate.
+        if smooth_window is not None:
+            #Smoothing out rate
+            hamming_filter = scipy.signal.hamming(smooth_window)
+            hamming_filter = hamming_filter/sum(hamming_filter)
+            padded = numpy.append(numpy.append(numpy.ones(smooth_window//2)*sample_rate[~bad_derivatives][0],sample_rate[~bad_derivatives]),numpy.ones(smooth_window//2)*sample_rate[~bad_derivatives][-1])
+            smoothed_rate = numpy.convolve(padded,hamming_filter, mode='valid')
+        else:
+            smoothed_rate = sample_rate[~bad_derivatives]
+        
+        #The following interpolates the smoothed rate.
+        f_interpolate_rate = scipy.interpolate.interp1d(inter_trig_time[~bad_derivatives],smoothed_rate,bounds_error=False,fill_value=(smoothed_rate[0],smoothed_rate[-1]))
+
+        #This will extrapolate the leading edge where some problems may have occurred in latched_pps_time.
+        latched_pps_time[trig_time <= latched_pps_time] = scipy.interpolate.interp1d(trig_time[trig_time > latched_pps_time],latched_pps_time[trig_time > latched_pps_time],bounds_error=False,fill_value='extrapolate')(trig_time[trig_time <= latched_pps_time])
 
         fractional_second = (trig_time - latched_pps_time)/f_interpolate_rate(trig_time) #THe fraction into the second (beyond pps_counter) this event was.
+        fractional_second -= numpy.floor(fractional_second) #Corrects for cases where the fractional second > 1 (for skipped latched_pps)
         second = pps_counter + fractional_second
-        #This will then need to be correlated with readout time to get the real world signal that these corresponds to.
-        #Right now these correspond to the number of second since the pps immediately prior to the run starting. 
-        #Will also need to make some exceptions to handle the first few events which appear weird for some reason. 
+
+        actual_event_time_seconds = numpy.floor(numpy.mean(readout_time_head - second)) + second
+
+
+        if False:
+            plt.figure()
+            ax = plt.subplot(2,1,1)
+            plt.plot(trig_time,trig_time,label='trig_time')
+            plt.plot(trig_time,latched_pps_time,label='latched_pps_time')
+            for v in inter_trig_time[bad_derivatives]:
+                plt.axvline(v,c='r')
+            plt.legend()
+            plt.subplot(2,1,2,sharex=ax)
+            plt.plot(trig_time, trig_time - latched_pps_time,label='trig_time - latched_pps_time')
+            plt.plot(trig_time, f_interpolate_rate(trig_time),label='rate')
+            for v in inter_trig_time[bad_derivatives]:
+                plt.axvline(v,c='r')
+            plt.legend()
+            plt.ylabel('trig_time - latched_pps_time')
+            plt.xlabel('trigtime')
 
         if plot == True:
 
             plt.figure()
-            plt.plot(inter_trig_time[~bad_derivatives],sample_rate[~bad_derivatives])
+            plt.subplot(2,1,1)
+            plt.plot(readout_time_head - second)
+            plt.axhline(numpy.mean(readout_time_head - second),label='mean = %f\nstd = %f'%(numpy.mean(readout_time_head - second), numpy.std(readout_time_head - second)),linestyle='--',c='r')
+            plt.ylabel('readout_time_head - second')
+            plt.xlabel('eventid')
+            plt.legend()
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            bins = numpy.linspace(min(readout_time_head - second),max((readout_time_head - second)),100)
+
+            for t_index, t in enumerate([1,2,3]):
+                if t_index == 0:
+                    ax = plt.subplot(2,3,3+t)
+                else:
+                    plt.subplot(2,3,3+t,sharex=ax,sharey=ax)
+
+                cut = trigger_type == t
+                y = (readout_time_head - second)[cut]
+                plt.hist(y,bins=bins,alpha=0.8,label='Trigger type = %i'%t)
+                mean = numpy.mean(y)
+                std = numpy.std(y)
+                plt.axvline(mean,label='mean = %f\nstd = %f'%(mean,std),linestyle='--',c='r')
+                plt.legend()
+                plt.xlabel('readout_time_head - second')
+                plt.ylabel('Counts')
+                plt.yscale('log', nonposy='clip')
+
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+            plt.figure()
+            plt.plot(inter_trig_time[~bad_derivatives],sample_rate[~bad_derivatives],label='Original')
+            if smooth_window is not None:
+                plt.plot(inter_trig_time[~bad_derivatives],smoothed_rate,label='Smoothed with len(hamming)=%i'%smooth_window)
+            plt.legend()
+            
             plt.xlabel('inter_trig_time')
             plt.ylabel('Sample Rate (Hz)')
 
+            '''
             plt.figure()
             plt.plot(trig_time,f_interpolate_rate(trig_time))
             plt.xlabel('trig_time')
             plt.ylabel('Interpolated Clock Rate (Hz)')
 
             plt.figure()
-            plt.plot(trig_time,latched_pps_time)
+            plt.subplot(2,1,1)
+            plt.plot(trig_time,latched_pps_time,label='All latched pps as stored')
             plt.xlabel('trig_time')
-            plt.ylabel('latched_pps_time')
+            plt.ylabel('All latched_pps_time')
+            plt.legend(loc='upper center')
+            plt.subplot(2,1,2)
+            plt.plot(trig_time[indices],latched_pps_time[indices],label='Only latched pps used in\ncalculating seconds')
+            plt.xlabel('trig_time')
+            plt.ylabel('Used latched_pps_time')
+            plt.legend(loc='upper center')
+            '''
+
+            plt.figure()
+            plt.subplot(2,1,1)
+            plt.plot(pps_counter)
+            plt.ylabel('pps_counter (s)')
+            plt.xlabel('eventid')
+
+            plt.subplot(2,1,2)
+            plt.plot(fractional_second)
+            plt.ylabel('fractional_second (s)')
+            plt.xlabel('eventid')
 
             plt.figure()
             plt.plot(second)
             plt.ylabel('second (s)')
             plt.xlabel('eventid')
 
-        return seconds
+
+        return actual_event_time_seconds
 
     except Exception as e:
         print('\nError in %s'%inspect.stack()[0][3])
