@@ -89,7 +89,8 @@ if __name__=="__main__":
         reader = Reader(datapath,run)
         filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.
 
-        with h5py.File(filename, 'a') as file:
+        if filename is not None:
+            with h5py.File(filename, 'a') as file:
             eventids = getEventIds(reader,trigger_type=[1,2,3]) #eventids with rf trigger
             if numpy.size(eventids) != 0:
                 print('run = ',run)
@@ -208,6 +209,8 @@ if __name__=="__main__":
                     file['%s_t_best_2subtract3'%mode][eventid] = t_best_2subtract3 
 
             file.close()
+        else:
+            print('filename is None, indicating empty tree.  Skipping run %i'%run)
     except Exception as e:
         print('\nError in %s'%inspect.stack()[0][3])
         print(e)

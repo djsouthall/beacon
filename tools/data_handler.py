@@ -297,124 +297,111 @@ def createFile(reader,redo_defaults=False):
     try:
         run = int(reader.run)
         N = reader.N()
-        filename = analysis_data_dir + 'run%i_analysis_data.h5'%run
+        if N > 0:
 
-        header_keys_to_copy = []
-        h = interpret.getHeaderDict(reader)
+            filename = analysis_data_dir + 'run%i_analysis_data.h5'%run
 
-        initial_expected_datasets = numpy.array(['eventids','trigger_type','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','calibrated_trigtime','inband_peak_freq_MHz']) #expand as more things are added.  This should only include datasets that this function will add.
-        initial_expected_attrs    = numpy.array(['N','run'])
+            header_keys_to_copy = []
+            h = interpret.getHeaderDict(reader)
 
-        #outdated_datasets_to_remove should include things that were once in each file but should no longer be.  They might be useful if a dataset
-        #is given a new name and you want to delete the old dataset for instance. 
-        outdated_datasets_to_remove = numpy.array(['trigger_types','times','subtimes','trigtimes'])
+            initial_expected_datasets = numpy.array(['eventids','trigger_type','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','calibrated_trigtime','inband_peak_freq_MHz']) #expand as more things are added.  This should only include datasets that this function will add.
+            initial_expected_attrs    = numpy.array(['N','run'])
 
-        if os.path.exists(filename):
-            print('%s already exists, checking if setup is up to date.'%filename )
+            #outdated_datasets_to_remove should include things that were once in each file but should no longer be.  They might be useful if a dataset
+            #is given a new name and you want to delete the old dataset for instance. 
+            outdated_datasets_to_remove = numpy.array(['trigger_types','times','subtimes','trigtimes'])
 
-            with h5py.File(filename, 'a') as file:
-                
-                try:
-                    remove_list = outdated_datasets_to_remove[~numpy.isin(outdated_datasets_to_remove,list(file.keys()))]
-                    for key in outdated_datasets_to_remove:
-                        print('Removing old dataset: %s'%key)
-                        del file[key]
+            if os.path.exists(filename):
+                print('%s already exists, checking if setup is up to date.'%filename )
 
-                    if redo_defaults == False:
-                        attempt_list = initial_expected_datasets[~numpy.isin(initial_expected_datasets,list(file.keys()))]
-                    else:
-                        attempt_list = initial_expected_datasets
-
-                    if numpy.any(numpy.isin(attempt_list,['eventids','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','inband_peak_freq_MHz'])):
-                        times_loaded = True
-                        raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids = getTimes(reader)
-
-
-                    for key in attempt_list:
-                        print('Attempting to add content for key: %s'%key)
-                        if key == 'eventids':
-                            if ('eventids' in list(file.keys())) == False:
-                                file.create_dataset('eventids', (N,), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
-                            file['eventids'][...] = eventids
-                        elif key == 'trigger_type':
-                            if ('trigger_type' in list(file.keys())) == False:
-                                file.create_dataset('trigger_type', (N,), dtype=numpy.uint8, compression='gzip', compression_opts=9, shuffle=True)
-                            file['trigger_type'][...] = loadTriggerTypes(reader)
-                        elif key == 'raw_approx_trigger_time':
-                            if ('raw_approx_trigger_time'  in list(file.keys())) == False:
-                                file.create_dataset('raw_approx_trigger_time', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
-                            file['raw_approx_trigger_time'][...] = raw_approx_trigger_time
-                        elif key == 'raw_approx_trigger_time_nsecs':
-                            if ('raw_approx_trigger_time_nsecs'  in list(file.keys())) == False:
-                                file.create_dataset('raw_approx_trigger_time_nsecs', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
-                            file['raw_approx_trigger_time_nsecs'][...] = raw_approx_trigger_time_nsecs
-                        elif key == 'trig_time':
-                            if ('trig_time'  in list(file.keys())) == False:
-                                file.create_dataset('trig_time', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
-                            file['trig_time'][...] = trig_time
-                        elif key == 'calibrated_trigtime':
-                            if ('calibrated_trigtime'  in list(file.keys())) == False:
-                                file.create_dataset('calibrated_trigtime', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
-                            file['calibrated_trigtime'][...] = getEventTimes(reader)
-                        elif key == 'inband_peak_freq_MHz':
-                            #Used for gating obvious backgrounds like known CW
-                            if ('inband_peak_freq_MHz'  in list(file.keys())) == False:
-                                file.create_dataset('inband_peak_freq_MHz', (N,8), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
-                            reader.setEntry(eventids[0])
-                            t = reader.t()/1e9
-                            freqs = numpy.fft.rfftfreq(len(t),t[1]-t[0])/1e6
-                            band_cut = numpy.logical_and(freqs > 10.0, freqs < 100.0)
-                            print('Calculating Spectral Frequency\n')
-                            print_every = int(N/1000)
-                            for event_index,eventid in enumerate(eventids):
-                                if event_index%print_every == 0:
-                                    sys.stdout.write('\r%i/%i'%(event_index+1,len(eventids)))
-                                    sys.stdout.flush()
-                                reader.setEntry(eventid)
-                                wfs = numpy.zeros((8,len(t)))
-                                for channel in range(8):
-                                    wfs[channel] = reader.wf(channel)
-
-                                fft = numpy.fft.rfft(wfs,axis=1)
-                                for channel in range(8):
-                                    file['inband_peak_freq_MHz'][event_index,channel] = freqs[band_cut][numpy.argmax(fft[channel][band_cut])]
-
-                            print('\n')
-                        else:
-                            print('key: %s currently has no hardcoded support in this loop.'%key)
-
-                    if redo_defaults == False:
-                        attempt_list = initial_expected_attrs[~numpy.isin(initial_expected_attrs,list(file.attrs.keys()))]
-                    else:
-                        attempt_list = initial_expected_attrs
-
-                    for key in attempt_list:
-                        print('Attempting to add content for key: %s'%key)
-                        if key == 'N':
-                            file.attrs['N'] = N
-                        elif key == 'run':
-                            file.attrs['run'] = run
-                        else:
-                            print('key: %s currently has no hardcoded support in this loop.'%key)
-                    file.close()
-                except Exception as e:
-                    file.close()
-                    print('\nError in %s'%inspect.stack()[0][3])
-                    print('Error while trying to copy header elements to attrs.')
-                    print(e)
-                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                    print(exc_type, fname, exc_tb.tb_lineno)
-
-        else:
-            print('Creating %s.'%filename )
-            with h5py.File(filename, 'w') as file:
-                #Prepare attributes for the file.
-                file.attrs['N'] = N
-                file.attrs['run'] = run
-                for key in header_keys_to_copy:
+                with h5py.File(filename, 'a') as file:
+                    
                     try:
-                        file.attrs[key] = h[key]
+                        remove_list = outdated_datasets_to_remove[numpy.isin(outdated_datasets_to_remove,list(file.keys()))]
+                        for key in remove_list:
+                            print('Removing old dataset: %s'%key)
+                            try:
+                                del file[key]
+                            except:
+                                continue
+
+                        if redo_defaults == False:
+                            attempt_list = initial_expected_datasets[~numpy.isin(initial_expected_datasets,list(file.keys()))]
+                        else:
+                            attempt_list = initial_expected_datasets
+
+                        if numpy.any(numpy.isin(attempt_list,['eventids','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','inband_peak_freq_MHz'])):
+                            times_loaded = True
+                            raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids = getTimes(reader)
+
+
+                        for key in attempt_list:
+                            print('Attempting to add content for key: %s'%key)
+                            if key == 'eventids':
+                                if ('eventids' in list(file.keys())) == False:
+                                    file.create_dataset('eventids', (N,), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
+                                file['eventids'][...] = eventids
+                            elif key == 'trigger_type':
+                                if ('trigger_type' in list(file.keys())) == False:
+                                    file.create_dataset('trigger_type', (N,), dtype=numpy.uint8, compression='gzip', compression_opts=9, shuffle=True)
+                                file['trigger_type'][...] = loadTriggerTypes(reader)
+                            elif key == 'raw_approx_trigger_time':
+                                if ('raw_approx_trigger_time'  in list(file.keys())) == False:
+                                    file.create_dataset('raw_approx_trigger_time', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                file['raw_approx_trigger_time'][...] = raw_approx_trigger_time
+                            elif key == 'raw_approx_trigger_time_nsecs':
+                                if ('raw_approx_trigger_time_nsecs'  in list(file.keys())) == False:
+                                    file.create_dataset('raw_approx_trigger_time_nsecs', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                file['raw_approx_trigger_time_nsecs'][...] = raw_approx_trigger_time_nsecs
+                            elif key == 'trig_time':
+                                if ('trig_time'  in list(file.keys())) == False:
+                                    file.create_dataset('trig_time', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                file['trig_time'][...] = trig_time
+                            elif key == 'calibrated_trigtime':
+                                if ('calibrated_trigtime'  in list(file.keys())) == False:
+                                    file.create_dataset('calibrated_trigtime', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                file['calibrated_trigtime'][...] = getEventTimes(reader)
+                            elif key == 'inband_peak_freq_MHz':
+                                #Used for gating obvious backgrounds like known CW
+                                if ('inband_peak_freq_MHz'  in list(file.keys())) == False:
+                                    file.create_dataset('inband_peak_freq_MHz', (N,8), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                reader.setEntry(eventids[0])
+                                t = reader.t()/1e9
+                                freqs = numpy.fft.rfftfreq(len(t),t[1]-t[0])/1e6
+                                band_cut = numpy.logical_and(freqs > 10.0, freqs < 100.0)
+                                print('Calculating Spectral Frequency\n')
+                                print_every = int(N/1000)
+                                for event_index,eventid in enumerate(eventids):
+                                    if event_index%print_every == 0:
+                                        sys.stdout.write('\r%i/%i'%(event_index+1,len(eventids)))
+                                        sys.stdout.flush()
+                                    reader.setEntry(eventid)
+                                    wfs = numpy.zeros((8,len(t)))
+                                    for channel in range(8):
+                                        wfs[channel] = reader.wf(channel)
+
+                                    fft = numpy.fft.rfft(wfs,axis=1)
+                                    for channel in range(8):
+                                        file['inband_peak_freq_MHz'][event_index,channel] = freqs[band_cut][numpy.argmax(fft[channel][band_cut])]
+
+                                print('\n')
+                            else:
+                                print('key: %s currently has no hardcoded support in this loop.'%key)
+
+                        if redo_defaults == False:
+                            attempt_list = initial_expected_attrs[~numpy.isin(initial_expected_attrs,list(file.attrs.keys()))]
+                        else:
+                            attempt_list = initial_expected_attrs
+
+                        for key in attempt_list:
+                            print('Attempting to add content for key: %s'%key)
+                            if key == 'N':
+                                file.attrs['N'] = N
+                            elif key == 'run':
+                                file.attrs['run'] = run
+                            else:
+                                print('key: %s currently has no hardcoded support in this loop.'%key)
+                        file.close()
                     except Exception as e:
                         file.close()
                         print('\nError in %s'%inspect.stack()[0][3])
@@ -424,52 +411,74 @@ def createFile(reader,redo_defaults=False):
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                         print(exc_type, fname, exc_tb.tb_lineno)
 
-                #Create datasets that don't require analysis, but might be useful in analysis.
-                #When adding things to here, ensure they are also added and handled above as well
-                #for when the file already exists. 
-                raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids = getTimes(reader)
-                file.create_dataset('eventids', (N,), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
-                file['eventids'][...] = eventids
+            else:
+                print('Creating %s.'%filename )
+                with h5py.File(filename, 'w') as file:
+                    #Prepare attributes for the file.
+                    file.attrs['N'] = N
+                    file.attrs['run'] = run
+                    for key in header_keys_to_copy:
+                        try:
+                            file.attrs[key] = h[key]
+                        except Exception as e:
+                            file.close()
+                            print('\nError in %s'%inspect.stack()[0][3])
+                            print('Error while trying to copy header elements to attrs.')
+                            print(e)
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            print(exc_type, fname, exc_tb.tb_lineno)
 
-                file.create_dataset('raw_approx_trigger_time', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
-                file['raw_approx_trigger_time'][...] = raw_approx_trigger_time
+                    #Create datasets that don't require analysis, but might be useful in analysis.
+                    #When adding things to here, ensure they are also added and handled above as well
+                    #for when the file already exists. 
+                    raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids = getTimes(reader)
+                    file.create_dataset('eventids', (N,), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
+                    file['eventids'][...] = eventids
 
-                file.create_dataset('raw_approx_trigger_time_nsecs', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
-                file['raw_approx_trigger_time_nsecs'][...] = raw_approx_trigger_time_nsecs
+                    file.create_dataset('raw_approx_trigger_time', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                    file['raw_approx_trigger_time'][...] = raw_approx_trigger_time
 
-                file.create_dataset('trig_time', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
-                file['trig_time'][...] = trig_time
+                    file.create_dataset('raw_approx_trigger_time_nsecs', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                    file['raw_approx_trigger_time_nsecs'][...] = raw_approx_trigger_time_nsecs
 
-                file.create_dataset('trigger_type', (N,), dtype=numpy.uint8, compression='gzip', compression_opts=9, shuffle=True)
-                file['trigger_type'][...] = loadTriggerTypes(reader)
+                    file.create_dataset('trig_time', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                    file['trig_time'][...] = trig_time
 
-                file.create_dataset('calibrated_trigtime', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
-                file['calibrated_trigtime'][...] = getEventTimes(reader)
+                    file.create_dataset('trigger_type', (N,), dtype=numpy.uint8, compression='gzip', compression_opts=9, shuffle=True)
+                    file['trigger_type'][...] = loadTriggerTypes(reader)
 
-                #Used for gating obvious backgrounds like known CW
-                file.create_dataset('inband_peak_freq_MHz', (N,8), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
-                reader.setEntry(eventids[0])
-                t = reader.t()/1e9
-                freqs = numpy.fft.rfftfreq(len(t),t[1]-t[0])/1e6
-                band_cut = numpy.logical_and(freqs > 10.0, freqs < 100.0)
-                print('Calculating Spectral Frequency\n')
-                print_every = int(N/1000)
-                for event_index,eventid in enumerate(eventids):
-                    if event_index%print_every == 0:
-                        sys.stdout.write('\r%i/%i'%(event_index+1,len(eventids)))
-                        sys.stdout.flush()
-                    reader.setEntry(eventid)
-                    wfs = numpy.zeros((8,len(t)))
-                    for channel in range(8):
-                        wfs[channel] = reader.wf(channel)
+                    file.create_dataset('calibrated_trigtime', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                    file['calibrated_trigtime'][...] = getEventTimes(reader)
 
-                    fft = numpy.fft.rfft(wfs,axis=1)
-                    for channel in range(8):
-                        file['inband_peak_freq_MHz'][event_index,channel] = freqs[band_cut][numpy.argmax(fft[channel][band_cut])]
+                    #Used for gating obvious backgrounds like known CW
+                    file.create_dataset('inband_peak_freq_MHz', (N,8), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                    reader.setEntry(eventids[0])
+                    t = reader.t()/1e9
+                    freqs = numpy.fft.rfftfreq(len(t),t[1]-t[0])/1e6
+                    band_cut = numpy.logical_and(freqs > 10.0, freqs < 100.0)
+                    print('Calculating Spectral Frequency\n')
+                    print_every = int(N/1000)
+                    for event_index,eventid in enumerate(eventids):
+                        if event_index%print_every == 0:
+                            sys.stdout.write('\r%i/%i'%(event_index+1,len(eventids)))
+                            sys.stdout.flush()
+                        reader.setEntry(eventid)
+                        wfs = numpy.zeros((8,len(t)))
+                        for channel in range(8):
+                            wfs[channel] = reader.wf(channel)
+
+                        fft = numpy.fft.rfft(wfs,axis=1)
+                        for channel in range(8):
+                            file['inband_peak_freq_MHz'][event_index,channel] = freqs[band_cut][numpy.argmax(fft[channel][band_cut])]
 
 
 
-        return filename
+            return filename
+
+        else:
+            print('Empty Tree, returning None')
+            return None
 
     except Exception as e:
         print('\nError in %s'%inspect.stack()[0][3])

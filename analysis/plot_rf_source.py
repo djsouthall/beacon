@@ -81,29 +81,41 @@ if __name__=="__main__":
                 reader = Reader(datapath,run)
                 filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.
                 
+                if filename is not None:
+                    with h5py.File(filename, 'a') as file:
+                        try:
+                            cut = file['trigger_type'][:] == 2
+                            cut_ids = numpy.where(cut)[0]
 
-                with h5py.File(filename, 'a') as file:
-                    cut = file['trigger_type'][:] == 2
-                    cut_ids = numpy.where(cut)[0]
+                            current_selected_events = numpy.array([])
 
-                    current_selected_events = numpy.array([])
+                            for mode in ['hpol','vpol']:
+                                zen_values = file['%s_max_corr_dir_ENU_zenith'%mode][cut]
+                                az_values = file['%s_max_corr_dir_ENU_azimuth'%mode][cut]
+                                hists[mode] += numpy.histogram2d(az_values, zen_values, bins=(az_edges, zen_edges))[0].T
 
-                    for mode in ['hpol','vpol']:
-                        zen_values = file['%s_max_corr_dir_ENU_zenith'%mode][cut]
-                        az_values = file['%s_max_corr_dir_ENU_azimuth'%mode][cut]
-                        hists[mode] += numpy.histogram2d(az_values, zen_values, bins=(az_edges, zen_edges))[0].T
+                                if highlight_roi == True:
+                                    zen_cut = numpy.logical_and(zen_values > zen_angle_cut_edges[mode][0],zen_values < zen_angle_cut_edges[mode][1])
+                                    az_cut = numpy.logical_and(az_values > az_angle_cut_edges[mode][0],az_values < az_angle_cut_edges[mode][1])
+                                    roi_cut = numpy.logical_and(zen_cut,az_cut)
+                                    current_selected_events = numpy.append(current_selected_events, cut_ids[roi_cut])
+                            if highlight_roi == True:
+                                sorted_events = numpy.sort(numpy.unique(current_selected_events)).astype(int)
+                                selected_events['eventid'] = numpy.append(selected_events['eventid'], sorted_events)
+                                selected_events['run'] = numpy.append(selected_events['run'], numpy.ones_like(sorted_events)*run)
 
-                        if highlight_roi == True:
-                            zen_cut = numpy.logical_and(zen_values > zen_angle_cut_edges[mode][0],zen_values < zen_angle_cut_edges[mode][1])
-                            az_cut = numpy.logical_and(az_values > az_angle_cut_edges[mode][0],az_values < az_angle_cut_edges[mode][1])
-                            roi_cut = numpy.logical_and(zen_cut,az_cut)
-                            current_selected_events = numpy.append(current_selected_events, cut_ids[roi_cut])
-                    if highlight_roi == True:
-                        sorted_events = numpy.sort(numpy.unique(current_selected_events)).astype(int)
-                        selected_events['eventid'] = numpy.append(selected_events['eventid'], sorted_events)
-                        selected_events['run'] = numpy.append(selected_events['run'], numpy.ones_like(sorted_events)*run)
-
-                    file.close()
+                            file.close()
+                        except Exception as e:
+                            print('Error while file is open, closing file.')
+                            file.close()
+                            print('\nError in %s'%inspect.stack()[0][3])
+                            print(e)
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            print(exc_type, fname, exc_tb.tb_lineno)
+                else:
+                    print('filename is None, indicating empty tree.  Skipping run %i'%run)
+                    
                         
             except Exception as e:
                 print('\nError in %s'%inspect.stack()[0][3])
