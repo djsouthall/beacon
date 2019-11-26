@@ -304,12 +304,22 @@ def createFile(reader,redo_defaults=False):
 
         initial_expected_datasets = numpy.array(['eventids','trigger_type','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','calibrated_trigtime','inband_peak_freq_MHz']) #expand as more things are added.  This should only include datasets that this function will add.
         initial_expected_attrs    = numpy.array(['N','run'])
+
+        #outdated_datasets_to_remove should include things that were once in each file but should no longer be.  They might be useful if a dataset
+        #is given a new name and you want to delete the old dataset for instance. 
+        outdated_datasets_to_remove = numpy.array(['trigger_types','times','subtimes','trigtimes'])
+
         if os.path.exists(filename):
             print('%s already exists, checking if setup is up to date.'%filename )
 
             with h5py.File(filename, 'a') as file:
                 
                 try:
+                    remove_list = outdated_datasets_to_remove[~numpy.isin(outdated_datasets_to_remove,list(file.keys()))]
+                    for key in outdated_datasets_to_remove:
+                        print('Removing old dataset: %s'%key)
+                        del file[key]
+
                     if redo_defaults == False:
                         attempt_list = initial_expected_datasets[~numpy.isin(initial_expected_datasets,list(file.keys()))]
                     else:
