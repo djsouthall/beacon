@@ -83,7 +83,7 @@ if __name__=="__main__":
                 
 
                 with h5py.File(filename, 'a') as file:
-                    cut = file['trigger_types'][:] == 2
+                    cut = file['trigger_type'][:] == 2
                     cut_ids = numpy.where(cut)[0]
 
                     current_selected_events = numpy.array([])

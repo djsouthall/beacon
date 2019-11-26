@@ -40,22 +40,22 @@ matplotlib.rc('font', **font)
 matplotlib.rcParams['figure.figsize'] = [10, 11]
 matplotlib.rcParams.update({'font.size': 16})
 
-def getEventIds(reader, trigger_types=None):
+def getEventIds(reader, trigger_type=None):
     '''
     Will get a list of eventids for the given reader, but only those matching the trigger
-    types supplied.  If trigger_types  == None then all eventids will be returned. 
+    types supplied.  If trigger_type  == None then all eventids will be returned. 
     trigger_type:
     1 Software
     2 RF
     3 GPS
     '''
-    if trigger_types == None:
-        trigger_types = numpy.array([1,2,3])
-    elif type(trigger_types) == int:
-        trigger_types = numpy.array([trigger_types])
+    if trigger_type == None:
+        trigger_type = numpy.array([1,2,3])
+    elif type(trigger_type) == int:
+        trigger_type = numpy.array([trigger_type])
 
     eventids = []
-    for trig in trigger_types:
+    for trig in trigger_type:
         N = reader.head_tree.Draw("Entry$","trigger_type==%i"%trig,"goff") 
         eventids.append(numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N).astype(int))
 
@@ -90,7 +90,7 @@ if __name__=="__main__":
         filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.
 
         with h5py.File(filename, 'a') as file:
-            eventids = getEventIds(reader,trigger_types=[1,2,3]) #eventids with rf trigger
+            eventids = getEventIds(reader,trigger_type=[1,2,3]) #eventids with rf trigger
             if numpy.size(eventids) != 0:
                 print('run = ',run)
             dsets = list(file.keys()) #Existing datasets

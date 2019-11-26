@@ -34,25 +34,25 @@ def getTimes(reader,trigger_type=2):
 
     Returns
     -------
-    times : numpy.ndarray of floats
+    raw_approx_trigger_time : numpy.ndarray of floats
         The raw_approx_trigger_time values for each event from the Tree.
-    subtimes : numpy.ndarray of floats
+    raw_approx_trigger_time_nsecs : numpy.ndarray of floats
         The raw_approx_trigger_time_nsecs values for each event from the Tree. 
-    trigtimes : numpy.ndarray of floats
+    trig_time : numpy.ndarray of floats
         The trig_time values for each event from the Tree.
     '''
     N = reader.head_tree.Draw("raw_approx_trigger_time_nsecs:raw_approx_trigger_time:trig_time:Entry$","trigger_type==%i"%trigger_type,"goff") 
     #ROOT.gSystem.ProcessEvents()
-    subtimes = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N)
-    times = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N) 
-    trigtimes = numpy.frombuffer(reader.head_tree.GetV3(), numpy.dtype('float64'), N)
+    raw_approx_trigger_time_nsecs = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N)
+    raw_approx_trigger_time = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N) 
+    trig_time = numpy.frombuffer(reader.head_tree.GetV3(), numpy.dtype('float64'), N)
     eventids = numpy.frombuffer(reader.head_tree.GetV4(), numpy.dtype('float64'), N).astype(int)
 
-    return times, subtimes, trigtimes, eventids
+    return raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids
 
 
 
-def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=1.0, percent_cut=0.005, subtime_bounds = None, time_bounds = None, plot=True, verbose=True,trigger_type=None):
+def pulserLocator(reader, nearest_neighbor=10, scale_raw_approx_trigger_time_nsecs=10.0, scale_raw_approx_trigger_time=1.0, percent_cut=0.005, subtime_bounds = None, time_bounds = None, plot=True, verbose=True,trigger_type=None):
     '''
     This uses a nearest neighbour calculation to select the cal pulser events from underneath the
     noise.  Adjust the parameters until it works for you specific run.  
@@ -68,13 +68,13 @@ def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=
         This is the the 'order' of the nearest neighbour for which the distances will be calculated.
         Events passing a threshold for closest (nearest_neighbor)th distance will be assumed to be
         in the cal pulser event.  Adjust until works.  (Default is 10).
-    scale_subtimes : float
+    scale_raw_approx_trigger_time_nsecs : float
         The two time scales of this run are initially scaled to range from 0 to 1.  Adjusting this
-        will make distances in the subtimes direction larger.  Effectively this means that larger 
+        will make distances in the raw_approx_trigger_time_nsecs direction larger.  Effectively this means that larger 
         this is the less the nearest neighbor favours vertical lines.
-    scale_times : 
+    scale_raw_approx_trigger_time : 
         The two time scales of this run are initially scaled to range from 0 to 1.  Adjusting this
-        will make distances in the times direction larger.  Effectively this means that larger this 
+        will make distances in the raw_approx_trigger_time direction larger.  Effectively this means that larger this 
         is the less the nearest neighbor favours horizontal lines.
     percent_cut : float
         The events will be sorted based on nearest neighbor distances.  This sets the cut on that 
@@ -85,11 +85,11 @@ def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=
 
     Returns
     -------
-    times : numpy.ndarray of floats
+    raw_approx_trigger_time : numpy.ndarray of floats
         The raw_approx_trigger_time values for each event from the Tree.
-    subtimes : numpy.ndarray of floats
+    raw_approx_trigger_time_nsecs : numpy.ndarray of floats
         The raw_approx_trigger_time_nsecs values for each event from the Tree. 
-    trigtimes : numpy.ndarray of floats
+    trig_time : numpy.ndarray of floats
         The trig_time values for each event from the Tree.
     eventids : numpy.ndarray of ints
         The event ids that the algorithm believes to be part of the most intense pulser strip
@@ -101,53 +101,53 @@ def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=
             print('WARNING:  The selected run is not in the known list of pulser runs.')
 
         if trigger_type is None:
-            times, subtimes, trigtimes, eventids = getTimes(reader)
+            raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids = getTimes(reader)
         else:
-            times, subtimes, trigtimes, eventids = getTimes(reader,trigger_type=trigger_type)
+            raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids = getTimes(reader,trigger_type=trigger_type)
 
         if subtime_bounds is not None:
-            subtimes_cut = numpy.logical_and(subtimes > min(subtime_bounds), subtimes < max(subtime_bounds))
+            raw_approx_trigger_time_nsecs_cut = numpy.logical_and(raw_approx_trigger_time_nsecs > min(subtime_bounds), raw_approx_trigger_time_nsecs < max(subtime_bounds))
         else:
-            subtimes_cut = numpy.ones_like(subtimes,dtype=bool)
+            raw_approx_trigger_time_nsecs_cut = numpy.ones_like(raw_approx_trigger_time_nsecs,dtype=bool)
 
         if time_bounds is not None:
-            times_cut = numpy.logical_and(times > min(time_bounds), times < max(time_bounds))
+            raw_approx_trigger_time_cut = numpy.logical_and(raw_approx_trigger_time > min(time_bounds), raw_approx_trigger_time < max(time_bounds))
         else:
-            times_cut = numpy.ones_like(subtimes,dtype=bool)
+            raw_approx_trigger_time_cut = numpy.ones_like(raw_approx_trigger_time_nsecs,dtype=bool)
 
 
 
-        times_scaled       =    scale_times *    (times - min(times))    /    (max(times) - min(times))
-        subtimes_scaled    = scale_subtimes * (subtimes - min(subtimes)) / (max(subtimes) - min(subtimes))
-        points = numpy.vstack((times_scaled,subtimes_scaled)).T
+        raw_approx_trigger_time_scaled       =    scale_raw_approx_trigger_time *    (raw_approx_trigger_time - min(raw_approx_trigger_time))    /    (max(raw_approx_trigger_time) - min(raw_approx_trigger_time))
+        raw_approx_trigger_time_nsecs_scaled    = scale_raw_approx_trigger_time_nsecs * (raw_approx_trigger_time_nsecs - min(raw_approx_trigger_time_nsecs)) / (max(raw_approx_trigger_time_nsecs) - min(raw_approx_trigger_time_nsecs))
+        points = numpy.vstack((raw_approx_trigger_time_scaled,raw_approx_trigger_time_nsecs_scaled)).T
         tree = scipy.spatial.KDTree(points)
         distance, index = tree.query(points,k=nearest_neighbor)
         distance = distance[:,nearest_neighbor-1]
 
         indices = numpy.argsort(distance)[0:int(percent_cut*len(distance))]  #The actual output indices in eventids that are pulsers
         
-        indices = indices[numpy.isin(indices,numpy.where(times_cut)[0][numpy.isin(numpy.where(times_cut)[0],numpy.where(subtimes_cut)[0])])]
+        indices = indices[numpy.isin(indices,numpy.where(raw_approx_trigger_time_cut)[0][numpy.isin(numpy.where(raw_approx_trigger_time_cut)[0],numpy.where(raw_approx_trigger_time_nsecs_cut)[0])])]
 
         if plot == True:
             fig = plt.figure()
-            plt.scatter(times,subtimes,c=distance,marker=',',s=(72./fig.dpi)**2)
-            plt.ylabel('Sub times')
-            plt.xlabel('Times')
+            plt.scatter(raw_approx_trigger_time,raw_approx_trigger_time_nsecs,c=distance,marker=',',s=(72./fig.dpi)**2)
+            plt.ylabel('raw_approx_trigger_time_nsecs')
+            plt.xlabel('raw_approx_trigger_time')
             plt.colorbar()
 
             fig = plt.figure()
-            plt.scatter(times,subtimes,c='b',marker=',',s=(72./fig.dpi)**2)
-            plt.scatter(times[indices],subtimes[indices],c='r',marker=',',s=(72./fig.dpi)**2)
-            plt.ylabel('Sub times')
-            plt.xlabel('Times')
+            plt.scatter(raw_approx_trigger_time,raw_approx_trigger_time_nsecs,c='b',marker=',',s=(72./fig.dpi)**2)
+            plt.scatter(raw_approx_trigger_time[indices],raw_approx_trigger_time_nsecs[indices],c='r',marker=',',s=(72./fig.dpi)**2)
+            plt.ylabel('raw_approx_trigger_time_nsecs')
+            plt.xlabel('raw_approx_trigger_time')
 
             fig = plt.figure()
-            plt.scatter(trigtimes,subtimes,c='b',marker=',',s=(72./fig.dpi)**2)
-            plt.scatter(trigtimes[indices],subtimes[indices],c='r',marker=',',s=(72./fig.dpi)**2)
-            plt.ylabel('Sub Times')
-            plt.xlabel('Trig Times')
+            plt.scatter(trig_time,raw_approx_trigger_time_nsecs,c='b',marker=',',s=(72./fig.dpi)**2)
+            plt.scatter(trig_time[indices],raw_approx_trigger_time_nsecs[indices],c='r',marker=',',s=(72./fig.dpi)**2)
+            plt.ylabel('raw_approx_trigger_time_nsecs')
+            plt.xlabel('raw_approx_trigger_time')
 
-        return times, subtimes, trigtimes, eventids, indices
+        return raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids, indices
 
     except Exception as e:
         print('Error in pulserLocator.')
@@ -155,7 +155,7 @@ def pulserLocator(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=
         return 0
 
 
-def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_times=1.0, slope_bound=0.001, percent_cut=0.001, nominal_clock_rate=31.25e6, lower_rate_bound=31.2e6, upper_rate_bound=31.3e6,subtime_bounds = None, time_bounds = None, plot=True, verbose=True):
+def getClockCorrection(reader, nearest_neighbor=10, scale_raw_approx_trigger_time_nsecs=10.0, scale_raw_approx_trigger_time=1.0, slope_bound=0.001, percent_cut=0.001, nominal_clock_rate=31.25e6, lower_rate_bound=31.2e6, upper_rate_bound=31.3e6,subtime_bounds = None, time_bounds = None, plot=True, verbose=True):
     '''
     This will attempt fit a pulser line within the selected run with a line, and then adjust the 
     clock rate to obtain the clock rate that results in a consistent cal pulser line.
@@ -176,13 +176,13 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
         This is the the 'order' of the nearest neighbour for which the distances will be calculated.
         Events passing a threshold for closest (nearest_neighbor)th distance will be assumed to be
         in the cal pulser event.  Adjust until works.  (Default is 10).
-    scale_subtimes : float
+    scale_raw_approx_trigger_time_nsecs : float
         The two time scales of this run are initially scaled to range from 0 to 1.  Adjusting this
-        will make distances in the subtimes direction larger.  Effectively this means that larger 
+        will make distances in the raw_approx_trigger_time_nsecs direction larger.  Effectively this means that larger 
         this is the less the nearest neighbor favours vertical lines.
-    scale_times : 
+    scale_raw_approx_trigger_time : 
         The two time scales of this run are initially scaled to range from 0 to 1.  Adjusting this
-        will make distances in the times direction larger.  Effectively this means that larger this 
+        will make distances in the raw_approx_trigger_time direction larger.  Effectively this means that larger this 
         is the less the nearest neighbor favours horizontal lines.
     percent_cut : float
         The events will be sorted based on nearest neighbor distances.  This sets the cut on that 
@@ -203,11 +203,11 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
     -------
     clock_rate : float
         The final adjusted clock rate in Hz.
-    times : numpy.ndarray of floats
+    raw_approx_trigger_time : numpy.ndarray of floats
         The raw_approx_trigger_time values for each event from the Tree.
-    subtimes : numpy.ndarray of floats
+    raw_approx_trigger_time_nsecs : numpy.ndarray of floats
         The raw_approx_trigger_time_nsecs values for each event from the Tree. 
-    trigtimes : numpy.ndarray of floats
+    trig_time : numpy.ndarray of floats
         The trig_time values for each event from the Tree.  Note these are NOT adjusted by the new
         clock rate. 
     eventids : numpy.ndarray of ints
@@ -220,13 +220,13 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
         #1 Software
         #2 RF
         #3 GPS
-        times, subtimes, trigtimes, eventids, indices = pulserLocator(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, percent_cut=percent_cut,subtime_bounds = subtime_bounds, time_bounds = time_bounds, plot=plot, verbose=verbose, trigger_type = trigger_type)
+        raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids, indices = pulserLocator(reader, nearest_neighbor=nearest_neighbor, scale_raw_approx_trigger_time_nsecs=scale_raw_approx_trigger_time_nsecs, scale_raw_approx_trigger_time=scale_raw_approx_trigger_time, percent_cut=percent_cut,subtime_bounds = subtime_bounds, time_bounds = time_bounds, plot=plot, verbose=verbose, trigger_type = trigger_type)
 
         clock_rate = nominal_clock_rate
         slope = 1000000.0
         clock_rate_upper = upper_rate_bound
         clock_rate_lower = lower_rate_bound
-        pulser_x = times[indices]
+        pulser_x = raw_approx_trigger_time[indices]
         max_iter = 1000
         i = 0
         roll_offset = 0
@@ -236,11 +236,11 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
             if verbose == True:
                 print(clock_rate)
             i += 1
-            pulser_y = (trigtimes[indices] + roll_offset)%clock_rate
+            pulser_y = (trig_time[indices] + roll_offset)%clock_rate
             max_diff = numpy.max(numpy.diff(pulser_y))
-            if max_diff > (max((trigtimes + roll_offset)%clock_rate) - min((trigtimes + roll_offset)%clock_rate))/2.0: #In case the points get split
-                roll_offset += (max((trigtimes + roll_offset)%clock_rate) - min((trigtimes + roll_offset)%clock_rate))/2.0
-                pulser_y = (trigtimes[indices] + roll_offset)%clock_rate
+            if max_diff > (max((trig_time + roll_offset)%clock_rate) - min((trig_time + roll_offset)%clock_rate))/2.0: #In case the points get split
+                roll_offset += (max((trig_time + roll_offset)%clock_rate) - min((trig_time + roll_offset)%clock_rate))/2.0
+                pulser_y = (trig_time[indices] + roll_offset)%clock_rate
             coeff = numpy.polyfit(pulser_x,pulser_y,1)
             slope = coeff[0]
 
@@ -255,18 +255,18 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
             print('Bisection clock correction timed out.  Returning on run %i'%run)
             return 0
         else:
-            adjusted_trigtimes = trigtimes%clock_rate
-            coeff = numpy.polyfit(times[indices],adjusted_trigtimes[indices],1)
+            adjusted_trig_time = trig_time%clock_rate
+            coeff = numpy.polyfit(raw_approx_trigger_time[indices],adjusted_trig_time[indices],1)
             p = numpy.poly1d(coeff)
-            x = numpy.arange(min(times[indices]),max(times[indices]),100)
+            x = numpy.arange(min(raw_approx_trigger_time[indices]),max(raw_approx_trigger_time[indices]),100)
             y = p(x)
             poly_label = '$y = ' + str(['%0.9g x^%i'%(coefficient,order_index) for order_index,coefficient in enumerate(coeff[::-1])]).replace("'","").replace(', ',' + ').replace('[','').replace(']','')+ '$' #Puts the polynomial into a str name.
 
             if plot == True:
                 fig = plt.figure()
-                plt.scatter(times,adjusted_trigtimes,c='b',marker=',',s=(72./fig.dpi)**2)
-                plt.scatter(times[indices],adjusted_trigtimes[indices],c='r',marker=',',s=(72./fig.dpi)**2)
-                plt.ylabel('Trig times')
+                plt.scatter(raw_approx_trigger_time,adjusted_trig_time,c='b',marker=',',s=(72./fig.dpi)**2)
+                plt.scatter(raw_approx_trigger_time[indices],adjusted_trig_time[indices],c='r',marker=',',s=(72./fig.dpi)**2)
+                plt.ylabel('Trig raw_approx_trigger_time')
                 plt.xlabel('Times')
 
                 plt.plot(x,y,label='Linear Fit ' + poly_label, c = 'y')
@@ -275,7 +275,7 @@ def getClockCorrection(reader, nearest_neighbor=10, scale_subtimes=10.0, scale_t
 
 
             print('Run: %i\tAdjusted Clock Rate = %f MHz'%(run,clock_rate/1e6))
-            return clock_rate, times, subtimes, trigtimes, eventids, indices
+            return clock_rate, raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids, indices
 
     except Exception as e:
         print('Error in getClockCorrection.  Skipping run %i'%run)
@@ -308,8 +308,8 @@ if __name__ == '__main__':
     datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
     runs = numpy.array([1508,1509,1511])#numpy.array([781,782,783,784,785,786,787,788,789,790])#numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793]) #Selects which run to examine
     nearest_neighbor = 10 #Adjust until works.
-    scale_subtimes = 50.0 #The larger this is the the less the nearest neighbor favors vertical lines.
-    scale_times = 1.0  #The larger this is the the less the nearest neighbor favors horizontal lines.
+    scale_raw_approx_trigger_time_nsecs = 50.0 #The larger this is the the less the nearest neighbor favors vertical lines.
+    scale_raw_approx_trigger_time = 1.0  #The larger this is the the less the nearest neighbor favors horizontal lines.
     slope_bound = 1.0e-9
     percent_cut = 0.012
     nominal_clock_rate = 31249810.0 #31.25e6
@@ -336,13 +336,13 @@ if __name__ == '__main__':
                 subtime_bounds = None
 
             if 'run%i'%run in list(percent_cuts.keys()):
-                clock_rate, times, subtimes, trigtimes, eventids, indices = getClockCorrection(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, slope_bound=slope_bound, percent_cut=percent_cuts['run%i'%run], nominal_clock_rate=nominal_clock_rate, lower_rate_bound=lower_rate_bound, upper_rate_bound=upper_rate_bound,subtime_bounds=subtime_bounds, time_bounds=time_bounds, plot=plot, verbose=verbose)
+                clock_rate, raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids, indices = getClockCorrection(reader, nearest_neighbor=nearest_neighbor, scale_raw_approx_trigger_time_nsecs=scale_raw_approx_trigger_time_nsecs, scale_raw_approx_trigger_time=scale_raw_approx_trigger_time, slope_bound=slope_bound, percent_cut=percent_cuts['run%i'%run], nominal_clock_rate=nominal_clock_rate, lower_rate_bound=lower_rate_bound, upper_rate_bound=upper_rate_bound,subtime_bounds=subtime_bounds, time_bounds=time_bounds, plot=plot, verbose=verbose)
             else:
                 print('run%i not in percent_cuts, using %f'%(run,percent_cut))
-                clock_rate, times, subtimes, trigtimes, eventids, indices = getClockCorrection(reader, nearest_neighbor=nearest_neighbor, scale_subtimes=scale_subtimes, scale_times=scale_times, slope_bound=slope_bound, percent_cut=percent_cut, nominal_clock_rate=nominal_clock_rate, lower_rate_bound=lower_rate_bound, upper_rate_bound=upper_rate_bound,subtime_bounds=subtime_bounds, time_bounds=time_bounds, plot=plot, verbose=verbose)
+                clock_rate, raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids, indices = getClockCorrection(reader, nearest_neighbor=nearest_neighbor, scale_raw_approx_trigger_time_nsecs=scale_raw_approx_trigger_time_nsecs, scale_raw_approx_trigger_time=scale_raw_approx_trigger_time, slope_bound=slope_bound, percent_cut=percent_cut, nominal_clock_rate=nominal_clock_rate, lower_rate_bound=lower_rate_bound, upper_rate_bound=upper_rate_bound,subtime_bounds=subtime_bounds, time_bounds=time_bounds, plot=plot, verbose=verbose)
             all_adjusted_clock_rates.append(clock_rate)
 
-            #indice_cut = times[indices] > (9000.0+1.562e9)
+            #indice_cut = raw_approx_trigger_time[indices] > (9000.0+1.562e9)
             indice_cut = numpy.ones_like(indices)
             if save == True:
                 numpy.savetxt('./run%i_pulser_eventids.csv'%run, numpy.sort(eventids[indices[indice_cut]]), delimiter=",")
@@ -368,17 +368,17 @@ if __name__ == '__main__':
         plt.legend()
 
     '''
-    a = trigtimes%clock_rate
-    b = eventids[numpy.logical_and(numpy.logical_and(a < 6249101,a > 6248700),numpy.logical_and(times < 8000+1.56202e9, times > 4400+1.56202e9))]
+    a = trig_time%clock_rate
+    b = eventids[numpy.logical_and(numpy.logical_and(a < 6249101,a > 6248700),numpy.logical_and(raw_approx_trigger_time < 8000+1.56202e9, raw_approx_trigger_time > 4400+1.56202e9))]
     numpy.savetxt('./run%i_pulser_eventids.csv'%run, numpy.sort(b), delimiter=",")
     '''
     '''
     This was a plot for Kaeli's poster.
     fig = plt.figure()
-    adjusted_trigtimes = trigtimes%clock_rate
-    adjusted_trigtimes = adjusted_trigtimes/(max(adjusted_trigtimes))
-    plt.scatter(times-times[0],adjusted_trigtimes,c='b',marker=',',s=(2*72./fig.dpi)**2)
-    #plt.scatter(times[indices],adjusted_trigtimes[indices],c='r',marker=',',s=(72./fig.dpi)**2)
+    adjusted_trig_time = trig_time%clock_rate
+    adjusted_trig_time = adjusted_trig_time/(max(adjusted_trig_time))
+    plt.scatter(raw_approx_trigger_time-raw_approx_trigger_time[0],adjusted_trig_time,c='b',marker=',',s=(2*72./fig.dpi)**2)
+    #plt.scatter(raw_approx_trigger_time[indices],adjusted_trig_time[indices],c='r',marker=',',s=(72./fig.dpi)**2)
     plt.ylabel('Sub-Second Trigger Time',fontsize=16)
     plt.xlabel('Seconds from Start of Run',fontsize=16)
 

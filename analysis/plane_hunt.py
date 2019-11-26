@@ -60,8 +60,8 @@ if __name__ == '__main__':
 
         with h5py.File(filename, 'a') as file:
             try:
-                rf_cut = file['trigger_types'][...] == 2
-                inband_cut = ~numpy.logical_and(numpy.any(file['inband_peak_freq_MHz'][...],axis=1) < 49, file['trigger_types'][...] > 48)
+                rf_cut = file['trigger_type'][...] == 2
+                inband_cut = ~numpy.logical_and(numpy.any(file['inband_peak_freq_MHz'][...],axis=1) < 49, file['trigger_type'][...] > 48)
                 total_cut = numpy.logical_and(rf_cut,inband_cut)
 
                 eventids = file['eventids'][total_cut]
@@ -74,15 +74,15 @@ if __name__ == '__main__':
                 '''
                 Here I will work with the data.
 
-                First I need to figure out how to get more accurate arrival times.
+                First I need to figure out how to get more accurate arrival raw_approx_trigger_time.
                 This should be possible from getting the gps trigger time and 
                 interpolating that as a function of raw_trig_time.  
                 '''
                 #ultimately should use an interpolated time, but temporarily I am using raw_approx_trigger_time
-                times = file['times'][total_cut] 
+                raw_approx_trigger_time = file['raw_approx_trigger_time'][total_cut] 
 
                 fig = plt.figure()
-                scatter = plt.scatter(td_01,td_02,c=times-min(times),cmap=cm)
+                scatter = plt.scatter(td_01,td_02,c=raw_approx_trigger_time-min(raw_approx_trigger_time),cmap=cm)
                 cbar = fig.colorbar(scatter)
 
 

@@ -40,8 +40,8 @@ if __name__ == '__main__':
     for run_index, run in enumerate(runs):
         print('Run %i'%run)
         reader = Reader(datapath,run)
-        times, subtimes, trigtimes, eventids = cc.getTimes(reader,trigger_type=3)
-        rtimes = times - times[0]
+        raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids = cc.getTimes(reader,trigger_type=3)
+        rtimes = raw_approx_trigger_time - raw_approx_trigger_time[0]
 
 
 

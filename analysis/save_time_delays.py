@@ -73,7 +73,7 @@ if __name__=="__main__":
 
         with h5py.File(filename, 'a') as file:
             eventids = file['eventids'][...]
-            rf_cut = file['trigger_types'][...] == 2
+            rf_cut = file['trigger_type'][...] == 2
 
             #eventids with rf trigger
             if numpy.size(eventids) != 0:

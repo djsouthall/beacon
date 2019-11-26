@@ -159,22 +159,22 @@ def getReaderDict(reader):
         out_dict[key] = getattr(reader,key)
     return out_dict
 
-def getEventIds(reader, trigger_types=None):
+def getEventIds(reader, trigger_type=None):
     '''
     Will get a list of eventids for the given reader, but only those matching the trigger
-    types supplied.  If trigger_types  == None then all eventids will be returned. 
+    types supplied.  If trigger_type  == None then all eventids will be returned. 
     trigger_type:
     1 Software
     2 RF
     3 GPS
     '''
-    if trigger_types == None:
-        trigger_types = numpy.array([1,2,3])
-    elif type(trigger_types) == int:
-        trigger_types = numpy.array([trigger_types])
+    if trigger_type == None:
+        trigger_type = numpy.array([1,2,3])
+    elif type(trigger_type) == int:
+        trigger_type = numpy.array([trigger_type])
 
     eventids = []
-    for trig in trigger_types:
+    for trig in trigger_type:
         N = reader.head_tree.Draw("Entry$","trigger_type==%i"%trig,"goff") 
         eventids.append(numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N).astype(int))
 
