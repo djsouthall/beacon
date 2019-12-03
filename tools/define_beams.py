@@ -7,10 +7,10 @@ sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
+from tools.correlator import Correlator
 import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
 import tools.info as info
 from tools.profiler import profile
-from tools.correlator import Correlator
 
 import matplotlib.pyplot as plt
 import scipy.signal
@@ -286,7 +286,7 @@ if __name__=="__main__":
         all_ax = []
 
         sample_delays = {}
-        for mode in ['hpol','vpol','vpol_no_ant0']:
+        for mode in ['vpol_no_ant01']:#['hpol','vpol','vpol_no_ant0','vpol_no_ant01']:
             print('\nMode = %s\n'%mode)
             #beam_thetas_deg = numpy.linspace(5,110,4)
             if False:
@@ -324,6 +324,14 @@ if __name__=="__main__":
                     turnoff_ants=[0]
                     outfile_name = '%s_beam_sample_delays_hilbert-%s.csv'%(mode,str(hilbert))
                     savefig_text = '%s_coverage_map_%i_beams_no_ant0_hilbert-%s.jpg'%(mode,sum(phis_per_theta),str(hilbert))
+                    mode = 'vpol'
+                elif mode == 'vpol_no_ant01':
+                    thetas_deg = numpy.array([2,10,25,40,68,90,100])#numpy.array([2,15,30,50,80,100])
+                    phis_per_theta = numpy.array([1,5,7,9,12,2,15])#numpy.array([1,5,8,10,8,15])
+                    phis_angular_ranges = numpy.array([[-48,48],[-45,45],[-47,47],[-48,48],[-49,49],[-48,48],[-42,42]])
+                    turnoff_ants=[0,1]
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s.csv'%(mode,str(hilbert))
+                    savefig_text = '%s_coverage_map_%i_beams_no_ant01_hilbert-%s.jpg'%(mode,sum(phis_per_theta),str(hilbert))
                     mode = 'vpol'
 
             beam_thetas_deg = numpy.array([])#numpy.zeros(sum(phis_per_theta))

@@ -72,215 +72,215 @@ if __name__=="__main__":
         filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.
         if filename is not None:
             with h5py.File(filename, 'a') as file:
-            eventids = file['eventids'][...]
-            rf_cut = file['trigger_type'][...] == 2
+                eventids = file['eventids'][...]
+                rf_cut = file['trigger_type'][...] == 2
 
-            #eventids with rf trigger
-            if numpy.size(eventids) != 0:
-                print('run = ',run)
-            dsets = list(file.keys()) #Existing datasets
+                #eventids with rf trigger
+                if numpy.size(eventids) != 0:
+                    print('run = ',run)
+                dsets = list(file.keys()) #Existing datasets
 
-            #Time Delays
-            #01
-            if not numpy.isin('hpol_t_0subtract1',dsets):
-                file.create_dataset('hpol_t_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in hpol_t_0subtract1 of %s will be overwritten by this analysis script.'%filename)
+                #Time Delays
+                #01
+                if not numpy.isin('hpol_t_0subtract1',dsets):
+                    file.create_dataset('hpol_t_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in hpol_t_0subtract1 of %s will be overwritten by this analysis script.'%filename)
 
-            if not numpy.isin('vpol_t_0subtract1',dsets):
-                file.create_dataset('vpol_t_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in vpol_t_0subtract1 of %s will be overwritten by this analysis script.'%filename)
-
-
-
-            #02
-            if not numpy.isin('hpol_t_0subtract2',dsets):
-                file.create_dataset('hpol_t_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in hpol_t_0subtract2 of %s will be overwritten by this analysis script.'%filename)
-
-            if not numpy.isin('vpol_t_0subtract2',dsets):
-                file.create_dataset('vpol_t_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in vpol_t_0subtract2 of %s will be overwritten by this analysis script.'%filename)
+                if not numpy.isin('vpol_t_0subtract1',dsets):
+                    file.create_dataset('vpol_t_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in vpol_t_0subtract1 of %s will be overwritten by this analysis script.'%filename)
 
 
 
-            #03
-            if not numpy.isin('hpol_t_0subtract3',dsets):
-                file.create_dataset('hpol_t_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in hpol_t_0subtract3 of %s will be overwritten by this analysis script.'%filename)
+                #02
+                if not numpy.isin('hpol_t_0subtract2',dsets):
+                    file.create_dataset('hpol_t_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in hpol_t_0subtract2 of %s will be overwritten by this analysis script.'%filename)
 
-            if not numpy.isin('vpol_t_0subtract3',dsets):
-                file.create_dataset('vpol_t_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in vpol_t_0subtract3 of %s will be overwritten by this analysis script.'%filename)
-
-
-
-            #12
-            if not numpy.isin('hpol_t_1subtract2',dsets):
-                file.create_dataset('hpol_t_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in hpol_t_1subtract2 of %s will be overwritten by this analysis script.'%filename)
-
-            if not numpy.isin('vpol_t_1subtract2',dsets):
-                file.create_dataset('vpol_t_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in vpol_t_1subtract2 of %s will be overwritten by this analysis script.'%filename)
+                if not numpy.isin('vpol_t_0subtract2',dsets):
+                    file.create_dataset('vpol_t_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in vpol_t_0subtract2 of %s will be overwritten by this analysis script.'%filename)
 
 
 
-            #13
-            if not numpy.isin('hpol_t_1subtract3',dsets):
-                file.create_dataset('hpol_t_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in hpol_t_1subtract3 of %s will be overwritten by this analysis script.'%filename)
+                #03
+                if not numpy.isin('hpol_t_0subtract3',dsets):
+                    file.create_dataset('hpol_t_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in hpol_t_0subtract3 of %s will be overwritten by this analysis script.'%filename)
 
-            if not numpy.isin('vpol_t_1subtract3',dsets):
-                file.create_dataset('vpol_t_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in vpol_t_1subtract3 of %s will be overwritten by this analysis script.'%filename)
-
-
-
-            #23
-            if not numpy.isin('hpol_t_2subtract3',dsets):
-                file.create_dataset('hpol_t_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in hpol_t_2subtract3 of %s will be overwritten by this analysis script.'%filename)
-
-            if not numpy.isin('vpol_t_2subtract3',dsets):
-                file.create_dataset('vpol_t_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in vpol_t_2subtract3 of %s will be overwritten by this analysis script.'%filename)
+                if not numpy.isin('vpol_t_0subtract3',dsets):
+                    file.create_dataset('vpol_t_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in vpol_t_0subtract3 of %s will be overwritten by this analysis script.'%filename)
 
 
 
-            #Correlation values.
-            #01
-            if not numpy.isin('hpol_max_corr_0subtract1',dsets):
-                file.create_dataset('hpol_max_corr_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in hpol_max_corr_0subtract1 of %s will be overwritten by this analysis script.'%filename)
+                #12
+                if not numpy.isin('hpol_t_1subtract2',dsets):
+                    file.create_dataset('hpol_t_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in hpol_t_1subtract2 of %s will be overwritten by this analysis script.'%filename)
 
-            if not numpy.isin('vpol_max_corr_0subtract1',dsets):
-                file.create_dataset('vpol_max_corr_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in vpol_max_corr_0subtract1 of %s will be overwritten by this analysis script.'%filename)
-            
-
-
-            #02
-            if not numpy.isin('hpol_max_corr_0subtract2',dsets):
-                file.create_dataset('hpol_max_corr_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in hpol_max_corr_0subtract2 of %s will be overwritten by this analysis script.'%filename)
-
-            if not numpy.isin('vpol_max_corr_0subtract2',dsets):
-                file.create_dataset('vpol_max_corr_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in vpol_max_corr_0subtract2 of %s will be overwritten by this analysis script.'%filename)
+                if not numpy.isin('vpol_t_1subtract2',dsets):
+                    file.create_dataset('vpol_t_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in vpol_t_1subtract2 of %s will be overwritten by this analysis script.'%filename)
 
 
 
-            #03
-            if not numpy.isin('hpol_max_corr_0subtract3',dsets):
-                file.create_dataset('hpol_max_corr_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in hpol_max_corr_0subtract3 of %s will be overwritten by this analysis script.'%filename)
+                #13
+                if not numpy.isin('hpol_t_1subtract3',dsets):
+                    file.create_dataset('hpol_t_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in hpol_t_1subtract3 of %s will be overwritten by this analysis script.'%filename)
 
-            if not numpy.isin('vpol_max_corr_0subtract3',dsets):
-                file.create_dataset('vpol_max_corr_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in vpol_max_corr_0subtract3 of %s will be overwritten by this analysis script.'%filename)
-
-
-
-            #12
-            if not numpy.isin('hpol_max_corr_1subtract2',dsets):
-                file.create_dataset('hpol_max_corr_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in hpol_max_corr_1subtract2 of %s will be overwritten by this analysis script.'%filename)
-
-            if not numpy.isin('vpol_max_corr_1subtract2',dsets):
-                file.create_dataset('vpol_max_corr_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in vpol_max_corr_1subtract2 of %s will be overwritten by this analysis script.'%filename)
+                if not numpy.isin('vpol_t_1subtract3',dsets):
+                    file.create_dataset('vpol_t_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in vpol_t_1subtract3 of %s will be overwritten by this analysis script.'%filename)
 
 
 
-            #13
-            if not numpy.isin('hpol_max_corr_1subtract3',dsets):
-                file.create_dataset('hpol_max_corr_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in hpol_max_corr_1subtract3 of %s will be overwritten by this analysis script.'%filename)
+                #23
+                if not numpy.isin('hpol_t_2subtract3',dsets):
+                    file.create_dataset('hpol_t_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in hpol_t_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
-            if not numpy.isin('vpol_max_corr_1subtract3',dsets):
-                file.create_dataset('vpol_max_corr_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in vpol_max_corr_1subtract3 of %s will be overwritten by this analysis script.'%filename)
-
-
-
-            #23
-            if not numpy.isin('hpol_max_corr_2subtract3',dsets):
-                file.create_dataset('hpol_max_corr_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in hpol_max_corr_2subtract3 of %s will be overwritten by this analysis script.'%filename)
-
-            if not numpy.isin('vpol_max_corr_2subtract3',dsets):
-                file.create_dataset('vpol_max_corr_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-            else:
-                print('Values in vpol_max_corr_2subtract3 of %s will be overwritten by this analysis script.'%filename)
+                if not numpy.isin('vpol_t_2subtract3',dsets):
+                    file.create_dataset('vpol_t_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in vpol_t_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
 
-            tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response)
-            time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids[rf_cut],align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=None,vpol_cut=None)
 
-            for pair_index, pair in enumerate(pairs):
-                if numpy.all(pair == numpy.array([0,2])):
-                    file['hpol_t_0subtract1'][rf_cut] = time_shifts[pair_index]
-                    file['hpol_max_corr_0subtract1'][rf_cut] = corrs[pair_index]
-                elif numpy.all(pair == numpy.array([0,4])):
-                    file['hpol_t_0subtract2'][rf_cut] = time_shifts[pair_index]
-                    file['hpol_max_corr_0subtract2'][rf_cut] = corrs[pair_index]
-                elif numpy.all(pair == numpy.array([0,6])):
-                    file['hpol_t_0subtract3'][rf_cut] = time_shifts[pair_index]
-                    file['hpol_max_corr_0subtract3'][rf_cut] = corrs[pair_index]
-                elif numpy.all(pair == numpy.array([2,4])):
-                    file['hpol_t_1subtract2'][rf_cut] = time_shifts[pair_index]
-                    file['hpol_max_corr_1subtract2'][rf_cut] = corrs[pair_index]
-                elif numpy.all(pair == numpy.array([2,6])):
-                    file['hpol_t_1subtract3'][rf_cut] = time_shifts[pair_index]
-                    file['hpol_max_corr_1subtract3'][rf_cut] = corrs[pair_index]
-                elif numpy.all(pair == numpy.array([4,6])):
-                    file['hpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
-                    file['hpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
+                #Correlation values.
+                #01
+                if not numpy.isin('hpol_max_corr_0subtract1',dsets):
+                    file.create_dataset('hpol_max_corr_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in hpol_max_corr_0subtract1 of %s will be overwritten by this analysis script.'%filename)
 
-                elif numpy.all(pair == numpy.array([1,3])):
-                    file['vpol_t_0subtract1'][rf_cut] = time_shifts[pair_index]
-                    file['vpol_max_corr_0subtract1'][rf_cut] = corrs[pair_index]
-                elif numpy.all(pair == numpy.array([1,5])):
-                    file['vpol_t_0subtract2'][rf_cut] = time_shifts[pair_index]
-                    file['vpol_max_corr_0subtract2'][rf_cut] = corrs[pair_index]
-                elif numpy.all(pair == numpy.array([1,7])):
-                    file['vpol_t_0subtract3'][rf_cut] = time_shifts[pair_index]
-                    file['vpol_max_corr_0subtract3'][rf_cut] = corrs[pair_index]
-                elif numpy.all(pair == numpy.array([3,5])):
-                    file['vpol_t_1subtract2'][rf_cut] = time_shifts[pair_index]
-                    file['vpol_max_corr_1subtract2'][rf_cut] = corrs[pair_index]
-                elif numpy.all(pair == numpy.array([3,7])):
-                    file['vpol_t_1subtract3'][rf_cut] = time_shifts[pair_index]
-                    file['vpol_max_corr_1subtract3'][rf_cut] = corrs[pair_index]
-                elif numpy.all(pair == numpy.array([5,7])):
-                    file['vpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
-                    file['vpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
+                if not numpy.isin('vpol_max_corr_0subtract1',dsets):
+                    file.create_dataset('vpol_max_corr_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in vpol_max_corr_0subtract1 of %s will be overwritten by this analysis script.'%filename)
+                
 
-            import pdb; pdb.set_trace()
-            file.close()
+
+                #02
+                if not numpy.isin('hpol_max_corr_0subtract2',dsets):
+                    file.create_dataset('hpol_max_corr_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in hpol_max_corr_0subtract2 of %s will be overwritten by this analysis script.'%filename)
+
+                if not numpy.isin('vpol_max_corr_0subtract2',dsets):
+                    file.create_dataset('vpol_max_corr_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in vpol_max_corr_0subtract2 of %s will be overwritten by this analysis script.'%filename)
+
+
+
+                #03
+                if not numpy.isin('hpol_max_corr_0subtract3',dsets):
+                    file.create_dataset('hpol_max_corr_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in hpol_max_corr_0subtract3 of %s will be overwritten by this analysis script.'%filename)
+
+                if not numpy.isin('vpol_max_corr_0subtract3',dsets):
+                    file.create_dataset('vpol_max_corr_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in vpol_max_corr_0subtract3 of %s will be overwritten by this analysis script.'%filename)
+
+
+
+                #12
+                if not numpy.isin('hpol_max_corr_1subtract2',dsets):
+                    file.create_dataset('hpol_max_corr_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in hpol_max_corr_1subtract2 of %s will be overwritten by this analysis script.'%filename)
+
+                if not numpy.isin('vpol_max_corr_1subtract2',dsets):
+                    file.create_dataset('vpol_max_corr_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in vpol_max_corr_1subtract2 of %s will be overwritten by this analysis script.'%filename)
+
+
+
+                #13
+                if not numpy.isin('hpol_max_corr_1subtract3',dsets):
+                    file.create_dataset('hpol_max_corr_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in hpol_max_corr_1subtract3 of %s will be overwritten by this analysis script.'%filename)
+
+                if not numpy.isin('vpol_max_corr_1subtract3',dsets):
+                    file.create_dataset('vpol_max_corr_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in vpol_max_corr_1subtract3 of %s will be overwritten by this analysis script.'%filename)
+
+
+
+                #23
+                if not numpy.isin('hpol_max_corr_2subtract3',dsets):
+                    file.create_dataset('hpol_max_corr_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in hpol_max_corr_2subtract3 of %s will be overwritten by this analysis script.'%filename)
+
+                if not numpy.isin('vpol_max_corr_2subtract3',dsets):
+                    file.create_dataset('vpol_max_corr_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in vpol_max_corr_2subtract3 of %s will be overwritten by this analysis script.'%filename)
+
+
+                tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response)
+                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids[rf_cut],align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=None,vpol_cut=None)
+
+                for pair_index, pair in enumerate(pairs):
+                    if numpy.all(pair == numpy.array([0,2])):
+                        file['hpol_t_0subtract1'][rf_cut] = time_shifts[pair_index]
+                        file['hpol_max_corr_0subtract1'][rf_cut] = corrs[pair_index]
+                    elif numpy.all(pair == numpy.array([0,4])):
+                        file['hpol_t_0subtract2'][rf_cut] = time_shifts[pair_index]
+                        file['hpol_max_corr_0subtract2'][rf_cut] = corrs[pair_index]
+                    elif numpy.all(pair == numpy.array([0,6])):
+                        file['hpol_t_0subtract3'][rf_cut] = time_shifts[pair_index]
+                        file['hpol_max_corr_0subtract3'][rf_cut] = corrs[pair_index]
+                    elif numpy.all(pair == numpy.array([2,4])):
+                        file['hpol_t_1subtract2'][rf_cut] = time_shifts[pair_index]
+                        file['hpol_max_corr_1subtract2'][rf_cut] = corrs[pair_index]
+                    elif numpy.all(pair == numpy.array([2,6])):
+                        file['hpol_t_1subtract3'][rf_cut] = time_shifts[pair_index]
+                        file['hpol_max_corr_1subtract3'][rf_cut] = corrs[pair_index]
+                    elif numpy.all(pair == numpy.array([4,6])):
+                        file['hpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
+                        file['hpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
+
+                    elif numpy.all(pair == numpy.array([1,3])):
+                        file['vpol_t_0subtract1'][rf_cut] = time_shifts[pair_index]
+                        file['vpol_max_corr_0subtract1'][rf_cut] = corrs[pair_index]
+                    elif numpy.all(pair == numpy.array([1,5])):
+                        file['vpol_t_0subtract2'][rf_cut] = time_shifts[pair_index]
+                        file['vpol_max_corr_0subtract2'][rf_cut] = corrs[pair_index]
+                    elif numpy.all(pair == numpy.array([1,7])):
+                        file['vpol_t_0subtract3'][rf_cut] = time_shifts[pair_index]
+                        file['vpol_max_corr_0subtract3'][rf_cut] = corrs[pair_index]
+                    elif numpy.all(pair == numpy.array([3,5])):
+                        file['vpol_t_1subtract2'][rf_cut] = time_shifts[pair_index]
+                        file['vpol_max_corr_1subtract2'][rf_cut] = corrs[pair_index]
+                    elif numpy.all(pair == numpy.array([3,7])):
+                        file['vpol_t_1subtract3'][rf_cut] = time_shifts[pair_index]
+                        file['vpol_max_corr_1subtract3'][rf_cut] = corrs[pair_index]
+                    elif numpy.all(pair == numpy.array([5,7])):
+                        file['vpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
+                        file['vpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
+
+                import pdb; pdb.set_trace()
+                file.close()
         else:
             print('filename is None, indicating empty tree.  Skipping run %i'%run)
     except Exception as e:

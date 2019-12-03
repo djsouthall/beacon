@@ -309,7 +309,7 @@ def createFile(reader,redo_defaults=False):
 
             #outdated_datasets_to_remove should include things that were once in each file but should no longer be.  They might be useful if a dataset
             #is given a new name and you want to delete the old dataset for instance. 
-            outdated_datasets_to_remove = numpy.array(['trigger_types','times','subtimes','trigtimes'])
+            outdated_datasets_to_remove = numpy.array(['trigger_types','times','subtimes','trigtimes','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','calibrated_trigtime']) #TEMPORARY
 
             if os.path.exists(filename):
                 print('%s already exists, checking if setup is up to date.'%filename )
@@ -347,19 +347,19 @@ def createFile(reader,redo_defaults=False):
                                 file['trigger_type'][...] = loadTriggerTypes(reader)
                             elif key == 'raw_approx_trigger_time':
                                 if ('raw_approx_trigger_time'  in list(file.keys())) == False:
-                                    file.create_dataset('raw_approx_trigger_time', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                    file.create_dataset('raw_approx_trigger_time', (N,), dtype=numpy.float64, compression='gzip', compression_opts=9, shuffle=True)
                                 file['raw_approx_trigger_time'][...] = raw_approx_trigger_time
                             elif key == 'raw_approx_trigger_time_nsecs':
                                 if ('raw_approx_trigger_time_nsecs'  in list(file.keys())) == False:
-                                    file.create_dataset('raw_approx_trigger_time_nsecs', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                    file.create_dataset('raw_approx_trigger_time_nsecs', (N,), dtype=numpy.float64, compression='gzip', compression_opts=9, shuffle=True)
                                 file['raw_approx_trigger_time_nsecs'][...] = raw_approx_trigger_time_nsecs
                             elif key == 'trig_time':
                                 if ('trig_time'  in list(file.keys())) == False:
-                                    file.create_dataset('trig_time', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                    file.create_dataset('trig_time', (N,), dtype=numpy.float64, compression='gzip', compression_opts=9, shuffle=True)
                                 file['trig_time'][...] = trig_time
                             elif key == 'calibrated_trigtime':
                                 if ('calibrated_trigtime'  in list(file.keys())) == False:
-                                    file.create_dataset('calibrated_trigtime', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                    file.create_dataset('calibrated_trigtime', (N,), dtype=numpy.float64, compression='gzip', compression_opts=9, shuffle=True)
                                 file['calibrated_trigtime'][...] = getEventTimes(reader)
                             elif key == 'inband_peak_freq_MHz':
                                 #Used for gating obvious backgrounds like known CW
@@ -436,19 +436,19 @@ def createFile(reader,redo_defaults=False):
                     file.create_dataset('eventids', (N,), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
                     file['eventids'][...] = eventids
 
-                    file.create_dataset('raw_approx_trigger_time', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                    file.create_dataset('raw_approx_trigger_time', (N,), dtype=numpy.float64, compression='gzip', compression_opts=9, shuffle=True)
                     file['raw_approx_trigger_time'][...] = raw_approx_trigger_time
 
-                    file.create_dataset('raw_approx_trigger_time_nsecs', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                    file.create_dataset('raw_approx_trigger_time_nsecs', (N,), dtype=numpy.float64, compression='gzip', compression_opts=9, shuffle=True)
                     file['raw_approx_trigger_time_nsecs'][...] = raw_approx_trigger_time_nsecs
 
-                    file.create_dataset('trig_time', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                    file.create_dataset('trig_time', (N,), dtype=numpy.float64, compression='gzip', compression_opts=9, shuffle=True)
                     file['trig_time'][...] = trig_time
 
                     file.create_dataset('trigger_type', (N,), dtype=numpy.uint8, compression='gzip', compression_opts=9, shuffle=True)
                     file['trigger_type'][...] = loadTriggerTypes(reader)
 
-                    file.create_dataset('calibrated_trigtime', (N,), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                    file.create_dataset('calibrated_trigtime', (N,), dtype=numpy.float64, compression='gzip', compression_opts=9, shuffle=True)
                     file['calibrated_trigtime'][...] = getEventTimes(reader)
 
                     #Used for gating obvious backgrounds like known CW

@@ -29,7 +29,6 @@ import tools.interpret #Must be imported before matplotlib or else plots don't l
 import tools.info as info
 import tools.field_fox as ff
 import tools.constants as constants
-from tools.correlator import Correlator
 import matplotlib.pyplot as plt
 from pprint import pprint
 import itertools
@@ -280,6 +279,7 @@ if __name__ == '__main__':
 
                 reader = Reader(datapath,run)
                 upsample = 2**14
+                from tools.correlator import Correlator
                 cor = Correlator(reader,  upsample=upsample, n_phi=180, n_theta=180, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=True)
                 t = cor.t()/1e9
                 t = t[-1]*numpy.arange(upsample)/upsample
