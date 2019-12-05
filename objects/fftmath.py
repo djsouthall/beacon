@@ -232,12 +232,15 @@ class FFTPrepper:
             #resolution information for time shifts.  The below correspond to the upsampled times.
             self.dt_ns_upsampled = 1.0e9/(2*(self.final_corr_length//2 + 1)*self.df_corr)
             self.corr_time_shifts = self.calculateTimeShifts(self.final_corr_length,self.dt_ns_upsampled)#This results in the maxiumum of an autocorrelation being located at a time shift of 0.0
+            self.corr_index_to_delay_index = -numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1) #Negative because with how it is programmed you would want to roll the template the normal amount, but I will be rolling the waveforms.
 
             #Prepare Filters
             self.filter_original = self.makeFilter(self.freqs_original,plot_filter=plot,apply_phase_response=apply_phase_response)
             #self.filter_padded_to_power2 = self.makeFilter(self.freqs_padded_to_power2,plot_filter=False)
             #self.filter_corr = self.makeFilter(self.freqs_corr,plot_filter=False)
             
+
+
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -258,7 +261,7 @@ class FFTPrepper:
 
     def calculateTimeShifts(self, final_corr_length, dt):
         return numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1)*self.dt_ns_upsampled
-
+    
 
     def makeFilter(self,freqs, plot_filter=False,apply_phase_response=False):
         '''
@@ -747,7 +750,7 @@ class TimeDelayCalculator(FFTPrepper):
         6: Pick the average indices of values > 98% peak height in hilbert of corrs
         7: Gets argmax of abs(corrs) and then finds highest positive peak before this value
 
-        'max_corrs' corresponds to the value of the selected methods peak. 
+        'max_corrs' corresponds to the value of the selected methods peak.
         '''
         try:
             ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert)
@@ -859,6 +862,152 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def calculateImpulsivityFromTimeDelays(self, eventid, time_delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=750):
+        '''
+        This will call calculateTimeDelaysFromEvent with the given settings, and use these to calculate impulsivity. 
+
+        If calculate_impulsivity == True then this will also use the upsampled waveforms to determine impulsivity.
+        If hilbert==True then the waveforms used for impulsivity will be recalculated to NOT be enveloped.  
+
+        Impulsivity_window is given in ns and says how wide the window around the peak of the hilbert envelope (not necessarily symmetric)
+        to sum the envelope for the metric.
+
+        Time delays should mean how much to roll each signal, with sign indicating forward or backward in time.
+        '''
+        try:
+            if upsampled_waveforms is None:
+                ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert)
+                #Else use the given waveforms, assumed to have sampling of self.dt_ns_upsampled
+
+            rolls = (time_delays/self.dt_ns_upsampled).astype(int)
+
+            hpols_rolls = numpy.append(numpy.array([0]),rolls[0:3])#How much to roll hpol
+            vpols_rolls = numpy.append(numpy.array([0]),rolls[6:9])#How much to roll vpol
+            times = self.dt_ns_upsampled*numpy.arange(numpy.shape(upsampled_waveforms)[1])
+
+            if plot == True:
+                plt.figure()
+                for channel_index, waveform in enumerate(upsampled_waveforms):
+                    plt.subplot(2,2,channel_index%2+1)
+                    plt.plot(times,waveform,label='ch%i'%channel_index)
+                    if channel_index%2 == 0:
+                        pol='hpol'
+                    else:
+                        pol='vpol'
+                    plt.ylabel('%s Upsampled Waveforms (adu)'%pol)
+                    plt.xlabel('t (ns)')
+                    plt.legend()
+
+            #import pdb; pdb.set_trace()
+            for channel_index in range(8):
+                if channel_index%2 == 1:
+                    roll = vpols_rolls[channel_index//2]
+                else:
+                    roll = hpols_rolls[channel_index//2]
+
+                upsampled_waveforms[channel_index] = numpy.roll(upsampled_waveforms[channel_index],-roll)
+
+            if plot == True:
+                for channel_index, waveform in enumerate(upsampled_waveforms):
+                    if channel_index%2 == 0:
+                        pol='hpol'
+                    else:
+                        pol='vpol'
+                    plt.subplot(2,2,3+channel_index%2)
+                    plt.plot(times,waveform,label='ch%i'%channel_index)
+                    plt.ylabel('%s Rolled Upsampled Waveforms (adu)'%pol)
+                    plt.xlabel('t (ns)')
+                    plt.legend()
+
+            summed_hpol_waveforms = numpy.sum(upsampled_waveforms[::2],axis=0)
+            hilbert_summed_hpol_waveforms = numpy.abs(scipy.signal.hilbert(summed_hpol_waveforms))
+            sorted_hilbert_summed_hpol_waveforms = hilbert_summed_hpol_waveforms[numpy.argsort(abs(numpy.arange(len(hilbert_summed_hpol_waveforms)) - numpy.argmax(hilbert_summed_hpol_waveforms)))]
+            
+            impulsivity_window_cut = times < impulsivity_window
+            unscaled_hpol_impulsivity = numpy.cumsum(sorted_hilbert_summed_hpol_waveforms[impulsivity_window_cut])/sum(sorted_hilbert_summed_hpol_waveforms[impulsivity_window_cut])
+            impulsivity_hpol = 2*numpy.mean(unscaled_hpol_impulsivity) - 1
+
+            summed_vpol_waveforms = numpy.sum(upsampled_waveforms[1::2],axis=0)
+            hilbert_summed_vpol_waveforms = numpy.abs(scipy.signal.hilbert(summed_vpol_waveforms))
+            sorted_hilbert_summed_vpol_waveforms = hilbert_summed_vpol_waveforms[numpy.argsort(abs(numpy.arange(len(hilbert_summed_vpol_waveforms)) - numpy.argmax(hilbert_summed_vpol_waveforms)))]
+            
+            impulsivity_window_cut = times < impulsivity_window
+            unscaled_vpol_impulsivity = numpy.cumsum(sorted_hilbert_summed_vpol_waveforms[impulsivity_window_cut])/sum(sorted_hilbert_summed_vpol_waveforms[impulsivity_window_cut])
+            impulsivity_vpol = 2*numpy.mean(unscaled_vpol_impulsivity) - 1
+
+
+            if plot == True:
+                plt.figure()
+                plt.subplot(3,1,1)
+                plt.plot(times,summed_hpol_waveforms,label='Summed Aligned Hpol Waveforms',alpha=0.8)
+                plt.plot(times,hilbert_summed_hpol_waveforms,linestyle='--',label='Hpol Hilbert',alpha=0.8)
+
+                plt.plot(times,summed_vpol_waveforms,label='Summed Aligned Vpol Waveforms',alpha=0.8)
+                plt.plot(times,hilbert_summed_vpol_waveforms,linestyle='--',label='Vpol Hilbert',alpha=0.8)
+
+                plt.legend(loc='upper right')
+                plt.ylabel('Aligned and\nSummed Signal')
+                plt.xlabel('t (ns)')
+                plt.subplot(3,1,2)
+                plt.plot(times,sorted_hilbert_summed_hpol_waveforms,label='Hpol Aligned and Summed Hilbert Sorted in Time by Proximity to Peak',alpha=0.8)
+                plt.plot(times,sorted_hilbert_summed_vpol_waveforms,label='Vpol Aligned and Summed Hilbert Sorted in Time by Proximity to Peak',alpha=0.8)
+                plt.ylabel('Aligned and\nSummed Signal')
+                plt.xlabel('Window Width (Sorted Out from Max Value) (ns)')
+                plt.legend(loc = 'upper right')
+                plt.subplot(3,1,3)
+                
+                plt.plot(times[impulsivity_window_cut], unscaled_hpol_impulsivity,label='Normalized Cumulative Sum of Hilbert Envelope',alpha=0.8)
+                plt.axhline(numpy.mean(unscaled_hpol_impulsivity),color=plt.rcParams['axes.prop_cycle'].by_key()['color'][0],linestyle='--',label='Mean (A) = %f, Impulsivity (2A+1) = %f'%(numpy.mean(unscaled_hpol_impulsivity),impulsivity_hpol))
+
+                plt.plot(times[impulsivity_window_cut], unscaled_vpol_impulsivity,label='Normalized Cumulative Sum of Hilbert Envelope',alpha=0.8)
+                plt.axhline(numpy.mean(unscaled_vpol_impulsivity),color=plt.rcParams['axes.prop_cycle'].by_key()['color'][1],linestyle='--',label='Mean (A) = %f, Impulsivity (2A+1) = %f'%(numpy.mean(unscaled_vpol_impulsivity),impulsivity_vpol))
+
+                plt.xlabel('Window Width (Sorted Out from Max Value) (ns)')
+                plt.ylabel('Cumulative Sum')
+                plt.legend(loc = 'lower right')
+
+            return impulsivity_hpol, impulsivity_vpol
+
+            #return self.calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=return_full_corrs, align_method=align_method, print_warning=False)
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
+
+    def calculateImpulsivityFromEvent(self, eventid, return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=750):
+        '''
+        This will call calculateTimeDelaysFromEvent with the given settings, and use these to calculate impulsivity. 
+
+        If calculate_impulsivity == True then this will also use the upsampled waveforms to determine impulsivity.
+        If hilbert==True then the waveforms used for impulsivity will be recalculated to NOT be enveloped.  
+
+        Impulsivity_window is given in ns and says how wide the window around the peak of the hilbert envelope (not necessarily symmetric)
+        to sum the envelope for the metric.
+        '''
+        try:
+            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert)
+            #self.dt_ns_upsampled
+
+            if return_full_corrs == True:
+                indices, corr_time_shifts, max_corrs, pairs, corrs = self.calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=return_full_corrs, align_method=align_method, print_warning=False)
+            else:
+                indices, corr_time_shifts, max_corrs, pairs = self.calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=return_full_corrs, align_method=align_method, print_warning=False)
+            
+            time_delays = -corr_time_shifts
+            print('From event')
+            print(time_delays)
+            return self.calculateImpulsivityFromTimeDelays(eventid, time_delays, upsampled_waveforms=upsampled_waveforms,return_full_corrs=return_full_corrs, align_method=align_method, hilbert=hilbert,plot=plot,impulsivity_window=impulsivity_window)
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
 class TemplateCompareTool(FFTPrepper):
     '''

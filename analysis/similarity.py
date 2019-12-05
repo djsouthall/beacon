@@ -128,7 +128,7 @@ if __name__=="__main__":
                         print(exc_type, fname, exc_tb.tb_lineno)
 
                     similarity_count = countSimilar(delays)
-                    similarity_fraction = similarity_count/numpy.sum(similarity_count)
+                    similarity_fraction = similarity_count/len(eventids)
 
                     file['%s_similarity_count'%(pol)][...] = similarity_count
                     file['%s_similarity_fraction'%(pol)][...] = similarity_fraction

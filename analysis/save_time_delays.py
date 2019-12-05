@@ -279,7 +279,6 @@ if __name__=="__main__":
                         file['vpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
                         file['vpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
 
-                import pdb; pdb.set_trace()
                 file.close()
         else:
             print('filename is None, indicating empty tree.  Skipping run %i'%run)

@@ -309,7 +309,7 @@ def createFile(reader,redo_defaults=False):
 
             #outdated_datasets_to_remove should include things that were once in each file but should no longer be.  They might be useful if a dataset
             #is given a new name and you want to delete the old dataset for instance. 
-            outdated_datasets_to_remove = numpy.array(['trigger_types','times','subtimes','trigtimes','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','calibrated_trigtime']) #TEMPORARY
+            outdated_datasets_to_remove = numpy.array(['trigger_types','times','subtimes','trigtimes','hpol_impulsivity','vpol_impulsivity']) 
 
             if os.path.exists(filename):
                 print('%s already exists, checking if setup is up to date.'%filename )

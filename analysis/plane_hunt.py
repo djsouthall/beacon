@@ -91,13 +91,13 @@ def countSimilar(delays,similarity_atol=5,verbose=True):
 if __name__ == '__main__':
     plt.close('all')
     datapath = os.environ['BEACON_DATA']
-    run = 1652
+    #run = 1652
 
-    runs = numpy.arange(1652,1670)
-    runs = [1652]
+    runs = numpy.arange(1645,1664)
+    #runs = [1652]
 
-    times = numpy.array([])
-    delays = numpy.array([])
+    colormap_mode = 0
+
 
     for run_index, run in enumerate(runs):
         try:
@@ -106,6 +106,8 @@ if __name__ == '__main__':
             if filename is not None:
                 with h5py.File(filename, 'r') as file:
                     try:
+                        n_events_total = len(file['eventids'][...])
+                        pol = 'hpol'
                         #print(list(file.keys()))
                         rough_dir_cut = file['hpol_max_corr_dir_ENU_zenith'][...] < 95.0 #Above horizen.  Don't trust calibration enough for this to be perfect.
                         
@@ -117,177 +119,77 @@ if __name__ == '__main__':
                         calibrated_trigtime = file['calibrated_trigtime'][total_loading_cut]
 
                         delays = numpy.vstack((file['hpol_t_%isubtract%i'%(0,1)][total_loading_cut],file['hpol_t_%isubtract%i'%(0,2)][total_loading_cut],file['hpol_t_%isubtract%i'%(0,3)][total_loading_cut],file['hpol_t_%isubtract%i'%(1,2)][total_loading_cut],file['hpol_t_%isubtract%i'%(1,3)][total_loading_cut],file['hpol_t_%isubtract%i'%(2,3)][total_loading_cut])).T
-                        similarity_count = countSimilar(delays)
+                        
+                        dsets = list(file.keys()) #Existing datasets
+
+                        if not numpy.isin('%s_similarity_count'%(pol),dsets):
+                            similarity_count = countSimilar(delays)
+                        else:
+                            try:
+                                similarity_count = file['%s_similarity_count'%(pol)][total_loading_cut]
+                            except:
+                                similarity_count = countSimilar(delays)
 
                         ignore_unreal = numpy.any(abs(delays) > 300,axis=1) #might be too strict for ones that don't have 4 visible pulses.
                         similarity_cut = similarity_count < 10 #Less than this number of similar events in a run to show up.
 
                         cut = numpy.logical_and(~ignore_unreal,similarity_cut) #Expand for more cuts
 
+                        if colormap_mode == 0:
+                            c = file['inband_peak_freq_MHz'][...][total_loading_cut,0][cut]
+                            suptitle = 'Color Corresponds to Peak Frequency In Band (MHz)'
+                            norm = None
+                        elif colormap_mode == 1:
+                            uniqueness = 1 - similarity_count/max(similarity_count)
+                            c = uniqueness[cut]
+                            suptitle = 'Uniqueness (1 = Unique, 0 = Common)'
+                            norm = None
+                        elif colormap_mode == 2:
+                            c = similarity_count[cut]
+                            suptitle = 'Number of Similar Events in Run'
+                            if max(similarity_count[cut]) >= 100:
+                                norm = LogNorm()
+                            else:
+                                norm = None
+                        elif colormap_mode == 3:
+                            c = file['hpol_max_corr_dir_ENU_azimuth'][...][total_loading_cut][cut]
+                            suptitle = 'hpol_max_corr_dir_ENU_azimuth (deg)'
+                            norm = None
+                        elif colormap_mode == 4:
+                            c = similarity_count[cut]/n_events_total
+                            suptitle = 'Color Denotes Fraction of Events in Run That Resemble This Event'
+                            norm = LogNorm()
+                        elif colormap_mode == 5:
+                            c = similarity_count[cut]/max(similarity_count[cut])
+                            suptitle = 'Normalized Similarity Count'
+                            norm = None
+                        elif colormap_mode == 6:
+                            #something to do with correlation values, max for all baselines?
+                            #file['hpol_max_corr_1subtract2'][...][total_loading_cut][cut]
+                            print('hpol_max_corr_1subtract2')
+                        else:
+                            c = numpy.ones_like(cut)
+                            suptitle = ''
+                            norm = None
+
                         if run_index == 0:
                             times = calibrated_trigtime[cut]
                             total_delays = delays[cut,:]
+                            total_similarity_count = similarity_count[cut]
+                            similarity_percent = similarity_count[cut]/n_events_total
+                            total_colors = c
+                            total_eventids = eventids
+                            total_runnum = numpy.ones_like(eventids)*run
+
                         else:
-                            times =  numpy.vstack((times,calibrated_trigtime[cut]))
                             total_delays =  numpy.vstack((total_delays,delays[cut,:]))
+                            times =  numpy.append(times,calibrated_trigtime[cut])
+                            total_colors = numpy.append(total_colors,c)
+                            similarity_percent = numpy.append(similarity_percent,similarity_count[cut]/n_events_total)
+                            total_similarity_count = numpy.append(total_similarity_count,similarity_count[cut])
 
-                        if False:
-                            remove_top_n_bins = 0
-                            n_bins = 500
-                            remove_indices = numpy.array([])
-
-
-                            plt.figure()
-                            bins = numpy.linspace(numpy.min(delays[:,0:3]),numpy.max(delays[:,0:3]),n_bins+1)
-                            plt.subplot(3,1,1)
-                            n, outbins, patches = plt.hist(delays[cut,0],bins=bins,label = 't0 - t1')
-                            plt.xlabel('t0 - t1 (ns)')
-                            plt.ylabel('Counts')
-                            plt.yscale('log', nonposy='clip')
-                            plt.minorticks_on()
-                            plt.grid(b=True, which='major', color='k', linestyle='-')
-                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                            top_left_edges = numpy.argsort(n)[::-1][0:remove_top_n_bins]
-                            for left_bin_edge_index in top_left_edges:
-                                if left_bin_edge_index == len(n):
-                                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(delays[:,0] >= outbins[left_bin_edge_index],delays[:,0] <= outbins[left_bin_edge_index + 1]) )[0]) #Different bin boundary condition on right edge. 
-                                else:
-                                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(delays[:,0] >= outbins[left_bin_edge_index],delays[:,0] < outbins[left_bin_edge_index + 1]) )[0])
-
-
-
-                            plt.subplot(3,1,2)
-                            n, outbins, patches = plt.hist(delays[cut,1],bins=bins,label = 't0 - t2')
-                            plt.xlabel('t0 - t2 (ns)')
-                            plt.ylabel('Counts')
-                            plt.yscale('log', nonposy='clip')
-                            plt.minorticks_on()
-                            plt.grid(b=True, which='major', color='k', linestyle='-')
-                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                            top_left_edges = numpy.argsort(n)[::-1][0:remove_top_n_bins]
-                            for left_bin_edge_index in top_left_edges:
-                                if left_bin_edge_index == len(n):
-                                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(delays[:,1] >= outbins[left_bin_edge_index],delays[:,1] <= outbins[left_bin_edge_index + 1]) )[0]) #Different bin boundary condition on right edge. 
-                                else:
-                                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(delays[:,1] >= outbins[left_bin_edge_index],delays[:,1] < outbins[left_bin_edge_index + 1]) )[0])
-
-
-                            plt.subplot(3,1,3)
-                            n, outbins, patches = plt.hist(delays[cut,2],bins=bins,label = 't0 - t3')
-                            plt.xlabel('t0 - t3 (ns)')
-                            plt.ylabel('Counts')
-                            plt.yscale('log', nonposy='clip')
-                            plt.minorticks_on()
-                            plt.grid(b=True, which='major', color='k', linestyle='-')
-                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                            top_left_edges = numpy.argsort(n)[::-1][0:remove_top_n_bins]
-                            for left_bin_edge_index in top_left_edges:
-                                if left_bin_edge_index == len(n):
-                                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(delays[:,2] >= outbins[left_bin_edge_index],delays[:,2] <= outbins[left_bin_edge_index + 1]) )[0]) #Different bin boundary condition on right edge. 
-                                else:
-                                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(delays[:,2] >= outbins[left_bin_edge_index],delays[:,2] < outbins[left_bin_edge_index + 1]) )[0])
-
-                            #remove_indices cuts from the time delays before [cut] is taken.  
-                            remove_indices = numpy.sort(numpy.unique(remove_indices))
-                            cut[remove_indices.astype(int)] = False
-
-                        if False:
-                            fig = plt.figure()
-                            scatter = plt.scatter(delays[cut,0],delays[cut,1],c=(calibrated_trigtime[cut]-min(calibrated_trigtime))/60,cmap=cm)
-                            cbar = fig.colorbar(scatter)
-                            plt.xlabel('t0 - t1')
-                            plt.ylabel('t0 - t2')
-
-                            fig = plt.figure()
-                            scatter = plt.scatter(delays[cut,0],delays[cut,2],c=(calibrated_trigtime[cut]-min(calibrated_trigtime))/60,cmap=cm)
-                            cbar = fig.colorbar(scatter)
-                            cbar.ax.set_ylabel('Time from Start of Run (min)', rotation=270)
-                            plt.xlabel('t0 - t1')
-                            plt.ylabel('t0 - t3')
-
-                        if True:
-                            
-                            if False:
-                                c = file['inband_peak_freq_MHz'][...][total_loading_cut,0][cut]
-                                suptitle = 'Color Corresponds to Peak Frequency In Band (MHz)'
-                                norm = None
-                            elif False:
-                                uniqueness = 1 - similarity_count/max(similarity_count)
-                                c = uniqueness[cut]
-                                suptitle = 'Uniqueness (1 = Unique, 0 = Common)'
-                                norm = None
-                            elif False:
-                                c = similarity_count[cut]
-                                suptitle = 'Number of Similar Events in Run'
-                                if max(similarity_count[cut]) >= 100:
-                                    norm = LogNorm()
-                                else:
-                                    norm = None
-                            elif True:
-                                c = file['hpol_max_corr_dir_ENU_azimuth'][...][total_loading_cut][cut]
-                                suptitle = 'hpol_max_corr_dir_ENU_azimuth (deg)'
-                                norm = None
-
-                            fig = plt.figure()
-                            ax = plt.subplot(3,1,1)
-                            scatter1 = plt.scatter((calibrated_trigtime[cut]-min(calibrated_trigtime)), delays[cut,0],label = 't0 - t1',c=c,cmap=cm,norm=norm)
-                            #cbar = ax.colorbar(scatter)
-                            plt.xlabel('Calibrated trigtime (s)')
-                            plt.ylabel('t0 - t1 (ns)')
-                            plt.legend()
-                            plt.minorticks_on()
-                            plt.grid(b=True, which='major', color='k', linestyle='-')
-                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                            
-                            divider = make_axes_locatable(ax)
-                            cax = divider.append_axes('right', size='5%', pad=0.05)
-                            fig.colorbar(scatter1, cax=cax, orientation='vertical')
-                            plt.minorticks_on()
-                            plt.grid(b=True, which='major', color='k', linestyle='-')
-                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-
-
-                            ax2 = plt.subplot(3,1,2,sharex=ax)
-                            scatter2 = plt.scatter((calibrated_trigtime[cut]-min(calibrated_trigtime)), delays[cut,1],label = 't0 - t2',c=c,cmap=cm,norm=norm)
-                            #cbar = ax.colorbar(scatter)
-                            plt.xlabel('Calibrated trigtime (s)')
-                            plt.ylabel('t0 - t2 (ns)')
-                            plt.minorticks_on()
-                            plt.legend()
-                            plt.grid(b=True, which='major', color='k', linestyle='-')
-                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                            divider = make_axes_locatable(ax2)
-                            cax2 = divider.append_axes('right', size='5%', pad=0.05)
-                            fig.colorbar(scatter2, cax=cax2, orientation='vertical')
-                            plt.minorticks_on()
-                            plt.grid(b=True, which='major', color='k', linestyle='-')
-                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                            ax3 = plt.subplot(3,1,3,sharex=ax)
-                            scatter3 = plt.scatter((calibrated_trigtime[cut]-min(calibrated_trigtime)), delays[cut,2],label = 't0 - t3',c=c,cmap=cm,norm=norm)
-                            #cbar = ax.colorbar(scatter)
-                            plt.xlabel('Calibrated trigtime (s)')
-                            plt.ylabel('t0 - t3 (ns)')
-                            plt.minorticks_on()
-                            plt.legend()
-                            plt.grid(b=True, which='major', color='k', linestyle='-')
-                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                            divider = make_axes_locatable(ax3)
-                            cax3 = divider.append_axes('right', size='5%', pad=0.05)
-                            fig.colorbar(scatter3, cax=cax3, orientation='vertical')
-                            plt.minorticks_on()
-                            plt.grid(b=True, which='major', color='k', linestyle='-')
-                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                            plt.suptitle(suptitle)
-
-
+                            total_eventids = numpy.append(total_eventids,eventids)
+                            total_runnum = numpy.append(total_runnum,numpy.ones_like(eventids)*run) 
 
                     except Exception as e:
                         file.close()
@@ -296,7 +198,7 @@ if __name__ == '__main__':
                         exc_type, exc_obj, exc_tb = sys.exc_info()
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                         print(exc_type, fname, exc_tb.tb_lineno)
-                file.close()
+                    file.close()
             else:
                 print('filename is None, indicating empty tree.  Skipping run %i'%run)
 
@@ -306,3 +208,161 @@ if __name__ == '__main__':
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+
+
+    #times = calibrated_trigtime[cut]
+    #total_delays = delays[cut,:]
+    #similarity_percent = similarity_count/numpy.shape(delays)[0]
+    try:
+        if False:
+            remove_top_n_bins = 0
+            n_bins = 500
+            remove_indices = numpy.array([])
+
+
+            plt.figure()
+            bins = numpy.linspace(numpy.min(total_delays[:,0:3]),numpy.max(total_delays[:,0:3]),n_bins+1)
+            plt.subplot(3,1,1)
+            n, outbins, patches = plt.hist(total_delays[:,0],bins=bins,label = 't0 - t1')
+            plt.xlabel('t0 - t1 (ns)')
+            plt.ylabel('Counts')
+            plt.yscale('log', nonposy='clip')
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            top_left_edges = numpy.argsort(n)[::-1][0:remove_top_n_bins]
+            for left_bin_edge_index in top_left_edges:
+                if left_bin_edge_index == len(n):
+                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_delays[:,0] >= outbins[left_bin_edge_index],total_delays[:,0] <= outbins[left_bin_edge_index + 1]) )[0]) #Different bin boundary condition on right edge. 
+                else:
+                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_delays[:,0] >= outbins[left_bin_edge_index],total_delays[:,0] < outbins[left_bin_edge_index + 1]) )[0])
+
+
+
+            plt.subplot(3,1,2)
+            n, outbins, patches = plt.hist(total_delays[:,1],bins=bins,label = 't0 - t2')
+            plt.xlabel('t0 - t2 (ns)')
+            plt.ylabel('Counts')
+            plt.yscale('log', nonposy='clip')
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            top_left_edges = numpy.argsort(n)[::-1][0:remove_top_n_bins]
+            for left_bin_edge_index in top_left_edges:
+                if left_bin_edge_index == len(n):
+                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_delays[:,1] >= outbins[left_bin_edge_index],total_delays[:,1] <= outbins[left_bin_edge_index + 1]) )[0]) #Different bin boundary condition on right edge. 
+                else:
+                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_delays[:,1] >= outbins[left_bin_edge_index],total_delays[:,1] < outbins[left_bin_edge_index + 1]) )[0])
+
+
+            plt.subplot(3,1,3)
+            n, outbins, patches = plt.hist(total_delays[:,2],bins=bins,label = 't0 - t3')
+            plt.xlabel('t0 - t3 (ns)')
+            plt.ylabel('Counts')
+            plt.yscale('log', nonposy='clip')
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            top_left_edges = numpy.argsort(n)[::-1][0:remove_top_n_bins]
+            for left_bin_edge_index in top_left_edges:
+                if left_bin_edge_index == len(n):
+                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_delays[:,2] >= outbins[left_bin_edge_index],total_delays[:,2] <= outbins[left_bin_edge_index + 1]) )[0]) #Different bin boundary condition on right edge. 
+                else:
+                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_delays[:,2] >= outbins[left_bin_edge_index],total_delays[:,2] < outbins[left_bin_edge_index + 1]) )[0])
+
+            #remove_indices cuts from the time total_delays before [cut] is taken.  
+            remove_indices = numpy.sort(numpy.unique(remove_indices))
+
+        if False:
+            fig = plt.figure()
+            scatter = plt.scatter(total_delays[:,0],total_delays[:,1],c=(times - min(times))/60,cmap=cm)
+            cbar = fig.colorbar(scatter)
+            plt.xlabel('t0 - t1')
+            plt.ylabel('t0 - t2')
+
+            fig = plt.figure()
+            scatter = plt.scatter(total_delays[:,0],total_delays[:,2],c=(times - min(times))/60,cmap=cm)
+            cbar = fig.colorbar(scatter)
+            cbar.ax.set_ylabel('Time from Start of Run (min)', rotation=270)
+            plt.xlabel('t0 - t1')
+            plt.ylabel('t0 - t3')
+
+        if True:
+
+            #Make vertical, group things baselines that you expect similar behaviour (i.e. 1,3 0,2)
+
+            cut = total_similarity_count < 10.0
+
+            c = total_colors[cut]
+            c = total_similarity_count[cut]
+
+
+            fig = plt.figure()
+            ax = plt.subplot(1,3,1)
+            scatter1 = plt.scatter((times[cut] - min(times))/3600.0, total_delays[cut,0],label = 't0 - t1',c=c,cmap=cm,norm=norm)
+            #cbar = ax.colorbar(scatter)
+            plt.xlabel('Calibrated trigtime From Start of Run (h)')
+            plt.ylabel('t0 - t1 (ns)')
+            plt.legend()
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes('right', size='5%', pad=0.05)
+            fig.colorbar(scatter1, cax=cax, orientation='vertical')
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+
+            ax2 = plt.subplot(1,3,2,sharex=ax)
+            scatter2 = plt.scatter((times[cut] - min(times))/3600.0, total_delays[cut,1],label = 't0 - t2',c=c,cmap=cm,norm=norm)
+            #cbar = ax.colorbar(scatter)
+            plt.xlabel('Calibrated trigtime From Start of Run (h)')
+            plt.ylabel('t0 - t2 (ns)')
+            plt.minorticks_on()
+            plt.legend()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            divider = make_axes_locatable(ax2)
+            cax2 = divider.append_axes('right', size='5%', pad=0.05)
+            fig.colorbar(scatter2, cax=cax2, orientation='vertical')
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            ax3 = plt.subplot(1,3,3,sharex=ax)
+            scatter3 = plt.scatter((times[cut] - min(times))/3600.0, total_delays[cut,2],label = 't0 - t3',c=c,cmap=cm,norm=norm)
+            #cbar = ax.colorbar(scatter)
+            plt.xlabel('Calibrated trigtime From Start of Run (h)')
+            plt.ylabel('t0 - t3 (ns)')
+            plt.minorticks_on()
+            plt.legend()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            divider = make_axes_locatable(ax3)
+            cax3 = divider.append_axes('right', size='5%', pad=0.05)
+            fig.colorbar(scatter3, cax=cax3, orientation='vertical')
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            plt.suptitle(suptitle)
+    
+    except Exception as e:
+        file.close()
+        print('Error in plotting.')
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+    
+

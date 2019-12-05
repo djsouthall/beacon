@@ -79,7 +79,7 @@ if __name__=="__main__":
     plot_filter=False
     hilbert=False
 
-    upsample = 2**14
+    upsample = 2**15
 
     max_method = 0
 
