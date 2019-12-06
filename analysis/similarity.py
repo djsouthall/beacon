@@ -43,7 +43,7 @@ matplotlib.rcParams['figure.figsize'] = [10, 11]
 matplotlib.rcParams.update({'font.size': 16})
 
 
-def countSimilar(delays,similarity_atol=5,verbose=True):
+def countSimilar(delays,similarity_atol=2,verbose=True):
     '''
     Given a set of delays this function will determine which ones are similar to eachother.
     Essentially each event will be given a similarity metric that describes how many other
@@ -72,7 +72,7 @@ def countSimilar(delays,similarity_atol=5,verbose=True):
                     sys.stdout.flush()
             delays_rolled = numpy.roll(delays_rolled,1,axis=0) #Comparing each event to the next event.
             comparison = numpy.isclose(delays,delays_rolled,atol=similarity_atol)
-            if False:
+            if True:
                 similarity_count += numpy.all(comparison,axis=1) #All time delays are within tolerance between the two events.
             else:
                 similarity_count += numpy.sum(comparison,axis=1) >= 5 #5/6 time delays are within tolerance between the two events.
