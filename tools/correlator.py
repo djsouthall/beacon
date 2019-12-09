@@ -695,7 +695,7 @@ class Correlator:
 
 
 
-    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None):
+    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None,verbose=True):
         '''
         Makes the cross correlation make for the given event.
 
@@ -723,7 +723,8 @@ class Correlator:
         '''
         try:
             if hilbert == True:
-                print('WARNING! Enabling Hilbert envelopes throws off correlation normalization.')
+                if verbose == True:
+                    print('WARNING! Enabling Hilbert envelopes throws off correlation normalization.')
             if pol == 'both':
                 hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert)
                 vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert)
@@ -768,32 +769,32 @@ class Correlator:
                     corr_value_0subtract1 = corr01[self.delay_indices_vpol_0subtract1]
                 except:
                     print('Error in corr_value_0subtract1')
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
                 try:
                     corr_value_0subtract2 = corr02[self.delay_indices_vpol_0subtract2]
                 except:
                     print('Error in corr_value_0subtract2')
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
                 try:
                     corr_value_0subtract3 = corr03[self.delay_indices_vpol_0subtract3]
                 except:
                     print('Error in corr_value_0subtract3')
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
                 try:
                     corr_value_1subtract2 = corr12[self.delay_indices_vpol_1subtract2]
                 except:
                     print('Error in corr_value_1subtract2')
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
                 try:
                     corr_value_1subtract3 = corr13[self.delay_indices_vpol_1subtract3]
                 except:
                     print('Error in corr_value_1subtract3')
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
                 try:
                     corr_value_2subtract3 = corr23[self.delay_indices_vpol_2subtract3]
                 except:
                     print('Error in corr_value_2subtract3')
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
 
 
                 mean_corr_values = numpy.mean(numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] ),axis=0)

@@ -96,7 +96,8 @@ if __name__=="__main__":
 
     try:
         run = int(run)
-
+        save = True
+        plot = False
         reader = Reader(datapath,run)
         filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.
         if filename is not None:
@@ -107,33 +108,63 @@ if __name__=="__main__":
                     print('run = ',run)
                 dsets = list(file.keys()) #Existing datasets
 
-                for pol in ['hpol','vpol']:
-                    if not numpy.isin('%s_similarity_count'%(pol),dsets):
-                        file.create_dataset('%s_similarity_count'%(pol), (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                if not numpy.isin('time_delays',dsets):
+                    print('time delays not present to perform similarity count in run %i'%run)
+                    file.close()
+                else:
+
+                    if not numpy.isin('similarity_count',dsets):
+                        file.create_group('similarity_count')
                     else:
-                        print('Values in %s_similarity_count of %s will be overwritten by this analysis script.'%(pol,filename))
+                        print('similarity_count group already exists in file %s'%filename)
 
-                    if not numpy.isin('%s_similarity_fraction'%(pol),dsets):
-                        file.create_dataset('%s_similarity_fraction'%(pol), (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                    else:
-                        print('Values in %s_similarity_fraction of %s will be overwritten by this analysis script.'%(pol,filename))
+                    time_delays_dsets = list(file['time_delays'].keys())
+                    similarity_count_dsets = list(file['similarity_count'].keys())
 
-                    try:
-                        delays = numpy.vstack((file['%s_t_%isubtract%i'%(pol,0,1)][...],file['%s_t_%isubtract%i'%(pol,0,2)][...],file['%s_t_%isubtract%i'%(pol,0,3)][...],file['%s_t_%isubtract%i'%(pol,1,2)][...],file['%s_t_%isubtract%i'%(pol,1,3)][...],file['%s_t_%isubtract%i'%(pol,2,3)][...])).T
-                    except Exception as e:
-                        print('\nError in %s'%inspect.stack()[0][3])
-                        print(e)
-                        exc_type, exc_obj, exc_tb = sys.exc_info()
-                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                        print(exc_type, fname, exc_tb.tb_lineno)
+                    for tdset in time_delays_dsets:
+                        if not numpy.isin(tdset,similarity_count_dsets):
+                            file['similarity_count'].create_group(tdset)
+                        else:
+                            print('similarity_count["%s"] group already exists in file %s'%(tdset,filename))
 
-                    similarity_count = countSimilar(delays)
-                    similarity_fraction = similarity_count/len(eventids)
+                        tdsets = list(file['similarity_count'][tdset].keys())
 
-                    file['%s_similarity_count'%(pol)][...] = similarity_count
-                    file['%s_similarity_fraction'%(pol)][...] = similarity_fraction
+                        print('Calculating similarity_count for %s'%tdset)
+                        if plot == True:
+                            plt.figure()
 
-                file.close()
+                        for pol in ['hpol','vpol']:
+                            print(pol)
+                            print('')
+                            if save == True:
+                                if not numpy.isin('%s_count'%(pol),tdsets):
+                                    file['similarity_count'][tdset].create_dataset('%s_count'%(pol), (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                                else:
+                                    print('Values in %s_count of %s will be overwritten by this analysis script.'%(pol,filename))
+
+                                if not numpy.isin('%s_fraction'%(pol),tdsets):
+                                    file['similarity_count'][tdset].create_dataset('%s_fraction'%(pol), (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                                else:
+                                    print('Values in %s_fraction of %s will be overwritten by this analysis script.'%(pol,filename))
+
+                            try:
+                                delays = numpy.vstack((file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,0,1)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,0,2)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,0,3)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,1,2)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,1,3)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,2,3)][...])).T
+                            except Exception as e:
+                                print('\nError in %s'%inspect.stack()[0][3])
+                                print(e)
+                                exc_type, exc_obj, exc_tb = sys.exc_info()
+                                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                print(exc_type, fname, exc_tb.tb_lineno)
+
+                            similarity_count = countSimilar(delays)
+                            similarity_fraction = similarity_count/len(eventids)
+                            if save == True:
+                                file['similarity_count'][tdset]['%s_count'%(pol)][...] = similarity_count
+                                file['similarity_count'][tdset]['%s_fraction'%(pol)][...] = similarity_fraction
+                            if plot == True:
+                                plt.hist(similarity_count,label=tdset + '\n' + pol,alpha=0.7)
+
+                    file.close()
         else:
             print('filename is None, indicating empty tree.  Skipping run %i'%run)
     except Exception as e:

@@ -74,36 +74,58 @@ if __name__=="__main__":
         if filename is not None:
             with h5py.File(filename, 'a') as file:
                 eventids = file['eventids'][...]
-                all_time_delays = numpy.vstack((file['%s_t_%isubtract%i'%('hpol',0,1)][...],file['%s_t_%isubtract%i'%('hpol',0,2)][...],file['%s_t_%isubtract%i'%('hpol',0,3)][...],file['%s_t_%isubtract%i'%('hpol',1,2)][...],file['%s_t_%isubtract%i'%('hpol',1,3)][...],file['%s_t_%isubtract%i'%('hpol',2,3)][...],file['%s_t_%isubtract%i'%('vpol',0,1)][...],file['%s_t_%isubtract%i'%('vpol',0,2)][...],file['%s_t_%isubtract%i'%('vpol',0,3)][...],file['%s_t_%isubtract%i'%('vpol',1,2)][...],file['%s_t_%isubtract%i'%('vpol',1,3)][...],file['%s_t_%isubtract%i'%('vpol',2,3)][...])).T
-
-                #eventids with rf trigger
-                if numpy.size(eventids) != 0:
-                    print('run = ',run)
                 dsets = list(file.keys()) #Existing datasets
 
-                
-                file.attrs['impulsivity_window_ns'] = impulsivity_window
-
-                if not numpy.isin('impulsivity_hpol',dsets):
-                    file.create_dataset('impulsivity_hpol', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                if not numpy.isin('time_delays',dsets):
+                    print('time delays not present to perform impulsivity in run %i'%run)
+                    file.close()
                 else:
-                    print('Values in impulsivity_hpol of %s will be overwritten by this analysis script.'%filename)
 
-                if not numpy.isin('impulsivity_vpol',dsets):
-                    file.create_dataset('impulsivity_vpol', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                else:
-                    print('Values in impulsivity_vpol of %s will be overwritten by this analysis script.'%filename)
+                    if not numpy.isin('impulsivity',dsets):
+                        file.create_group('impulsivity')
+                    else:
+                        print('impulsivity group already exists in file %s'%filename)
 
-                #Add two functions to TimeDelayCalculator: calculateImpulsivityFromDelay and calculateImpulsivityFromEventid, these can then be use below to get the impulsivity.
+                    time_delays_dsets = list(file['time_delays'].keys())
+                    impulsivity_dsets = list(file['impulsivity'].keys())
 
-                tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response)
+                    for tdset in time_delays_dsets:
+                        if not numpy.isin(tdset,impulsivity_dsets):
+                            file['impulsivity'].create_group(tdset)
+                        else:
+                            print('impulsivity["%s"] group already exists in file %s'%(tdset,filename))
+                        idsets = list(file['impulsivity'][tdset].keys())
 
-                for eventid in eventids: 
-                    if eventid%500 == 0:
-                        sys.stdout.write('(%i/%i)\r'%(eventid,len(eventids)))
-                        sys.stdout.flush()
-                    delays = -all_time_delays[eventid] #Unsure why I need to invert this.
-                    file['impulsivity_hpol'][eventid], file['impulsivity_vpol'][eventid] = tdc.calculateImpulsivityFromTimeDelays(eventid, delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=750)
+                        all_time_delays = numpy.vstack((file['time_delays'][tdset]['%s_t_%isubtract%i'%('hpol',0,1)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%('hpol',0,2)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%('hpol',0,3)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%('hpol',1,2)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%('hpol',1,3)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%('hpol',2,3)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%('vpol',0,1)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%('vpol',0,2)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%('vpol',0,3)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%('vpol',1,2)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%('vpol',1,3)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%('vpol',2,3)][...])).T
+
+                        #eventids with rf trigger
+                        if numpy.size(eventids) != 0:
+                            print('run = ',run)
+
+                        file.attrs['impulsivity_window_ns'] = impulsivity_window
+
+
+
+                        if not numpy.isin('hpol',idsets):
+                            file['impulsivity'][tdset].create_dataset('hpol', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                        else:
+                            print('Values in hpol of %s will be overwritten by this analysis script.'%filename)
+
+                        if not numpy.isin('vpol',idsets):
+                            file['impulsivity'][tdset].create_dataset('vpol', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                        else:
+                            print('Values in vpol of %s will be overwritten by this analysis script.'%filename)
+
+                        #Add two functions to TimeDelayCalculator: calculateImpulsivityFromDelay and calculateImpulsivityFromEventid, these can then be use below to get the impulsivity.
+
+                        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response)
+
+                        for eventid in eventids: 
+                            if eventid%500 == 0:
+                                sys.stdout.write('(%i/%i)\r'%(eventid,len(eventids)))
+                                sys.stdout.flush()
+                            delays = -all_time_delays[eventid] #Unsure why I need to invert this.
+                            file['impulsivity'][tdset]['hpol'][eventid], file['impulsivity'][tdset]['vpol'][eventid] = tdc.calculateImpulsivityFromTimeDelays(eventid, delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=750)
 
                 file.close()
         else:

@@ -93,11 +93,14 @@ if __name__ == '__main__':
     datapath = os.environ['BEACON_DATA']
     #run = 1652
 
-    runs = [1680]#numpy.arange(1646,1680) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
+    runs = numpy.arange(1646,1680) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
 
-    colormap_mode = 0
-    similarity_count_cut_limit = 3
+    colormap_mode = 6
+    similarity_count_cut_limit = 1000
 
+    #filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0'
+    filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-corlen_32768-align_0'
+    map_filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'
     for run_index, run in enumerate(runs):
         try:
             reader = Reader(datapath,run)
@@ -105,10 +108,13 @@ if __name__ == '__main__':
             if filename is not None:
                 with h5py.File(filename, 'r') as file:
                     try:
+                        #print(list(file['map_direction'].keys()) )
+                        dsets = list(file.keys()) #Existing datasets
                         n_events_total = len(file['eventids'][...])
                         pol = 'hpol'
                         #print(list(file.keys()))
-                        rough_dir_cut = file['hpol_max_corr_dir_ENU_zenith'][...] < 100.0 #Above horizen.  Don't trust calibration enough for this to be perfect.
+                        #print(list(file['time_delays'].keys()))
+                        rough_dir_cut = file['map_direction'][map_filter_string]['hpol_ENU_zenith'][...] < 100.0 #Above horizen.  Don't trust calibration enough for this to be perfect.
                         
                         rf_cut = file['trigger_type'][...] == 2 #This is RF triggers.
                         inband_cut = ~numpy.logical_and(numpy.any(file['inband_peak_freq_MHz'][...],axis=1) < 49, file['trigger_type'][...] > 48) #Cutting out known CW
@@ -117,29 +123,25 @@ if __name__ == '__main__':
                         eventids = file['eventids'][total_loading_cut]
                         calibrated_trigtime = file['calibrated_trigtime'][total_loading_cut]
 
-                        delays = numpy.vstack((file['hpol_t_%isubtract%i'%(0,1)][total_loading_cut],file['hpol_t_%isubtract%i'%(0,2)][total_loading_cut],file['hpol_t_%isubtract%i'%(0,3)][total_loading_cut],file['hpol_t_%isubtract%i'%(1,2)][total_loading_cut],file['hpol_t_%isubtract%i'%(1,3)][total_loading_cut],file['hpol_t_%isubtract%i'%(2,3)][total_loading_cut])).T
-                        
-                        dsets = list(file.keys()) #Existing datasets
 
-                        if not numpy.isin('%s_similarity_count'%(pol),dsets):
+                        delays = numpy.vstack((file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,1)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,2)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,3)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(1,2)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(1,3)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(2,3)][total_loading_cut])).T
+                        
+                        try:
+                            similarity_count = file['similarity_count'][filter_string]['%s_count'%(pol)][total_loading_cut]
+                            if False:
+                                plt.figure()
+                                plt.hist(file['similarity_count'][filter_string]['%s_count'%('hpol')][total_loading_cut],label='hpol similarity count',bins=1000)
+                                plt.hist(file['similarity_count'][filter_string]['%s_count'%('vpol')][total_loading_cut],label='vpol similarity count',bins=1000)
+                        except:
                             similarity_count = countSimilar(delays)
-                        else:
-                            try:
-                                similarity_count = file['%s_similarity_count'%(pol)][total_loading_cut]
-                                if False:
-                                    plt.figure()
-                                    plt.hist(file['%s_similarity_count'%('hpol')][total_loading_cut],label='hpol similarity count',bins=1000)
-                                    plt.hist(file['%s_similarity_count'%('vpol')][total_loading_cut],label='vpol similarity count',bins=1000)
-                            except:
-                                similarity_count = countSimilar(delays)
 
                         ignore_unreal = numpy.any(abs(delays) > 300,axis=1) #might be too strict for ones that don't have 4 visible pulses.
                         similarity_cut = similarity_count < similarity_count_cut_limit #Less than this number of similar events in a run to show up.
                         cut = numpy.logical_and(~ignore_unreal,similarity_cut) #Expand for more cuts
 
                         try:
-                            impulsivity_hpol = file['impulsivity_hpol'][...][total_loading_cut]
-                            impulsivity_vpol = file['impulsivity_vpol'][...][total_loading_cut]
+                            impulsivity_hpol = file['impulsivity'][filter_string]['hpol'][...][total_loading_cut]
+                            impulsivity_vpol = file['impulsivity'][filter_string]['vpol'][...][total_loading_cut]
                             max_impulsivity = numpy.max(numpy.vstack((impulsivity_hpol,impulsivity_vpol)),axis=0)
                             cut = numpy.logical_and(cut,max_impulsivity > 0.5)
                             if False:
@@ -179,7 +181,7 @@ if __name__ == '__main__':
                             else:
                                 norm = None
                         elif colormap_mode == 3:
-                            c = file['hpol_max_corr_dir_ENU_azimuth'][...][total_loading_cut][cut]
+                            c = file['map_direction'][map_filter_string]['hpol_ENU_zenith'][...][total_loading_cut][cut]
                             suptitle = 'hpol_max_corr_dir_ENU_azimuth (deg)'
                             norm = None
                         elif colormap_mode == 4:
@@ -191,8 +193,8 @@ if __name__ == '__main__':
                             suptitle = 'Normalized Similarity Count'
                             norm = None
                         elif colormap_mode == 6:
-                            impulsivity_hpol = file['impulsivity_hpol'][...][total_loading_cut][cut]
-                            impulsivity_vpol = file['impulsivity_vpol'][...][total_loading_cut][cut]
+                            impulsivity_hpol = file['impulsivity'][filter_string]['hpol'][...][total_loading_cut][cut]
+                            impulsivity_vpol = file['impulsivity'][filter_string]['vpol'][...][total_loading_cut][cut]
                             c = numpy.max(numpy.vstack((impulsivity_hpol,impulsivity_vpol)),axis=0)
                             suptitle = 'Impulsivity'
                             norm = None

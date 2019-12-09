@@ -28,7 +28,7 @@ import tools.info as info
 import pdb
 
 
-analysis_data_dir = '/home/dsouthall/scratch-midway2/beacon/'
+analysis_data_dir = '/home/dsouthall/scratch-midway2/beacon_new2/'
 #os.environ['BEACON_ANALYSIS_DIR'] + 'data/'
 
 
@@ -81,14 +81,22 @@ def getTimes(reader):
     trig_time : numpy.ndarray of floats
         The trig_time values for each event from the Tree.
     '''
-    N = reader.head_tree.Draw("raw_approx_trigger_time_nsecs:raw_approx_trigger_time:trig_time:Entry$","","goff") 
-    #ROOT.gSystem.ProcessEvents()
-    raw_approx_trigger_time_nsecs = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N)
-    raw_approx_trigger_time = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N) 
-    trig_time = numpy.frombuffer(reader.head_tree.GetV3(), numpy.dtype('float64'), N)
-    eventids = numpy.frombuffer(reader.head_tree.GetV4(), numpy.dtype('float64'), N).astype(int)
+    try:
+        N = reader.head_tree.Draw("raw_approx_trigger_time_nsecs:raw_approx_trigger_time:trig_time:Entry$","","goff") 
+        #ROOT.gSystem.ProcessEvents()
+        raw_approx_trigger_time_nsecs = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N)
+        raw_approx_trigger_time = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N) 
+        trig_time = numpy.frombuffer(reader.head_tree.GetV3(), numpy.dtype('float64'), N)
+        eventids = numpy.frombuffer(reader.head_tree.GetV4(), numpy.dtype('float64'), N).astype(int)
 
-    return raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids
+        return raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print('Error while trying to copy header elements to attrs.')
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
 
 def getEventTimes(reader,plot=False,smooth_window=101):
     '''
@@ -309,7 +317,7 @@ def createFile(reader,redo_defaults=False):
 
             #outdated_datasets_to_remove should include things that were once in each file but should no longer be.  They might be useful if a dataset
             #is given a new name and you want to delete the old dataset for instance. 
-            outdated_datasets_to_remove = numpy.array(['trigger_types','times','subtimes','trigtimes','hpol_impulsivity','vpol_impulsivity']) 
+            outdated_datasets_to_remove = numpy.array(['trigger_tpes','times','subtimes','trigtimes','hpol_impulsivity','vpol_impulsivity']) #Currently working on similarity.  Will want the old one to be in here after complete.
 
             if os.path.exists(filename):
                 print('%s already exists, checking if setup is up to date.'%filename )
