@@ -120,6 +120,11 @@ def getEventTimes(reader,plot=False,smooth_window=101):
         N = reader.status_tree.Draw("latched_pps_time","","goff") 
         _latched_pps_time = numpy.frombuffer(reader.status_tree.GetV1(), numpy.dtype('float64'), N)
         
+        #latched_pps_time are not present for every event, but I want an array which contains the most recent latched_pps_time
+        #per event.  Below searchsorted returns the index of the _latched_pps_time that each trigtime would be placed to remain
+        #sorted.  This means that these indices correspond the the values in _latched_pps_time that are just larger than trig_time
+        #a(as if they were bumped to the right, and the trig time was inserted there, it would still be sorted).  This picking those
+        #indices - 1 you get the _latched_pps_time for each event that is just to the left of the trig_time for each trig_time.  
         latched_pps_time = _latched_pps_time[numpy.searchsorted(_latched_pps_time,trig_time,side='left') - 1]
         
 
@@ -133,25 +138,48 @@ def getEventTimes(reader,plot=False,smooth_window=101):
             #latched_pps_time[eventid] =  getattr(reader.status(),'latched_pps_time')
 
         '''
+
+        #The next few steps aim to obtain the instantaneous clock rate.  Some work has to be done to ignore anomolies like skipped latched_pps_times for instance.
         unique_latched_pps, indices = numpy.unique(latched_pps_time,return_index=True)
+
         #Sorting unique values by index
         indices = numpy.sort(indices)
         unique_latched_pps = latched_pps_time[indices]
+        
+        if plot == True:
+            plt.figure()
+            plt.ylabel('Calculated Clock Rate MHz)',fontsize=16)
+            plt.xlabel('trig_time',fontsize=16)
+            plt.plot((trig_time[indices][:-1] + trig_time[indices][1:]) / 2.0 ,  numpy.diff(unique_latched_pps)/1e6,label='Before removing anomolies')
 
         #Sometimes the beginning of the run can not be properly handled.  The latched pps will start very high.
         #I ignore these values and then hope to get the resulting values later by interpolating at a later stage. 
         problematic_latched_pps_cut = numpy.append(numpy.diff(unique_latched_pps) < 0,False)
 
+
         indices = indices[~problematic_latched_pps_cut]
         unique_latched_pps = unique_latched_pps[~problematic_latched_pps_cut]
 
-        #Getting first pass sample rate
-        sample_rate = numpy.diff(unique_latched_pps)
-        inter_trig_time = (trig_time[indices][:-1] + trig_time[indices][1:]) / 2.0
-                
-        bad_derivatives = sample_rate > 3.15e7 #Ones where a sample was missed or something went wrong.
 
-        #The below will smooth out the rate.
+        #Getting first pass sample rate
+        sample_rate = numpy.diff(unique_latched_pps) #Results in array with len = len(unique_latched_pps) - 1
+
+        #Calculating trig times between original trig times to correspond to len = len(unique_latched_pps) - 1
+        inter_trig_time = (trig_time[indices][:-1] + trig_time[indices][1:]) / 2.0 
+                
+        bad_derivatives = sample_rate > 3.15e7 #Ones where a latched_pps_time sample was missed or something went wrong, so the rate is artificially about double.
+
+        if plot == True:
+            plt.plot(inter_trig_time[~bad_derivatives],  sample_rate[~bad_derivatives]/1e6,label='Negative and Doubled\nClock Rates Removed')
+            plt.legend()
+
+            plt.figure()
+            plt.ylabel('Calculated Clock Rate MHz)',fontsize=16)
+            plt.xlabel('trig_time',fontsize=16)
+            plt.plot(inter_trig_time[~bad_derivatives],  sample_rate[~bad_derivatives]/1e6,label='Negative and Doubled\nClock Rates Removed',c=plt.rcParams['axes.prop_cycle'].by_key()['color'][1])
+            plt.legend()
+
+        #The below will smooth out the rate to let interpolation and extrapolation work better than with the jittering rate.
         if smooth_window is not None:
             #Smoothing out rate
             hamming_filter = scipy.signal.hamming(smooth_window)
@@ -272,6 +300,7 @@ def getEventTimes(reader,plot=False,smooth_window=101):
             plt.ylabel('second (s)')
             plt.xlabel('eventid')
 
+        import pdb; pdb.set_trace()
 
         return actual_event_time_seconds
 
@@ -542,13 +571,14 @@ if __name__=="__main__":
             s = interpret.getStatusDict(reader)
             pprint(s)
             #'''
+            getEventTimes(reader,plot=True) #WHAT I AM CURRENTLY WORKING ON
+        
             filename = createFile(reader,redo_defaults=redo_defaults)
             with h5py.File(filename, 'r') as file:
                 cut = file['trigger_type'][:] == 2
                 for channel in range(8):
                     hist[channel] += numpy.histogram(file['inband_peak_freq_MHz'][:,int(channel)][cut],bins=bins)[0]
 
-                getEventTimes(reader,plot=True) #WHAT I AM CURRENTLY WORKING ON
 
         if False:
             fig, ax = plt.subplots()
