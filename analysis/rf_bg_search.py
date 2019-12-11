@@ -67,6 +67,7 @@ def getEventIds(reader, trigger_type=None):
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
+        return e
 
 
 if __name__=="__main__":
@@ -140,6 +141,16 @@ if __name__=="__main__":
         run = int(run)
 
         reader = Reader(datapath,run)
+        try:
+            print(reader.status())
+        except Exception as e:
+            print('Status Tree not present.  Returning Error.')
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+            sys.exit(1)
         filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.
         eventids = getEventIds(reader,trigger_type=[1,2,3]) #eventids with rf trigger
         if numpy.size(eventids) != 0:
@@ -301,6 +312,7 @@ if __name__=="__main__":
                     exc_type, exc_obj, exc_tb = sys.exc_info()
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                     print(exc_type, fname, exc_tb.tb_lineno)
+                    sys.exit(1)
         else:
             print('filename is None, indicating empty tree.  Skipping run %i'%run)
     except Exception as e:
@@ -309,4 +321,6 @@ if __name__=="__main__":
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
+        sys.exit(1)
+    sys.exit(0)
 

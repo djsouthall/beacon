@@ -111,8 +111,6 @@ class FFTPrepper:
 
             self.tukey = scipy.signal.tukey(self.buffer_length, alpha=tukey_alpha, sym=True)
 
-            self.start_waveform_index = waveform_index_range[0]
-
             self.prepForFFTs(plot=plot_filters,apply_phase_response=apply_phase_response)
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -670,7 +668,7 @@ class TimeDelayCalculator(FFTPrepper):
                     indices[pair_index] = numpy.argmax( numpy.multiply( cut , corrs[pair_index] ) )
                     max_corrs[pair_index] = corrs[pair_index][indices[pair_index]]
 
-                if True:
+                if False:
                     times = numpy.arange(len(wf))*self.dt_ns_upsampled
                     for pair_index, pair in enumerate(self.pairs):
                         plt.figure()
@@ -1254,8 +1252,8 @@ class TemplateCompareTool(FFTPrepper):
 if __name__ == '__main__':
     try:
         datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
-        run = 1507
-        waveform_index_range = (1500,None)
+        run = 1650
+        waveform_index_range = (None,None)
         apply_phase_response = True
 
         #Filter settings
@@ -1270,21 +1268,25 @@ if __name__ == '__main__':
         use_filter = True
         plot_filters= True
 
-        known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
-        eventids = {}
-        eventids['hpol'] = numpy.sort(known_pulser_ids['run%i'%run]['hpol'])
-        eventids['vpol'] = numpy.sort(known_pulser_ids['run%i'%run]['vpol'])
-        all_eventids = numpy.sort(numpy.append(eventids['hpol'],eventids['vpol']))
-
-        hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
-        vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
 
         reader = Reader(datapath,run)
+
+        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response)
+        tdc.calculateImpulsivityFromEvent(128975, return_full_corrs=False, align_method=0, hilbert=False,plot=True,impulsivity_window=500)
         
-        tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters,apply_phase_response=True)
-        times, hpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['hpol'], align_method=0, template_eventid=eventids['hpol'][0], plot=True,event_type='hpol')
-        tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters,apply_phase_response=False)
-        times, hpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['hpol'], align_method=0, template_eventid=eventids['hpol'][0], plot=True,event_type='hpol')
+
+        # known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
+        # eventids = {}
+        # eventids['hpol'] = numpy.sort(known_pulser_ids['run%i'%run]['hpol'])
+        # eventids['vpol'] = numpy.sort(known_pulser_ids['run%i'%run]['vpol'])
+        # all_eventids = numpy.sort(numpy.append(eventids['hpol'],eventids['vpol']))
+
+        # hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
+        # vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
+        # tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters,apply_phase_response=True)
+        # times, hpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['hpol'], align_method=0, template_eventid=eventids['hpol'][0], plot=True,event_type='hpol')
+        # tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters,apply_phase_response=False)
+        # times, hpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['hpol'], align_method=0, template_eventid=eventids['hpol'][0], plot=True,event_type='hpol')
 
         #times, vpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['vpol'], align_method=0, template_eventid=eventids['vpol'][0], plot=True,event_type='vpol')
 

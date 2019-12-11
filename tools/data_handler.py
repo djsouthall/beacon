@@ -28,7 +28,7 @@ import tools.info as info
 import pdb
 
 
-analysis_data_dir = '/home/dsouthall/scratch-midway2/beacon_new2/'
+analysis_data_dir = '/home/dsouthall/scratch-midway2/beacon_dec11_2019/'
 #os.environ['BEACON_ANALYSIS_DIR'] + 'data/'
 
 
@@ -61,6 +61,7 @@ def loadTriggerTypes(reader):
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
+        return e
     return trigger_type
 
 def getTimes(reader):
@@ -97,6 +98,7 @@ def getTimes(reader):
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
+        return e
 
 def getEventTimes(reader,plot=False,smooth_window=101):
     '''
@@ -300,8 +302,6 @@ def getEventTimes(reader,plot=False,smooth_window=101):
             plt.ylabel('second (s)')
             plt.xlabel('eventid')
 
-        import pdb; pdb.set_trace()
-
         return actual_event_time_seconds
 
     except Exception as e:
@@ -310,6 +310,7 @@ def getEventTimes(reader,plot=False,smooth_window=101):
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
+        return e
 
 
 
@@ -447,6 +448,7 @@ def createFile(reader,redo_defaults=False):
                         exc_type, exc_obj, exc_tb = sys.exc_info()
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                         print(exc_type, fname, exc_tb.tb_lineno)
+                        return e
 
             else:
                 print('Creating %s.'%filename )
@@ -465,6 +467,7 @@ def createFile(reader,redo_defaults=False):
                             exc_type, exc_obj, exc_tb = sys.exc_info()
                             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                             print(exc_type, fname, exc_tb.tb_lineno)
+                            return e
 
                     #Create datasets that don't require analysis, but might be useful in analysis.
                     #When adding things to here, ensure they are also added and handled above as well
@@ -523,6 +526,7 @@ def createFile(reader,redo_defaults=False):
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
+        return e
 
 
 if __name__=="__main__":
@@ -538,6 +542,16 @@ if __name__=="__main__":
                 print('WARNING, REDOING DEFAULTS')
         try:
             reader = Reader(datapath,run)
+            try:
+                print(reader.status())
+            except Exception as e:
+                print('Status Tree not present.  Returning Error.')
+                print('\nError in %s'%inspect.stack()[0][3])
+                print(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+                sys.exit(1)
             createFile(reader,redo_defaults=redo_defaults)
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -545,52 +559,73 @@ if __name__=="__main__":
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+            sys.exit(1)
 
     else:
-        plt.close('all')
-        redo_defaults = False
+        try:
+            plt.close('all')
+            redo_defaults = False
 
-        runs = [1645]#numpy.arange(1645,1650)
+            runs = [1645]#numpy.arange(1645,1650)
 
-        bins = numpy.linspace(10,100,91)
-        width = numpy.diff(bins)
-        center = (bins[:-1] + bins[1:]) / 2
-        hist = numpy.zeros((8,len(bins)-1))
-        for run_index, run in enumerate(runs):
-            run = int(run)
-            reader = Reader(datapath,run)
-            #'''
-            trigger_type = loadTriggerTypes(reader)
-            print('\nReader:')
-            d = interpret.getReaderDict(reader)
-            pprint(d)
-            print('\nHeader:')
-            h = interpret.getHeaderDict(reader)
-            pprint(h)
-            print('\nStatus:')
-            s = interpret.getStatusDict(reader)
-            pprint(s)
-            #'''
-            getEventTimes(reader,plot=True) #WHAT I AM CURRENTLY WORKING ON
-        
-            filename = createFile(reader,redo_defaults=redo_defaults)
-            with h5py.File(filename, 'r') as file:
-                cut = file['trigger_type'][:] == 2
+            bins = numpy.linspace(10,100,91)
+            width = numpy.diff(bins)
+            center = (bins[:-1] + bins[1:]) / 2
+            hist = numpy.zeros((8,len(bins)-1))
+            for run_index, run in enumerate(runs):
+                run = int(run)
+                reader = Reader(datapath,run)
+
+                try:
+                    print(reader.status())
+                except Exception as e:
+                    print('Status Tree not present.  Returning Error.')
+                    print('\nError in %s'%inspect.stack()[0][3])
+                    print(e)
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    print(exc_type, fname, exc_tb.tb_lineno)
+                    sys.exit(1)
+                #'''
+                trigger_type = loadTriggerTypes(reader)
+                print('\nReader:')
+                d = interpret.getReaderDict(reader)
+                pprint(d)
+                print('\nHeader:')
+                h = interpret.getHeaderDict(reader)
+                pprint(h)
+                print('\nStatus:')
+                s = interpret.getStatusDict(reader)
+                pprint(s)
+                #'''
+                getEventTimes(reader,plot=True) #WHAT I AM CURRENTLY WORKING ON
+            
+                filename = createFile(reader,redo_defaults=redo_defaults)
+                with h5py.File(filename, 'r') as file:
+                    cut = file['trigger_type'][:] == 2
+                    for channel in range(8):
+                        hist[channel] += numpy.histogram(file['inband_peak_freq_MHz'][:,int(channel)][cut],bins=bins)[0]
+
+
+            if False:
+                fig, ax = plt.subplots()
+                
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                
                 for channel in range(8):
-                    hist[channel] += numpy.histogram(file['inband_peak_freq_MHz'][:,int(channel)][cut],bins=bins)[0]
+                    ax.bar(center, hist[channel], align='center', width=width,label='ch%i'%channel,alpha=0.7)
 
-
-        if False:
-            fig, ax = plt.subplots()
-            
-            plt.minorticks_on()
-            plt.grid(b=True, which='major', color='k', linestyle='-')
-            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-            
-            for channel in range(8):
-                ax.bar(center, hist[channel], align='center', width=width,label='ch%i'%channel,alpha=0.7)
-
-            plt.legend()
-            plt.ylabel('Counts')
-            plt.xlabel('Peak Inband Freq (MHz)')
-            #ax.set_xticks(bins)
+                plt.legend()
+                plt.ylabel('Counts')
+                plt.xlabel('Peak Inband Freq (MHz)')
+                #ax.set_xticks(bins)
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+            sys.exit(1)
+    sys.exit(0)

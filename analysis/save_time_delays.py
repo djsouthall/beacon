@@ -42,10 +42,16 @@ matplotlib.rcParams['figure.figsize'] = [10, 11]
 matplotlib.rcParams.update({'font.size': 16})
 
 if __name__=="__main__":
-    if len(sys.argv) == 2:
+    if len(sys.argv) > 1:
         run = int(sys.argv[1])
+        if len(sys.argv) > 2:
+            align_method = int(sys.argv[2])
+        else:
+            align_method = 8#4#0#4#8
+        print('Using align_method = %i'%align_method)
     else:
         run = 1702
+        align_method = 8#4#0#4#8
 
     datapath = os.environ['BEACON_DATA']
 
@@ -56,9 +62,8 @@ if __name__=="__main__":
     high_pass_filter_order = None
 
     apply_phase_response = True
-    hilbert=True
+    hilbert=False
     final_corr_length = 2**15
-    align_method = 0
 
     filter_string = ''
 
@@ -107,7 +112,7 @@ if __name__=="__main__":
 
 
 
-    plot_filter=False
+    plot_filter = False
     plot_multiple = False
 
 
@@ -124,6 +129,7 @@ if __name__=="__main__":
             with h5py.File(filename, 'a') as file:
                 eventids = file['eventids'][...]
                 rf_cut = file['trigger_type'][...] == 2
+
                 dsets = list(file.keys()) #Existing datasets
 
                 if not numpy.isin('time_delays',dsets):
@@ -136,7 +142,7 @@ if __name__=="__main__":
                 if not numpy.isin(filter_string,time_delay_groups):
                     file['time_delays'].create_group(filter_string)
                 else:
-                    print('%s group already exists in file %s'%filter_string)
+                    print('%s group already exists in file %s'%(filter_string,filename))
 
                 time_delay_dsets = list(file['time_delays'][filter_string].keys()) #Existing datasets
 
@@ -301,48 +307,50 @@ if __name__=="__main__":
                     print('Values in vpol_max_corr_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
 
-                tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response)
-                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids[rf_cut],align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=None,vpol_cut=None)
+                if sum(rf_cut) > 0:
+                    tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response)
+                    time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids[rf_cut],align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=None,vpol_cut=None)
 
-                for pair_index, pair in enumerate(pairs):
-                    if numpy.all(pair == numpy.array([0,2])):
-                        file['time_delays'][filter_string]['hpol_t_0subtract1'][rf_cut] = time_shifts[pair_index]
-                        file['time_delays'][filter_string]['hpol_max_corr_0subtract1'][rf_cut] = corrs[pair_index]
-                    elif numpy.all(pair == numpy.array([0,4])):
-                        file['time_delays'][filter_string]['hpol_t_0subtract2'][rf_cut] = time_shifts[pair_index]
-                        file['time_delays'][filter_string]['hpol_max_corr_0subtract2'][rf_cut] = corrs[pair_index]
-                    elif numpy.all(pair == numpy.array([0,6])):
-                        file['time_delays'][filter_string]['hpol_t_0subtract3'][rf_cut] = time_shifts[pair_index]
-                        file['time_delays'][filter_string]['hpol_max_corr_0subtract3'][rf_cut] = corrs[pair_index]
-                    elif numpy.all(pair == numpy.array([2,4])):
-                        file['time_delays'][filter_string]['hpol_t_1subtract2'][rf_cut] = time_shifts[pair_index]
-                        file['time_delays'][filter_string]['hpol_max_corr_1subtract2'][rf_cut] = corrs[pair_index]
-                    elif numpy.all(pair == numpy.array([2,6])):
-                        file['time_delays'][filter_string]['hpol_t_1subtract3'][rf_cut] = time_shifts[pair_index]
-                        file['time_delays'][filter_string]['hpol_max_corr_1subtract3'][rf_cut] = corrs[pair_index]
-                    elif numpy.all(pair == numpy.array([4,6])):
-                        file['time_delays'][filter_string]['hpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
-                        file['time_delays'][filter_string]['hpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
+                    for pair_index, pair in enumerate(pairs):
+                        if numpy.all(pair == numpy.array([0,2])):
+                            file['time_delays'][filter_string]['hpol_t_0subtract1'][rf_cut] = time_shifts[pair_index]
+                            file['time_delays'][filter_string]['hpol_max_corr_0subtract1'][rf_cut] = corrs[pair_index]
+                        elif numpy.all(pair == numpy.array([0,4])):
+                            file['time_delays'][filter_string]['hpol_t_0subtract2'][rf_cut] = time_shifts[pair_index]
+                            file['time_delays'][filter_string]['hpol_max_corr_0subtract2'][rf_cut] = corrs[pair_index]
+                        elif numpy.all(pair == numpy.array([0,6])):
+                            file['time_delays'][filter_string]['hpol_t_0subtract3'][rf_cut] = time_shifts[pair_index]
+                            file['time_delays'][filter_string]['hpol_max_corr_0subtract3'][rf_cut] = corrs[pair_index]
+                        elif numpy.all(pair == numpy.array([2,4])):
+                            file['time_delays'][filter_string]['hpol_t_1subtract2'][rf_cut] = time_shifts[pair_index]
+                            file['time_delays'][filter_string]['hpol_max_corr_1subtract2'][rf_cut] = corrs[pair_index]
+                        elif numpy.all(pair == numpy.array([2,6])):
+                            file['time_delays'][filter_string]['hpol_t_1subtract3'][rf_cut] = time_shifts[pair_index]
+                            file['time_delays'][filter_string]['hpol_max_corr_1subtract3'][rf_cut] = corrs[pair_index]
+                        elif numpy.all(pair == numpy.array([4,6])):
+                            file['time_delays'][filter_string]['hpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
+                            file['time_delays'][filter_string]['hpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
 
-                    elif numpy.all(pair == numpy.array([1,3])):
-                        file['time_delays'][filter_string]['vpol_t_0subtract1'][rf_cut] = time_shifts[pair_index]
-                        file['time_delays'][filter_string]['vpol_max_corr_0subtract1'][rf_cut] = corrs[pair_index]
-                    elif numpy.all(pair == numpy.array([1,5])):
-                        file['time_delays'][filter_string]['vpol_t_0subtract2'][rf_cut] = time_shifts[pair_index]
-                        file['time_delays'][filter_string]['vpol_max_corr_0subtract2'][rf_cut] = corrs[pair_index]
-                    elif numpy.all(pair == numpy.array([1,7])):
-                        file['time_delays'][filter_string]['vpol_t_0subtract3'][rf_cut] = time_shifts[pair_index]
-                        file['time_delays'][filter_string]['vpol_max_corr_0subtract3'][rf_cut] = corrs[pair_index]
-                    elif numpy.all(pair == numpy.array([3,5])):
-                        file['time_delays'][filter_string]['vpol_t_1subtract2'][rf_cut] = time_shifts[pair_index]
-                        file['time_delays'][filter_string]['vpol_max_corr_1subtract2'][rf_cut] = corrs[pair_index]
-                    elif numpy.all(pair == numpy.array([3,7])):
-                        file['time_delays'][filter_string]['vpol_t_1subtract3'][rf_cut] = time_shifts[pair_index]
-                        file['time_delays'][filter_string]['vpol_max_corr_1subtract3'][rf_cut] = corrs[pair_index]
-                    elif numpy.all(pair == numpy.array([5,7])):
-                        file['time_delays'][filter_string]['vpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
-                        file['time_delays'][filter_string]['vpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
-
+                        elif numpy.all(pair == numpy.array([1,3])):
+                            file['time_delays'][filter_string]['vpol_t_0subtract1'][rf_cut] = time_shifts[pair_index]
+                            file['time_delays'][filter_string]['vpol_max_corr_0subtract1'][rf_cut] = corrs[pair_index]
+                        elif numpy.all(pair == numpy.array([1,5])):
+                            file['time_delays'][filter_string]['vpol_t_0subtract2'][rf_cut] = time_shifts[pair_index]
+                            file['time_delays'][filter_string]['vpol_max_corr_0subtract2'][rf_cut] = corrs[pair_index]
+                        elif numpy.all(pair == numpy.array([1,7])):
+                            file['time_delays'][filter_string]['vpol_t_0subtract3'][rf_cut] = time_shifts[pair_index]
+                            file['time_delays'][filter_string]['vpol_max_corr_0subtract3'][rf_cut] = corrs[pair_index]
+                        elif numpy.all(pair == numpy.array([3,5])):
+                            file['time_delays'][filter_string]['vpol_t_1subtract2'][rf_cut] = time_shifts[pair_index]
+                            file['time_delays'][filter_string]['vpol_max_corr_1subtract2'][rf_cut] = corrs[pair_index]
+                        elif numpy.all(pair == numpy.array([3,7])):
+                            file['time_delays'][filter_string]['vpol_t_1subtract3'][rf_cut] = time_shifts[pair_index]
+                            file['time_delays'][filter_string]['vpol_max_corr_1subtract3'][rf_cut] = corrs[pair_index]
+                        elif numpy.all(pair == numpy.array([5,7])):
+                            file['time_delays'][filter_string]['vpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
+                            file['time_delays'][filter_string]['vpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
+                else:
+                    print('No RF signals, skipping calculation.')
                 file.close()
         else:
             print('filename is None, indicating empty tree.  Skipping run %i'%run)
@@ -352,4 +360,6 @@ if __name__=="__main__":
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
+        sys.exit(1)
 
+    sys.exit(0)

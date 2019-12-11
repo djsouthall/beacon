@@ -85,6 +85,7 @@ def countSimilar(delays,similarity_atol=2,verbose=True):
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
+        return e
 
 if __name__=="__main__":
     if len(sys.argv) == 2:
@@ -99,6 +100,16 @@ if __name__=="__main__":
         save = True
         plot = False
         reader = Reader(datapath,run)
+        try:
+            print(reader.status())
+        except Exception as e:
+            print('Status Tree not present.  Returning Error.')
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+            sys.exit(1)
         filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.
         if filename is not None:
             with h5py.File(filename, 'a') as file:
@@ -147,15 +158,19 @@ if __name__=="__main__":
                                 else:
                                     print('Values in %s_fraction of %s will be overwritten by this analysis script.'%(pol,filename))
 
+                            print(list(file['time_delays'][tdset].keys()))
                             try:
                                 delays = numpy.vstack((file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,0,1)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,0,2)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,0,3)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,1,2)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,1,3)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,2,3)][...])).T
                             except Exception as e:
                                 print('\nError in %s'%inspect.stack()[0][3])
+                                print('In the past this error has indicated corrupt data.')
                                 print(e)
                                 exc_type, exc_obj, exc_tb = sys.exc_info()
                                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                                 print(exc_type, fname, exc_tb.tb_lineno)
-
+                                sys.exit(1)
+                            #import pdb; pdb.set_trace()
+                            #continue
                             similarity_count = countSimilar(delays)
                             similarity_fraction = similarity_count/len(eventids)
                             if save == True:
@@ -173,4 +188,6 @@ if __name__=="__main__":
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
+        sys.exit(1)
+    sys.exit(0)
 

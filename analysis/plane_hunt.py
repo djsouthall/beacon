@@ -95,7 +95,7 @@ if __name__ == '__main__':
 
     runs = numpy.arange(1646,1680) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
 
-    colormap_mode = 6
+    colormap_mode = 0
     similarity_count_cut_limit = 1000
 
     #filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0'
@@ -114,7 +114,7 @@ if __name__ == '__main__':
                         pol = 'hpol'
                         #print(list(file.keys()))
                         #print(list(file['time_delays'].keys()))
-                        rough_dir_cut = file['map_direction'][map_filter_string]['hpol_ENU_zenith'][...] < 100.0 #Above horizen.  Don't trust calibration enough for this to be perfect.
+                        rough_dir_cut = file['map_direction'][map_filter_string]['hpol_ENU_zenith'][...] < 200.0 #CURRENTLY ALL ANGLES, BASICALLY DISABLING #Above horizen.  Don't trust calibration enough for this to be perfect.
                         
                         rf_cut = file['trigger_type'][...] == 2 #This is RF triggers.
                         inband_cut = ~numpy.logical_and(numpy.any(file['inband_peak_freq_MHz'][...],axis=1) < 49, file['trigger_type'][...] > 48) #Cutting out known CW
@@ -199,9 +199,12 @@ if __name__ == '__main__':
                             suptitle = 'Impulsivity'
                             norm = None
                         elif colormap_mode == 7:
+                            all_hpol_corr_vals = numpy.vstack((file['time_delays'][filter_string]['hpol_max_corr_0subtract1'][...][total_loading_cut][cut],file['time_delays'][filter_string]['hpol_max_corr_0subtract2'][...][total_loading_cut][cut],file['time_delays'][filter_string]['hpol_max_corr_0subtract3'][...][total_loading_cut][cut],file['time_delays'][filter_string]['hpol_max_corr_1subtract2'][...][total_loading_cut][cut],file['time_delays'][filter_string]['hpol_max_corr_1subtract3'][...][total_loading_cut][cut],file['time_delays'][filter_string]['hpol_max_corr_2subtract3'][...][total_loading_cut][cut]))
+                            c = numpy.max(all_hpol_corr_vals, axis=0)
                             #something to do with correlation values, max for all baselines?
                             #file['hpol_max_corr_1subtract2'][...][total_loading_cut][cut]
-                            print('hpol_max_corr_1subtract2')
+                            suptitle = 'Max Correlation Value (All Hpol Baselines)'
+                            norm = None
                         else:
                             c = numpy.ones_like(cut)
                             suptitle = ''
