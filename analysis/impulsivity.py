@@ -60,7 +60,7 @@ if __name__=="__main__":
     final_corr_length = 2**15
     align_method = 0
     max_method = 0
-    impulsivity_window = 750
+    impulsivity_window = 400
 
     hpol_pairs  = numpy.array(list(itertools.combinations((0,2,4,6), 2)))
     vpol_pairs  = numpy.array(list(itertools.combinations((1,3,5,7), 2)))

@@ -584,9 +584,16 @@ class TimeDelayCalculator(FFTPrepper):
         try:
             if print_warning:
                 print('Note that calculateTimeDelays expects the ffts to be the same format as those loaded with loadFilteredFFTs().  If this is not the case the returned time shifts may be incorrect.')
+
             corrs_fft = numpy.multiply((ffts[self.pairs[:,0]].T/numpy.std(ffts[self.pairs[:,0]],axis=1)).T,(numpy.conj(ffts[self.pairs[:,1]]).T/numpy.std(numpy.conj(ffts[self.pairs[:,1]]),axis=1)).T) / (len(self.waveform_times_corr)//2 + 1)
+
+            if ~numpy.all(numpy.isfinite(corrs_fft)):
+                import pdb; pdb.set_trace()
+
             corrs = numpy.fft.fftshift(numpy.fft.irfft(corrs_fft,axis=1,n=self.final_corr_length),axes=1) * (self.final_corr_length//2) #Upsampling and keeping scale
 
+            if ~numpy.all(numpy.isfinite(corrs)):
+                import pdb; pdb.set_trace()
 
             if align_method == 0:
                 indices = numpy.argmax(corrs,axis=1)

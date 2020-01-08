@@ -42,21 +42,22 @@ matplotlib.rcParams['figure.figsize'] = [10, 11]
 matplotlib.rcParams.update({'font.size': 16})
 
 if __name__=="__main__":
+    default_align_method = 0
     if len(sys.argv) > 1:
         run = int(sys.argv[1])
         if len(sys.argv) > 2:
             align_method = int(sys.argv[2])
         else:
-            align_method = 8#4#0#4#8
+            align_method = default_align_method#4#0#4#8
         print('Using align_method = %i'%align_method)
     else:
         run = 1702
-        align_method = 8#4#0#4#8
+        align_method = default_align_method#4#0#4#8
 
     datapath = os.environ['BEACON_DATA']
 
-    crit_freq_low_pass_MHz = 70 #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = 4
+    crit_freq_low_pass_MHz = None #This new pulser seems to peak in the region of 85 MHz or so
+    low_pass_filter_order = None
 
     crit_freq_high_pass_MHz = None
     high_pass_filter_order = None
