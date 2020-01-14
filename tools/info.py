@@ -17,6 +17,7 @@ import sys
 import os
 import inspect
 import numpy
+import csv
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.field_fox as ff
 import pymap3d as pm
@@ -617,20 +618,12 @@ def loadBeamDelays():
     are all positive such that the antenna that has 0 delay is the antenna that you expect
     the signal to arrive at last (all others are delayed until it's arrival).
     '''
-    hpol_delays_file = ''
+    hpol_delays_file = os.environ['BEACON_ANALYSIS_DIR'] + 'tools/beam_definitions/hpol_beam_delays.csv'
+    vpol_delays_file = os.environ['BEACON_ANALYSIS_DIR'] + 'tools/beam_definitions/vpol_beam_delays.csv'
     header = 1
-    with open(hpol_delays_file,'r') as file:
-        lines = file.readlines()
-        vals = []
-        for index, line in enumerate(lines):
-            if index > header - 1:
-                print(line)
-                '''
-                line = line.replace('\n','').split(delimeter)
-                line[1] = line[0].replace(' ','') + '_' + line[1].replace(' ','') #consolodating names to 1 value.
-                line.pop(0) #removing redundent first column.
-                vals.append( line )
-                '''
+    hpol_vals = numpy.loadtxt(hpol_delays_file,delimiter=',')
+    vpol_vals = numpy.loadtxt(hpol_delays_file,delimiter=',')
+    return hpol_vals, vpol_vals
 
 '''
 MAKE AN EXPECTED PULSER TIME DELAY FUNCTION
@@ -640,6 +633,7 @@ if __name__ == '__main__':
     try:
         print('Loaded run info dictionaries.')
         plt.ion()
+        loadBeamDelays()
 
     except Exception as e:
         print('Error in main loop.')
