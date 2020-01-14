@@ -258,6 +258,97 @@ class BeamMaker(Correlator):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def calculateBeams(self,reader,eventid):
+        '''
+        This is not a real function, really.  It is storing relevant code for calculating beams from an event
+        using pre-saved beams.  This code was pulled from low_snr_search.py
+        '''
+        hpol_beam_delays = info.loadBeamDelays()[0]
+        reader.setEntry(eventid)
+        t = reader.t()
+
+        max_powers = numpy.zeros(hpol_beam_delays.shape[0])
+
+        power_sum_step = 8
+        N_original = int(len(t))
+        N_new = int(numpy.ceil(N_original/power_sum_step)*power_sum_step)
+        padded_wf = numpy.zeros((4,N_new))
+        new_t = numpy.arange(N_new)*(t[1]-t[0])
+
+        for i in range(4):
+            padded_wf[i][0:N_original] = reader.wf(2*i)
+
+        binned_8_indices_A = numpy.arange(N_new).reshape((-1,power_sum_step)).astype(int)
+        binned_8_indices_B = numpy.roll(numpy.arange(N_new).reshape((-1,power_sum_step)),-1,axis=0).astype(int)
+
+
+        rolled_wf = numpy.zeros_like(padded_wf)
+        plt.figure()
+        for beam_index, beam in enumerate(hpol_beam_delays):
+            #delay_ant0 = beam[3]
+            #delay_ant1 = beam[4]
+            #delay_ant2 = beam[5]
+            #delay_ant3 = beam[6]
+
+            for i in range(4):
+                rolled_wf[i] = numpy.roll(padded_wf[i],int(beam[3 + i]))
+
+            summed_waveforms = numpy.sum(rolled_wf,axis=0)
+            power = summed_waveforms**2
+            power_sum = numpy.sum(power[binned_8_indices_A],axis=1) + numpy.sum(power[binned_8_indices_B],axis=1)
+            max_powers[beam_index] = numpy.max(power_sum)
+            plt.plot(power_sum,label='Beam %i\nZen = %0.1f deg\nAz = %0.1f deg'%(beam_index,hpol_beam_delays[beam_index,1],hpol_beam_delays[beam_index,2]))
+
+        plt.xlabel('Power Sum Bins')
+        plt.ylabel('Summed Power (adu^2)')
+        plt.legend()
+
+        for beam_index in numpy.argsort(max_powers)[::-1][0:5]:
+            print('Beam %i\tPowerSum = %i\nZen = %0.1f deg\tAz = %0.1f deg'%(beam_index,max_powers[beam_index],hpol_beam_delays[beam_index,1],hpol_beam_delays[beam_index,2]))
+
+        best_beam = numpy.argmax(max_powers)
+
+        beam_index = best_beam
+        beam = hpol_beam_delays[best_beam]
+        for i in range(4):
+            rolled_wf[i] = numpy.roll(padded_wf[i],int(beam[3 + i]))
+
+        summed_waveforms = numpy.sum(rolled_wf,axis=0)
+        power = summed_waveforms**2
+        power_sum = numpy.sum(power[binned_8_indices_A],axis=1) + numpy.sum(power[binned_8_indices_B],axis=1)
+        max_powers[beam_index] = numpy.max(power_sum)
+
+        fig = plt.figure()
+        plt.suptitle('Eventid: %i, Triggered on Beam: %i'%(eventid,best_beam))
+        plt.subplot(3,1,1)
+        for wf_index, wf in enumerate(padded_wf):
+            plt.plot(new_t,wf,label='hpol %i'%wf_index)
+
+        extra_t_to_fit_legend = 400
+        plt.xlabel('ns')
+        plt.ylabel('adu')
+        plt.xlim(min(t),max(t) + extra_t_to_fit_legend)
+        plt.legend(loc='upper right')
+
+
+        plt.subplot(3,1,2)
+        for wf_index, wf in enumerate(rolled_wf):
+            plt.plot(new_t,wf,label='Aligned hpol %i'%wf_index)
+
+        plt.xlabel('ns')
+        plt.ylabel('adu')
+        plt.xlim(min(t),max(t) + extra_t_to_fit_legend)
+        plt.legend(loc='upper right')
+
+        plt.subplot(3,1,3)
+        plt.plot(power_sum,label='Beam %i\nZen = %0.1f deg\nAz = %0.1f deg'%(best_beam,hpol_beam_delays[best_beam,1],hpol_beam_delays[best_beam,2]))
+
+        plt.xlabel('Power Sum Bins')
+        plt.ylabel('Summed Power (adu^2)')
+        plt.xlim(0,len(power_sum)* (1+extra_t_to_fit_legend/max(t)))
+        plt.legend(loc='upper right')
+
+
 if __name__=="__main__":
     #plt.close('all')
     use_pulser=False
