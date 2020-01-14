@@ -119,7 +119,7 @@ if __name__=="__main__":
 
     plot_filter = False
     plot_multiple = False
-    plot_aligned_wf = False
+    plot_aligned_wf = True
     plot_averaged = True
     plot_maps = False
     plot_td = True
@@ -259,7 +259,7 @@ if __name__=="__main__":
                             fit_time_delays.append(popt[1])
                     fit_time_delays = numpy.array(fit_time_delays)
                     print(fit_time_delays)
-                    numpy.savetxt('./time_delays_77MHz.csv',fit_time_delays, delimiter=",")
+                    #numpy.savetxt('./time_delays_77MHz.csv',fit_time_delays, delimiter=",")
 
                 file.close()
         else:

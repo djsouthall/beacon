@@ -19,7 +19,8 @@ if __name__ == "__main__":
     username = 'dsouthall'
     #mem = '16G'
     partition = 'broadwl'
-    runs = numpy.arange(1650,1675)#[::-1]
+    #runs = numpy.arange(1650,1675)#[::-1]
+    runs = [1790]
     #runs = numpy.array([1665,1666,1667,1682,1685,1689,1690,1691,1698])
 
     ###--------###
@@ -31,7 +32,7 @@ if __name__ == "__main__":
 
         batch = 'sbatch --partition=%s --job-name=%s '%(partition,jobname)
 
-        command = os.environ['BEACON_ANALYSIS_DIR'] + 'analysis/similarity.py %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
+        command = os.environ['BEACON_ANALYSIS_DIR'] + 'tools/data_handler.py %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
 
         command_queue = batch + command
     

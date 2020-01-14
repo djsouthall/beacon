@@ -609,6 +609,28 @@ def loadPulserEventids(remove_ignored=False):
     return known_pulser_ids
 
 
+def loadBeamDelays():
+    '''
+    This will load the beams and beam delays that are currently selected as the best selction.
+    These were determined using the define_beams.py script.  The delays are given in integer
+    values of how many samples to delay each antenna's signal by for that beam.  The values
+    are all positive such that the antenna that has 0 delay is the antenna that you expect
+    the signal to arrive at last (all others are delayed until it's arrival).
+    '''
+    hpol_delays_file = ''
+    header = 1
+    with open(hpol_delays_file,'r') as file:
+        lines = file.readlines()
+        vals = []
+        for index, line in enumerate(lines):
+            if index > header - 1:
+                print(line)
+                '''
+                line = line.replace('\n','').split(delimeter)
+                line[1] = line[0].replace(' ','') + '_' + line[1].replace(' ','') #consolodating names to 1 value.
+                line.pop(0) #removing redundent first column.
+                vals.append( line )
+                '''
 
 '''
 MAKE AN EXPECTED PULSER TIME DELAY FUNCTION
