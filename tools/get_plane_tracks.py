@@ -71,7 +71,7 @@ def getTracks(start,stop,min_approach_cut_km,hour_window = 12):
 
 
             vals = numpy.zeros(sum(cut),dtype=dtype)
-            vals['names'] = numpy.array(file['names'][cut],dtype='U32')
+            vals['names'] = numpy.array([s.split('_')[-1] for s in numpy.array(file['names'][cut],dtype='U32')]) #Only using the hex portion.  
             vals['timestamps'] = numpy.array(file['timestamps'][cut],dtype=float)
             vals['lat'] = numpy.array(file['lat'][cut],dtype=float)
             vals['lon'] = numpy.array(file['lon'][cut],dtype=float)
@@ -197,6 +197,8 @@ if __name__ == '__main__':
 
 
     plt.figure()
+    existing_locations_A = numpy.array([])
+    existing_locations_B = numpy.array([])
     for flight in list(flight_tracks_ENU.keys()):
         track = flight_tracks_ENU[flight]
         tof, dof, dt = getTimeDelaysFromTrack(track)
@@ -208,31 +210,75 @@ if __name__ == '__main__':
             plot_distance_cut = numpy.ones_like(distance,dtype=bool)
 
         
-        plt.subplot(2,1,1)
+        ax = plt.subplot(2,1,1)
         ant_i = 0
         ant_j = 2        
+        x = (track[plot_distance_cut,3] - start)/60
+        y = dt['expected_time_differences_hpol'][(ant_i, ant_j)][plot_distance_cut]
+        plt.plot(x,y,linestyle = '--',alpha=0.5)
+        text_color = plt.gca().lines[-1].get_color()
+        plt.scatter(x,y,c=distance[plot_distance_cut],cmap=cm,norm=norm)
 
-        plt.plot((track[plot_distance_cut,3] - start)/60,dt['expected_time_differences_hpol'][(ant_i, ant_j)][plot_distance_cut],linestyle = '--',alpha=0.5)
-        plt.scatter((track[plot_distance_cut,3] - start)/60,dt['expected_time_differences_hpol'][(ant_i, ant_j)][plot_distance_cut],c=distance[plot_distance_cut],cmap=cm,norm=norm)
+        #Attempt at avoiding overlapping text.
+        text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
+        if existing_locations_A.size != 0:
+            if len(numpy.shape(existing_locations_A)) == 1:
+                dist = numpy.sqrt((text_loc[0]-existing_locations_A[0])**2 + (text_loc[1]-existing_locations_A[1])**2) #weird units but works
+                while dist < 15:
+                    text_loc[1] -= 1
+                    dist = numpy.sqrt((text_loc[0]-existing_locations_A[0])**2 + (text_loc[1]-existing_locations_A[1])**2) #weird units but works
+            else:
+                dist = min(numpy.sqrt((existing_locations_A[:,0] - text_loc[0])**2 + (existing_locations_A[:,1] - text_loc[1])**2))
+                while dist < 15:
+                    text_loc[1] -= 1
+                    dist = min(numpy.sqrt((existing_locations_A[:,0] - text_loc[0])**2 + (existing_locations_A[:,1] - text_loc[1])**2)) #weird units but works
+            existing_locations_A = numpy.vstack((existing_locations_A,text_loc))
+        else:
+            existing_locations_A = text_loc           
 
-        plt.subplot(2,1,2)
+        plt.text(text_loc[0],text_loc[1],flight,color=text_color,withdash=True)
+
+
+
+        plt.subplot(2,1,2,sharex=ax)
         ant_i = 1
         ant_j = 3 
+        x = (track[plot_distance_cut,3] - start)/60
+        y = dt['expected_time_differences_hpol'][(ant_i, ant_j)][plot_distance_cut]
+        plt.plot(x,y,linestyle = '--',alpha=0.5)
+        text_color = plt.gca().lines[-1].get_color()
+        plt.scatter(x,y,c=distance[plot_distance_cut],cmap=cm,norm=norm)
 
-        plt.plot((track[plot_distance_cut,3] - start)/60,dt['expected_time_differences_hpol'][(ant_i, ant_j)][plot_distance_cut],linestyle = '--',alpha=0.5)
-        plt.scatter((track[plot_distance_cut,3] - start)/60,dt['expected_time_differences_hpol'][(ant_i, ant_j)][plot_distance_cut],c=distance[plot_distance_cut],cmap=cm,norm=norm)
+        #Attempt at avoiding overlapping text.
+        text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
+        if existing_locations_B.size != 0:
+            if len(numpy.shape(existing_locations_B)) == 1:
+                dist = numpy.sqrt((text_loc[0]-existing_locations_B[0])**2 + (text_loc[1]-existing_locations_B[1])**2) #weird units but works
+                while dist < 15:
+                    text_loc[1] -= 1
+                    dist = numpy.sqrt((text_loc[0]-existing_locations_B[0])**2 + (text_loc[1]-existing_locations_B[1])**2) #weird units but works
+            else:
+                dist = min(numpy.sqrt((existing_locations_B[:,0] - text_loc[0])**2 + (existing_locations_B[:,1] - text_loc[1])**2))
+                while dist < 15:
+                    text_loc[1] -= 1
+                    dist = min(numpy.sqrt((existing_locations_B[:,0] - text_loc[0])**2 + (existing_locations_B[:,1] - text_loc[1])**2)) #weird units but works
+            existing_locations_B = numpy.vstack((existing_locations_B,text_loc))
+        else:
+            existing_locations_B = text_loc           
+
+        plt.text(text_loc[0],text_loc[1],flight,color=text_color,withdash=True)
 
 
 
 
     plt.subplot(2,1,1)        
     plt.xlabel('Time Since Timestamp=%0.1f (min)'%start)
-    plt.ylabel('Expected Observed Time Difference B/w Hpol %i and %i (ns)'%(0,2))
+    plt.ylabel('Expected Observed Time Difference\nB/w Hpol %i and %i (ns)'%(0,2))
     cbar = plt.colorbar()
     cbar.set_label('Distance From BEACON (km)', rotation=90)
 
-    plt.subplot(2,1,2)        
+    plt.subplot(2,1,2,sharex=ax)        
     plt.xlabel('Time Since Timestamp=%0.1f (min)'%start)
-    plt.ylabel('Expected Observed Time Difference B/w Hpol %i and %i (ns)'%(1,3))
+    plt.ylabel('Expected Observed Time Difference\nB/w Hpol %i and %i (ns)'%(1,3))
     cbar = plt.colorbar()
     cbar.set_label('Distance From BEACON (km)', rotation=90)
