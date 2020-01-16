@@ -121,9 +121,9 @@ def getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_i
             # x, y, z, t
             flight_tracks_ENU[unique_flight] = numpy.vstack((numpy.asarray(enu),ts[None,:])).T[sorted_track_indices]
 
-        return flight_tracks_ENU
+        return flight_tracks_ENU, all_vals
     else:
-        return []
+        return [], []
 
 def getTimeDelaysFromTrack(track):
     '''
@@ -176,9 +176,9 @@ if __name__ == '__main__':
     time = filenameToDatetime(files[100]) #random time just to test code. 
     start = time.timestamp(),
     stop = time.timestamp()+60*60
-    min_approach_cut_km = 25 #km
+    min_approach_cut_km = 500 #km
     #unique_flights,all_vals = getTracks(start,stop,min_approach_cut_km,hour_window = 12)
-    flight_tracks_ENU = getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 0,flights_of_interest=[])
+    flight_tracks_ENU, all_vals = getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 0,flights_of_interest=[])
 
 
     cm = plt.cm.get_cmap('viridis')
@@ -196,9 +196,42 @@ if __name__ == '__main__':
         norm = plt.Normalize(0,100)
 
 
+    #Plot lonlat
+    '''
+    Make a plot that hopefully illustrates where planes are visible for us.  Why are the tracks
+    disappear where they do?
+    TODO
+    '''
+    plt.figure()
+    zero = info.loadAntennaZeroLocation()
+    plt.scatter(all_vals['lon'],all_vals['lat'],alpha=0.5,s=1)
+    #plt.scatter(all_vals['lon'][all_vals['names'] == 'a14c0f'],all_vals['lat'][all_vals['names'] == 'a14c0f'],c=all_vals['timestamps'][all_vals['names'] == 'a14c0f'],alpha=0.5,s=1)
+    #plt.colorbar()    
+    plt.scatter(zero[1],zero[0],c='r')
+
+
+    #Plot tracks
     plt.figure()
     existing_locations_A = numpy.array([])
     existing_locations_B = numpy.array([])
+
+    use_north_south = False
+
+    #pairs = (0,1),(0,2),(0,3),(1,2),(1,3),(2,3)
+    #NS Pairs = (0,2), (1,3)
+    #EW Pairs = (0,1), (2,3)
+    if use_north_south == True:
+        ant_i = 0
+        ant_j = 2
+        ant_k = 1
+        ant_l = 3
+    else:  
+        ant_i = 0
+        ant_j = 1
+        ant_k = 2
+        ant_l = 3
+ 
+
     for flight in list(flight_tracks_ENU.keys()):
         track = flight_tracks_ENU[flight]
         tof, dof, dt = getTimeDelaysFromTrack(track)
@@ -211,8 +244,6 @@ if __name__ == '__main__':
 
         
         ax = plt.subplot(2,1,1)
-        ant_i = 0
-        ant_j = 2        
         x = (track[plot_distance_cut,3] - start)/60
         y = dt['expected_time_differences_hpol'][(ant_i, ant_j)][plot_distance_cut]
         plt.plot(x,y,linestyle = '--',alpha=0.5)
@@ -241,10 +272,8 @@ if __name__ == '__main__':
 
 
         plt.subplot(2,1,2,sharex=ax)
-        ant_i = 1
-        ant_j = 3 
         x = (track[plot_distance_cut,3] - start)/60
-        y = dt['expected_time_differences_hpol'][(ant_i, ant_j)][plot_distance_cut]
+        y = dt['expected_time_differences_hpol'][(ant_k, ant_l)][plot_distance_cut]
         plt.plot(x,y,linestyle = '--',alpha=0.5)
         text_color = plt.gca().lines[-1].get_color()
         plt.scatter(x,y,c=distance[plot_distance_cut],cmap=cm,norm=norm)

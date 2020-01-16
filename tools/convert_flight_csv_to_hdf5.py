@@ -129,9 +129,9 @@ def getENUTrackDict(start,stop,hour_window = 12,flights_of_interest=[]):
             # x, y, z, t
             flight_tracks_ENU[unique_flight.replace(' ','')] = numpy.vstack((numpy.asarray(enu),ts[None,:])).T
 
-        return flight_tracks_ENU
+        return flight_tracks_ENU, all_vals
     else:
-        return []
+        return [], []
 
 def getTimeDelaysFromTrack(track):
     '''

@@ -18,6 +18,7 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret #Must be imported before matplotlib or else plots don't load.
 import tools.clock_correct as cc
+from objects.fftmath import TemplateCompareTool
 import tools.info as info
 from tools.data_handler import createFile
 from objects.fftmath import TimeDelayCalculator
@@ -31,6 +32,8 @@ import warnings
 import h5py
 warnings.simplefilter(action='ignore', category=FutureWarning)
 plt.ion()
+
+datapath = os.environ['BEACON_DATA']
 
 cable_delays = info.loadCableDelays()
 
@@ -92,6 +95,25 @@ def countSimilar(delays,similarity_atol=2,verbose=True):
 from matplotlib.widgets import LassoSelector
 from matplotlib.path import Path
 
+def alignSelectedEvents(run, eventids,plot_aligned_wf=True,save_template=False):
+    '''
+    My plan is for this to be called when some events are circled in the plot.
+    It will take those wf, align them, and plot the averaged waveforms.  No
+    filters will be applied. 
+    '''
+    _reader = Reader(datapath,run)
+    tct = TemplateCompareTool(_reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,apply_phase_response=False)
+    times, averaged_waveforms = tct.averageAlignedSignalsPerChannel( eventids, align_method=0, template_eventid=eventids[0], plot=plot_aligned_wf,event_type=None)
+    
+    resampled_averaged_waveforms_original_length = numpy.zeros((8,len(_reader.t())))
+    for channel in range(8):
+        resampled_averaged_waveforms_original_length[channel] = scipy.interpolate.interp1d(times,averaged_waveforms[channel],kind='cubic',bounds_error=False,fill_value=0)(reader.t())
+
+    if save_template:
+        print('Need to implement save feature with auto naming.')
+        #numpy.savetxt('./template_77MHz_type%i.csv'%(event_type),resampled_averaged_waveforms_original_length, delimiter=",")
+    return resampled_averaged_waveforms_original_length
+
 class SelectFromCollection(object):
     """
     This is an adapted bit of code that prints out information
@@ -120,34 +142,46 @@ class SelectFromCollection(object):
         self.lasso = LassoSelector(ax, onselect=self.onselect)
         self.ind = []
 
+
+
     def onselect(self, verts):
         path = Path(verts)
         self.ind = numpy.nonzero(path.contains_points(self.xys))[0]
         print('Selected run/eventids:')
         print(repr(self.id[self.ind]))
+        event_info = self.id[self.ind]
+        print(event_info)
         print('Coordinates:')
         print(repr(self.xys[self.ind]))
         self.canvas.draw_idle()
+
+        runs, counts = numpy.unique(self.id[self.ind][:,0],return_counts=True)
+        run = runs[numpy.argmax(counts)]
+        print('Only calculating template from run with most points circled: run %i with %i events circled'%(run,max(counts)))
+        eventids = self.id[self.ind][:,1][self.id[self.ind][:,0] == run]
+        alignSelectedEvents(run, eventids,plot_aligned_wf=True,save_template=False)
+
 
     def disconnect(self):
         self.lasso.disconnect_events()
         self.canvas.draw_idle()
 
 
+
+
 if __name__ == '__main__':
     #plt.close('all')
-    datapath = os.environ['BEACON_DATA']
     #run = 1652
 
-    runs = numpy.arange(1650,1652) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
+    runs = numpy.arange(1650,1653) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
 
     colormap_mode = 6
-    similarity_count_cut_limit = 1
+    similarity_count_cut_limit = 100
 
-    #filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0'
+    filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0'
     #filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-corlen_32768-align_0'
     #filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_4'
-    filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0'
+    #filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0'
 
     cut77MHz_filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0'
 
@@ -161,6 +195,7 @@ if __name__ == '__main__':
                     try:
                         #print(list(file['map_direction'].keys()) )
                         dsets = list(file.keys()) #Existing datasets
+                        print(dsets)
                         n_events_total = len(file['eventids'][...])
                         pol = 'hpol'
                         #print(list(file.keys()))
@@ -171,15 +206,20 @@ if __name__ == '__main__':
 
                         cut77MHz_delays = numpy.sum(time_delays_for_77MHz_cut - template_77MHz_time_delays[None,0:6] < 1,axis=1) < 5 #5 of the time delays within 2 ns of the template direction.
 
+
+
+
+
                         rough_dir_cut = file['map_direction'][map_filter_string]['hpol_ENU_zenith'][...] < 180.0 #CURRENTLY ALL ANGLES, BASICALLY DISABLING #Above horizen.  Don't trust calibration enough for this to be perfect.
                         
                         rf_cut = file['trigger_type'][...] == 2 #This is RF triggers.
                         inband_cut = ~numpy.logical_and(numpy.any(file['inband_peak_freq_MHz'][...],axis=1) < 49, file['trigger_type'][...] > 48) #Cutting out known CW
                         total_loading_cut = numpy.logical_and(numpy.logical_and(numpy.logical_and(rf_cut,inband_cut),rough_dir_cut),cut77MHz_delays)
-                        import pdb; pdb.set_trace()
                         eventids = file['eventids'][total_loading_cut]
                         calibrated_trigtime = file['calibrated_trigtime'][total_loading_cut]
 
+                        correlation_77MHz = numpy.max(numpy.vstack((numpy.max(file['correlation_77MHz_type0'][...][total_loading_cut,:],axis=1),numpy.max(file['correlation_77MHz_type1'][...][total_loading_cut,:],axis=1))),axis=0)
+                        correlation_77MHz_cut = correlation_77MHz < 0.7
 
                         delays = numpy.vstack((file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,1)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,2)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,3)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(1,2)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(1,3)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(2,3)][total_loading_cut])).T
                         
@@ -195,6 +235,7 @@ if __name__ == '__main__':
                         ignore_unreal = numpy.any(abs(delays) > 300,axis=1) #might be too strict for ones that don't have 4 visible pulses.
                         similarity_cut = similarity_count < similarity_count_cut_limit #Less than this number of similar events in a run to show up.
                         cut = numpy.logical_and(~ignore_unreal,similarity_cut) #Expand for more cuts
+                        cut = numpy.logical_and(cut,correlation_77MHz_cut)
 
                         try:
                             impulsivity_hpol = file['impulsivity'][filter_string]['hpol'][...][total_loading_cut]
@@ -246,8 +287,8 @@ if __name__ == '__main__':
                             suptitle = 'Color Denotes Fraction of Events in Run That Resemble This Event'
                             norm = LogNorm()
                         elif colormap_mode == 5:
-                            c = similarity_count[cut]/max(similarity_count[cut])
-                            suptitle = 'Normalized Similarity Count'
+                            c = similarity_count[cut]
+                            suptitle = 'Similarity Count'
                             norm = None
                         elif colormap_mode == 6:
                             impulsivity_hpol = file['impulsivity'][filter_string]['hpol'][...][total_loading_cut][cut]
@@ -262,6 +303,11 @@ if __name__ == '__main__':
                             #file['hpol_max_corr_1subtract2'][...][total_loading_cut][cut]
                             suptitle = 'Max Correlation Value (All Hpol Baselines)'
                             norm = None
+                        elif colormap_mode == 8:
+                            c = correlation_77MHz[cut]
+                            suptitle = 'Max Correlation Value with 77MHz Template'
+                            norm = None
+                            
                         else:
                             c = numpy.ones_like(cut)
                             suptitle = ''
@@ -393,82 +439,26 @@ if __name__ == '__main__':
             cut_eventids = total_eventids[hist_cut]
             cut_runnum = total_runnum[hist_cut]
 
-            #NORTH SOUTH SENSITIVE PLOT
-            #pairs = (0,1),(0,2),(0,3),(1,2),(1,3),(2,3)
-            #NS Pairs = (0,2), (1,3)
-            #EW Pairs = (0,1), (2,3)
-
-
-
-
-            
-
-
-
-            
-
-            fig = plt.figure()
-            plt.suptitle('North South ' + suptitle)
-            ax1 = plt.subplot(1,2,1)
-            scatter1 = plt.scatter((times[hist_cut] - min(times))/3600.0, total_delays[hist_cut,1],label = 't0 - t2',c=c,cmap=cm,norm=norm)
-            #cbar = ax1.colorbar(scatter)
-            plt.xlabel('Calibrated trigtime From Start of Run (h)')
-            plt.ylabel('t0 - t2 (ns)')
-            plt.legend()
-            plt.minorticks_on()
-            plt.grid(b=True, which='major', color='k', linestyle='-')
-            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-            
-            divider = make_axes_locatable(ax1)
-            cax = divider.append_axes('right', size='5%', pad=0.05)
-            fig.colorbar(scatter1, cax=cax, orientation='vertical')
-            plt.minorticks_on()
-            plt.grid(b=True, which='major', color='k', linestyle='-')
-            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-
-
-            ax2 = plt.subplot(1,2,2,sharex=ax1)
-            scatter2 = plt.scatter((times[hist_cut] - min(times))/3600.0, total_delays[hist_cut,4],label = 't1 - t3',c=c,cmap=cm,norm=norm)
-            #cbar = ax2.colorbar(scatter)
-            plt.xlabel('Calibrated trigtime From Start of Run (h)')
-            plt.ylabel('t1 - t3 (ns)')
-            plt.minorticks_on()
-            plt.legend()
-            plt.grid(b=True, which='major', color='k', linestyle='-')
-            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-            divider = make_axes_locatable(ax2)
-            cax2 = divider.append_axes('right', size='5%', pad=0.05)
-            fig.colorbar(scatter2, cax=cax2, orientation='vertical')
-            plt.minorticks_on()
-            plt.grid(b=True, which='major', color='k', linestyle='-')
-            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-
-            selector1 = SelectFromCollection(ax1, scatter1,cut_eventids,cut_runnum)
-            selector2 = SelectFromCollection(ax2, scatter2,cut_eventids,cut_runnum)
-
 
             if False:
-                #EAST WEST SENSITIVE PLOT
+                #NORTH SOUTH SENSITIVE PLOT
                 #pairs = (0,1),(0,2),(0,3),(1,2),(1,3),(2,3)
                 #NS Pairs = (0,2), (1,3)
                 #EW Pairs = (0,1), (2,3)
 
                 fig = plt.figure()
-                plt.suptitle('East West ' + suptitle)
-                ax = plt.subplot(1,2,1)
-                scatter1 = plt.scatter((times[hist_cut] - min(times))/3600.0, total_delays[hist_cut,0],label = 't0 - t1',c=c,cmap=cm,norm=norm)
-                #cbar = ax.colorbar(scatter)
+                plt.suptitle('North South ' + suptitle)
+                ax1 = plt.subplot(1,2,1)
+                scatter1 = plt.scatter((times[hist_cut] - min(times))/3600.0, total_delays[hist_cut,1],label = 't0 - t2',c=c,cmap=cm,norm=norm)
+                #cbar = ax1.colorbar(scatter)
                 plt.xlabel('Calibrated trigtime From Start of Run (h)')
-                plt.ylabel('t0 - t1 (ns)')
+                plt.ylabel('t0 - t2 (ns)')
                 plt.legend()
                 plt.minorticks_on()
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
                 
-                divider = make_axes_locatable(ax)
+                divider = make_axes_locatable(ax1)
                 cax = divider.append_axes('right', size='5%', pad=0.05)
                 fig.colorbar(scatter1, cax=cax, orientation='vertical')
                 plt.minorticks_on()
@@ -477,9 +467,59 @@ if __name__ == '__main__':
 
 
 
-                ax2 = plt.subplot(1,2,2,sharex=ax)
+                ax2 = plt.subplot(1,2,2,sharex=ax1)
+                scatter2 = plt.scatter((times[hist_cut] - min(times))/3600.0, total_delays[hist_cut,4],label = 't1 - t3',c=c,cmap=cm,norm=norm)
+                #cbar = ax2.colorbar(scatter)
+                plt.xlabel('Calibrated trigtime From Start of Run (h)')
+                plt.ylabel('t1 - t3 (ns)')
+                plt.minorticks_on()
+                plt.legend()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                divider = make_axes_locatable(ax2)
+                cax2 = divider.append_axes('right', size='5%', pad=0.05)
+                fig.colorbar(scatter2, cax=cax2, orientation='vertical')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+                selector1 = SelectFromCollection(ax1, scatter1,cut_eventids,cut_runnum)
+                selector2 = SelectFromCollection(ax2, scatter2,cut_eventids,cut_runnum)
+
+
+            if True:
+                #EAST WEST SENSITIVE PLOT
+                #pairs = (0,1),(0,2),(0,3),(1,2),(1,3),(2,3)
+                #NS Pairs = (0,2), (1,3)
+                #EW Pairs = (0,1), (2,3)
+
+                
+                fig = plt.figure()
+                plt.suptitle('East West ' + suptitle)
+                ax1 = plt.subplot(1,2,1)
+                scatter1 = plt.scatter((times[hist_cut] - min(times))/3600.0, total_delays[hist_cut,0],label = 't0 - t1',c=c,cmap=cm,norm=norm)
+                #cbar = ax1.colorbar(scatter)
+                plt.xlabel('Calibrated trigtime From Start of Run (h)')
+                plt.ylabel('t0 - t1 (ns)')
+                plt.legend()
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                
+                divider = make_axes_locatable(ax1)
+                cax = divider.append_axes('right', size='5%', pad=0.05)
+                fig.colorbar(scatter1, cax=cax, orientation='vertical')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+
+                ax2 = plt.subplot(1,2,2,sharex=ax1)
                 scatter2 = plt.scatter((times[hist_cut] - min(times))/3600.0, total_delays[hist_cut,5],label = 't2 - t3',c=c,cmap=cm,norm=norm)
-                #cbar = ax.colorbar(scatter)
+                #cbar = ax2.colorbar(scatter)
                 plt.xlabel('Calibrated trigtime From Start of Run (h)')
                 plt.ylabel('t2 - t3 (ns)')
                 plt.minorticks_on()
@@ -494,6 +534,9 @@ if __name__ == '__main__':
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
+
+                selector1 = SelectFromCollection(ax1, scatter1,cut_eventids,cut_runnum)
+                selector2 = SelectFromCollection(ax2, scatter2,cut_eventids,cut_runnum)
 
 
 

@@ -119,10 +119,15 @@ if __name__=="__main__":
 
     plot_filter = False
     plot_multiple = False
-    plot_aligned_wf = True
-    plot_averaged = True
+    plot_aligned_wf = False
+    plot_averaged = False
     plot_maps = False
-    plot_td = True
+    plot_td = False
+    plot_original_length_templates = True
+
+    save_time_delays = False
+    save_template = True
+
 
     waveform_index_range = (None,500)
 
@@ -147,7 +152,7 @@ if __name__=="__main__":
             print(exc_type, fname, exc_tb.tb_lineno)
             sys.exit(1)
         
-        tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=(None,None), plot_filters=False,apply_phase_response=True)
+        tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=(None,None), plot_filters=False,apply_phase_response=False)
         
         filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.
         
@@ -172,7 +177,7 @@ if __name__=="__main__":
                     for pair_index in range(12):
                         plt.figure(pair_index)
 
-                for event_type in [1]:
+                for event_type in [0]:
                     eventids = file['eventids'][...]
                     if event_type == 1:
                         #Pick crosspol
@@ -197,11 +202,20 @@ if __name__=="__main__":
                     
 
                     resampled_averaged_waveforms = numpy.zeros((8,len(tct.waveform_times_corr)))
+                    resampled_averaged_waveforms_original_length = numpy.zeros((8,len(reader.t())))
                     for channel in range(8):
                         #Resampling averaged waveforms to be more compatible with cross correlation framework. 
                         resampled_averaged_waveforms[channel] = scipy.interpolate.interp1d(times,averaged_waveforms[channel],kind='cubic',bounds_error=False,fill_value=0)(tct.waveform_times_corr)
+                        resampled_averaged_waveforms_original_length[channel] = scipy.interpolate.interp1d(times,averaged_waveforms[channel],kind='cubic',bounds_error=False,fill_value=0)(reader.t())
 
-                    #numpy.savetxt('./template_77MHz_type%i.csv'%(event_type), delimiter=",")
+                    if plot_original_length_templates:
+                        plt.figure()
+                        for channel, wf in enumerate(resampled_averaged_waveforms_original_length):
+                            plt.plot(reader.t(),wf,label='%i'%channel)
+                        plt.xlabel('t (ns)')
+                        plt.ylabel('adu (not digitized)')
+                    if save_template:
+                        numpy.savetxt('./template_77MHz_type%i.csv'%(event_type),resampled_averaged_waveforms_original_length, delimiter=",")
                     
                     #FFTs of resampled templates which will be used when performing cross correlation.
                     averaged_waveforms_ffts = numpy.fft.rfft(resampled_averaged_waveforms,axis=1)
@@ -257,9 +271,11 @@ if __name__=="__main__":
                             plt.ylabel('Counts')
                             plt.xlabel('Time Delays (ns)')
                             fit_time_delays.append(popt[1])
-                    fit_time_delays = numpy.array(fit_time_delays)
-                    print(fit_time_delays)
-                    #numpy.savetxt('./time_delays_77MHz.csv',fit_time_delays, delimiter=",")
+                        fit_time_delays = numpy.array(fit_time_delays)
+                        print(fit_time_delays)
+
+                        if save_time_delays == True:
+                            numpy.savetxt('./time_delaysll_77MHz_type%i.csv'%event_type,fit_time_delays, delimiter=",")
 
                 file.close()
         else:
