@@ -131,7 +131,7 @@ def alignSelectedEvents(run, eventids,plot_aligned_wf=True,save_template=False):
 
 
     if save_template:
-        filename_index = 0
+        filename_index = 0 
         filename = './generated_event_template_%i.csv'%filename_index
         existing_files = numpy.array(glob.glob('./*.csv'))
 
