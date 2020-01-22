@@ -25,4 +25,4 @@ echo 'Attempting to prepare impulsivity metric by executing impulsivity.py' || e
 python3 ${BEACON_ANALYSIS_DIR}analysis/impulsivity.py $1 || exit
 
 echo 'Attempting to prepare impulsivity metric by executing correlate_with_background_templates.py' || exit
-python3 ${BEACON_ANALYSIS_DIR}analysis/correlate_with_77MHz_template.py $1 || exit
+python3 ${BEACON_ANALYSIS_DIR}analysis/correlate_with_background_templates.py $1 || exit

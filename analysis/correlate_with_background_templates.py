@@ -7,6 +7,7 @@ signals with high correlation values.
 import os
 import sys
 import h5py
+import glob
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 
@@ -53,8 +54,9 @@ if __name__=="__main__":
         run = 1701
 
     try:
+
+        template_filenames = numpy.array(glob.glob(os.environ['BEACON_ANALYSIS_DIR']+'templates/*.csv'))
         run = int(run)
-        save = True
         plot = False
         reader = Reader(datapath,run)
         try:
@@ -79,32 +81,38 @@ if __name__=="__main__":
                     dsets = list(file.keys()) #Existing datasets
 
                     correlation_values = numpy.zeros((file.attrs['N'],8))
-                    if save == True:
-                        if not numpy.isin('correlation_77MHz_type%i'%(event_type),dsets):
-                            file.create_dataset('correlation_77MHz_type%i'%(event_type), (file.attrs['N'],8), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    if not numpy.isin('template_correlations',dsets):
+                        file.create_group('template_correlations')
+
+                    correlation_dsets = list(file['template_correlations'].keys())
+
+                    for template_filename in template_filenames:
+                        template_filename_root = template_filename.split('/')[-1].replace('.csv','')
+
+                        if not numpy.isin(template_filename_root,correlation_dsets):
+                            file['template_correlations'].create_dataset(template_filename_root, (file.attrs['N'],8), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                         else:
-                            print('correlation_77MHz_type%i group already exists in file %s'%(event_type,filename))
+                            print('%s group already exists in file %s'%(template_filename_root,filename))
 
-                    template = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR']+'templates/template_77MHz_type1.csv',delimiter=',')
-                    template_std = numpy.std(template,axis=1)*len(reader.t()) #Normalization factor
+                        template = numpy.loadtxt(template_filename,delimiter=',')
+                        template_std = numpy.std(template,axis=1)*len(reader.t()) #Normalization factor
 
-                    for eventid in eventids:
-                        if eventid%1000 == 0:
-                            sys.stdout.write('\r%i/%i'%(eventid,len(eventids)-1))
-                            sys.stdout.flush()
-                        reader.setEntry(eventid)
-                        for antenna in range(8):
-                            signal = reader.wf(antenna)
-                            std = numpy.std(signal)
-                            c = scipy.signal.correlate(template[antenna],signal)/(std*template_std[antenna])
-                            correlation_values[eventid,antenna] = numpy.max(c)
+                        for eventid in eventids:
+                            if eventid%1000 == 0:
+                                sys.stdout.write('\r%i/%i'%(eventid,len(eventids)-1))
+                                sys.stdout.flush()
+                            reader.setEntry(eventid)
+                            for antenna in range(8):
+                                signal = reader.wf(antenna)
+                                std = numpy.std(signal)
+                                c = scipy.signal.correlate(template[antenna],signal)/(std*template_std[antenna])
+                                correlation_values[eventid,antenna] = numpy.max(c)
 
-                    if plot == True:
-                        plt.figure()
-                        plt.hist(numpy.max(correlation_values,axis=1),bins=50)
+                        if plot == True:
+                            plt.figure()
+                            plt.hist(numpy.max(correlation_values,axis=1),bins=50)
 
-                    if save == True:
-                        file['correlation_77MHz_type%i'%(event_type)][...] = correlation_values
+                        file['template_correlations'][template_filename_root][...] = correlation_values
                 file.close()
         else:
             print('filename is None, indicating empty tree.  Skipping run %i'%run)

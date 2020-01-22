@@ -43,7 +43,7 @@ matplotlib.rcParams['figure.figsize'] = [10, 11]
 matplotlib.rcParams.update({'font.size': 16})
 
 
-def countSimilar(delays,similarity_atol=2,verbose=True):
+def countSimilar(delays,similarity_atol=2.5,verbose=True):
     '''
     Given a set of delays this function will determine which ones are similar to eachother.
     Essentially each event will be given a similarity metric that describes how many other

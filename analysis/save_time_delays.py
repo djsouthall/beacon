@@ -64,7 +64,7 @@ if __name__=="__main__":
 
     apply_phase_response = True
     hilbert=False
-    final_corr_length = 2**15
+    final_corr_length = 2**18
 
     filter_string = ''
 

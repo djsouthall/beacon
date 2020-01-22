@@ -70,7 +70,7 @@ if __name__=="__main__":
 
     apply_phase_response = True
     hilbert=False
-    final_corr_length = 2**17
+    final_corr_length = 2**18
 
     filter_string = ''
 
@@ -125,8 +125,8 @@ if __name__=="__main__":
     plot_td = False
     plot_original_length_templates = True
 
-    save_time_delays = False
-    save_template = True
+    save_time_delays = True
+    save_template = False
 
 
     waveform_index_range = (None,500)
@@ -177,7 +177,7 @@ if __name__=="__main__":
                     for pair_index in range(12):
                         plt.figure(pair_index)
 
-                for event_type in [0]:
+                for event_type in [0,1]:
                     eventids = file['eventids'][...]
                     if event_type == 1:
                         #Pick crosspol
@@ -248,7 +248,7 @@ if __name__=="__main__":
                     #bins = numpy.arange(-1000,1000)#numpy.linspace(min(numpy.min(time_shifts)*.99,numpy.min(time_shifts)*1.01),numpy.max(time_shifts)*1.01,1000)
                     
 
-                    if plot_td:
+                    if numpy.logical_or(plot_td,save_time_delays):
 
                         fit_time_delays = []
 
@@ -275,7 +275,7 @@ if __name__=="__main__":
                         print(fit_time_delays)
 
                         if save_time_delays == True:
-                            numpy.savetxt('./time_delaysll_77MHz_type%i.csv'%event_type,fit_time_delays, delimiter=",")
+                            numpy.savetxt('./time_delays_77MHz_type%i.csv'%event_type,fit_time_delays, delimiter=",")
 
                 file.close()
         else:

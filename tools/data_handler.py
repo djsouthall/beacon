@@ -28,7 +28,7 @@ import tools.info as info
 import pdb
 
 
-analysis_data_dir = '/home/dsouthall/scratch-midway2/beacon_dec11_2019/'
+analysis_data_dir = '/home/dsouthall/scratch-midway2/beacon_jan17_2020/'
 #os.environ['BEACON_ANALYSIS_DIR'] + 'data/'
 
 
