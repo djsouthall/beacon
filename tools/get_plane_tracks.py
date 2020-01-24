@@ -175,7 +175,7 @@ if __name__ == '__main__':
     files = numpy.array(glob.glob(flight_data_location_hdf5+'*.h5'))    
     time = filenameToDatetime(numpy.random.choice(files)) #random time just to test code. 
     start = time.timestamp(),
-    stop = time.timestamp()+4*60*60
+    stop = time.timestamp()+0.5*60*60
     min_approach_cut_km = 25 #km
     #unique_flights,all_vals = getTracks(start,stop,min_approach_cut_km,hour_window = 12)
     flight_tracks_ENU, all_vals = getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 0,flights_of_interest=[])

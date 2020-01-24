@@ -368,14 +368,14 @@ def createFile(reader,redo_defaults=False):
                         else:
                             attempt_list = initial_expected_datasets
 
-                        print('attempt_list = ',attempt_list)
-
                         if numpy.any(numpy.isin(attempt_list,['eventids','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','inband_peak_freq_MHz','p2p'])):
                             times_loaded = True
                             raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids = getTimes(reader)
 
 
-                        for key in attempt_list:
+                        for key_index, key in enumerate(attempt_list):
+                            if key_index == 0:
+                                print('attempt_list = ',attempt_list)
                             print('Attempting to add content for key: %s'%key)
                             if key == 'eventids':
                                 if ('eventids' in list(file.keys())) == False:

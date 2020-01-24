@@ -62,7 +62,7 @@ if __name__=="__main__":
     crit_freq_high_pass_MHz = None
     high_pass_filter_order = None
 
-    apply_phase_response = True
+    apply_phase_response = False
     hilbert=False
     final_corr_length = 2**18
 

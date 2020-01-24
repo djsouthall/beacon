@@ -8,12 +8,6 @@ python3 ${BEACON_ANALYSIS_DIR}tools/data_handler.py $1 || exit
 echo 'Attempting to prepare time delays by executing save_time_delays.py align_method = 0' || exit
 python3 ${BEACON_ANALYSIS_DIR}analysis/save_time_delays.py $1 0 || exit
 
-echo 'Attempting to prepare time delays by executing save_time_delays.py align_method = 4' || exit
-python3 ${BEACON_ANALYSIS_DIR}analysis/save_time_delays.py $1 4 || exit
-
-echo 'Attempting to prepare time delays by executing save_time_delays.py align_method = 8' || exit
-python3 ${BEACON_ANALYSIS_DIR}analysis/save_time_delays.py $1 8 || exit
-
 echo 'Attempting to prepare current pointing directions by executing rf_bg_search.py' || exit
 python3 ${BEACON_ANALYSIS_DIR}analysis/rf_bg_search.py $1 || exit
 

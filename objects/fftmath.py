@@ -767,7 +767,10 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateMultipleTimeDelays(self,eventids, align_method=None,hilbert=False,plot=False,hpol_cut=None,vpol_cut=None):
+    def calculateMultipleTimeDelays(self,eventids, align_method=None,hilbert=False,plot=False,hpol_cut=None,vpol_cut=None,colors=None):
+        '''
+        If colors is some set of values that matches len(eventids) then they will be used to color the event curves.
+        '''
         try:
             if ~numpy.all(eventids == numpy.sort(eventids)):
                 print('eventids NOT SORTED, WOULD BE FASTER IF SORTED.')
@@ -778,6 +781,14 @@ class TimeDelayCalculator(FFTPrepper):
                 print('Warning!  This likely will run out of ram and fail. ')
                 figs = []
                 axs = []
+                if colors is not None:
+                    if len(colors) == len(eventids):
+                        norm = plt.Normalize()
+                        norm_colors = plt.cm.coolwarm(norm(colors))#plt.cm.viridis(norm(colors))
+                    else:
+                        norm = None
+                else:
+                    norm = None
                 for pair in self.pairs:
                     fig = plt.figure()
                     plt.suptitle(str(self.reader.run))
@@ -790,7 +801,7 @@ class TimeDelayCalculator(FFTPrepper):
 
                     figs.append(fig)
                     axs.append(plt.gca())
-            one_percent_event = int(len(eventids)/100)
+            one_percent_event = max(1,int(len(eventids)/100))
             for event_index, eventid in enumerate(eventids):
                 if event_index%one_percent_event == 0:
                     sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
@@ -808,11 +819,12 @@ class TimeDelayCalculator(FFTPrepper):
                 timeshifts.append(time_shift)
                 max_corrs.append(corr_value)
                 if plot == True:
+
                     for index, pair in enumerate(self.pairs):
                         #plotting less points by plotting subset of data
                         time_mid = self.corr_time_shifts[numpy.argmax(corrs[index])]
                         
-                        half_window = 150 #ns
+                        half_window = 200 #ns
                         index_cut_min = numpy.max(numpy.append(numpy.where(self.corr_time_shifts < time_mid - half_window)[0],0))
                         index_cut_max = numpy.min(numpy.append(numpy.where(self.corr_time_shifts > time_mid + half_window)[0],len(self.corr_time_shifts) - 1))
                         '''
@@ -820,43 +832,42 @@ class TimeDelayCalculator(FFTPrepper):
                         index_cut_min = numpy.min(index_loc)
                         index_cut_max = numpy.max(index_loc)
                         '''
-                        if hpol_cut is not None:
-                            if len(hpol_cut) == len(eventids):
-                                if numpy.logical_and(hpol_cut[event_index], pair[0]%2 == 0):
-                                    axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.2)
-                                    if abs(time_mid > 300):
-                                        fig = plt.figure()
-                                        plt.suptitle(str(eventid))
-                                        plt.subplot(2,1,1)
-                                        plt.plot(self.corr_time_shifts,corrs[index])
-                                        plt.axvline(time_mid,c='r',linestyle='--')
-                                        plt.subplot(2,1,2)
-                                        plt.plot(self.t(),self.wf(int(pair[0]),apply_filter=True,hilbert=False),label=str(int(pair[0])))
-                                        plt.plot(self.t(),self.wf(int(pair[1]),apply_filter=True,hilbert=False),label=str(int(pair[1])))
-                                        plt.legend()
-                                        import pdb; pdb.set_trace()
-                                        plt.close(fig)
+                        if (hpol_cut is not None) and numpy.all([len(hpol_cut) == len(eventids),hpol_cut[event_index], pair[0]%2 == 0]):
+                            axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.8)
+                            if abs(time_mid > 300):
+                                fig = plt.figure()
+                                plt.suptitle(str(eventid))
+                                plt.subplot(2,1,1)
+                                plt.plot(self.corr_time_shifts,corrs[index])
+                                plt.axvline(time_mid,c='r',linestyle='--')
+                                plt.subplot(2,1,2)
+                                plt.plot(self.t(),self.wf(int(pair[0]),apply_filter=True,hilbert=False),label=str(int(pair[0])))
+                                plt.plot(self.t(),self.wf(int(pair[1]),apply_filter=True,hilbert=False),label=str(int(pair[1])))
+                                plt.legend()
+                                import pdb; pdb.set_trace()
+                                plt.close(fig)
+                        elif (vpol_cut is not None) and numpy.all([len(vpol_cut) == len(eventids),vpol_cut[event_index], pair[0]%2 != 0]):
+                            axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.8)
+                            if abs(time_mid > 300):
+                                fig = plt.figure()
+                                plt.suptitle(str(eventid))
+                                plt.subplot(2,1,1)
+                                plt.plot(self.corr_time_shifts,corrs[index])
+                                plt.axvline(time_mid,c='r',linestyle='--')
+                                plt.subplot(2,1,2)
+                                plt.plot(self.t(),self.wf(int(pair[0]),apply_filter=True,hilbert=False),label=str(int(pair[0])))
+                                plt.plot(self.t(),self.wf(int(pair[1]),apply_filter=True,hilbert=False),label=str(int(pair[1])))
+                                plt.legend()
+                                import pdb; pdb.set_trace()
+                                plt.close(fig)
                         else:
-                            axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.2)
-                        if vpol_cut is not None:
-                            if len(vpol_cut) == len(eventids):
-                                if numpy.logical_and(vpol_cut[event_index], pair[0]%2 != 0):
-                                    axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.2)
-                                    if abs(time_mid > 300):
-                                        fig = plt.figure()
-                                        plt.suptitle(str(eventid))
-                                        plt.subplot(2,1,1)
-                                        plt.plot(self.corr_time_shifts,corrs[index])
-                                        plt.axvline(time_mid,c='r',linestyle='--')
-                                        plt.subplot(2,1,2)
-                                        plt.plot(self.t(),self.wf(int(pair[0]),apply_filter=True,hilbert=False),label=str(int(pair[0])))
-                                        plt.plot(self.t(),self.wf(int(pair[1]),apply_filter=True,hilbert=False),label=str(int(pair[1])))
-                                        plt.legend()
-                                        import pdb; pdb.set_trace()
-                                        plt.close(fig)
-                        else:
-                            axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.2)
-
+                            if norm is not None:
+                                axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.8,c=norm_colors[event_index],label=colors[event_index])
+                            else:
+                                axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.8)
+            if plot == True:
+                for ax in axs:
+                    ax.legend()
             sys.stdout.write('\n')
             sys.stdout.flush()
             return numpy.array(timeshifts).T, numpy.array(max_corrs).T, self.pairs
@@ -867,7 +878,7 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateImpulsivityFromTimeDelays(self, eventid, time_delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=750):
+    def calculateImpulsivityFromTimeDelays(self, eventid, time_delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=400):
         '''
         This will call calculateTimeDelaysFromEvent with the given settings, and use these to calculate impulsivity. 
 

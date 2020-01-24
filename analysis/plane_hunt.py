@@ -31,6 +31,7 @@ from pprint import pprint
 import itertools
 import warnings
 import h5py
+import pandas as pd
 warnings.simplefilter(action='ignore', category=FutureWarning)
 plt.ion()
 
@@ -45,6 +46,10 @@ cable_delays = info.loadCableDelays()
 known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
 ignorable_pulser_ids = info.loadIgnorableEventids()
 cm = plt.cm.get_cmap('plasma')
+
+def txtToClipboard(txt):
+    df=pd.DataFrame([txt])
+    df.to_clipboard(index=False,header=False)
 
 def gaus(x,a,x0,sigma):
     return a*numpy.exp(-(x-x0)**2.0/(2.0*sigma**2.0))
@@ -95,52 +100,6 @@ def countSimilar(delays,similarity_atol=2,verbose=True):
 from matplotlib.widgets import LassoSelector
 from matplotlib.path import Path
 
-def alignSelectedEvents(run, eventids,plot_aligned_wf=True,save_template=False):
-    '''
-    My plan is for this to be called when some events are circled in the plot.
-    It will take those wf, align them, and plot the averaged waveforms.  No
-    filters will be applied. 
-    '''
-    _reader = Reader(datapath,run)
-    
-    crit_freq_low_pass_MHz = None
-    low_pass_filter_order = None
-    
-    crit_freq_high_pass_MHz = None# 45
-    high_pass_filter_order = None# 12
-    
-    waveform_index_range = (None,None)
-    
-    tct = TemplateCompareTool(_reader, final_corr_length=2**17, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=True,apply_phase_response=True)
-    times, averaged_waveforms = tct.averageAlignedSignalsPerChannel( eventids, align_method=0, template_eventid=eventids[0], plot=plot_aligned_wf,event_type=None)
-    
-    resampled_averaged_waveforms_original_length = numpy.zeros((8,len(_reader.t())))
-    for channel in range(8):
-        resampled_averaged_waveforms_original_length[channel] = scipy.interpolate.interp1d(times,averaged_waveforms[channel],kind='cubic',bounds_error=False,fill_value=0)(reader.t())
-
-    if False:
-        for channel in range(8):
-            plt.figure()
-            plt.title(str(channel))
-            for eventid in eventids:
-                tct.setEntry(eventid)
-                plt.plot(tct.t(),tct.wf(channel),label=str(eventid),alpha=0.8)
-            plt.legend()
-            plt.xlabel('t (ns)')
-            plt.ylabel('adu')
-
-
-    if save_template:
-        filename_index = 0 
-        filename = './generated_event_template_%i.csv'%filename_index
-        existing_files = numpy.array(glob.glob('./*.csv'))
-
-        while numpy.isin(filename,existing_files):
-            filename_index += 1
-            filename = './generated_event_template_%i.csv'%filename_index
-        numpy.savetxt(filename,resampled_averaged_waveforms_original_length, delimiter=",")
-        print('Genreated template saved as:\n%s'%filename)
-    return resampled_averaged_waveforms_original_length
 
 class SelectFromCollection(object):
     """
@@ -156,7 +115,8 @@ class SelectFromCollection(object):
         Collection you want to select from.
     """
 
-    def __init__(self, ax, collection, eventids, runnum, alpha_other=0.3):
+    def __init__(self, ax, collection, eventids, runnum, total_hpol_delays,total_vpol_delays,alpha_other=0.3):
+
         self.canvas = ax.figure.canvas
         self.eventids = eventids
         self.runnum = runnum
@@ -170,6 +130,9 @@ class SelectFromCollection(object):
         self.lasso = LassoSelector(ax, onselect=self.onselect)
         self.ind = []
 
+        self.total_hpol_delays = total_hpol_delays
+        self.total_vpol_delays = total_vpol_delays
+
 
 
     def onselect(self, verts):
@@ -177,18 +140,111 @@ class SelectFromCollection(object):
         self.ind = numpy.nonzero(path.contains_points(self.xys))[0]
         print('Selected run/eventids:')
         print(repr(self.id[self.ind]))
+        txtToClipboard(repr(self.id[self.ind]))
         event_info = self.id[self.ind]
-        print(event_info)
+        #print(event_info)
         print('Coordinates:')
         print(repr(self.xys[self.ind]))
         self.canvas.draw_idle()
 
-        runs, counts = numpy.unique(self.id[self.ind][:,0],return_counts=True)
-        run = runs[numpy.argmax(counts)]
-        print('Only calculating template from run with most points circled: run %i with %i events circled'%(run,max(counts)))
-        eventids = self.id[self.ind][:,1][self.id[self.ind][:,0] == run]
-        alignSelectedEvents(run, eventids)
+        self.alignSelectedEvents()
 
+    def plotTimeDelays(self,times,total_hpol_delays,total_vpol_delays):
+        '''
+        This is intended to reproduce the plot that Kaeli used to make, with the time
+        delays being plotted all on the same plot. 
+        '''
+        times = times - times[0]
+        for pol in ['Hpol','Vpol']:
+            _fig = plt.figure()
+            _fig.canvas.set_window_title('%s Delays'%pol)
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            plt.title(pol)
+            plt.ylabel('Time Delay (ns)')
+            plt.xlabel('Readout Time (s)')
+
+            for pair_index, pair in enumerate([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]):
+                if pol == 'Hpol':
+                    y = total_hpol_delays[:,pair_index]
+                else:
+                    y = total_vpol_delays[:,pair_index]
+
+                #plt.plot(times, y,linestyle = '--',alpha=0.5)
+                plt.scatter(times, y,label='A%i and A%i'%(pair[0],pair[1]))
+            plt.legend(loc='upper right')
+
+
+
+
+
+
+    def alignSelectedEvents(self, plot_aligned_wf=False,save_template=False,plot_timedelays=True):
+        '''
+        My plan is for this to be called when some events are circled in the plot.
+        It will take those wf, align them, and plot the averaged waveforms.  No
+        filters will be applied. 
+        '''
+        if plot_timedelays == True:
+            runs, counts = numpy.unique(self.id[self.ind][:,0],return_counts=True)
+            run = runs[numpy.argmax(counts)]
+            print('Only calculating template from run with most points circled: run %i with %i events circled'%(run,max(counts)))
+            eventids = self.id[self.ind][:,1][self.id[self.ind][:,0] == run]
+            coords = self.xys[self.ind]
+
+            self.plotTimeDelays(self.xys[self.ind][:,0]*60,self.total_hpol_delays[self.ind],self.total_vpol_delays[self.ind])
+
+        _reader = Reader(datapath,run)
+        
+        crit_freq_low_pass_MHz = None
+        low_pass_filter_order = None
+        
+        crit_freq_high_pass_MHz = None# 45
+        high_pass_filter_order = None# 12
+        
+        waveform_index_range = (None,None)
+        
+        final_corr_length = 2**18
+
+        tct = TemplateCompareTool(_reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=True)
+        tdc = TimeDelayCalculator(_reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=True)
+        
+        times, averaged_waveforms = tct.averageAlignedSignalsPerChannel( eventids, align_method=0, template_eventid=eventids[0], plot=plot_aligned_wf,event_type=None)
+        
+        resampled_averaged_waveforms_original_length = numpy.zeros((8,len(_reader.t())))
+        for channel in range(8):
+            resampled_averaged_waveforms_original_length[channel] = scipy.interpolate.interp1d(times,averaged_waveforms[channel],kind='cubic',bounds_error=False,fill_value=0)(reader.t())
+
+        if False:
+            for channel in range(8):
+                plt.figure()
+                plt.title(str(channel))
+                for eventid in eventids:
+                    tct.setEntry(eventid)
+                    plt.plot(tct.t(),tct.wf(channel),label=str(eventid),alpha=0.8)
+                plt.legend()
+                plt.xlabel('t (ns)')
+                plt.ylabel('adu')
+
+
+        if save_template == True:
+            filename_index = 0 
+            filename = './generated_event_template_%i.csv'%filename_index
+            existing_files = numpy.array(glob.glob('./*.csv'))
+
+            while numpy.isin(filename,existing_files):
+                filename_index += 1
+                filename = './generated_event_template_%i.csv'%filename_index
+            numpy.savetxt(filename,resampled_averaged_waveforms_original_length, delimiter=",")
+            print('Genreated template saved as:\n%s'%filename)
+
+
+
+        tdc.calculateMultipleTimeDelays(eventids, align_method=8,hilbert=False,plot=True, colors=numpy.array(coords)[:,0])
+
+        return resampled_averaged_waveforms_original_length
 
     def disconnect(self):
         self.lasso.disconnect_events()
@@ -198,9 +254,9 @@ class SelectFromCollection(object):
 
 
 if __name__ == '__main__':
-    runs = numpy.arange(1650,1675) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
+    runs = numpy.arange(1770,1800) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
 
-    colormap_mode = 0
+    colormap_mode = 6
     #0 : Color Corresponds to Peak Frequency In Band (MHz)
     #1 : Uniqueness (1 = Unique, 0 = Common)
     #2 : Number of Similar Events in Run
@@ -214,8 +270,8 @@ if __name__ == '__main__':
 
     #################################
     corr_length = 262144#32768
+    align_method = 0
 
-    align_method = 8
     # Align method can be one of a few:
     # 0: argmax of corrs (default)
     # 1: argmax of hilbert of corrs
@@ -235,13 +291,13 @@ if __name__ == '__main__':
     #################################
     # CUT PARAMETERS
     #################################
-    cut_on_77MHz_delays = True #This will apply cuts based on the 77MHz time delays stored in background_timedelays folder.
+    cut_on_77MHz_delays = False #This will apply cuts based on the 77MHz time delays stored in background_timedelays folder.
     matching_delays = 5 #Number of required time delays to match within ns_threshold to be ignored
     ns_threshold = 1.0
     cut77MHz_filter_string = filter_string #These will be the time delays that will compare to the previously generated template times.
 
     apply_hpol_corr_cut = True
-    hpol_corr_threshold = 0.4 #This minimum value of corr vals to pass threshold. 
+    hpol_corr_threshold = 0.5 #This minimum value of corr vals to pass threshold. 
     hpol_minimum_correlating_baselines = 4 # Atleast this many of the 6 baselines must pass the above threshold for the event to count.
 
     apply_vpol_corr_cut = False
@@ -262,16 +318,21 @@ if __name__ == '__main__':
     apply_similarity_count_cut = False
     similarity_count_cut_limit = 2
 
-    apply_impuslivity_cut = False
-    impulsivity_threshold = 0.5
+    apply_hpol_impuslivity_cut = True
+    hpol_impulsivity_threshold = 0.5
+
+    apply_vpol_impuslivity_cut = False
+    vpol_impulsivity_threshold = 0.4
+
 
     apply_similarity_hist_cut = True #Here the time delays for a each event are summed to create one number.  These are then histogrammed.
-    similarity_hist_nbins = 200 #Number of bins in histogram
-    similarity_hist_threshold = 5 #Events in bins with less than this number of counts are plotted.  
+    similarity_hist_nbins = 300 #Number of bins in histogram
+    similarity_hist_threshold = 100 #Events in bins with less than this number of counts are plotted.  
 
 
     for run_index, run in enumerate(runs):
         try:
+            print('\nProcessing Run %i'%run)
             reader = Reader(datapath,run)
             filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.  
             if filename is not None:
@@ -368,7 +429,8 @@ if __name__ == '__main__':
                         eventids = file['eventids'][total_loading_cut]
                         calibrated_trigtime = file['calibrated_trigtime'][total_loading_cut]
 
-                        delays = numpy.vstack((file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,1)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,2)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,3)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(1,2)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(1,3)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(2,3)][total_loading_cut])).T
+                        hpol_delays = numpy.vstack((file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,1)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,2)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,3)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(1,2)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(1,3)][total_loading_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(2,3)][total_loading_cut])).T
+                        vpol_delays = numpy.vstack((file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(0,1)][total_loading_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(0,2)][total_loading_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(0,3)][total_loading_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(1,2)][total_loading_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(1,3)][total_loading_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(2,3)][total_loading_cut])).T
 
                         ############################
                         # Applying cuts on data (Done in 2 parts)
@@ -376,7 +438,7 @@ if __name__ == '__main__':
                         # Part 2
                         ############################
                         if numpy.logical_or(colormap_mode == 9,apply_similarity_hist_cut):
-                            vals = numpy.sum(delays,axis=1)
+                            vals = numpy.sum(hpol_delays,axis=1)
                             n, bins = numpy.histogram(vals,bins=similarity_hist_nbins)
                             
                             bin_numbers = numpy.zeros(len(vals),dtype=int)
@@ -389,9 +451,9 @@ if __name__ == '__main__':
                                 print('Applying cut based on histogram made of summed time delays values.')
                                 similarity_hist_cut = similarity_hist_counts < similarity_hist_threshold
                             else:
-                                similarity_hist_cut = numpy.ones_like(sum(total_loading_cut))
+                                similarity_hist_cut = numpy.ones(sum(total_loading_cut))
                         else:
-                            similarity_hist_cut = numpy.ones_like(sum(total_loading_cut))
+                            similarity_hist_cut = numpy.ones(sum(total_loading_cut))
 
                         ############################
                         if numpy.logical_or(apply_template_cut == True, colormap_mode in [8]):
@@ -432,7 +494,7 @@ if __name__ == '__main__':
                                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                                 print(exc_type, fname, exc_tb.tb_lineno)
                                 print('Similarity count not previously performed, or is corrupt.  Attempting to perform now.')
-                                similarity_count = countSimilar(delays)
+                                similarity_count = countSimilar(hpol_delays)
 
                             if apply_similarity_count_cut == True:
                                 similarity_cut = similarity_count < similarity_count_cut_limit #Less than this number of similar events in a run to show up.
@@ -443,15 +505,21 @@ if __name__ == '__main__':
                             similarity_cut = numpy.ones(sum(total_loading_cut))
 
                         ############################
-                        if numpy.logical_or(apply_impuslivity_cut == True, colormap_mode in [6]):
+
+                        impulsivity_cut = numpy.ones(sum(total_loading_cut))
+                        if numpy.any([apply_hpol_impuslivity_cut == True, apply_vpol_impuslivity_cut == True, colormap_mode in [6]]):
                             impulsivity_hpol = file['impulsivity'][filter_string]['hpol'][...][total_loading_cut]
                             impulsivity_vpol = file['impulsivity'][filter_string]['vpol'][...][total_loading_cut]
-                            if apply_impuslivity_cut == True:
-                                try:
-                                    max_impulsivity = numpy.max(numpy.vstack((impulsivity_hpol,impulsivity_vpol)),axis=0)
-                                    impuslivity_cut = max_impulsivity > impulsivity_threshold
-                                    print('Applying cut on impulsivity.  Only events with impulsivity > %0.2f will be shown. '%impulsivity_threshold) 
-                                    if False:
+
+                            if apply_hpol_impuslivity_cut:
+                                print('Applying cut on impulsivity of hpol signals.  Events with a impulsivity > %0.2f will be shown.'%hpol_impulsivity_threshold)
+                                impulsivity_cut = numpy.logical_and(impulsivity_cut, impulsivity_hpol > hpol_impulsivity_threshold)
+
+                            if apply_vpol_impuslivity_cut:
+                                print('Applying cut on impulsivity of vpol signals.  Events with a impulsivity > %0.2f will be shown.'%vpol_impulsivity_threshold)
+                                impulsivity_cut = numpy.logical_and(impulsivity_cut, impulsivity_vpol > vpol_impulsivity_threshold)
+                                if False:
+                                    try:
                                         plt.figure()
                                         plt.subplot(2,1,1)
                                         plt.hist(impulsivity_hpol[similarity_count > 1000.0],bins=100,label='similarity_count > 10.0')
@@ -463,20 +531,16 @@ if __name__ == '__main__':
                                         plt.hist(impulsivity_vpol[similarity_count < 1000.0],bins=100,label='similarity_count < 10.0')
                                         plt.legend()
                                         plt.xlabel('impulsivity_vpol')
-                                except Exception as e:
-                                    file.close()
-                                    print('Error in plotting.')
-                                    print(e)
-                                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                                    print(exc_type, fname, exc_tb.tb_lineno)
-                            else:
-                                impulsivity_cut = numpy.ones(sum(total_loading_cut))
-                        else:
-                            impulsivity_cut = numpy.ones(sum(total_loading_cut))
+                                    except Exception as e:
+                                        file.close()
+                                        print('Error in plotting.')
+                                        print(e)
+                                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                        print(exc_type, fname, exc_tb.tb_lineno)
 
                         ############################
-                        ignore_unreal = numpy.any(abs(delays) > 300,axis=1) #might be too strict for ones that don't have 4 visible pulses.
+                        ignore_unreal = numpy.any(abs(hpol_delays) > 300,axis=1) #might be too strict for ones that don't have 4 visible pulses.
                         
 
                         ############################
@@ -540,7 +604,8 @@ if __name__ == '__main__':
 
                         if run_index == 0:
                             times = calibrated_trigtime[cut]
-                            total_delays = delays[cut,:]
+                            total_hpol_delays = hpol_delays[cut,:]
+                            total_vpol_delays = vpol_delays[cut,:]
                             if numpy.logical_or(colormap_mode in [1,2,4,5],apply_similarity_count_cut == True):
                                 total_similarity_count = similarity_count[cut]
                                 similarity_percent = similarity_count[cut]/n_events_total
@@ -549,7 +614,8 @@ if __name__ == '__main__':
                             total_runnum = numpy.ones_like(eventids[cut])*run
 
                         else:
-                            total_delays =  numpy.vstack((total_delays,delays[cut,:]))
+                            total_hpol_delays = numpy.vstack((total_hpol_delays,hpol_delays[cut,:]))
+                            total_vpol_delays = numpy.vstack((total_vpol_delays,vpol_delays[cut,:]))
                             times =  numpy.append(times,calibrated_trigtime[cut])
                             total_colors = numpy.append(total_colors,c)
                             if numpy.logical_or(colormap_mode in [1,2,4,5],apply_similarity_count_cut == True):
@@ -580,7 +646,7 @@ if __name__ == '__main__':
 
 
     #times = calibrated_trigtime[cut]
-    #total_delays = delays[cut,:]
+    #total_hpol_delays = delays[cut,:]
     #similarity_percent = similarity_count/numpy.shape(delays)[0]
     try:
         if False:
@@ -590,9 +656,9 @@ if __name__ == '__main__':
 
 
             plt.figure()
-            bins = numpy.linspace(numpy.min(total_delays[:,0:3]),numpy.max(total_delays[:,0:3]),n_bins+1)
+            bins = numpy.linspace(numpy.min(total_hpol_delays[:,0:3]),numpy.max(total_hpol_delays[:,0:3]),n_bins+1)
             plt.subplot(3,1,1)
-            n, outbins, patches = plt.hist(total_delays[:,0],bins=bins,label = 't0 - t1')
+            n, outbins, patches = plt.hist(total_hpol_delays[:,0],bins=bins,label = 't0 - t1')
             plt.xlabel('t0 - t1 (ns)')
             plt.ylabel('Counts')
             plt.yscale('log', nonposy='clip')
@@ -603,14 +669,14 @@ if __name__ == '__main__':
             top_left_edges = numpy.argsort(n)[::-1][0:remove_top_n_bins]
             for left_bin_edge_index in top_left_edges:
                 if left_bin_edge_index == len(n):
-                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_delays[:,0] >= outbins[left_bin_edge_index],total_delays[:,0] <= outbins[left_bin_edge_index + 1]) )[0]) #Different bin boundary condition on right edge. 
+                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_hpol_delays[:,0] >= outbins[left_bin_edge_index],total_hpol_delays[:,0] <= outbins[left_bin_edge_index + 1]) )[0]) #Different bin boundary condition on right edge. 
                 else:
-                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_delays[:,0] >= outbins[left_bin_edge_index],total_delays[:,0] < outbins[left_bin_edge_index + 1]) )[0])
+                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_hpol_delays[:,0] >= outbins[left_bin_edge_index],total_hpol_delays[:,0] < outbins[left_bin_edge_index + 1]) )[0])
 
 
 
             plt.subplot(3,1,2)
-            n, outbins, patches = plt.hist(total_delays[:,1],bins=bins,label = 't0 - t2')
+            n, outbins, patches = plt.hist(total_hpol_delays[:,1],bins=bins,label = 't0 - t2')
             plt.xlabel('t0 - t2 (ns)')
             plt.ylabel('Counts')
             plt.yscale('log', nonposy='clip')
@@ -621,13 +687,13 @@ if __name__ == '__main__':
             top_left_edges = numpy.argsort(n)[::-1][0:remove_top_n_bins]
             for left_bin_edge_index in top_left_edges:
                 if left_bin_edge_index == len(n):
-                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_delays[:,1] >= outbins[left_bin_edge_index],total_delays[:,1] <= outbins[left_bin_edge_index + 1]) )[0]) #Different bin boundary condition on right edge. 
+                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_hpol_delays[:,1] >= outbins[left_bin_edge_index],total_hpol_delays[:,1] <= outbins[left_bin_edge_index + 1]) )[0]) #Different bin boundary condition on right edge. 
                 else:
-                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_delays[:,1] >= outbins[left_bin_edge_index],total_delays[:,1] < outbins[left_bin_edge_index + 1]) )[0])
+                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_hpol_delays[:,1] >= outbins[left_bin_edge_index],total_hpol_delays[:,1] < outbins[left_bin_edge_index + 1]) )[0])
 
 
             plt.subplot(3,1,3)
-            n, outbins, patches = plt.hist(total_delays[:,2],bins=bins,label = 't0 - t3')
+            n, outbins, patches = plt.hist(total_hpol_delays[:,2],bins=bins,label = 't0 - t3')
             plt.xlabel('t0 - t3 (ns)')
             plt.ylabel('Counts')
             plt.yscale('log', nonposy='clip')
@@ -638,22 +704,22 @@ if __name__ == '__main__':
             top_left_edges = numpy.argsort(n)[::-1][0:remove_top_n_bins]
             for left_bin_edge_index in top_left_edges:
                 if left_bin_edge_index == len(n):
-                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_delays[:,2] >= outbins[left_bin_edge_index],total_delays[:,2] <= outbins[left_bin_edge_index + 1]) )[0]) #Different bin boundary condition on right edge. 
+                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_hpol_delays[:,2] >= outbins[left_bin_edge_index],total_hpol_delays[:,2] <= outbins[left_bin_edge_index + 1]) )[0]) #Different bin boundary condition on right edge. 
                 else:
-                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_delays[:,2] >= outbins[left_bin_edge_index],total_delays[:,2] < outbins[left_bin_edge_index + 1]) )[0])
+                    remove_indices = numpy.append(remove_indices,numpy.where( numpy.logical_and(total_hpol_delays[:,2] >= outbins[left_bin_edge_index],total_hpol_delays[:,2] < outbins[left_bin_edge_index + 1]) )[0])
 
-            #remove_indices cuts from the time total_delays before [cut] is taken.  
+            #remove_indices cuts from the time total_hpol_delays before [cut] is taken.  
             remove_indices = numpy.sort(numpy.unique(remove_indices))
 
         if False:
             fig = plt.figure()
-            scatter = plt.scatter(total_delays[:,0],total_delays[:,1],c=(times - min(times))/60,cmap=cm)
+            scatter = plt.scatter(total_hpol_delays[:,0],total_hpol_delays[:,1],c=(times - min(times))/60,cmap=cm)
             cbar = fig.colorbar(scatter)
             plt.xlabel('t0 - t1')
             plt.ylabel('t0 - t2')
 
             fig = plt.figure()
-            scatter = plt.scatter(total_delays[:,0],total_delays[:,2],c=(times - min(times))/60,cmap=cm)
+            scatter = plt.scatter(total_hpol_delays[:,0],total_hpol_delays[:,2],c=(times - min(times))/60,cmap=cm)
             cbar = fig.colorbar(scatter)
             cbar.ax.set_ylabel('Time from Start of Run (min)', rotation=270)
             plt.xlabel('t0 - t1')
@@ -676,7 +742,7 @@ if __name__ == '__main__':
                 fig = plt.figure()
                 plt.suptitle('North South ' + suptitle)
                 ax1 = plt.subplot(2,1,1)
-                scatter1 = plt.scatter((times[hist_cut] - min(times))/60.0, total_delays[hist_cut,1],label = 't0 - t2',c=c,cmap=cm,norm=norm)
+                scatter1 = plt.scatter((times[hist_cut] - min(times))/60.0, total_hpol_delays[hist_cut,1],label = 't0 - t2',c=c,cmap=cm,norm=norm)
                 #cbar = ax1.colorbar(scatter)
                 plt.xlabel('Calibrated trigtime From Start of Run (min)')
                 plt.ylabel('t0 - t2 (ns)')
@@ -695,7 +761,7 @@ if __name__ == '__main__':
 
 
                 ax2 = plt.subplot(2,1,2,sharex=ax1)
-                scatter2 = plt.scatter((times[hist_cut] - min(times))/60.0, total_delays[hist_cut,4],label = 't1 - t3',c=c,cmap=cm,norm=norm)
+                scatter2 = plt.scatter((times[hist_cut] - min(times))/60.0, total_hpol_delays[hist_cut,4],label = 't1 - t3',c=c,cmap=cm,norm=norm)
                 #cbar = ax2.colorbar(scatter)
                 plt.xlabel('Calibrated trigtime From Start of Run (min)')
                 plt.ylabel('t1 - t3 (ns)')
@@ -712,8 +778,8 @@ if __name__ == '__main__':
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
 
-                selector1 = SelectFromCollection(ax1, scatter1,cut_eventids,cut_runnum)
-                selector2 = SelectFromCollection(ax2, scatter2,cut_eventids,cut_runnum)
+                selector1 = SelectFromCollection(ax1, scatter1,cut_eventids,cut_runnum,total_hpol_delays[hist_cut],total_vpol_delays[hist_cut])
+                selector2 = SelectFromCollection(ax2, scatter2,cut_eventids,cut_runnum,total_hpol_delays[hist_cut],total_vpol_delays[hist_cut])
 
 
             if True:
@@ -726,7 +792,7 @@ if __name__ == '__main__':
                 fig = plt.figure()
                 plt.suptitle('East West ' + suptitle)
                 ax3 = plt.subplot(2,1,1)
-                scatter3 = plt.scatter((times[hist_cut] - min(times))/60.0, total_delays[hist_cut,0],label = 't0 - t1',c=c,cmap=cm,norm=norm)
+                scatter3 = plt.scatter((times[hist_cut] - min(times))/60.0, total_hpol_delays[hist_cut,0],label = 't0 - t1',c=c,cmap=cm,norm=norm)
                 #cbar = ax3.colorbar(scatter)
                 plt.xlabel('Calibrated trigtime From Start of Run (min)')
                 plt.ylabel('t0 - t1 (ns)')
@@ -745,7 +811,7 @@ if __name__ == '__main__':
 
 
                 ax4 = plt.subplot(2,1,2,sharex=ax3)
-                scatter4 = plt.scatter((times[hist_cut] - min(times))/60.0, total_delays[hist_cut,5],label = 't2 - t3',c=c,cmap=cm,norm=norm)
+                scatter4 = plt.scatter((times[hist_cut] - min(times))/60.0, total_hpol_delays[hist_cut,5],label = 't2 - t3',c=c,cmap=cm,norm=norm)
                 #cbar = ax4.colorbar(scatter)
                 plt.xlabel('Calibrated trigtime From Start of Run (min)')
                 plt.ylabel('t2 - t3 (ns)')
@@ -762,8 +828,8 @@ if __name__ == '__main__':
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
 
-                selector3 = SelectFromCollection(ax3, scatter3,cut_eventids,cut_runnum)
-                selector2 = SelectFromCollection(ax4, scatter4,cut_eventids,cut_runnum)
+                selector3 = SelectFromCollection(ax3, scatter3,cut_eventids,cut_runnum,total_hpol_delays[hist_cut],total_vpol_delays[hist_cut])
+                selector4 = SelectFromCollection(ax4, scatter4,cut_eventids,cut_runnum,total_hpol_delays[hist_cut],total_vpol_delays[hist_cut])
 
 
 
@@ -774,7 +840,7 @@ if __name__ == '__main__':
 
             fig = plt.figure()
             ax = plt.subplot(1,3,1)
-            scatter1 = plt.scatter((times[cut] - min(times))/3600.0, total_delays[cut,0],label = 't0 - t1',c=c,cmap=cm,norm=norm)
+            scatter1 = plt.scatter((times[cut] - min(times))/3600.0, total_hpol_delays[cut,0],label = 't0 - t1',c=c,cmap=cm,norm=norm)
             #cbar = ax.colorbar(scatter)
             plt.xlabel('Calibrated trigtime From Start of Run (h)')
             plt.ylabel('t0 - t1 (ns)')
@@ -793,7 +859,7 @@ if __name__ == '__main__':
 
 
             ax2 = plt.subplot(1,3,2,sharex=ax)
-            scatter2 = plt.scatter((times[cut] - min(times))/3600.0, total_delays[cut,1],label = 't0 - t2',c=c,cmap=cm,norm=norm)
+            scatter2 = plt.scatter((times[cut] - min(times))/3600.0, total_hpol_delays[cut,1],label = 't0 - t2',c=c,cmap=cm,norm=norm)
             #cbar = ax.colorbar(scatter)
             plt.xlabel('Calibrated trigtime From Start of Run (h)')
             plt.ylabel('t0 - t2 (ns)')
@@ -810,7 +876,7 @@ if __name__ == '__main__':
             plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
             ax3 = plt.subplot(1,3,3,sharex=ax)
-            scatter3 = plt.scatter((times[cut] - min(times))/3600.0, total_delays[cut,2],label = 't0 - t3',c=c,cmap=cm,norm=norm)
+            scatter3 = plt.scatter((times[cut] - min(times))/3600.0, total_hpol_delays[cut,2],label = 't0 - t3',c=c,cmap=cm,norm=norm)
             #cbar = ax.colorbar(scatter)
             plt.xlabel('Calibrated trigtime From Start of Run (h)')
             plt.ylabel('t0 - t3 (ns)')
