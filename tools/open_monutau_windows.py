@@ -65,9 +65,7 @@ array([[  1662,  58427],
 
 #Defining as block string that is parsed for quick copy and paste
 eventids_str = '''
-array([[ 1773, 14413],
-       [ 1773, 14540],
-       [ 1773, 14590]], dtype=uint32)
+array([[1728,62026],[1728,62182],[1728,62370],[1728,62382],[1728,62552],[1728,62577]], dtype=uint32)
 '''
 
 if __name__=="__main__":

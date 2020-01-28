@@ -23,7 +23,16 @@ c = 2.99700e8 #m/s
 flight_data_location_hdf5 = '/project2/avieregg/beacon/flight_backup_jan2020/data/altered/' #The files will be hdf5.
 
 def filenameToDatetime(filename):
-    return datetime.datetime.strptime(filename.split('/')[-1],'barcroft_%Y-%m-%d-%H.h5')
+    try:
+        return datetime.datetime.strptime(filename.split('/')[-1],'barcroft_%Y-%m-%d-%H.h5')
+    except Exception as e:
+        print('Error in filenameToDatetime.')
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+    
+
 
 def getFileNamesFromTimestamps(start,stop,hour_window=12):
     '''
@@ -37,23 +46,43 @@ def getFileNamesFromTimestamps(start,stop,hour_window=12):
     an event is reported at NAME.h5 timestamp but is reported a planes location
     that was measured earlier, you can catch that).
     '''
-    files = numpy.array(glob.glob(flight_data_location_hdf5+'*.h5'))
-    timestamps = []
-    for index, file in enumerate(files):
-        timestamps.append(filenameToDatetime(file).timestamp())
+    try:
+        files = numpy.array(glob.glob(flight_data_location_hdf5+'*.h5'))
+        timestamps = []
+        for index, file in enumerate(files):
+            timestamps.append(filenameToDatetime(file).timestamp())
 
-    timestamps = numpy.array(timestamps)
-    sort_indices = numpy.argsort(timestamps)
-    sorted_files = files[sort_indices]
-    timestamps = timestamps[sort_indices]
+        timestamps = numpy.array(timestamps)
+        sort_indices = numpy.argsort(timestamps)
+        sorted_files = files[sort_indices]
+        timestamps = timestamps[sort_indices]
 
-    cut_indices = numpy.where(numpy.logical_and(timestamps >= start, timestamps <= stop))[0]
-    if numpy.size(cut_indices) != 0:
-        start_file_index = max(0,min(cut_indices)-hour_window)
-        stop_file_index = min(len(files),max(cut_indices) + 1 + hour_window)
-        return sorted_files[start_file_index:stop_file_index]
-    else:
-        return []
+
+        # cut_indices = numpy.where(numpy.logical_and(timestamps >= start, timestamps <= stop))[0] #THIS ONLY CATCHES THINGS WHEN RUNS CROSS SOME TIMESTAMP WINDOW< NOT CORRECT
+        # if numpy.size(cut_indices) != 0:
+        #     start_file_index = max(0,min(cut_indices)-hour_window)
+        #     stop_file_index = min(len(files),max(cut_indices) + 1 + hour_window)
+        #     return sorted_files[start_file_index:stop_file_index]
+        # else:
+        #     return []
+        try:
+            start_file_index = numpy.max(numpy.where(timestamps <= start)[0])
+            stop_file_index = numpy.min(numpy.where(timestamps > stop)[0])
+            return sorted_files[start_file_index:stop_file_index]
+        except Exception as e:
+            print('Error in getting files from timestamp.')
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+            return []
+
+    except Exception as e:
+        print('Error in getFileNamesFromTimestamps.')
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
 
 def getTracks(start,stop,min_approach_cut_km,hour_window = 12):
     '''
@@ -61,36 +90,46 @@ def getTracks(start,stop,min_approach_cut_km,hour_window = 12):
     and scans these files for the relevant positional information.  It will then
     convert the information to an easily usable format sorted by planes.
     '''
-    relevant_files = getFileNamesFromTimestamps(start,stop,hour_window=hour_window)
-    all_vals_exists = False
-    for index, rfile in enumerate(relevant_files):
-        with h5py.File(rfile, 'r') as file:
-            cut = file['closest_approach'][...]/1000 <= min_approach_cut_km
-            dtype = [('names','U32'),('timestamps',float), ('lat',float), ('lon',float), ('alt',float), ('closest_approach',float)] 
-            #cut = numpy.logical_and(cut,numpy.isin(numpy.arange(len(cut)),numpy.unique(file['timestamps'][...],return_index=True)[1])) #bool cut of first occurance of each timestamp to remove repeated.
+    try:
+        relevant_files = getFileNamesFromTimestamps(start,stop,hour_window=hour_window)
+        all_vals_exists = False
+        if numpy.size(relevant_files) != 0:
+            for index, rfile in enumerate(relevant_files):
+                with h5py.File(rfile, 'r') as file:
+                    cut = file['closest_approach'][...]/1000 <= min_approach_cut_km
+                    dtype = [('names','U32'),('timestamps',float), ('lat',float), ('lon',float), ('alt',float), ('closest_approach',float)] 
+                    #cut = numpy.logical_and(cut,numpy.isin(numpy.arange(len(cut)),numpy.unique(file['timestamps'][...],return_index=True)[1])) #bool cut of first occurance of each timestamp to remove repeated.
 
 
-            vals = numpy.zeros(sum(cut),dtype=dtype)
-            vals['names'] = numpy.array([s.split('_')[-1] for s in numpy.array(file['names'][cut],dtype='U32')]) #Only using the hex portion.  
-            vals['timestamps'] = numpy.array(file['timestamps'][cut],dtype=float)
-            vals['lat'] = numpy.array(file['lat'][cut],dtype=float)
-            vals['lon'] = numpy.array(file['lon'][cut],dtype=float)
-            vals['alt'] = numpy.array(file['alt'][cut],dtype=float)
-            vals['closest_approach'] = numpy.array(file['closest_approach'][cut],dtype=float)
+                    vals = numpy.zeros(sum(cut),dtype=dtype)
+                    vals['names'] = numpy.array([s.split('_')[-1] for s in numpy.array(file['names'][cut],dtype='U32')]) #Only using the hex portion.  
+                    vals['timestamps'] = numpy.array(file['timestamps'][cut],dtype=float)
+                    vals['lat'] = numpy.array(file['lat'][cut],dtype=float)
+                    vals['lon'] = numpy.array(file['lon'][cut],dtype=float)
+                    vals['alt'] = numpy.array(file['alt'][cut],dtype=float)
+                    vals['closest_approach'] = numpy.array(file['closest_approach'][cut],dtype=float)
 
-            #vals = numpy.vstack((numpy.array(file['names'][cut],dtype=str),numpy.array(file['timestamps'][cut],dtype=float),numpy.array(file['lat'][cut],dtype=float),numpy.array(file['lon'][cut],dtype=float),numpy.array(file['alt'][cut],dtype=float),numpy.array(file['closest_approach'][cut],dtype=float))).T
-        if all_vals_exists  == False:
-            all_vals = vals
-            all_vals_exists = True
+                    #vals = numpy.vstack((numpy.array(file['names'][cut],dtype=str),numpy.array(file['timestamps'][cut],dtype=float),numpy.array(file['lat'][cut],dtype=float),numpy.array(file['lon'][cut],dtype=float),numpy.array(file['alt'][cut],dtype=float),numpy.array(file['closest_approach'][cut],dtype=float))).T
+                if all_vals_exists  == False:
+                    all_vals = vals
+                    all_vals_exists = True
+                else:
+                    all_vals = numpy.append(all_vals,vals)
+
+            if numpy.size(all_vals) != 0:
+                all_vals = all_vals[numpy.argsort(all_vals['timestamps'].astype(float))] #Sorting lines by timestamp. 
+                unique_flights = numpy.unique(all_vals['names'])
+                return unique_flights,all_vals
+            else:
+                return [],[]
         else:
-            all_vals = numpy.append(all_vals,vals)
-
-    if numpy.size(all_vals) != 0:
-        all_vals = all_vals[numpy.argsort(all_vals['timestamps'].astype(float))] #Sorting lines by timestamp. 
-        unique_flights = numpy.unique(all_vals['names'])
-        return unique_flights,all_vals
-    else:
-        return [],[]
+            return [],[]
+    except Exception as e:
+        print('Error in getTracks.')
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
 
 def getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_interest=[]):
     '''
@@ -99,82 +138,97 @@ def getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_i
 
     NOT UPDATED YET
     '''
-    unique_flights, all_vals = getTracks(start,stop,min_approach_cut_km,hour_window=hour_window)
+    try:
+        unique_flights, all_vals = getTracks(start,stop,min_approach_cut_km,hour_window=hour_window)
 
-    if numpy.size(flights_of_interest) != 0:
-        unique_flights = unique_flights[numpy.isin(unique_flights,flights_of_interest)]
-        all_vals = all_vals[numpy.isin(all_vals['names'],flights_of_interest)]
+        if numpy.size(flights_of_interest) != 0:
+            unique_flights = unique_flights[numpy.isin(unique_flights,flights_of_interest)]
+            all_vals = all_vals[numpy.isin(all_vals['names'],flights_of_interest)]
 
-    if numpy.size(all_vals) != 0:
-        flight_tracks_ENU = {}
-        origin = info.loadAntennaZeroLocation(deploy_index = 1) #Antenna 0
+        if numpy.size(all_vals) != 0:
+            flight_tracks_ENU = {}
+            origin = info.loadAntennaZeroLocation(deploy_index = 1) #Antenna 0
 
-        for unique_flight in unique_flights:
-            flight_cut = numpy.where(all_vals['names'] == unique_flight)[0]
-            flight_cut = flight_cut[numpy.unique(all_vals['timestamps'][flight_cut],return_index=True)[1]] #Removing repeated timestamps per flight
-            ts = all_vals['timestamps'][flight_cut]
+            for unique_flight in unique_flights:
+                flight_cut = numpy.where(all_vals['names'] == unique_flight)[0]
+                flight_cut = flight_cut[numpy.unique(all_vals['timestamps'][flight_cut],return_index=True)[1]] #Removing repeated timestamps per flight
+                ts = all_vals['timestamps'][flight_cut]
 
-            #cut = numpy.logical_and(cut,numpy.isin(numpy.arange(len(cut)),numpy.unique(file['timestamps'][...],return_index=True)[1])) #bool cut of first occurance of each timestamp to remove repeated.
+                #cut = numpy.logical_and(cut,numpy.isin(numpy.arange(len(cut)),numpy.unique(file['timestamps'][...],return_index=True)[1])) #bool cut of first occurance of each timestamp to remove repeated.
 
-            enu = pm.geodetic2enu(all_vals['lat'][flight_cut],all_vals['lon'][flight_cut],all_vals['alt'][flight_cut],origin[0],origin[1],origin[2])  #converts to ENU
-            sorted_track_indices = numpy.argsort(ts)
-            # x, y, z, t
-            flight_tracks_ENU[unique_flight] = numpy.vstack((numpy.asarray(enu),ts[None,:])).T[sorted_track_indices]
+                enu = pm.geodetic2enu(all_vals['lat'][flight_cut],all_vals['lon'][flight_cut],all_vals['alt'][flight_cut],origin[0],origin[1],origin[2])  #converts to ENU
+                sorted_track_indices = numpy.argsort(ts)
+                # x, y, z, t
+                flight_tracks_ENU[unique_flight] = numpy.vstack((numpy.asarray(enu),ts[None,:])).T[sorted_track_indices]
 
-        return flight_tracks_ENU, all_vals
-    else:
-        return [], []
+            return flight_tracks_ENU, all_vals
+        else:
+            return {}, []
+    except Exception as e:
+        print('Error in getENUTrackDict.')
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
 
 def getTimeDelaysFromTrack(track):
     '''
     Given a trajectory (each row specified x,y,z,t in ENU), this will determine the
     expected set of time delays based on the current saved antenna positions.
     '''
-    antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()# MAKE SURE TO PUT THE DEPLOY INDEX CORRECTLY
-    cable_delays = info.loadCableDelays()
-    pairs = list(itertools.combinations((0,1,2,3), 2))
+    try:
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()# MAKE SURE TO PUT THE DEPLOY INDEX CORRECTLY
+        cable_delays = info.loadCableDelays()
+        pairs = list(itertools.combinations((0,1,2,3), 2))
 
-    labels = ['Physical','Hpol Phase Center','Vpol Phase Center']
-    print_prefixs = {   'Physical':'expected_time_differences_physical' ,
-                        'Hpol Phase Center':'expected_time_differences_hpol' ,
-                        'Vpol Phase Center':'expected_time_differences_vpol'}
+        labels = ['Physical','Hpol Phase Center','Vpol Phase Center']
+        print_prefixs = {   'Physical':'expected_time_differences_physical' ,
+                            'Hpol Phase Center':'expected_time_differences_hpol' ,
+                            'Vpol Phase Center':'expected_time_differences_vpol'}
 
-    tof = {}
-    dof = {}
-    dt = {}
-    for index, antennas in enumerate([antennas_phase_hpol,antennas_phase_vpol]):
-        tof[print_prefixs[labels[index]]] = {}
-        dof[print_prefixs[labels[index]]] = {}
-        dt[print_prefixs[labels[index]]] = {}
+        tof = {}
+        dof = {}
+        dt = {}
+        for index, antennas in enumerate([antennas_phase_hpol,antennas_phase_vpol]):
+            tof[print_prefixs[labels[index]]] = {}
+            dof[print_prefixs[labels[index]]] = {}
+            dt[print_prefixs[labels[index]]] = {}
 
-        #print('\nCalculating expected time delays from %s location'%print_prefixs[labels[index]])
-        for antenna, location in antennas.items():
-            tof[print_prefixs[labels[index]]][antenna] = []
-            dof[print_prefixs[labels[index]]][antenna] = []
-            for plane_location in track:
-                distance = numpy.sqrt((plane_location[0] - location[0])**2 + (plane_location[1] - location[1])**2 + (plane_location[2] - location[2])**2)
-                time = (distance / c)*1e9 #ns
-                if index == 0:
-                    time += 0 #Physical, assuming no cable delay
-                elif index == 1:
-                    time += cable_delays['hpol'][antenna]
-                elif index == 2:
-                    time += cable_delays['vpol'][antenna]
-                tof[print_prefixs[labels[index]]][antenna].append(time)
-                dof[print_prefixs[labels[index]]][antenna].append(distance) #Does not include cable delays
+            #print('\nCalculating expected time delays from %s location'%print_prefixs[labels[index]])
+            for antenna, location in antennas.items():
+                tof[print_prefixs[labels[index]]][antenna] = []
+                dof[print_prefixs[labels[index]]][antenna] = []
+                for plane_location in track:
+                    distance = numpy.sqrt((plane_location[0] - location[0])**2 + (plane_location[1] - location[1])**2 + (plane_location[2] - location[2])**2)
+                    time = (distance / c)*1e9 #ns
+                    if index == 0:
+                        time += 0 #Physical, assuming no cable delay
+                    elif index == 1:
+                        time += cable_delays['hpol'][antenna]
+                    elif index == 2:
+                        time += cable_delays['vpol'][antenna]
+                    tof[print_prefixs[labels[index]]][antenna].append(time)
+                    dof[print_prefixs[labels[index]]][antenna].append(distance) #Does not include cable delays
 
-            tof[print_prefixs[labels[index]]][antenna] = numpy.array(tof[print_prefixs[labels[index]]][antenna])
-            dof[print_prefixs[labels[index]]][antenna] = numpy.array(dof[print_prefixs[labels[index]]][antenna])
-        dt[print_prefixs[labels[index]]] = {}
-        for pair in pairs:
-            dt[print_prefixs[labels[index]]][pair] = tof[print_prefixs[labels[index]]][pair[0]] - tof[print_prefixs[labels[index]]][pair[1]] 
+                tof[print_prefixs[labels[index]]][antenna] = numpy.array(tof[print_prefixs[labels[index]]][antenna])
+                dof[print_prefixs[labels[index]]][antenna] = numpy.array(dof[print_prefixs[labels[index]]][antenna])
+            dt[print_prefixs[labels[index]]] = {}
+            for pair in pairs:
+                dt[print_prefixs[labels[index]]][pair] = tof[print_prefixs[labels[index]]][pair[0]] - tof[print_prefixs[labels[index]]][pair[1]] 
 
-    return tof, dof, dt 
+        return tof, dof, dt 
+    except Exception as e:
+        print('Error in getTimeDelaysFromTrack.')
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+
 
 if __name__ == '__main__':
-    files = numpy.array(glob.glob(flight_data_location_hdf5+'*.h5'))    
+    files = numpy.array(glob.glob(flight_data_location_hdf5+'*.h5')) 
     time = filenameToDatetime(numpy.random.choice(files)) #random time just to test code. 
-    start = time.timestamp(),
+    start = time.timestamp()
     stop = time.timestamp()+0.5*60*60
     min_approach_cut_km = 25 #km
     #unique_flights,all_vals = getTracks(start,stop,min_approach_cut_km,hour_window = 12)

@@ -254,7 +254,7 @@ class SelectFromCollection(object):
 
 
 if __name__ == '__main__':
-    runs = numpy.arange(1770,1800) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
+    runs = numpy.array([1728])#numpy.arange(1770,1800) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
 
     colormap_mode = 6
     #0 : Color Corresponds to Peak Frequency In Band (MHz)
@@ -296,7 +296,7 @@ if __name__ == '__main__':
     ns_threshold = 1.0
     cut77MHz_filter_string = filter_string #These will be the time delays that will compare to the previously generated template times.
 
-    apply_hpol_corr_cut = True
+    apply_hpol_corr_cut = False
     hpol_corr_threshold = 0.5 #This minimum value of corr vals to pass threshold. 
     hpol_minimum_correlating_baselines = 4 # Atleast this many of the 6 baselines must pass the above threshold for the event to count.
 
@@ -318,14 +318,14 @@ if __name__ == '__main__':
     apply_similarity_count_cut = False
     similarity_count_cut_limit = 2
 
-    apply_hpol_impuslivity_cut = True
+    apply_hpol_impuslivity_cut = False
     hpol_impulsivity_threshold = 0.5
 
     apply_vpol_impuslivity_cut = False
     vpol_impulsivity_threshold = 0.4
 
 
-    apply_similarity_hist_cut = True #Here the time delays for a each event are summed to create one number.  These are then histogrammed.
+    apply_similarity_hist_cut = False #Here the time delays for a each event are summed to create one number.  These are then histogrammed.
     similarity_hist_nbins = 300 #Number of bins in histogram
     similarity_hist_threshold = 100 #Events in bins with less than this number of counts are plotted.  
 

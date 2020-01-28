@@ -656,6 +656,8 @@ class TimeDelayCalculator(FFTPrepper):
                     cfd_thresh = 0.8
                 elif run == 1511:
                     cfd_thresh = 0.3
+                elif run == 1774:
+                    cfd_thresh = 0.5
                 else:
                     cfd_thresh = 0.75
 
