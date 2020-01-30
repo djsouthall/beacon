@@ -217,6 +217,7 @@ def getTimeDelaysFromTrack(track):
                         time += cable_delays['hpol'][antenna]
                     elif index == 2:
                         time += cable_delays['vpol'][antenna]
+                        
                     tof[print_prefixs[labels[index]]][antenna].append(time)
                     dof[print_prefixs[labels[index]]][antenna].append(distance) #Does not include cable delays
 

@@ -188,26 +188,66 @@ if __name__ == '__main__':
             plane_ax.dist = 10
 
 
+                #Limits 
+        guess_range = 100 #Limit to how far from physical center the phase centers can be.  
+
+        if guess_range is not None:
+            ant0_physical_limits_x = (antennas_physical[0][0] - guess_range ,antennas_physical[0][0] + guess_range)
+            ant0_physical_limits_y = (antennas_physical[0][1] - guess_range ,antennas_physical[0][1] + guess_range)
+            ant0_physical_limits_z = (antennas_physical[0][2] - guess_range ,antennas_physical[0][2] + guess_range)
+
+            ant1_physical_limits_x = (antennas_physical[1][0] - guess_range ,antennas_physical[1][0] + guess_range)
+            ant1_physical_limits_y = (antennas_physical[1][1] - guess_range ,antennas_physical[1][1] + guess_range)
+            ant1_physical_limits_z = (antennas_physical[1][2] - guess_range ,antennas_physical[1][2] + guess_range)
+
+            ant2_physical_limits_x = (antennas_physical[2][0] - guess_range ,antennas_physical[2][0] + guess_range)
+            ant2_physical_limits_y = (antennas_physical[2][1] - guess_range ,antennas_physical[2][1] + guess_range)
+            ant2_physical_limits_z = (antennas_physical[2][2] - guess_range ,antennas_physical[2][2] + guess_range)
+
+            ant3_physical_limits_x = (antennas_physical[3][0] - guess_range ,antennas_physical[3][0] + guess_range)
+            ant3_physical_limits_y = (antennas_physical[3][1] - guess_range ,antennas_physical[3][1] + guess_range)
+            ant3_physical_limits_z = (antennas_physical[3][2] - guess_range ,antennas_physical[3][2] + guess_range)
+
+        else:
+            ant0_physical_limits_x = None 
+            ant0_physical_limits_y = None
+            ant0_physical_limits_z = None
+
+            ant1_physical_limits_x = None#(None,0.0)
+            ant1_physical_limits_y = None#None
+            ant1_physical_limits_z = None#(10.0,None)
+
+            ant2_physical_limits_x = None#None
+            ant2_physical_limits_y = None#(None,0.0)
+            ant2_physical_limits_z = None
+
+            ant3_physical_limits_x = None#(None,0.0)
+            ant3_physical_limits_y = None#(None,0.0)
+            ant3_physical_limits_z = None#(0.0,None)
+
+
         ##########
         # Define Chi^2
         ##########
 
-        def rawChi2(ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z):
+        # chi2_fig = plt.figure()
+        # chi2_fig.canvas.set_window_title('chi2_fig')
+        # chi2_ax = chi2_fig.add_subplot(111, projection='3d')
+
+
+        def rawChi2(ant0_x, ant0_y, ant0_z,ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z):
             '''
             This is a chi^2 that loops over locations from planes, calculating expected time delays for those locations.  Then
             it will compares those to the calculated time delays for known plane events.  
             '''
             try:
-                #fixing the locations of antenna zero.
-                ant0_x = 0.0
-                ant0_y = 0.0
-                ant0_z = 0.0
+                # chi2_ax.scatter(ant0_x, ant0_y, ant0_z,label='Antenna 0',c='r',alpha=0.5)
+                # chi2_ax.scatter(ant1_x, ant1_y, ant1_z,label='Antenna 1',c='g',alpha=0.5)
+                # chi2_ax.scatter(ant2_x, ant2_y, ant2_z,label='Antenna 2',c='b',alpha=0.5)
+                # chi2_ax.scatter(ant3_x, ant3_y, ant3_z,label='Antenna 3',c='m',alpha=0.5)
 
                 #Calculate distances (already converted to ns) from pulser to each antenna
-
-
                 chi_2 = 0.0
-
 
                 for plane in list(known_planes.keys()):
                     d0 = (numpy.sqrt((interpolated_plane_locations[key][:,0] - ant0_x)**2 + (interpolated_plane_locations[key][:,1] - ant0_y)**2 + (interpolated_plane_locations[key][:,2] - ant0_z)**2 )/c)*1.0e9 #ns
@@ -218,14 +258,12 @@ if __name__ == '__main__':
                     d = [d0,d1,d2,d3]
 
                     for pair_index, pair in enumerate(known_planes[plane]['baselines'][mode]):
-                        geometric_time_delay = (d[pair[0]] + cable_delays[0]) - (d[pair[1]] + cable_delays[1])
+                        geometric_time_delay = (d[pair[0]] + cable_delays[pair[0]]) - (d[pair[1]] + cable_delays[pair[1]])
                         #Right now these seem reversed from what I would expect based on the plot?  In time I mean. 
 
-                        import pdb; pdb.set_trace()
-                        #NOTE: Right now this will weight planes with more events higher.  That might be what I want, it might not be.  Might want to divide by number of events per plane so each plane has equal overall weighting
-                        #Could just average instead of sum here?
-                        chi_2 += sum(((geometric_time_delay - measured_plane_times_delays[key][pair_index])**2)/measured_plane_times_delays_weights[key][pair_index]**2)
-                 
+                        vals = ((geometric_time_delay - measured_plane_times_delays[key][pair_index])**2)/measured_plane_times_delays_weights[key][pair_index]**2
+                        chi_2 += numpy.mean(vals)/numpy.std(vals) #Weight highly varied events less?
+                # print(chi_2)
                 return chi_2
             except Exception as e:
                 print('Error in rawChi2')
@@ -241,6 +279,9 @@ if __name__ == '__main__':
         
         
         m = Minuit(     rawChi2,\
+                        ant0_x=antennas_phase_start[0][0],\
+                        ant0_y=antennas_phase_start[0][1],\
+                        ant0_z=antennas_phase_start[0][2],\
                         ant1_x=antennas_phase_start[1][0],\
                         ant1_y=antennas_phase_start[1][1],\
                         ant1_z=antennas_phase_start[1][2],\
@@ -250,6 +291,9 @@ if __name__ == '__main__':
                         ant3_x=antennas_phase_start[3][0],\
                         ant3_y=antennas_phase_start[3][1],\
                         ant3_z=antennas_phase_start[3][2],\
+                        error_ant0_x=initial_step,\
+                        error_ant0_y=initial_step,\
+                        error_ant0_z=initial_step,\
                         error_ant1_x=initial_step,\
                         error_ant1_y=initial_step,\
                         error_ant1_z=initial_step,\
@@ -260,15 +304,21 @@ if __name__ == '__main__':
                         error_ant3_y=initial_step,\
                         error_ant3_z=initial_step,\
                         errordef = 1.0,\
-                        limit_ant1_x=None,\
-                        limit_ant1_y=None,\
-                        limit_ant1_z=None,\
-                        limit_ant2_x=None,\
-                        limit_ant2_y=None,\
-                        limit_ant2_z=None,\
-                        limit_ant3_x=None,\
-                        limit_ant3_y=None,\
-                        limit_ant3_z=None,\
+                        limit_ant0_x=ant0_physical_limits_x,\
+                        limit_ant0_y=ant0_physical_limits_y,\
+                        limit_ant0_z=ant0_physical_limits_z,\
+                        limit_ant1_x=ant1_physical_limits_x,\
+                        limit_ant1_y=ant1_physical_limits_y,\
+                        limit_ant1_z=ant1_physical_limits_z,\
+                        limit_ant2_x=ant2_physical_limits_x,\
+                        limit_ant2_y=ant2_physical_limits_y,\
+                        limit_ant2_z=ant2_physical_limits_z,\
+                        limit_ant3_x=ant3_physical_limits_x,\
+                        limit_ant3_y=ant3_physical_limits_y,\
+                        limit_ant3_z=ant3_physical_limits_z,\
+                        fix_ant0_x=False,\
+                        fix_ant0_y=False,\
+                        fix_ant0_z=False,\
                         fix_ant1_x=False,\
                         fix_ant1_y=False,\
                         fix_ant1_z=False,\
@@ -288,9 +338,9 @@ if __name__ == '__main__':
         print(result)
 
         #12 variables
-        ant0_phase_x = 0.0#m.values['ant0_x']
-        ant0_phase_y = 0.0#m.values['ant0_y']
-        ant0_phase_z = 0.0#m.values['ant0_z']
+        ant0_phase_x = m.values['ant0_x']
+        ant0_phase_y = m.values['ant0_y']
+        ant0_phase_z = m.values['ant0_z']
 
         ant1_phase_x = m.values['ant1_x']
         ant1_phase_y = m.values['ant1_y']

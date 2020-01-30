@@ -280,6 +280,10 @@ if __name__ == '__main__':
                                     plot_distance_cut = numpy.ones_like(distance,dtype=bool)
 
                                 x = track[plot_distance_cut,3]
+
+                                #cable_delays = info.loadCableDelays()[mode]
+
+
                                 y = dt['expected_time_differences_hpol'][(pair[0], pair[1])][plot_distance_cut]
                                 if known_flight is not None:
                                     plt.plot(x,y,c=python_colors[pair_index],linestyle = '--',alpha=0.5,label='Flight %s TD: A%i and A%i'%(known_flight,pair[0],pair[1]))
