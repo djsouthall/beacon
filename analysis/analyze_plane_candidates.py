@@ -122,11 +122,11 @@ if __name__ == '__main__':
     filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_%i-align_%i'%(final_corr_length,align_method)
 
 
-    crit_freq_low_pass_MHz = None#100 #This new pulser seems to peak in the region of 85 MHz or so
+    crit_freq_low_pass_MHz = None#60 #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = None#5
 
-    crit_freq_high_pass_MHz = None#50
-    high_pass_filter_order = None#4
+    crit_freq_high_pass_MHz = None#60
+    high_pass_filter_order = None#6
 
     waveform_index_range = (None,None)#(150,400)
 
@@ -246,7 +246,7 @@ if __name__ == '__main__':
                     plt.grid(b=True, which='major', color='k', linestyle='-')
                     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-                    plt.title(pol)
+                    plt.title(pol + ' ' + candidates_key)
                     plt.ylabel('Time Delay (ns)')
                     plt.xlabel('Readout Time (s)')
 
@@ -271,7 +271,7 @@ if __name__ == '__main__':
 
                             for flight in list(flight_tracks_ENU.keys()):
                                 track = flight_tracks_ENU[flight]
-                                tof, dof, dt = pt.getTimeDelaysFromTrack(track)
+                                tof, dof, dt = pt.getTimeDelaysFromTrack(track) #DOESN"T INCLUDE TIME DELAYS!
                                 distance = numpy.sqrt(numpy.sum(track[:,0:3]**2,axis=1))/1000 #km
 
                                 if plot_distance_cut_limit is not None:

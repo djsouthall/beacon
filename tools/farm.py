@@ -20,7 +20,7 @@ if __name__ == "__main__":
     #mem = '16G'
     partition = 'broadwl'
     # BEFORE ATTEMPTING TO RUN THE TWO BELOW, CHANGE THE TIME DELAYS SCRIPT TO NOT DECONVOLVE THE PHASE RESPONSE
-    runs = numpy.array([186,189,364,365,366,367])#numpy.arange(1725,1800)#numpy.array([186,189])#numpy.array([364,365,366,367])#numpy.arange(1675,1725)#[::-1]
+    runs = numpy.arange(1642,1650)#numpy.array([186,189,364,365,366,367])#numpy.arange(1725,1800)#numpy.array([186,189])#numpy.array([364,365,366,367])#numpy.arange(1675,1725)#[::-1]
     #runs = [1790]
     #runs = numpy.array([1665,1666,1667,1682,1685,1689,1690,1691,1698])
 

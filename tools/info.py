@@ -18,13 +18,52 @@ import os
 import inspect
 import numpy
 import csv
+
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
+sys.path.append(os.environ['BEACON_INSTALL_DIR'])
+from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from tools.data_handler import getEventTimes, createFile
 import tools.field_fox as ff
+
+import h5py
 import pymap3d as pm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
 default_deploy = 1 #The deployment time to use as the default.
+
+
+def loadKnownPlaneDict():
+    '''
+    Loads a list of known planes, and the event ids associated with them.
+
+    Good baselines indicate baselines that are worth using for calibration.
+
+    I.e. if an antenna is down, the baselines with that antenna won't be useful.
+    Or if an event is clearly only hpol the vpol might not be worth trying to
+    calibrate.  
+    '''
+    known_planes = {\
+    '1728-62026':{  'eventids':numpy.array([[1728,62026],[1728,62182],[1728,62370],[1728,62382],[1728,62552],[1728,62577]]),\
+                    'known_flight':'a44585',
+                    'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+    '1773-14413':{  'eventids':numpy.array([[1773,14413],[1773,14540],[1773,14590]]),\
+                    'known_flight':'aa8c39',
+                    'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+    '1773-63659':{  'eventids':numpy.array([[1773,63659],[1773,63707],[1773,63727],[1773,63752],[1773,63757]]),\
+                    'known_flight':'a28392',
+                    'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+    '1774-88800':{  'eventids':numpy.array([[1774,88800],[1774,88810],[1774,88815],[1774,88895],[1774,88913],[1774,88921],[1774,88923],[1774,88925],[1774,88944],[1774,88955],[1774,88959],[1774,88988],[1774,88993],[1774,89029],[1774,89030],[1774,89032],[1774,89034],[1774,89041],[1774,89043],[1774,89052],[1774,89172],[1774,89175],[1774,89181],[1774,89203],[1774,89204],[1774,89213]]),\
+                    'known_flight':'ab5f43',
+                    'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+    '1783-28830':{  'eventids':numpy.array([[1783,28830],[1783,28832],[1783,28861]]),\
+                    'known_flight':'a52e4f',
+                    'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+    '1784-7166':{   'eventids':numpy.array([[1784,7166],[1784,7176],[1784,7179],[1784,7195],[1784,7244],[1784,7255]]),\
+                    'known_flight':'acf975',
+                    'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}}\
+    }
+    return known_planes
 
 
 def pulserRuns():
@@ -632,8 +671,10 @@ MAKE AN EXPECTED PULSER TIME DELAY FUNCTION
 if __name__ == '__main__':
     try:
         print('Loaded run info dictionaries.')
-        plt.ion()
-        loadBeamDelays()
+        #plt.ion()
+        #loadBeamDelays()
+
+        known_planes, calibrated_trigtime, output_tracks = getKnownPlaneTracks()
 
     except Exception as e:
         print('Error in main loop.')

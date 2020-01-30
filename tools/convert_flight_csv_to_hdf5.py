@@ -116,7 +116,7 @@ def getENUTrackDict(start,stop,hour_window = 12,flights_of_interest=[]):
     
         lat = all_vals[:,2].astype(float)
         lon = all_vals[:,3].astype(float)
-        alt = all_vals[:,4].astype(float)*0.3048
+        alt = all_vals[:,4].astype(float)*0.3048 #Expressing alt in meters now. 
         timestamps = all_vals[:,1].astype(float)
 
         flight_tracks_ENU = {}

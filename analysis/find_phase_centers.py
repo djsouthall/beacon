@@ -38,6 +38,9 @@ if __name__ == '__main__':
             print('No mode given.  Defaulting to vpol')
             mode = 'vpol'
 
+        print('Loading known plane locations.')
+        plane_dict = info.getKnownPlaneTracks()
+
         print('Performing calculations for %s'%mode)
         cable_delays = info.loadCableDelays()[mode]
 

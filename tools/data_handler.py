@@ -24,7 +24,6 @@ import scipy.signal
 
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
-import tools.info as info
 import pdb
 
 

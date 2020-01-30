@@ -2,6 +2,8 @@
 This will process the hdf5 files created using convert_flight_csv_to_hdf5
 providing functions for searching through multiple hdf5 files.
 '''
+
+#General Imports
 import numpy
 import pylab
 import glob
@@ -10,14 +12,22 @@ import sys
 import os
 import datetime
 import pandas as pd
-import pymap3d as pm
 import itertools
-import matplotlib.pyplot as plt
 import h5py
+import tools.info as info
+
+#Personal Imports
+sys.path.append(os.environ['BEACON_INSTALL_DIR'])
+from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
+from tools.data_handler import createFile
+
+#Plotting Imports
+import pymap3d as pm
+import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
-sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
-import tools.info as info
+
 c = 2.99700e8 #m/s
 
 flight_data_location_hdf5 = '/project2/avieregg/beacon/flight_backup_jan2020/data/altered/' #The files will be hdf5.
@@ -224,6 +234,50 @@ def getTimeDelaysFromTrack(track):
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
 
+def getKnownPlaneTracks():
+    '''
+    Given the plane information outlines in loadKnownPlaneDict this will return
+    a compisite dtype array with information about lat, lon, alt, and timing for
+    each unique reported position of each plane in loadKnownPlaneDict.
+
+    This can then be interpolated by the user at timestamps to get expected
+    position corresponding to events in a run. 
+    '''
+    try:
+        known_planes = info.loadKnownPlaneDict()
+        output_tracks = {}
+        calibrated_trigtime = {}
+        for key in list(known_planes.keys()):
+            runs = numpy.unique(known_planes[key]['eventids'][:,0])
+            calibrated_trigtime[key] = numpy.zeros(len(known_planes[key]['eventids'][:,0]))
+            for run in runs:
+                run_cut = known_planes[key]['eventids'][:,0] == run
+                reader = Reader(os.environ['BEACON_DATA'],run)
+                eventids = known_planes[key]['eventids'][run_cut,1]
+                try:
+                    filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.  
+                    with h5py.File(filename, 'r') as file:
+                        calibrated_trigtime[key][run_cut] = file['calibrated_trigtime'][...][eventids]
+                except Exception as e:
+                    print(e)
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    print(exc_type, fname, exc_tb.tb_lineno)
+                    print('Calculating calibrated trig times.')
+                    calibrated_trigtime[key][run_cut] = getEventTimes(reader,plot=False,smooth_window=101)[eventids]
+
+            known_flight = known_planes[key]['known_flight']
+            all_vals = getTracks(min(calibrated_trigtime[key]),max(calibrated_trigtime[key]),1000,hour_window=12)[1]
+            vals = all_vals[all_vals['names'] == known_planes[key]['known_flight']]
+            vals = vals[numpy.unique(vals['timestamps'],return_index=True)[1]] 
+            output_tracks[key] = vals
+        return known_planes, calibrated_trigtime, output_tracks
+    except Exception as e:
+        print('Error in getKnownPlaneTracksLatLon.')
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
 
 if __name__ == '__main__':
     files = numpy.array(glob.glob(flight_data_location_hdf5+'*.h5')) 
