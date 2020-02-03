@@ -254,7 +254,7 @@ class SelectFromCollection(object):
 
 
 if __name__ == '__main__':
-    runs = numpy.array([1728])#numpy.arange(1770,1800) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
+    runs = numpy.arange(1642,1650)#numpy.array([1728])#numpy.arange(1770,1800) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
 
     colormap_mode = 6
     #0 : Color Corresponds to Peak Frequency In Band (MHz)
@@ -283,7 +283,7 @@ if __name__ == '__main__':
     # 7: Gets argmax of abs(corrs) and then finds highest positive peak before this value
     # 8: Apply cfd to waveforms to get first pass guess at delays, then pick the best correlation near that. 
 
-    filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_%i-align_%i'%(corr_length,align_method)
+    filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_%i-align_%i'%(corr_length,align_method)
 
     #filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_%i-align_0'%corr_length
     #filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-corlen_%i-align_0'%corr_length
@@ -306,7 +306,7 @@ if __name__ == '__main__':
 
     apply_rough_dir_cut = False
     cut_angle = 110 #Angles below this are ignored
-    map_filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0' #The settings used you want to cut dir on. 
+    map_filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_0-Hilb_0-upsample_32768-maxmethod_0' #The settings used you want to cut dir on. 
 
     cut_48MHz_signals = False
     cut_43MHz_signals = False

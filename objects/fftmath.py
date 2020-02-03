@@ -25,6 +25,7 @@ import tools.info as info
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
+from matplotlib.widgets import Slider, Button, RadioButtons
 from pprint import pprint
 import itertools
 import warnings
@@ -80,6 +81,8 @@ class FFTPrepper:
             self.pairs = numpy.vstack((self.hpol_pairs,self.vpol_pairs)) 
 
             self.tukey_default = tukey_default #This sets the default in self.wf whether to use tukey or not. 
+
+            self.persistent_object = [] #For any objects that need to be kept alive/referenced (i.e. interactive plots)
 
 
             #Allowing for a subset of the waveform to be isolated.  Helpful to speed this up if you know where signals are in long traces.
@@ -712,6 +715,70 @@ class TimeDelayCalculator(FFTPrepper):
                         plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
                         plt.legend()
                     import pdb; pdb.set_trace()
+            elif align_method == 9:
+                '''
+                For this I want to use the 'slider' method of visual alignment.
+                I.e. plot the two curves, and have a slide controlling the roll
+                of one of the waveforms. Once satisfied with the roll, lock it down.
+                '''
+                indices = numpy.zeros(numpy.shape(corrs)[0],dtype=int)
+                max_corrs = numpy.zeros(numpy.shape(corrs)[0])
+
+
+                time_delays = numpy.zeros(len(self.pairs))
+                display_half_time_window = 200
+                display_half_time_window_index = int(display_half_time_window/self.dt_ns_upsampled) #In indices
+                slider_half_time_window = 100
+                slider_half_time_window_index = int(slider_half_time_window/self.dt_ns_upsampled) #In indices
+
+                t = numpy.arange(upsampled_waveforms.shape[1])*self.dt_ns_upsampled
+                for pair_index, pair in enumerate(self.pairs):
+                    #self.dt_ns_upsampled
+                    fig_index = len(self.persistent_object)
+                    ax_index = fig_index + 1
+
+                    fig, ax = plt.subplots()
+
+                    self.persistent_object.append(fig)
+                    self.persistent_object.append(ax)
+                    self.persistent_object[ax_index].margins(x=0)
+
+                    plt.subplots_adjust(bottom=0.25)
+                    plt.plot(t, upsampled_waveforms[pair[0]]/max(upsampled_waveforms[pair[0]]), c='k', alpha=0.8, lw=2,label = 'Ant %i'%pair[0])
+
+                    start_roll = numpy.argmax(corrs[pair_index])-len(t)
+
+                    plot, = plt.plot(t + start_roll*self.dt_ns_upsampled, upsampled_waveforms[pair[1]]/max(upsampled_waveforms[pair[1]]), c='r', alpha=0.5, lw=2,label = 'Ant %i'%pair[1])
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.xlabel('t (ns)')
+                    plt.ylabel('Normalized Amplitude')
+                    plt.xlim(t[numpy.argmax(upsampled_waveforms[pair[0]])] - 1.5*display_half_time_window , t[numpy.argmax(upsampled_waveforms[pair[0]])] + 2.0*display_half_time_window)
+
+                    plt.legend()
+                    ax_roll = plt.axes([0.25, 0.15, 0.65, 0.03])
+
+                    slider_roll = Slider(ax_roll, 'Roll Ant %i'%pair[1], max(-upsampled_waveforms.shape[1],start_roll-slider_half_time_window_index), min(start_roll+slider_half_time_window_index,upsampled_waveforms.shape[1]), valinit=start_roll, valstep=1.0)
+
+
+                    def update(val):
+                        roll = slider_roll.val
+                        plot.set_xdata(t + roll*self.dt_ns_upsampled)
+                        self.persistent_object[fig_index].canvas.draw_idle()
+
+
+                    slider_roll.on_changed(update)
+
+                    input('If satisfied with current slider location, press Enter to lock it down.')
+                    plt.close(self.persistent_object[fig_index])
+
+                    indices[pair_index] = int(len(t) + slider_roll.val)
+                    max_corrs[pair_index] = corrs[pair_index][indices[pair_index]]                    
+                    print('int of %i chosen representing time delay of %0.3f ns\nCorresponding correlation value of %0.3f (max = %0.3f)'%(slider_roll.val,slider_roll.val*self.dt_ns_upsampled, max_corrs[pair_index], max(corrs[pair_index])))
+
+
+
 
             if False:
                 if True:#numpy.any(self.corr_time_shifts[indices] > 2000):
@@ -805,7 +872,9 @@ class TimeDelayCalculator(FFTPrepper):
                     axs.append(plt.gca())
             one_percent_event = max(1,int(len(eventids)/100))
             for event_index, eventid in enumerate(eventids):
-                if event_index%one_percent_event == 0:
+                if align_method == 9:
+                    sys.stdout.write('(%i/%i)\t\t\t\n'%(event_index+1,len(eventids)))
+                elif event_index%one_percent_event == 0:
                     sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
                 sys.stdout.flush()
                 if align_method is None:
