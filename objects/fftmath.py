@@ -570,17 +570,20 @@ class TimeDelayCalculator(FFTPrepper):
     --------
     examples.beacon_data_reader.reader
     '''
-    def calculateTimeDelays(self, ffts, upsampled_waveforms, return_full_corrs=False, align_method=0, print_warning=True):
+    def calculateTimeDelays(self, ffts, upsampled_waveforms, return_full_corrs=False, align_method=0, print_warning=True, align_method_10_estimate=None, align_method_10_window_ns=8):
         '''
         Align method can be one of a few:
-        0: argmax of corrs (default)
-        1: argmax of hilbert of corrs
-        2: Average of argmin and argmax
-        3: argmin of corrs
-        4: Pick the largest max peak preceding the max of the hilbert of corrs
-        5: Pick the average indices of values > 95% peak height in corrs
-        6: Pick the average indices of values > 98% peak height in hilbert of corrs
-        7: Gets argmax of abs(corrs) and then finds highest positive peak before this value
+        0:  argmax of corrs (default)
+        1:  argmax of hilbert of corrs
+        2:  Average of argmin and argmax
+        3:  argmin of corrs
+        4:  Pick the largest max peak preceding the max of the hilbert of corrs
+        5:  Pick the average indices of values > 95% peak height in corrs
+        6:  Pick the average indices of values > 98% peak height in hilbert of corrs
+        7:  Gets argmax of abs(corrs) and then finds highest positive peak before this value
+        8:  Apply cfd to waveforms to get first pass guess at delays, then pick the best correlation near that. 
+        9:  For this I want to use the 'slider' method of visual alignment. I.e. plot the two curves, and have a slide controlling the roll of one of the waveforms. Once satisfied with the roll, lock it down.
+        10: This requires expected time delays, and will just snap to the highest value within a small window around that.  Good for fine adjustments after using method 9.  
 
         'max_corrs' corresponds to the value of the selected methods peak. 
         '''
@@ -772,13 +775,34 @@ class TimeDelayCalculator(FFTPrepper):
 
                     input('If satisfied with current slider location, press Enter to lock it down.')
                     plt.close(self.persistent_object[fig_index])
-
-                    indices[pair_index] = int(len(t) + slider_roll.val)
-                    max_corrs[pair_index] = corrs[pair_index][indices[pair_index]]                    
-                    print('int of %i chosen representing time delay of %0.3f ns\nCorresponding correlation value of %0.3f (max = %0.3f)'%(slider_roll.val,slider_roll.val*self.dt_ns_upsampled, max_corrs[pair_index], max(corrs[pair_index])))
+                    selected_index = int(len(t) + slider_roll.val)
 
 
+                    search_window_cut = numpy.logical_and(self.corr_time_shifts > (self.corr_time_shifts[selected_index] - align_method_10_window_ns),  self.corr_time_shifts < (self.corr_time_shifts[selected_index] + align_method_10_window_ns) )
+                    search_window_indices = numpy.where(search_window_cut)[0]
 
+                    indices[pair_index] = search_window_indices[numpy.argmax(corrs[pair_index][search_window_cut])]
+                    max_corrs[pair_index] = numpy.max(corrs[pair_index][search_window_cut])              
+                    print('int of %i chosen, snapping to time delay of %0.3f ns\nCorresponding correlation value of %0.3f (max = %0.3f)'%(slider_roll.val,self.corr_time_shifts[indices[pair_index]], max_corrs[pair_index], max(corrs[pair_index])))
+            elif align_method == 10:
+                '''
+                Requires an expected time delay that is used to snap to the closest peak to that.  
+                '''
+                print(align_method_10_estimate)
+                print(align_method_10_window_ns)
+                if align_method_10_estimate is None:
+                    print('NEED TO GIVE VALUE FOR align_method_10_estimate IF USING aligned_method = 10.  Failing.')
+                else:
+                    #align_method_10_estimate must be have the same number of elements as max_corrs has rows.
+
+                    indices = numpy.zeros(numpy.shape(corrs)[0],dtype=int)
+                    max_corrs = numpy.zeros(numpy.shape(corrs)[0])
+                    for pair_index, pair in enumerate(self.pairs):
+                        search_window_cut = numpy.logical_and(self.corr_time_shifts > (align_method_10_estimate[pair_index] - align_method_10_window_ns),  self.corr_time_shifts < (align_method_10_estimate[pair_index] + align_method_10_window_ns) )
+                        search_window_indices = numpy.where(search_window_cut)[0]
+
+                        indices[pair_index] = search_window_indices[numpy.argmax(corrs[pair_index][search_window_cut])]
+                        max_corrs[pair_index] = numpy.max(corrs[pair_index][search_window_cut])
 
             if False:
                 if True:#numpy.any(self.corr_time_shifts[indices] > 2000):
@@ -812,7 +836,7 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateTimeDelaysFromEvent(self, eventid, return_full_corrs=False, align_method=0, hilbert=False):
+    def calculateTimeDelaysFromEvent(self, eventid, return_full_corrs=False, align_method=0, hilbert=False, align_method_10_estimate=None, align_method_10_window_ns=8):
         '''
         Align method can be one of a few:
         0: argmax of corrs (default)
@@ -828,7 +852,9 @@ class TimeDelayCalculator(FFTPrepper):
         '''
         try:
             ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert)
-            return self.calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=return_full_corrs, align_method=align_method, print_warning=False)
+            
+
+            return self.calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=return_full_corrs, align_method=align_method, print_warning=False, align_method_10_estimate=align_method_10_estimate, align_method_10_window_ns=align_method_10_window_ns)
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -836,7 +862,7 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateMultipleTimeDelays(self,eventids, align_method=None,hilbert=False,plot=False,hpol_cut=None,vpol_cut=None,colors=None):
+    def calculateMultipleTimeDelays(self,eventids, align_method=None,hilbert=False,plot=False,hpol_cut=None,vpol_cut=None,colors=None, align_method_10_estimates=None, align_method_10_window_ns=8):
         '''
         If colors is some set of values that matches len(eventids) then they will be used to color the event curves.
         '''
@@ -871,6 +897,9 @@ class TimeDelayCalculator(FFTPrepper):
                     figs.append(fig)
                     axs.append(plt.gca())
             one_percent_event = max(1,int(len(eventids)/100))
+
+            if align_method_10_estimates is None:
+                align_method_10_estimates = [None]*len(eventids)
             for event_index, eventid in enumerate(eventids):
                 if align_method == 9:
                     sys.stdout.write('(%i/%i)\t\t\t\n'%(event_index+1,len(eventids)))
@@ -879,14 +908,14 @@ class TimeDelayCalculator(FFTPrepper):
                 sys.stdout.flush()
                 if align_method is None:
                     if plot == True:
-                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=True) #Using default of the other function
+                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns) #Using default of the other function
                     else:
-                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=False) #Using default of the other function
+                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns) #Using default of the other function
                 else:
                     if plot == True:
-                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=True)
+                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns)
                     else:
-                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=False)
+                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns)
                 timeshifts.append(time_shift)
                 max_corrs.append(corr_value)
                 if plot == True:

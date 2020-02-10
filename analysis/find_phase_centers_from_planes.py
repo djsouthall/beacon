@@ -120,7 +120,8 @@ if __name__ == '__main__':
         apply_phase_response = False
         hilbert = False
 
-        try_to_use_precalculated_time_delays = True
+        try_to_use_precalculated_time_delays = False
+        try_to_use_precalculated_time_delays_but_just_as_guess_for_real_time_delays_why_is_this_so_long = True
 
         if len(sys.argv) == 2:
             if str(sys.argv[1]) in ['vpol', 'hpol']:
@@ -174,6 +175,25 @@ if __name__ == '__main__':
                 measured_plane_time_delays[key] = known_planes[key]['time_delays'][mode].T[pair_cut]
                 measured_plane_time_delays_weights[key] = known_planes[key]['max_corrs'][mode].T[pair_cut] #might need something better than this. 
 
+            elif try_to_use_precalculated_time_delays_but_just_as_guess_for_real_time_delays_why_is_this_so_long == True:
+
+                guess_time_delays = numpy.vstack((known_planes[key]['time_delays']['hpol'].T,known_planes[key]['time_delays']['vpol'].T)).T
+
+                print('Calculating time delays from info.py')
+                run = int(key.split('-')[0])
+                reader = Reader(datapath,run)
+                tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=False,apply_phase_response=apply_phase_response)
+                eventids = known_planes[key]['eventids'][:,1]
+                
+                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids,align_method=10,hilbert=hilbert, align_method_10_estimates=guess_time_delays, align_method_10_window_ns=8)
+
+                if mode == 'hpol':
+                    measured_plane_time_delays[key] = time_shifts[0:6,:][pair_cut]
+                    measured_plane_time_delays_weights[key] = corrs[0:6,:][pair_cut] #might need something better than this. 
+                else:
+                    measured_plane_time_delays[key] = time_shifts[6:12,:][pair_cut]
+                    measured_plane_time_delays_weights[key] = corrs[6:12,:][pair_cut] #might need something better than this.
+
             else:
                 print('Calculating time delays from info.py')
                 run = int(key.split('-')[0])
@@ -220,21 +240,21 @@ if __name__ == '__main__':
             ant3_physical_limits_z = (antennas_phase_start[3][2] - guess_range ,antennas_phase_start[3][2] + guess_range)
 
         else:
-            ant0_physical_limits_x = None 
-            ant0_physical_limits_y = None
-            ant0_physical_limits_z = None
+            ant0_physical_limits_x = None#None 
+            ant0_physical_limits_y = None#None
+            ant0_physical_limits_z = None#None
 
-            ant1_physical_limits_x = (None,0.0) #Forced west of 0
-            ant1_physical_limits_y = None
-            ant1_physical_limits_z = (10.0,None) #Forced above 0
+            ant1_physical_limits_x = None#(None,0.0) #Forced west of 0
+            ant1_physical_limits_y = None#None
+            ant1_physical_limits_z = None#(10.0,None) #Forced above 0
 
-            ant2_physical_limits_x = None
-            ant2_physical_limits_y = (None,0.0) #Forced south of 0 
-            ant2_physical_limits_z = None
+            ant2_physical_limits_x = None#None
+            ant2_physical_limits_y = None#(None,0.0) #Forced south of 0 
+            ant2_physical_limits_z = None#None
 
-            ant3_physical_limits_x = (None,0.0) #Forced West of 0
-            ant3_physical_limits_y = (None,0.0) #Forced South of 0
-            ant3_physical_limits_z = (0.0,None) #Forced above 0
+            ant3_physical_limits_x = None#(None,0.0) #Forced West of 0
+            ant3_physical_limits_y = None#(None,0.0) #Forced South of 0
+            ant3_physical_limits_z = None#(0.0,None) #Forced above 0
 
 
         ##########
@@ -242,7 +262,22 @@ if __name__ == '__main__':
         ##########
 
         chi2_fig = plt.figure()
-        chi2_fig.canvas.set_window_title('chi2_fig')
+        chi2_fig.canvas.set_window_title('Initial Positions')
+        chi2_ax = chi2_fig.add_subplot(111, projection='3d')
+        chi2_ax.scatter(antennas_phase_start[0][0], antennas_phase_start[0][1], antennas_phase_start[0][2],c='r',alpha=0.5,label='Initial Ant0')
+        chi2_ax.scatter(antennas_phase_start[1][0], antennas_phase_start[1][1], antennas_phase_start[1][2],c='g',alpha=0.5,label='Initial Ant1')
+        chi2_ax.scatter(antennas_phase_start[2][0], antennas_phase_start[2][1], antennas_phase_start[2][2],c='b',alpha=0.5,label='Initial Ant2')
+        chi2_ax.scatter(antennas_phase_start[3][0], antennas_phase_start[3][1], antennas_phase_start[3][2],c='m',alpha=0.5,label='Initial Ant3')
+
+        chi2_ax.set_xlabel('East (m)',linespacing=10)
+        chi2_ax.set_ylabel('North (m)',linespacing=10)
+        chi2_ax.set_zlabel('Up (m)',linespacing=10)
+        chi2_ax.dist = 10
+        plt.legend()
+
+
+        chi2_fig = plt.figure()
+        chi2_fig.canvas.set_window_title('Both')
         chi2_ax = chi2_fig.add_subplot(111, projection='3d')
         chi2_ax.scatter(antennas_phase_start[0][0], antennas_phase_start[0][1], antennas_phase_start[0][2],c='r',alpha=0.5,label='Initial Ant0')
         chi2_ax.scatter(antennas_phase_start[1][0], antennas_phase_start[1][1], antennas_phase_start[1][2],c='g',alpha=0.5,label='Initial Ant1')
@@ -291,7 +326,7 @@ if __name__ == '__main__':
                         #Right now these seem reversed from what I would expect based on the plot?  In time I mean. 
 
                         
-                        vals = ((geometric_time_delay - measured_plane_time_delays[key][pair_index])**2)/measured_plane_time_delays_weights[key][pair_index]**2
+                        vals = ((geometric_time_delay - measured_plane_time_delays[key][pair_index])**2)/(1.0001-measured_plane_time_delays_weights[key][pair_index])**2 #1-max(corr) makes the optimizer see larger variations when accurate time delays aren't well matched.  i.e the smaller max(corr) the smaller (1-max(corr))**2 is, and the larger that chi^2 is.  
                         #chi_2 += numpy.mean(vals)/numpy.std(vals) #This was a completely dumb calculation that biased against planes that actually travelled.  I missed the point.
                         chi_2 += numpy.sum(vals) 
                 return chi_2
@@ -348,9 +383,9 @@ if __name__ == '__main__':
                         limit_ant3_x=ant3_physical_limits_x,\
                         limit_ant3_y=ant3_physical_limits_y,\
                         limit_ant3_z=ant3_physical_limits_z,\
-                        fix_ant0_x=False,\
-                        fix_ant0_y=False,\
-                        fix_ant0_z=False,\
+                        fix_ant0_x=True,\
+                        fix_ant0_y=True,\
+                        fix_ant0_z=True,\
                         fix_ant1_x=False,\
                         fix_ant1_y=False,\
                         fix_ant1_z=False,\
@@ -395,11 +430,28 @@ if __name__ == '__main__':
         chi2_ax.scatter(ant1_phase_x, ant1_phase_y, ant1_phase_z,marker='*',c='g',alpha=0.5,label='Final Ant1')
         chi2_ax.scatter(ant2_phase_x, ant2_phase_y, ant2_phase_z,marker='*',c='b',alpha=0.5,label='Final Ant2')
         chi2_ax.scatter(ant3_phase_x, ant3_phase_y, ant3_phase_z,marker='*',c='m',alpha=0.5,label='Final Ant3')
-
+        
+        chi2_ax.set_xlabel('East (m)',linespacing=10)
+        chi2_ax.set_ylabel('North (m)',linespacing=10)
+        chi2_ax.set_zlabel('Up (m)',linespacing=10)
+        chi2_ax.dist = 10
         plt.legend()
 
 
 
+        chi2_fig = plt.figure()
+        chi2_fig.canvas.set_window_title('Final Positions')
+        chi2_ax = chi2_fig.add_subplot(111, projection='3d')
+        chi2_ax.scatter(ant0_phase_x, ant0_phase_y, ant0_phase_z,marker='*',c='r',alpha=0.5,label='Final Ant0')
+        chi2_ax.scatter(ant1_phase_x, ant1_phase_y, ant1_phase_z,marker='*',c='g',alpha=0.5,label='Final Ant1')
+        chi2_ax.scatter(ant2_phase_x, ant2_phase_y, ant2_phase_z,marker='*',c='b',alpha=0.5,label='Final Ant2')
+        chi2_ax.scatter(ant3_phase_x, ant3_phase_y, ant3_phase_z,marker='*',c='m',alpha=0.5,label='Final Ant3')
+
+        chi2_ax.set_xlabel('East (m)',linespacing=10)
+        chi2_ax.set_ylabel('North (m)',linespacing=10)
+        chi2_ax.set_zlabel('Up (m)',linespacing=10)
+        chi2_ax.dist = 10
+        plt.legend()
 
 
         if plot_time_delays == True:
