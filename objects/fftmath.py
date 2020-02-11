@@ -584,7 +584,8 @@ class TimeDelayCalculator(FFTPrepper):
         8:  Apply cfd to waveforms to get first pass guess at delays, then pick the best correlation near that. 
         9:  For this I want to use the 'slider' method of visual alignment. I.e. plot the two curves, and have a slide controlling the roll of one of the waveforms. Once satisfied with the roll, lock it down.
         10: This requires expected time delays, and will just snap to the highest value within a small window around that.  Good for fine adjustments after using method 9.  
-
+        11: For hpol baselines this will use 0, and for vpol it will use 9.
+        12: For vpol baselines this will use 0, and for hpol it will use 9.
         'max_corrs' corresponds to the value of the selected methods peak. 
         '''
         try:
@@ -600,6 +601,7 @@ class TimeDelayCalculator(FFTPrepper):
 
             if ~numpy.all(numpy.isfinite(corrs)):
                 import pdb; pdb.set_trace()
+
 
             if align_method == 0:
                 indices = numpy.argmax(corrs,axis=1)
@@ -718,24 +720,37 @@ class TimeDelayCalculator(FFTPrepper):
                         plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
                         plt.legend()
                     import pdb; pdb.set_trace()
-            elif align_method == 9:
+            elif numpy.any([align_method == 9,align_method == 11,align_method == 12]):
                 '''
                 For this I want to use the 'slider' method of visual alignment.
                 I.e. plot the two curves, and have a slide controlling the roll
                 of one of the waveforms. Once satisfied with the roll, lock it down.
                 '''
-                indices = numpy.zeros(numpy.shape(corrs)[0],dtype=int)
-                max_corrs = numpy.zeros(numpy.shape(corrs)[0])
+
+                if align_method == 9:
+                    loop_pairs = self.pairs
+                    indices = numpy.zeros(numpy.shape(corrs)[0],dtype=int)
+                    max_corrs = numpy.zeros(numpy.shape(corrs)[0])
+                elif align_method == 11:
+                    loop_pairs = self.vpol_pairs
+                    indices = numpy.argmax(corrs,axis=1)
+                    max_corrs = numpy.max(corrs,axis=1)
+                elif align_method == 12:
+                    loop_pairs = self.hpol_pairs
+                    indices = numpy.argmax(corrs,axis=1)
+                    max_corrs = numpy.max(corrs,axis=1)
 
 
                 time_delays = numpy.zeros(len(self.pairs))
                 display_half_time_window = 200
                 display_half_time_window_index = int(display_half_time_window/self.dt_ns_upsampled) #In indices
-                slider_half_time_window = 100
+                slider_half_time_window = 300
                 slider_half_time_window_index = int(slider_half_time_window/self.dt_ns_upsampled) #In indices
 
                 t = numpy.arange(upsampled_waveforms.shape[1])*self.dt_ns_upsampled
                 for pair_index, pair in enumerate(self.pairs):
+                    if pair not in loop_pairs:
+                        continue
                     #self.dt_ns_upsampled
                     fig_index = len(self.persistent_object)
                     ax_index = fig_index + 1
@@ -784,6 +799,7 @@ class TimeDelayCalculator(FFTPrepper):
                     indices[pair_index] = search_window_indices[numpy.argmax(corrs[pair_index][search_window_cut])]
                     max_corrs[pair_index] = numpy.max(corrs[pair_index][search_window_cut])              
                     print('int of %i chosen, snapping to time delay of %0.3f ns\nCorresponding correlation value of %0.3f (max = %0.3f)'%(slider_roll.val,self.corr_time_shifts[indices[pair_index]], max_corrs[pair_index], max(corrs[pair_index])))
+
             elif align_method == 10:
                 '''
                 Requires an expected time delay that is used to snap to the closest peak to that.  
@@ -803,6 +819,9 @@ class TimeDelayCalculator(FFTPrepper):
 
                         indices[pair_index] = search_window_indices[numpy.argmax(corrs[pair_index][search_window_cut])]
                         max_corrs[pair_index] = numpy.max(corrs[pair_index][search_window_cut])
+
+
+
 
             if False:
                 if True:#numpy.any(self.corr_time_shifts[indices] > 2000):

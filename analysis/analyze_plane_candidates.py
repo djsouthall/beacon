@@ -33,7 +33,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import LogNorm
-from pprint import pprint
+import pprint
 import itertools
 import warnings
 import h5py
@@ -107,7 +107,9 @@ all_candidates = {\
                 'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}}\
 }
 
+
 '''
+
 
 all_candidates = {\
 '1773-14413':{  'eventids':numpy.array([[1773,14413],[1773,14540],[1773,14590]]),\
@@ -131,7 +133,18 @@ all_candidates = {\
                 'align_method':0,\
                 'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}}\
 }
+
+
 '''
+
+all_candidates = {\
+'1774-88800':{  'eventids':numpy.array([[1774,88800],[1774,88810],[1774,88815],[1774,88895],[1774,88913],[1774,88921],[1774,88923],[1774,88925],[1774,88944],[1774,88955],[1774,88959],[1774,88988],[1774,88993],[1774,89029],[1774,89030],[1774,89032],[1774,89034],[1774,89041],[1774,89043],[1774,89052],[1774,89172],[1774,89175],[1774,89181],[1774,89203],[1774,89204],[1774,89213]]),\
+                'known_flight':'ab5f43',\
+                'align_method':0,\
+                'baselines':{'hpol':[],'vpol':[[1,2],[1,3],[2,3]]}}
+}
+
+
 
 candidates = all_candidates
 # test_track = '1784-7166'#'1728-62026'
@@ -240,11 +253,13 @@ if __name__ == '__main__':
                             hpol_corrs = numpy.vstack((file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(0,1)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(0,2)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(0,3)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(1,2)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(1,3)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(2,3)][load_cut])).T.T
                             vpol_corrs = numpy.vstack((file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(0,1)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(0,2)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(0,3)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(1,2)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(1,3)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(2,3)][load_cut])).T.T
                         print('\n\n')
-                        print(known_flight)
-                        print(hpol_delays)
-                        print(vpol_delays)
-                        print(hpol_corrs)
-                        print(vpol_corrs)
+
+                        pp = pprint.PrettyPrinter(width=200,indent=0) #Width isn't really working which is lame.
+                        pp.pprint(known_flight)
+                        pp.pprint(hpol_delays)
+                        pp.pprint(vpol_delays)
+                        pp.pprint(hpol_corrs)
+                        pp.pprint(vpol_corrs)
 
 
                     except Exception as e:
@@ -295,7 +310,7 @@ if __name__ == '__main__':
                 
 
 
-                for pol in ['Hpol']:#['Hpol','Vpol']:
+                for pol in ['Vpol']:#['Hpol','Vpol']:
                     pair_cut = numpy.array([pair in candidates[candidates_key]['baselines'][pol.lower()] for pair in [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]] ]) #Checks which pairs are worth looping over.
                     time_delay_fig = plt.figure()
                     time_delay_fig.canvas.set_window_title('%s Delays'%pol)
