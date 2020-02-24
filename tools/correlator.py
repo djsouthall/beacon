@@ -8,6 +8,8 @@ interpretting signal directions of BEACON signals.
 '''
 import os
 import sys
+import gc
+import pymap3d as pm
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 
@@ -15,8 +17,12 @@ sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
 import tools.info as info
 import analysis.phase_response as pr
+import tools.get_plane_tracks as pt
+from analysis.find_phase_centers_from_planes import PlanePoly
 
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
 import scipy.signal
 import scipy.stats
 import numpy
@@ -75,11 +81,7 @@ class Correlator:
 
             self.figs = []
             self.axs = []
-
-            self.n_phi = n_phi
-            self.range_phi_deg = range_phi_deg
-            self.n_theta = n_theta
-            self.range_theta_deg = range_theta_deg
+            self.animations = []
 
             cable_delays = info.loadCableDelays()
             self.cable_delays = numpy.array([cable_delays['hpol'][0],cable_delays['vpol'][0],cable_delays['hpol'][1],cable_delays['vpol'][1],cable_delays['hpol'][2],cable_delays['vpol'][2],cable_delays['hpol'][3],cable_delays['vpol'][3]])
@@ -133,10 +135,12 @@ class Correlator:
             self.n_theta = n_theta
             self.range_phi_deg = range_phi_deg
             self.n_phi = n_phi
-            self.thetas_deg = numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta)
-            self.phis_deg = numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi)
-            self.thetas_rad = numpy.radians(self.thetas_deg)
-            self.phis_rad = numpy.radians(self.phis_deg)
+            self.thetas_deg = numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta) #Zenith angle
+            self.phis_deg = numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi) #Azimuth angle
+            self.thetas_rad = numpy.deg2rad(self.thetas_deg)
+            self.phis_rad = numpy.deg2rad(self.phis_deg)
+
+            self.mesh_azimuth_rad, self.mesh_elevation_rad = numpy.meshgrid(numpy.deg2rad(numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi+1)), numpy.pi/2.0 - numpy.deg2rad(numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta+1)))
 
             self.A0_latlonel = info.loadAntennaZeroLocation() #Used for conversion to RA and Dec coordinates.
 
@@ -944,6 +948,136 @@ class Correlator:
         else:
             return total_mean_corr_values
 
+    def animatedMap(self, eventids, pol, title, plane_zenith=None, plane_az=None, hilbert=False, max_method=None,center_dir='E',save=True):
+        '''
+        Does the same thing as map, but updates the canvas for each event creating an animation.
+        Mostly helpful for repeated sources that are expected to be moving such as planes.
+
+        Parameters
+        ----------
+        eventids : numpy.ndarray of ints
+            The entry numbers to include in the calculation.
+        pol : str
+            The polarization you wish to plot.  Options: 'hpol', 'vpol', 'both'
+        plot_map : bool
+            Whether to actually plot the results.  
+        plot_corr : bool
+            Plot the cross-correlations for each baseline.
+        hilbert : bool
+            Enables performing calculations with Hilbert envelopes of waveforms. 
+        max_method : bool
+            Determines how the most probable source direction is from the map.
+        '''
+        if pol == 'both':
+            hpol_result = self.animatedMap(eventids, 'hpol',title, plane_zenith=plane_zenith, plane_az=plane_az, hilbert=hilbert, max_method=max_method,center_dir=center_dir,save=save)
+            vpol_result = self.animatedMap(eventids, 'vpol',title, plane_zenith=plane_zenith, plane_az=plane_az, hilbert=hilbert, max_method=max_method,center_dir=center_dir,save=save)
+
+            return hpol_result, vpol_result
+
+        try:
+            print('Performing calculations for %s'%pol)
+
+            all_maps = []# numpy.zeros((self.n_theta, self.n_phi))
+            for event_index, eventid in enumerate(eventids):
+                sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
+                sys.stdout.flush()
+                m = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert)
+                if center_dir.upper() == 'E':
+                    center_dir_full = 'East'
+                    azimuth_offset_rad = 0 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From East = 0 deg, North = 90 deg)'
+                    roll = 0
+                elif center_dir.upper() == 'N':
+                    center_dir_full = 'North'
+                    azimuth_offset_rad = numpy.pi/2 #This is subtracted from the xaxis to roll it effectively. 
+                    xlabel = 'Azimuth (From North = 0 deg, West = 90 deg)'
+                    roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+                elif center_dir.upper() == 'W':
+                    center_dir_full = 'West'
+                    azimuth_offset_rad = numpy.pi #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From West = 0 deg, South = 90 deg)'
+                    roll = len(self.phis_rad)//2
+                elif center_dir.upper() == 'S':
+                    center_dir_full = 'South'
+                    azimuth_offset_rad = -numpy.pi/2 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)'
+                    roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+
+                m = numpy.roll(m,roll,axis=1) #orients center.
+                all_maps.append(m)
+            print('')
+
+            #Convert to radians
+            if plane_az is not None:
+                if plane_az is list:
+                    plane_az = numpy.array(plane_az)
+                plane_az = numpy.deg2rad(plane_az) - azimuth_offset_rad
+            if plane_zenith is not None:
+                if plane_zenith is list:
+                    plane_zenith = numpy.array(plane_zenith)
+                plane_elevation = numpy.deg2rad(90 - plane_zenith)
+            else:
+                plane_elevation = None
+
+            fig = plt.figure(figsize=(16,9))
+            ax = fig.add_subplot(1,1,1, projection='mollweide')
+            
+            fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
+            ax.set_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
+
+
+            if hilbert == True:
+                #im = ax.imshow(all_maps[0], interpolation='none', vmin=numpy.min(all_maps[0]),vmax=numpy.max(all_maps[0]), extent=extent,cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
+                im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, all_maps[0], vmin=numpy.min(all_maps[0]), vmax=numpy.max(all_maps[0]),cmap=plt.cm.coolwarm)
+                cbar = fig.colorbar(im)
+                cbar.set_label('Mean Correlation Value (arb)')
+            else:
+                #im = ax.imshow(all_maps[0], interpolation='none', vmin=numpy.concatenate(all_maps).min(),vmax=numpy.concatenate(all_maps).max(), extent=extent,cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
+                im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, all_maps[0], vmin=numpy.concatenate(all_maps).min(), vmax=numpy.concatenate(all_maps).max(),cmap=plt.cm.coolwarm)
+                cbar = fig.colorbar(im)
+                cbar.set_label('Mean Correlation Value')
+            plt.xlabel(xlabel)
+            plt.ylabel('Zenith Angle (Degrees)')
+            plt.grid(True)
+
+            if plane_elevation is not None and plane_az is not None:
+                radius = numpy.deg2rad(2.5) #Radians I think?  Should eventually represent error. 
+                circle = plt.Circle((plane_az[0], plane_elevation[0]), radius, edgecolor='lime',linewidth=2,fill=False,zorder=10)
+                ax.add_artist(circle)
+
+            #Circle not plotting, what is that all about?
+
+            def update(frame):
+                fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[frame]))
+                ax.set_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[frame]))
+                im.set_array(all_maps[frame].ravel())
+
+                if hilbert == True:
+                    im.set_clim(vmin=numpy.min(all_maps[frame]),vmax=numpy.max(all_maps[frame]))
+
+                if plane_elevation is not None and plane_az is not None:
+                    circle.center = plane_az[frame], plane_elevation[frame]
+                    ax.add_artist(circle)
+                return [im]
+
+            ani = FuncAnimation(fig, update, frames=range(len(eventids)),blit=False,save_count=0)
+
+            if save == True:
+                ani.save('./%s_%s_hilbert=%s_%s.mp4'%(title,pol,str(hilbert), center_dir_full + '_centered'), writer='ffmpeg', fps=3,dpi=300)
+                plt.close(fig)
+            else:
+                self.figs.append(fig)
+                self.axs.append(ax)
+                self.animations.append(ani)
+            
+            return        
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
     def histMapPeak(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, use_weight=False):
         '''
         This will loop over eventids and makes a histogram from of location of maximum correlation
@@ -1084,7 +1218,7 @@ def testMain():
                 pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
                 pulser_locations_ENU = pulser_locations_ENU/numpy.linalg.norm(pulser_locations_ENU)
                 pulser_theta = numpy.degrees(numpy.arccos(pulser_locations_ENU[2]))
-                pulser_phi = numpy.degrees(numpy.arctan(pulser_locations_ENU[1]/pulser_locations_ENU[0]))
+                pulser_phi = numpy.degrees(numpy.arctan2(pulser_locations_ENU[1],pulser_locations_ENU[0]))
                 print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
 
                 ax.axvline(pulser_phi,c='r')
@@ -1098,7 +1232,7 @@ def testMain():
             pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
             pulser_locations_ENU = pulser_locations_ENU/numpy.linalg.norm(pulser_locations_ENU)
             pulser_theta = numpy.degrees(numpy.arccos(pulser_locations_ENU[2]))
-            pulser_phi = numpy.degrees(numpy.arctan(pulser_locations_ENU[1]/pulser_locations_ENU[0]))
+            pulser_phi = numpy.degrees(numpy.arctan2(pulser_locations_ENU[1],pulser_locations_ENU[0]))
             print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
 
             ax.axvline(pulser_phi,c='r')
@@ -1112,14 +1246,15 @@ if __name__=="__main__":
     crit_freq_low_pass_MHz = None#60 #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = None#4
 
-    crit_freq_high_pass_MHz = 30#None
-    high_pass_filter_order = 5#None
-    plot_filter=True
-    apply_phase_response=True
+    crit_freq_high_pass_MHz = None#30#None
+    high_pass_filter_order = None#5#None
+    plot_filter=False
+
+    apply_phase_response=False
     n_phi = 720
     n_theta = 720
 
-    upsample = 2**15
+    upsample = 2**17
 
     max_method = 0
     
@@ -1159,59 +1294,100 @@ if __name__=="__main__":
         all_axs = []
         all_cors = []
 
-        for run in [1507,1509,1511]:
+        if False:
+            for run in [1507,1509,1511]:
 
-            if run == 1507:
-                waveform_index_range = (1500,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
-            elif run == 1509:
-                waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
-            elif run == 1511:
-                waveform_index_range = (1250,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
-            else:
-                waveform_index_range = (None,None)
+                if run == 1507:
+                    waveform_index_range = (1500,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
+                elif run == 1509:
+                    waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
+                elif run == 1511:
+                    waveform_index_range = (1250,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
+                else:
+                    waveform_index_range = (None,None)
 
-            reader = Reader(datapath,run)
-            plot_filter=run==1507 #True once
+                reader = Reader(datapath,run)
 
-            known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
-            eventids = {}
-            eventids['hpol'] = numpy.sort(known_pulser_ids['run%i'%run]['hpol'])
-            eventids['vpol'] = numpy.sort(known_pulser_ids['run%i'%run]['vpol'])
-            all_eventids = numpy.sort(numpy.append(eventids['hpol'],eventids['vpol']))
+                known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
+                eventids = {}
+                eventids['hpol'] = numpy.sort(known_pulser_ids['run%i'%run]['hpol'])
+                eventids['vpol'] = numpy.sort(known_pulser_ids['run%i'%run]['vpol'])
+                all_eventids = numpy.sort(numpy.append(eventids['hpol'],eventids['vpol']))
 
-            hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
-            vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
+                hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
+                vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
 
-            cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
-            if True:
-                for mode in ['hpol','vpol']:
-                    eventid = eventids[mode][0]
-                    mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method)
+                cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
+                if False:
+                    for mode in ['hpol','vpol']:
+                        eventid = eventids[mode][0]
+                        mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method)
 
-                    pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
-                    pulser_locations_ENU = pulser_locations_ENU/numpy.linalg.norm(pulser_locations_ENU)
-                    pulser_theta = numpy.degrees(numpy.arccos(pulser_locations_ENU[2]))
-                    pulser_phi = numpy.degrees(numpy.arctan(pulser_locations_ENU[1]/pulser_locations_ENU[0]))
-                    print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
+                        pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
+                        #Do I need to adjust the height of the pulser?  Cosmin thinks there is a 20 m discrepency in alt between the two metrics.
+                        #pulser_locations_ENU[2] -= 20.0
 
-                    ax.axvline(pulser_phi,c='r')
-                    ax.axhline(pulser_theta,c='r')
+                        pulser_locations_ENU = pulser_locations_ENU/numpy.linalg.norm(pulser_locations_ENU)
+
+
+                        pulser_theta = numpy.degrees(numpy.arccos(pulser_locations_ENU[2]))
+                        pulser_phi = numpy.degrees(numpy.arctan2(pulser_locations_ENU[1],pulser_locations_ENU[0]))
+                        print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
+
+                        ax.axvline(pulser_phi,c='r')
+                        ax.axhline(pulser_theta,c='r')
+
+                        all_figs.append(fig)
+                        all_axs.append(ax)
+                if True:
+                    for mode in ['hpol','vpol']:
+                        mean_corr_values, fig, ax = cor.averagedMap(eventids[mode], mode, plot_map=True, hilbert=False, max_method=max_method)
+
+                        pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
+                        pulser_locations_ENU = pulser_locations_ENU/numpy.linalg.norm(pulser_locations_ENU)
+                        pulser_theta = numpy.degrees(numpy.arccos(pulser_locations_ENU[2]))
+                        pulser_phi = numpy.degrees(numpy.arctan2(pulser_locations_ENU[1],pulser_locations_ENU[0]))
+                        print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
+
+                        ax.axvline(pulser_phi,c='r')
+                        ax.axhline(pulser_theta,c='r')
 
                     all_figs.append(fig)
                     all_axs.append(ax)
-            if False:
-                for mode in ['hpol','vpol']:
-                    mean_corr_values, fig, ax = cor.averagedMap(eventids[mode], mode, plot_map=True, hilbert=False, max_method=max_method)
+                all_cors.append(cor)
 
-                    pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
-                    pulser_locations_ENU = pulser_locations_ENU/numpy.linalg.norm(pulser_locations_ENU)
-                    pulser_theta = numpy.degrees(numpy.arccos(pulser_locations_ENU[2]))
-                    pulser_phi = numpy.degrees(numpy.arctan(pulser_locations_ENU[1]/pulser_locations_ENU[0]))
-                    print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
+        if True:
+            #Preparing for planes:
+            known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks()
 
-                    ax.axvline(pulser_phi,c='r')
-                    ax.axhline(pulser_theta,c='r')
+            plane_polys = {}
+            cors = []
+            interpolated_plane_locations = {}
+            origin = info.loadAntennaZeroLocation(deploy_index = 1)
+            for index, key in enumerate(list(known_planes.keys())):
+                # if index > 0:
+                #     continue
+                enu = pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2])
+                plane_polys[key] = PlanePoly(output_tracks[key]['timestamps'],enu,plot=False)
 
-                all_figs.append(fig)
-                all_axs.append(ax)
-            all_cors.append(cor)
+                interpolated_plane_locations[key] = plane_polys[key].poly(calibrated_trigtime[key])
+                interpolated_plane_locations[key] = interpolated_plane_locations[key]/numpy.linalg.norm(interpolated_plane_locations[key])
+
+                run = numpy.unique(known_planes[key]['eventids'][:,0])[0]
+                calibrated_trigtime[key] = numpy.zeros(len(known_planes[key]['eventids'][:,0]))
+                #Mostly expected to have only 1 run per plane.  I.e. not being visible across runs. 
+                run_cut = known_planes[key]['eventids'][:,0] == run
+                reader = Reader(os.environ['BEACON_DATA'],run)
+                eventids = known_planes[key]['eventids'][run_cut,1]
+
+
+
+                plane_zenith = numpy.degrees(numpy.arccos(interpolated_plane_locations[key][:,2]))
+                plane_az = numpy.degrees(numpy.arctan2(interpolated_plane_locations[key][:,1],interpolated_plane_locations[key][:,0]))
+
+                cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
+
+                cor.animatedMap(eventids, 'both', key,plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='W',save=True)
+
+                cors.append(cor) #Need to keep references for animations to work. 
+

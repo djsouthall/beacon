@@ -15,6 +15,7 @@ sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import objects.station as bc
 import tools.info as info
 from tools.correlator import Correlator
+import tools.get_plane_tracks as pt
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -39,7 +40,7 @@ if __name__ == '__main__':
             mode = 'vpol'
 
         print('Loading known plane locations.')
-        plane_dict = info.getKnownPlaneTracks()
+        plane_dict = pt.getKnownPlaneTracks()
 
         print('Performing calculations for %s'%mode)
         cable_delays = info.loadCableDelays()[mode]

@@ -24,7 +24,6 @@ sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 from tools.data_handler import createFile, getTimes
 import objects.station as bc
 import tools.info as info
-from tools.correlator import Correlator
 import tools.get_plane_tracks as pt
 from objects.fftmath import TimeDelayCalculator
 
@@ -220,6 +219,8 @@ if __name__ == '__main__':
 
         #Limits 
         guess_range = None #Limit to how far from input phase locations to limit the parameter space to
+        fix_ant0 = True
+
 
         if guess_range is not None:
 
@@ -383,9 +384,9 @@ if __name__ == '__main__':
                         limit_ant3_x=ant3_physical_limits_x,\
                         limit_ant3_y=ant3_physical_limits_y,\
                         limit_ant3_z=ant3_physical_limits_z,\
-                        fix_ant0_x=True,\
-                        fix_ant0_y=True,\
-                        fix_ant0_z=True,\
+                        fix_ant0_x=fix_ant0,\
+                        fix_ant0_y=fix_ant0,\
+                        fix_ant0_z=fix_ant0,\
                         fix_ant1_x=False,\
                         fix_ant1_y=False,\
                         fix_ant1_z=False,\
@@ -532,6 +533,11 @@ if __name__ == '__main__':
                     text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
                     plt.text(text_loc[0],text_loc[1], 'A%i and A%i'%(pair[0],pair[1]),color=text_color,withdash=True)
                 #plt.legend()
+
+        print('Copy-Paste Prints:\n------------')
+        print('')
+        print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, 0.0 ,0.0 ,0.0 ,  m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z'],  m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z'],  m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']))
+        print('antennas_phase_%s_hesse = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, 0.0 ,0.0 ,0.0 ,  m.errors['ant1_x'],m.errors['ant1_y'],m.errors['ant1_z'],  m.errors['ant2_x'],m.errors['ant2_y'],m.errors['ant2_z'],  m.errors['ant3_x'],m.errors['ant3_y'],m.errors['ant3_z']))
 
 
     except Exception as e:

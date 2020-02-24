@@ -754,8 +754,9 @@ class TimeDelayCalculator(FFTPrepper):
                     #self.dt_ns_upsampled
                     fig_index = len(self.persistent_object)
                     ax_index = fig_index + 1
-
-                    fig, ax = plt.subplots()
+                    fig = plt.figure(figsize=(15,5))
+                    ax = plt.gca()
+                    #fig, ax = plt.subplots(figsize=(15,5))
 
                     self.persistent_object.append(fig)
                     self.persistent_object.append(ax)
@@ -773,7 +774,7 @@ class TimeDelayCalculator(FFTPrepper):
                     plt.xlabel('t (ns)')
                     plt.ylabel('Normalized Amplitude')
                     plt.xlim(t[numpy.argmax(upsampled_waveforms[pair[0]])] - 1.5*display_half_time_window , t[numpy.argmax(upsampled_waveforms[pair[0]])] + 2.0*display_half_time_window)
-
+                    plt.tight_layout()
                     plt.legend()
                     ax_roll = plt.axes([0.25, 0.15, 0.65, 0.03])
 
