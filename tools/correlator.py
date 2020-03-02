@@ -500,19 +500,19 @@ class Correlator:
                                                     self.A1_vpol - self.A3_vpol,\
                                                     self.A2_vpol - self.A3_vpol])
 
-            self.t_hpol_0subtract1 = ((hpol_baseline_vectors[0][0]*signal_propogate_direction[:,:,0] + hpol_baseline_vectors[0][1]*signal_propogate_direction[:,:,1] + hpol_baseline_vectors[0][2]*signal_propogate_direction[:,:,2])/self.c)*1e9 + (self.cable_delays[0] - self.cable_delays[2]) #ns
-            self.t_hpol_0subtract2 = ((hpol_baseline_vectors[1][0]*signal_propogate_direction[:,:,0] + hpol_baseline_vectors[1][1]*signal_propogate_direction[:,:,1] + hpol_baseline_vectors[1][2]*signal_propogate_direction[:,:,2])/self.c)*1e9 + (self.cable_delays[0] - self.cable_delays[4]) #ns
-            self.t_hpol_0subtract3 = ((hpol_baseline_vectors[2][0]*signal_propogate_direction[:,:,0] + hpol_baseline_vectors[2][1]*signal_propogate_direction[:,:,1] + hpol_baseline_vectors[2][2]*signal_propogate_direction[:,:,2])/self.c)*1e9 + (self.cable_delays[0] - self.cable_delays[6]) #ns
-            self.t_hpol_1subtract2 = ((hpol_baseline_vectors[3][0]*signal_propogate_direction[:,:,0] + hpol_baseline_vectors[3][1]*signal_propogate_direction[:,:,1] + hpol_baseline_vectors[3][2]*signal_propogate_direction[:,:,2])/self.c)*1e9 + (self.cable_delays[2] - self.cable_delays[4]) #ns
-            self.t_hpol_1subtract3 = ((hpol_baseline_vectors[4][0]*signal_propogate_direction[:,:,0] + hpol_baseline_vectors[4][1]*signal_propogate_direction[:,:,1] + hpol_baseline_vectors[4][2]*signal_propogate_direction[:,:,2])/self.c)*1e9 + (self.cable_delays[2] - self.cable_delays[6]) #ns
-            self.t_hpol_2subtract3 = ((hpol_baseline_vectors[5][0]*signal_propogate_direction[:,:,0] + hpol_baseline_vectors[5][1]*signal_propogate_direction[:,:,1] + hpol_baseline_vectors[5][2]*signal_propogate_direction[:,:,2])/self.c)*1e9 + (self.cable_delays[4] - self.cable_delays[6]) #ns
+            self.t_hpol_0subtract1 = ((hpol_baseline_vectors[0][0]*signal_propogate_direction[:,:,0] + hpol_baseline_vectors[0][1]*signal_propogate_direction[:,:,1] + hpol_baseline_vectors[0][2]*signal_propogate_direction[:,:,2])/self.c)*1.0e9 + (self.cable_delays[0] - self.cable_delays[2]) #ns
+            self.t_hpol_0subtract2 = ((hpol_baseline_vectors[1][0]*signal_propogate_direction[:,:,0] + hpol_baseline_vectors[1][1]*signal_propogate_direction[:,:,1] + hpol_baseline_vectors[1][2]*signal_propogate_direction[:,:,2])/self.c)*1.0e9 + (self.cable_delays[0] - self.cable_delays[4]) #ns
+            self.t_hpol_0subtract3 = ((hpol_baseline_vectors[2][0]*signal_propogate_direction[:,:,0] + hpol_baseline_vectors[2][1]*signal_propogate_direction[:,:,1] + hpol_baseline_vectors[2][2]*signal_propogate_direction[:,:,2])/self.c)*1.0e9 + (self.cable_delays[0] - self.cable_delays[6]) #ns
+            self.t_hpol_1subtract2 = ((hpol_baseline_vectors[3][0]*signal_propogate_direction[:,:,0] + hpol_baseline_vectors[3][1]*signal_propogate_direction[:,:,1] + hpol_baseline_vectors[3][2]*signal_propogate_direction[:,:,2])/self.c)*1.0e9 + (self.cable_delays[2] - self.cable_delays[4]) #ns
+            self.t_hpol_1subtract3 = ((hpol_baseline_vectors[4][0]*signal_propogate_direction[:,:,0] + hpol_baseline_vectors[4][1]*signal_propogate_direction[:,:,1] + hpol_baseline_vectors[4][2]*signal_propogate_direction[:,:,2])/self.c)*1.0e9 + (self.cable_delays[2] - self.cable_delays[6]) #ns
+            self.t_hpol_2subtract3 = ((hpol_baseline_vectors[5][0]*signal_propogate_direction[:,:,0] + hpol_baseline_vectors[5][1]*signal_propogate_direction[:,:,1] + hpol_baseline_vectors[5][2]*signal_propogate_direction[:,:,2])/self.c)*1.0e9 + (self.cable_delays[4] - self.cable_delays[6]) #ns
 
-            self.t_vpol_0subtract1 = ((vpol_baseline_vectors[0][0]*signal_propogate_direction[:,:,0] + vpol_baseline_vectors[0][1]*signal_propogate_direction[:,:,1] + vpol_baseline_vectors[0][2]*signal_propogate_direction[:,:,2])/self.c)*1e9 + (self.cable_delays[1] - self.cable_delays[3]) #ns
-            self.t_vpol_0subtract2 = ((vpol_baseline_vectors[1][0]*signal_propogate_direction[:,:,0] + vpol_baseline_vectors[1][1]*signal_propogate_direction[:,:,1] + vpol_baseline_vectors[1][2]*signal_propogate_direction[:,:,2])/self.c)*1e9 + (self.cable_delays[1] - self.cable_delays[5]) #ns
-            self.t_vpol_0subtract3 = ((vpol_baseline_vectors[2][0]*signal_propogate_direction[:,:,0] + vpol_baseline_vectors[2][1]*signal_propogate_direction[:,:,1] + vpol_baseline_vectors[2][2]*signal_propogate_direction[:,:,2])/self.c)*1e9 + (self.cable_delays[1] - self.cable_delays[7]) #ns
-            self.t_vpol_1subtract2 = ((vpol_baseline_vectors[3][0]*signal_propogate_direction[:,:,0] + vpol_baseline_vectors[3][1]*signal_propogate_direction[:,:,1] + vpol_baseline_vectors[3][2]*signal_propogate_direction[:,:,2])/self.c)*1e9 + (self.cable_delays[3] - self.cable_delays[5]) #ns
-            self.t_vpol_1subtract3 = ((vpol_baseline_vectors[4][0]*signal_propogate_direction[:,:,0] + vpol_baseline_vectors[4][1]*signal_propogate_direction[:,:,1] + vpol_baseline_vectors[4][2]*signal_propogate_direction[:,:,2])/self.c)*1e9 + (self.cable_delays[3] - self.cable_delays[7]) #ns
-            self.t_vpol_2subtract3 = ((vpol_baseline_vectors[5][0]*signal_propogate_direction[:,:,0] + vpol_baseline_vectors[5][1]*signal_propogate_direction[:,:,1] + vpol_baseline_vectors[5][2]*signal_propogate_direction[:,:,2])/self.c)*1e9 + (self.cable_delays[5] - self.cable_delays[7]) #ns
+            self.t_vpol_0subtract1 = ((vpol_baseline_vectors[0][0]*signal_propogate_direction[:,:,0] + vpol_baseline_vectors[0][1]*signal_propogate_direction[:,:,1] + vpol_baseline_vectors[0][2]*signal_propogate_direction[:,:,2])/self.c)*1.0e9 + (self.cable_delays[1] - self.cable_delays[3]) #ns
+            self.t_vpol_0subtract2 = ((vpol_baseline_vectors[1][0]*signal_propogate_direction[:,:,0] + vpol_baseline_vectors[1][1]*signal_propogate_direction[:,:,1] + vpol_baseline_vectors[1][2]*signal_propogate_direction[:,:,2])/self.c)*1.0e9 + (self.cable_delays[1] - self.cable_delays[5]) #ns
+            self.t_vpol_0subtract3 = ((vpol_baseline_vectors[2][0]*signal_propogate_direction[:,:,0] + vpol_baseline_vectors[2][1]*signal_propogate_direction[:,:,1] + vpol_baseline_vectors[2][2]*signal_propogate_direction[:,:,2])/self.c)*1.0e9 + (self.cable_delays[1] - self.cable_delays[7]) #ns
+            self.t_vpol_1subtract2 = ((vpol_baseline_vectors[3][0]*signal_propogate_direction[:,:,0] + vpol_baseline_vectors[3][1]*signal_propogate_direction[:,:,1] + vpol_baseline_vectors[3][2]*signal_propogate_direction[:,:,2])/self.c)*1.0e9 + (self.cable_delays[3] - self.cable_delays[5]) #ns
+            self.t_vpol_1subtract3 = ((vpol_baseline_vectors[4][0]*signal_propogate_direction[:,:,0] + vpol_baseline_vectors[4][1]*signal_propogate_direction[:,:,1] + vpol_baseline_vectors[4][2]*signal_propogate_direction[:,:,2])/self.c)*1.0e9 + (self.cable_delays[3] - self.cable_delays[7]) #ns
+            self.t_vpol_2subtract3 = ((vpol_baseline_vectors[5][0]*signal_propogate_direction[:,:,0] + vpol_baseline_vectors[5][1]*signal_propogate_direction[:,:,1] + vpol_baseline_vectors[5][2]*signal_propogate_direction[:,:,2])/self.c)*1.0e9 + (self.cable_delays[5] - self.cable_delays[7]) #ns
 
             #Should double check when using these via rolling signals.
             #Calculate indices in corr for each direction.
@@ -1063,7 +1063,7 @@ class Correlator:
             ani = FuncAnimation(fig, update, frames=range(len(eventids)),blit=False,save_count=0)
 
             if save == True:
-                ani.save('./%s_%s_hilbert=%s_%s.mp4'%(title,pol,str(hilbert), center_dir_full + '_centered'), writer='ffmpeg', fps=3,dpi=300)
+                ani.save('./feb24/%s_%s_hilbert=%s_%s.mp4'%(title,pol,str(hilbert), center_dir_full + '_centered'), writer='ffmpeg', fps=3,dpi=300)
                 plt.close(fig)
             else:
                 self.figs.append(fig)
@@ -1365,8 +1365,8 @@ if __name__=="__main__":
             interpolated_plane_locations = {}
             origin = info.loadAntennaZeroLocation(deploy_index = 1)
             for index, key in enumerate(list(known_planes.keys())):
-                # if index > 0:
-                #     continue
+                if key != '1774-88800':
+                    continue
                 enu = pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2])
                 plane_polys[key] = PlanePoly(output_tracks[key]['timestamps'],enu,plot=False)
 
@@ -1387,7 +1387,7 @@ if __name__=="__main__":
 
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
 
-                cor.animatedMap(eventids, 'both', key,plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='W',save=True)
+                cor.animatedMap(eventids, 'both', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=True, max_method=None,center_dir='W',save=True)
 
                 cors.append(cor) #Need to keep references for animations to work. 
 
