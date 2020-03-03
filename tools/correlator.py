@@ -76,6 +76,7 @@ class Correlator:
         try:
             n = 1.0003 #Index of refraction of air  #Should use https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.453-11-201507-S!!PDF-E.pdf 
             self.c = 299792458/n #m/s
+            self.min_elevation_linewidth = 0.5
             self.reader = reader
             self.reader.setEntry(0)
 
@@ -163,6 +164,7 @@ class Correlator:
             self.A3_vpol = numpy.asarray(antennas_phase_vpol[3])
 
             self.generateTimeIndices()
+            self.calculateArrayNormalVector()
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -271,6 +273,7 @@ class Correlator:
             if verbose:
                 print('Rerunning time delay prep with antenna positions.')
             self.generateTimeIndices()
+            self.calculateArrayNormalVector()
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -278,6 +281,88 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def calculateArrayNormalVector(self,plot_map=False,mollweide=False, pol='both'):
+        '''
+        This function will determine the normal vector to the plane defined by the array.  This can be
+        used with a dot product of expected directions to determine which scenario might be more likely.
+
+        I.e. We expect most real signals to result in a positive dot product with this vector (as it points)
+        outward toward the sky).  A neigitive dot product is more commonly associate with reflections. 
+
+        Note that because there are 4 antennas, the plane of the array is not well defined.  I have chose to define
+        it using the points for a0 and a2, and the midpoint between a1 and a3.  
+        '''
+        try:
+            n_func = lambda v0, v1, v2 : - numpy.cross( v1 - v0 , v2 - v1 )/numpy.linalg.norm(- numpy.cross( v1 - v0 , v2 - v1 ))
+
+            self.n_physical = n_func(self.A0_physical, self.A2_physical, (self.A0_physical + self.A3_physical)/2.0)
+            self.n_hpol     = n_func(self.A0_hpol,     self.A2_hpol,     (self.A0_hpol     + self.A3_hpol)/2.0)
+            self.n_vpol     = n_func(self.A0_vpol,     self.A2_vpol,     (self.A0_vpol     + self.A3_vpol)/2.0)
+
+            self.generateNormalDotValues()
+
+            if plot_map == True:
+                self.plotArrayNormalVector(mollweide=mollweide,pol=pol)
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def plotArrayNormalVector(self, pol, mollweide=False):
+        '''
+        This will plot the values of the dot products of source direction with array norm for a given polarization.
+        '''
+        try:
+            if pol == 'both':
+                self.plotArrayNormalVector('hpol', mollweide=mollweide) 
+                self.plotArrayNormalVector('vpol', mollweide=mollweide) 
+            else:
+
+                fig = plt.figure()
+                fig.canvas.set_window_title('Direction Relative to Array Plane')
+                if mollweide == True:
+                    ax = fig.add_subplot(1,1,1, projection='mollweide')
+                else:
+                    ax = fig.add_subplot(1,1,1)
+
+                
+                if pol == 'hpol':
+                    #Calculate minimum angle as a function of azimuth:
+                    #import pdb; pdb.set_trace()
+                    if mollweide == True:
+                        #Automatically converts from rads to degs
+                        im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.hpol_dot_angle_from_plane_deg, vmin=numpy.min(self.hpol_dot_angle_from_plane_deg), vmax=numpy.max(self.hpol_dot_angle_from_plane_deg),cmap=plt.cm.coolwarm)
+                        plt.plot(self.phis_rad, numpy.pi/2 - self.thetas_rad[self.hpol_min_elevation_index_per_az], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.hpol_dot_angle_from_plane_deg, vmin=numpy.min(self.hpol_dot_angle_from_plane_deg), vmax=numpy.max(self.hpol_dot_angle_from_plane_deg),cmap=plt.cm.coolwarm)
+                        plt.plot(self.phis_deg, 90.0 - self.thetas_deg[self.hpol_min_elevation_index_per_az], linewidth = self.min_elevation_linewidth, color='k')
+                elif pol == 'vpol':
+                    min_elevation_index_per_az = numpy.argmin(numpy.abs(self.vpol_dot_angle_from_plane_deg),axis=0)
+                    if mollweide == True:
+                        #Automatically converts from rads to degs
+                        im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.vpol_dot_angle_from_plane_deg, vmin=numpy.min(self.vpol_dot_angle_from_plane_deg), vmax=numpy.max(self.vpol_dot_angle_from_plane_deg),cmap=plt.cm.coolwarm)
+                        plt.plot(self.phis_rad, numpy.pi/2 - self.thetas_rad[self.vpol_min_elevation_index_per_az], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.vpol_dot_angle_from_plane_deg, vmin=numpy.min(self.vpol_dot_angle_from_plane_deg), vmax=numpy.max(self.vpol_dot_angle_from_plane_deg),cmap=plt.cm.coolwarm)
+                        plt.plot(self.phis_deg, 90.0 - self.thetas_deg[self.vpol_min_elevation_index_per_az], linewidth = self.min_elevation_linewidth, color='k')
+
+                cbar = fig.colorbar(im)
+                cbar.set_label('Angle off of %s Array Plane'%pol.title())
+                plt.xlabel('Azimuth Angle (Degrees)')
+                plt.ylabel('Elevation Angle (Degrees)')
+
+                plt.grid(True)
+
+                self.figs.append(fig)
+                self.axs.append(ax)
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def overwriteCableDelays(self, ch0, ch1, ch2, ch3, ch4, ch5, ch6, ch7):
         '''
@@ -335,11 +420,17 @@ class Correlator:
         and create the additional portion of the filter that will be applied to signals.  This
         ideally will make the signals more impulsive.
         '''
-        phase_response_2nd_stage = pr.loadInterpolatedPhaseResponse2ndStage(goal_freqs, plot=plot)[1]
-        phase_response_preamp = pr.loadInterpolatedPhaseResponseMeanPreamp(goal_freqs, plot=plot)[1]
+        try:
+            phase_response_2nd_stage = pr.loadInterpolatedPhaseResponse2ndStage(goal_freqs, plot=plot)[1]
+            phase_response_preamp = pr.loadInterpolatedPhaseResponseMeanPreamp(goal_freqs, plot=plot)[1]
 
-        return numpy.exp(-1j*(phase_response_2nd_stage + phase_response_preamp)) #One row per channel.
-
+            return numpy.exp(-1j*(phase_response_2nd_stage + phase_response_preamp)) #One row per channel.
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def makeFilter(self,plot_filter=False,apply_phase_response=False):
         '''
@@ -546,6 +637,46 @@ class Correlator:
             self.delay_indices_vpol_1subtract2 = numpy.rint((self.t_vpol_1subtract2/self.dt_resampled + center)).astype(int)
             self.delay_indices_vpol_1subtract3 = numpy.rint((self.t_vpol_1subtract3/self.dt_resampled + center)).astype(int)
             self.delay_indices_vpol_2subtract3 = numpy.rint((self.t_vpol_2subtract3/self.dt_resampled + center)).astype(int)
+
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def generateNormalDotValues(self):
+        '''
+        For each of the specified directions this will determine the dot product of that vector with the norm
+        of the array.  
+        '''
+        try:
+            #Prepare grids of thetas and phis
+            thetas  = numpy.tile(self.thetas_rad,(self.n_phi,1)).T  #Each row is a different theta (zenith)
+            phis    = numpy.tile(self.phis_rad,(self.n_theta,1))    #Each column is a different phi (azimuth)
+
+            #Source direction is the direction FROM BEACON you look to see the source.
+            signal_source_direction        = numpy.zeros((self.n_theta, self.n_phi, 3))
+            signal_source_direction[:,:,0] = numpy.multiply( numpy.cos(phis) , numpy.sin(thetas) )
+            signal_source_direction[:,:,1] = numpy.multiply( numpy.sin(phis) , numpy.sin(thetas) )
+            signal_source_direction[:,:,2] = numpy.cos(thetas)
+            #Propogate direction is the direction FROM THE SOURCE that the ray travels towards BEACON.  
+            signal_propogate_direction = - signal_source_direction
+
+            self.physical_dot_values = (self.n_physical[0]*signal_source_direction[:,:,0] + self.n_physical[1]*signal_source_direction[:,:,1] + self.n_physical[2]*signal_source_direction[:,:,2])
+            self.hpol_dot_values = (self.n_hpol[0]*signal_source_direction[:,:,0] + self.n_hpol[1]*signal_source_direction[:,:,1] + self.n_hpol[2]*signal_source_direction[:,:,2])
+            self.vpol_dot_values = (self.n_vpol[0]*signal_source_direction[:,:,0] + self.n_vpol[1]*signal_source_direction[:,:,1] + self.n_vpol[2]*signal_source_direction[:,:,2])
+
+            #90 deg off plane for aligned with plane norm. 
+            self.physical_dot_angle_from_plane_deg = numpy.rad2deg(numpy.arcsin(self.physical_dot_values))
+            self.hpol_dot_angle_from_plane_deg = numpy.rad2deg(numpy.arcsin(self.hpol_dot_values))
+            self.vpol_dot_angle_from_plane_deg = numpy.rad2deg(numpy.arcsin(self.vpol_dot_values))
+
+            self.physical_min_elevation_index_per_az = numpy.argmin(numpy.abs(self.physical_dot_angle_from_plane_deg),axis=0)
+            self.hpol_min_elevation_index_per_az = numpy.argmin(numpy.abs(self.hpol_dot_angle_from_plane_deg),axis=0)
+            self.vpol_min_elevation_index_per_az = numpy.argmin(numpy.abs(self.vpol_dot_angle_from_plane_deg),axis=0)
+
 
 
         except Exception as e:
@@ -888,16 +1019,26 @@ class Correlator:
                     ax = fig.add_subplot(1,1,1)
                 ax.set_title('%i-%i-%s-Hilbert=%s'%(self.reader.run,eventid,pol,str(hilbert))) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
                 #im = ax.imshow(mean_corr_values, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
+
+
                 if mollweide == True:
                     #Automatically converts from rads to degs
                     im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, mean_corr_values, vmin=numpy.min(mean_corr_values), vmax=numpy.max(mean_corr_values),cmap=plt.cm.coolwarm)
+                    if pol == 'hpol':
+                        plt.plot(self.phis_rad, numpy.pi/2 - self.thetas_rad[self.hpol_min_elevation_index_per_az], linewidth = self.min_elevation_linewidth, color='k')
+                    elif pol == 'vpol':
+                        plt.plot(self.phis_rad, numpy.pi/2 - self.thetas_rad[self.vpol_min_elevation_index_per_az], linewidth = self.min_elevation_linewidth, color='k')
                 else:
                     im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, mean_corr_values, vmin=numpy.min(mean_corr_values), vmax=numpy.max(mean_corr_values),cmap=plt.cm.coolwarm)
+                    if pol == 'hpol':
+                        plt.plot(self.phis_deg, 90.0 - self.thetas_deg[self.hpol_min_elevation_index_per_az], linewidth = self.min_elevation_linewidth, color='k')
+                    elif pol == 'vpol':
+                        plt.plot(self.phis_deg, 90.0 - self.thetas_deg[self.vpol_min_elevation_index_per_az], linewidth = self.min_elevation_linewidth, color='k')
 
                 cbar = fig.colorbar(im)
                 cbar.set_label('Mean Correlation Value')
                 plt.xlabel('Azimuth Angle (Degrees)')
-                plt.ylabel('Zenith Angle (Degrees)')
+                plt.ylabel('Elevation Angle (Degrees)')
 
                 plt.grid(True)
                 
@@ -1019,14 +1160,22 @@ class Correlator:
             if mollweide == True:
                 #Automatically converts from rads to degs
                 im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, total_mean_corr_values, vmin=numpy.min(total_mean_corr_values), vmax=numpy.max(total_mean_corr_values),cmap=plt.cm.coolwarm)
+                if pol == 'hpol':
+                        plt.plot(self.phis_deg, 90.0 - self.thetas_deg[self.hpol_min_elevation_index_per_az], linewidth = self.min_elevation_linewidth, color='k')
+                elif pol == 'vpol':
+                    plt.plot(self.phis_deg, 90.0 - self.thetas_deg[self.vpol_min_elevation_index_per_az], linewidth = self.min_elevation_linewidth, color='k')
             else:
                 im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, total_mean_corr_values, vmin=numpy.min(total_mean_corr_values), vmax=numpy.max(total_mean_corr_values),cmap=plt.cm.coolwarm)
+                if pol == 'hpol':
+                    plt.plot(self.phis_rad, numpy.pi/2 - self.thetas_rad[self.hpol_min_elevation_index_per_az], linewidth = self.min_elevation_linewidth, color='k')
+                elif pol == 'vpol':
+                    plt.plot(self.phis_rad, numpy.pi/2 - self.thetas_rad[self.vpol_min_elevation_index_per_az], linewidth = self.min_elevation_linewidth, color='k')
 
 
             cbar = fig.colorbar(im)
             cbar.set_label('Mean Correlation Value')
             plt.xlabel('Azimuth Angle (Degrees)')
-            plt.ylabel('Zenith Angle (Degrees)')
+            plt.ylabel('Elevation Angle (Degrees)')
             plt.grid(True)
 
             radius = 5.0 #Degrees I think?  Should eventually represent error. 
@@ -1117,10 +1266,13 @@ class Correlator:
                 if plane_az is list:
                     plane_az = numpy.array(plane_az)
                 plane_az = numpy.deg2rad(plane_az) - azimuth_offset_rad
+
+                #NEED TO ACCOUNT FOR WHEN THIS ISN't BETWEEN -pi and pi !!!!!  CIRCLES ARE DISAPPEARING
+
             if plane_zenith is not None:
                 if plane_zenith is list:
                     plane_zenith = numpy.array(plane_zenith)
-                plane_elevation = numpy.deg2rad(90 - plane_zenith)
+                plane_elevation = numpy.deg2rad(90.0 - plane_zenith)
             else:
                 plane_elevation = None
 
@@ -1141,13 +1293,19 @@ class Correlator:
                 im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, all_maps[0], vmin=numpy.concatenate(all_maps).min(), vmax=numpy.concatenate(all_maps).max(),cmap=plt.cm.coolwarm)
                 cbar = fig.colorbar(im)
                 cbar.set_label('Mean Correlation Value')
+
+            if pol == 'hpol':
+                plt.plot(self.phis_rad, numpy.roll(numpy.pi/2 - self.thetas_rad[self.hpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
+            elif pol == 'vpol':
+                plt.plot(self.phis_rad, numpy.roll(numpy.pi/2 - self.thetas_rad[self.vpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
+
             plt.xlabel(xlabel)
-            plt.ylabel('Zenith Angle (Degrees)')
+            plt.ylabel('Elevation Angle (Degrees)')
             plt.grid(True)
 
             if plane_elevation is not None and plane_az is not None:
                 radius = numpy.deg2rad(5.0) #Radians I think?  Should eventually represent error. 
-                circle = plt.Circle((plane_az[0], plane_elevation[0]), radius, edgecolor='lime',linewidth=0.5,fill=False,zorder=10)
+                circle = plt.Circle((plane_az[0], plane_elevation[0]), radius, edgecolor='lime',linewidth=1.0,fill=False,zorder=10)
                 ax.add_artist(circle)
 
             #Circle not plotting, what is that all about?
@@ -1168,7 +1326,7 @@ class Correlator:
             ani = FuncAnimation(fig, update, frames=range(len(eventids)),blit=False,save_count=0)
 
             if save == True:
-                ani.save('./feb24/%s_%s_hilbert=%s_%s.mp4'%(title,pol,str(hilbert), center_dir_full + '_centered'), writer='ffmpeg', fps=3,dpi=300)
+                ani.save('./%s_%s_hilbert=%s_%s.mp4'%(title,pol,str(hilbert), center_dir_full + '_centered'), writer='ffmpeg', fps=3,dpi=600)
                 plt.close(fig)
             else:
                 self.figs.append(fig)
@@ -1226,7 +1384,7 @@ class Correlator:
             cbar = fig.colorbar(im)
             cbar.set_label('Counts (Maybe Weighted)')
             plt.xlabel('Azimuth Angle (Degrees)')
-            plt.ylabel('Zenith Angle (Degrees)')
+            plt.ylabel('Elevation Angle (Degrees)')
 
             return hist
 
@@ -1470,7 +1628,7 @@ if __name__=="__main__":
             interpolated_plane_locations = {}
             origin = info.loadAntennaZeroLocation(deploy_index = 1)
             for index, key in enumerate(list(known_planes.keys())):
-                if key != '1774-88800':
+                if key != '1773-63659':
                     continue
                 enu = pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2])
                 plane_polys[key] = PlanePoly(output_tracks[key]['timestamps'],enu,plot=False)
@@ -1494,12 +1652,14 @@ if __name__=="__main__":
 
                 zenith_cut = [0,120]
 
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True,zenith_cut=zenith_cut)
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut=zenith_cut)
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method,mollweide=True,zenith_cut=zenith_cut)
-                mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=False,zenith_cut=zenith_cut)
-                mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut=zenith_cut)
-                #cor.animatedMap(eventids, 'both', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='W',save=True)
+                #cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True,zenith_cut=zenith_cut)
+                #cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut=zenith_cut)
+                # cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method,mollweide=True,zenith_cut=zenith_cut)
+                # mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=False,zenith_cut=zenith_cut)
+                # mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut=zenith_cut)
+                for eventid in eventids:
+                    cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut=zenith_cut)
+                cor.animatedMap(eventids, 'both', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='W',save=True)
 
                 cors.append(cor) #Need to keep references for animations to work. 
 
