@@ -141,6 +141,7 @@ class Correlator:
             self.phis_rad = numpy.deg2rad(self.phis_deg)
 
             self.mesh_azimuth_rad, self.mesh_elevation_rad = numpy.meshgrid(numpy.deg2rad(numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi+1)), numpy.pi/2.0 - numpy.deg2rad(numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta+1)))
+            self.mesh_azimuth_deg, self.mesh_elevation_deg = numpy.meshgrid(numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi+1), 90.0 - numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta+1))
 
             self.A0_latlonel = info.loadAntennaZeroLocation() #Used for conversion to RA and Dec coordinates.
 
@@ -198,7 +199,7 @@ class Correlator:
         chaning self.upsample if that is changed.
         '''
         try:
-            self.times = self.reader.t()
+            self.times = self.t()
             self.dt = numpy.diff(self.times)[0]
 
             self.times_resampled = scipy.signal.resample(numpy.zeros(self.buffer_length),self.upsample,t=self.times)[1]
@@ -446,6 +447,17 @@ class Correlator:
 
             waveforms = scipy.signal.resample(temp_waveforms,self.upsample,axis=1)
 
+
+            if False:
+                plt.figure()
+                plt.title('Testing Waveforms')
+                plt.plot(self.reader.t(),temp_waveforms[0],label='Hopefully processed non-resampled')
+                plt.plot(self.times_resampled,waveforms[0],label='processed resampled')
+                plt.plot(self.reader.t(),numpy.asarray(self.reader.wf(0))[self.start_waveform_index:self.end_waveform_index+1],label='no processing')
+                plt.legend()
+                import pdb; pdb.set_trace()
+
+
             return waveforms
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -458,7 +470,7 @@ class Correlator:
         '''
         This loads a times but only the section that is selected by the start and end indices specified.
 
-        This will also roll the starting point to zero. 
+        This will also roll the starting point to zero.  This will not change relative times between signals. 
         '''
         try:
             return self.reader.t()[self.start_waveform_index:self.end_waveform_index+1] - self.reader.t()[self.start_waveform_index]
@@ -543,7 +555,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def interactivePlotter(self, event):
+    def interactivePlotter(self, event, mollweide = False):
         '''
         This hopefully will make a plot when called by a double clock in the map.
         '''
@@ -554,8 +566,14 @@ class Correlator:
                 eventid = int(event_ax.get_title().split('-')[1])
                 hilbert = literal_eval(event_ax.get_title().split('-')[3].split('=')[1])
 
-                theta_index = numpy.argmin( abs(self.thetas_deg - event.ydata) )
+                if mollweide == True:
+                    #axis coords in radians for mollweide
+                    event.xdata = numpy.rad2deg(event.xdata)
+                    event.ydata = numpy.rad2deg(event.ydata)
+
+                theta_index = numpy.argmin( abs((90.0 - self.thetas_deg) - event.ydata) ) #Data plotted with elevation angles, not zenith.
                 phi_index = numpy.argmin( abs(self.phis_deg - event.xdata) )
+
                 if pol == 'hpol':
                     channels = numpy.array([0,2,4,6])
                     waveforms = self.wf(eventid, channels,div_std=False,hilbert=hilbert,apply_filter=self.apply_filter)
@@ -699,7 +717,7 @@ class Correlator:
 
 
 
-    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None,verbose=True):
+    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None,verbose=True, mollweide=False):
         '''
         Makes the cross correlation make for the given event.
 
@@ -730,8 +748,8 @@ class Correlator:
                 if verbose == True:
                     print('WARNING! Enabling Hilbert envelopes throws off correlation normalization.')
             if pol == 'both':
-                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert)
-                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert)
+                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide)
+                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide)
                 return hpol_result, vpol_result
 
             elif pol == 'hpol':
@@ -835,26 +853,43 @@ class Correlator:
                 self.figs.append(fig)
                 self.axs.append(fig.gca())
             if plot_map:
+                elevation_best_deg = 90.0 - theta_best
+
                 fig = plt.figure()
                 fig.canvas.set_window_title('r%i-e%i-%s Correlation Map'%(self.reader.run,eventid,pol.title()))
-                ax = fig.add_subplot(1,1,1)
+                if mollweide == True:
+                    ax = fig.add_subplot(1,1,1, projection='mollweide')
+                else:
+                    ax = fig.add_subplot(1,1,1)
                 ax.set_title('%i-%i-%s-Hilbert=%s'%(self.reader.run,eventid,pol,str(hilbert))) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
-                im = ax.imshow(mean_corr_values, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
+                #im = ax.imshow(mean_corr_values, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
+                if mollweide == True:
+                    #Automatically converts from rads to degs
+                    im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, mean_corr_values, vmin=numpy.min(mean_corr_values), vmax=numpy.max(mean_corr_values),cmap=plt.cm.coolwarm)
+                else:
+                    im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, mean_corr_values, vmin=numpy.min(mean_corr_values), vmax=numpy.max(mean_corr_values),cmap=plt.cm.coolwarm)
+
                 cbar = fig.colorbar(im)
                 cbar.set_label('Mean Correlation Value')
                 plt.xlabel('Azimuth Angle (Degrees)')
                 plt.ylabel('Zenith Angle (Degrees)')
+                plt.grid(True)
 
                 
 
                 radius = 5.0 #Degrees I think?  Should eventually represent error. 
-                circle = plt.Circle((phi_best, theta_best), radius, edgecolor='lime',linewidth=2,fill=False)
-                ax.axvline(phi_best,c='lime',linewidth=1)
-                ax.axhline(theta_best,c='lime',linewidth=1)
+                if mollweide == True:
+                    circle = plt.Circle((numpy.deg2rad(phi_best), numpy.deg2rad(elevation_best_deg)), numpy.deg2rad(radius), edgecolor='lime',linewidth=0.5,fill=False)
+                    ax.axvline(numpy.deg2rad(phi_best),c='lime',ymin=-numpy.pi/2,ymax=numpy.pi/2,linewidth=0.5)
+                    ax.axhline(numpy.deg2rad(elevation_best_deg),c='lime',linewidth=0.5)
+                else:
+                    circle = plt.Circle((phi_best, elevation_best_deg), radius, edgecolor='lime',linewidth=0.5,fill=False)
+                    ax.axvline(phi_best,c='lime',linewidth=0.5)
+                    ax.axhline(elevation_best_deg,c='lime',linewidth=0.5)
 
                 ax.add_artist(circle)
                 if interactive == True:
-                    fig.canvas.mpl_connect('button_press_event',self.interactivePlotter)
+                    fig.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event, mollweide=mollweide))
 
                 self.figs.append(fig)
                 self.axs.append(ax)
@@ -871,7 +906,7 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None):
+    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None,mollweide=False):
         '''
         Does the same thing as map, but averages over all eventids given.  Mostly helpful for 
         repeated sources such as background sources or pulsers.
@@ -892,15 +927,15 @@ class Correlator:
             Determines how the most probable source direction is from the map.
         '''
         if pol == 'both':
-            hpol_result = self.averagedMap(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert)
-            vpol_result = self.averagedMap(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert)
+            hpol_result = self.averagedMap(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide)
+            vpol_result = self.averagedMap(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide)
             return hpol_result, vpol_result
 
         total_mean_corr_values = numpy.zeros((self.n_theta, self.n_phi))
         for event_index, eventid in enumerate(eventids):
             sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
             sys.stdout.flush()
-            total_mean_corr_values += self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert)/len(eventids)
+            total_mean_corr_values += self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert,mollweide=False)/len(eventids)
         print('')
 
 
@@ -909,6 +944,8 @@ class Correlator:
                 row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,max_method=max_method,verbose=True)
             else:
                 row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,verbose=True)        
+
+            elevation_best_deg = 90.0 - theta_best
 
             if pol == 'hpol':
                 t_best_0subtract1  = self.t_hpol_0subtract1[row_index,column_index]
@@ -929,17 +966,35 @@ class Correlator:
                 return
             fig = plt.figure()
             fig.canvas.set_window_title('r%i %s Averaged Correlation Map'%(self.reader.run,pol.title()))
-            ax = fig.add_subplot(1,1,1)
-            im = ax.imshow(total_mean_corr_values, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
+            if mollweide == True:
+                ax = fig.add_subplot(1,1,1, projection='mollweide')
+            else:
+                ax = fig.add_subplot(1,1,1)
+
+            #im = ax.imshow(total_mean_corr_values, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
+            if mollweide == True:
+                #Automatically converts from rads to degs
+                im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, total_mean_corr_values, vmin=numpy.min(total_mean_corr_values), vmax=numpy.max(total_mean_corr_values),cmap=plt.cm.coolwarm)
+            else:
+                im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, total_mean_corr_values, vmin=numpy.min(total_mean_corr_values), vmax=numpy.max(total_mean_corr_values),cmap=plt.cm.coolwarm)
+
+
             cbar = fig.colorbar(im)
             cbar.set_label('Mean Correlation Value')
             plt.xlabel('Azimuth Angle (Degrees)')
             plt.ylabel('Zenith Angle (Degrees)')
+            plt.grid(True)
 
             radius = 5.0 #Degrees I think?  Should eventually represent error. 
-            circle = plt.Circle((phi_best, theta_best), radius, edgecolor='lime',linewidth=2,fill=False)
-            ax.axvline(phi_best,c='lime',linewidth=1)
-            ax.axhline(theta_best,c='lime',linewidth=1)
+            if mollweide == True:
+                circle = plt.Circle((numpy.deg2rad(phi_best), numpy.deg2rad(elevation_best_deg)), numpy.deg2rad(radius), edgecolor='lime',linewidth=0.5,fill=False)
+                ax.axvline(numpy.deg2rad(phi_best),c='lime',ymin=-numpy.pi/2,ymax=numpy.pi/2,linewidth=0.5)
+                ax.axhline(numpy.deg2rad(elevation_best_deg),c='lime',linewidth=0.5)
+            else:
+                circle = plt.Circle((phi_best, elevation_best_deg), radius, edgecolor='lime',linewidth=0.5,fill=False)
+                ax.axvline(phi_best,c='lime',linewidth=0.5)
+                ax.axhline(elevation_best_deg,c='lime',linewidth=0.5)
+
             ax.add_artist(circle)
             self.figs.append(fig)
             self.axs.append(ax)
@@ -1041,8 +1096,8 @@ class Correlator:
             plt.grid(True)
 
             if plane_elevation is not None and plane_az is not None:
-                radius = numpy.deg2rad(2.5) #Radians I think?  Should eventually represent error. 
-                circle = plt.Circle((plane_az[0], plane_elevation[0]), radius, edgecolor='lime',linewidth=2,fill=False,zorder=10)
+                radius = numpy.deg2rad(5.0) #Radians I think?  Should eventually represent error. 
+                circle = plt.Circle((plane_az[0], plane_elevation[0]), radius, edgecolor='lime',linewidth=0.5,fill=False,zorder=10)
                 ax.add_artist(circle)
 
             #Circle not plotting, what is that all about?
@@ -1387,7 +1442,12 @@ if __name__=="__main__":
 
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
 
-                cor.animatedMap(eventids, 'both', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=True, max_method=None,center_dir='W',save=True)
+                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True)
+                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False)
+                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method,mollweide=True)
+                mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=False)
+                mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True)
+                #cor.animatedMap(eventids, 'both', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='W',save=True)
 
                 cors.append(cor) #Need to keep references for animations to work. 
 
