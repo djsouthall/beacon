@@ -635,7 +635,7 @@ class Correlator:
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 print(exc_type, fname, exc_tb.tb_lineno)
 
-    def mapMax(self, map_values, max_method=0, verbose=False):
+    def mapMax(self, map_values, max_method=0, verbose=False, zenith_cut=None):
         '''
         Determines the indices in the given map of the optimal source direction.
 
@@ -647,6 +647,11 @@ class Correlator:
             The index of the method you would like to use.
             0 : argmax of map. (Default).
             1 : Averages each point in the map with the four surrounding points (by rolling map by 1 index in each direction and summing).
+        verbose : bool
+            Will print more if True.  Default is False.
+        zenith_cut : list of 2 float values
+            Given in degrees, angles within these two values are considered.  If None is given for the first then it is
+            assumed to be 0 (overhead), if None is given for the latter then it is assumed to be 180 (straight down).
 
         Returns
         -------
@@ -671,12 +676,32 @@ class Correlator:
         t_best_2subtract3 : float
             The corresponding values for this parameters for row_index and col_index.
         '''
+
+        if zenith_cut is not None:
+            if len(zenith_cut) != 2:
+                print('zenith_cut must be a 2 valued list.')
+                return
+            else:
+                if zenith_cut[0] is None:
+                    zenith_cut[0] = 0
+                if zenith_cut[1] is None:
+                    zenith_cut[1] = 180
+
+                theta_cut = numpy.logical_and(self.thetas_deg >= min(zenith_cut), self.thetas_deg <= max(zenith_cut))
+        else:
+            theta_cut = numpy.ones_like(self.thetas_deg,dtype=bool)
+
+        theta_cut_row_indices = numpy.where(theta_cut)[0]
+
         if max_method == 0:
-            row_index, column_index = numpy.unravel_index(map_values.argmax(),numpy.shape(map_values))
+            row_index, column_index = numpy.unravel_index(map_values[theta_cut].argmax(),numpy.shape(map_values[theta_cut]))
+
         elif max_method == 1:
             #Calculates sum of each point plus surrounding four points to get max.
             rounded_corr_values = (map_values + numpy.roll(map_values,1,axis=0) + numpy.roll(map_values,-1,axis=0) + numpy.roll(map_values,1,axis=1) + numpy.roll(map_values,-1,axis=1))/5.0
-            row_index, column_index = numpy.unravel_index(rounded_corr_values.argmax(),numpy.shape(rounded_corr_values))
+            row_index, column_index = numpy.unravel_index(rounded_corr_values[theta_cut].argmax(),numpy.shape(rounded_corr_values[theta_cut]))
+
+        row_index = theta_cut_row_indices[row_index] #This accounts for zenith_cut having different row labels than the actual map. 
 
         theta_best  = self.thetas_deg[row_index]
         phi_best    = self.phis_deg[column_index]
@@ -717,7 +742,7 @@ class Correlator:
 
 
 
-    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None,verbose=True, mollweide=False):
+    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut=None):
         '''
         Makes the cross correlation make for the given event.
 
@@ -773,9 +798,9 @@ class Correlator:
                 mean_corr_values = numpy.mean(numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] ),axis=0)
                 if plot_map == True:
                     if max_method is not None:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut=zenith_cut)
                     else:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut=zenith_cut)
 
             elif pol == 'vpol':
                 if waveforms is None:
@@ -823,9 +848,9 @@ class Correlator:
                 
                 if plot_map == True:
                     if max_method is not None:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut=zenith_cut)
                     else:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut=zenith_cut)
 
             else:
                 print('Invalid polarization option.  Returning nothing.')
@@ -873,8 +898,8 @@ class Correlator:
                 cbar.set_label('Mean Correlation Value')
                 plt.xlabel('Azimuth Angle (Degrees)')
                 plt.ylabel('Zenith Angle (Degrees)')
-                plt.grid(True)
 
+                plt.grid(True)
                 
 
                 radius = 5.0 #Degrees I think?  Should eventually represent error. 
@@ -882,10 +907,14 @@ class Correlator:
                     circle = plt.Circle((numpy.deg2rad(phi_best), numpy.deg2rad(elevation_best_deg)), numpy.deg2rad(radius), edgecolor='lime',linewidth=0.5,fill=False)
                     ax.axvline(numpy.deg2rad(phi_best),c='lime',ymin=-numpy.pi/2,ymax=numpy.pi/2,linewidth=0.5)
                     ax.axhline(numpy.deg2rad(elevation_best_deg),c='lime',linewidth=0.5)
+                    plt.axhspan(numpy.deg2rad(90 - min(zenith_cut)) , numpy.deg2rad(90.0),alpha=0.5)
+                    plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut)),alpha=0.5)
                 else:
                     circle = plt.Circle((phi_best, elevation_best_deg), radius, edgecolor='lime',linewidth=0.5,fill=False)
                     ax.axvline(phi_best,c='lime',linewidth=0.5)
                     ax.axhline(elevation_best_deg,c='lime',linewidth=0.5)
+                    plt.axhspan(90 - min(zenith_cut),90.0,alpha=0.5)
+                    plt.axhspan(-90 , 90 - max(zenith_cut),alpha=0.5)
 
                 ax.add_artist(circle)
                 if interactive == True:
@@ -906,7 +935,7 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None,mollweide=False):
+    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut=None):
         '''
         Does the same thing as map, but averages over all eventids given.  Mostly helpful for 
         repeated sources such as background sources or pulsers.
@@ -927,23 +956,38 @@ class Correlator:
             Determines how the most probable source direction is from the map.
         '''
         if pol == 'both':
-            hpol_result = self.averagedMap(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide)
-            vpol_result = self.averagedMap(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide)
+            hpol_result = self.averagedMap(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut=zenith_cut)
+            vpol_result = self.averagedMap(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut=zenith_cut)
             return hpol_result, vpol_result
 
         total_mean_corr_values = numpy.zeros((self.n_theta, self.n_phi))
         for event_index, eventid in enumerate(eventids):
             sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
             sys.stdout.flush()
-            total_mean_corr_values += self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert,mollweide=False)/len(eventids)
+            total_mean_corr_values += self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=False, zenith_cut=zenith_cut)/len(eventids)
         print('')
 
+        if zenith_cut is not None:
+            if len(zenith_cut) != 2:
+                print('zenith_cut must be a 2 valued list.')
+                return
+            else:
+                if zenith_cut[0] is None:
+                    zenith_cut[0] = 0
+                if zenith_cut[1] is None:
+                    zenith_cut[1] = 180
+
+                theta_cut = numpy.logical_and(self.thetas_deg >= min(zenith_cut), self.thetas_deg <= max(zenith_cut))
+        else:
+            theta_cut = numpy.ones_like(self.thetas_deg,dtype=bool)
+
+        theta_cut_row_indices = numpy.where(theta_cut)[0]
 
         if plot_map:
             if max_method is not None:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,max_method=max_method,verbose=True)
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,max_method=max_method,verbose=True,zenith_cut=zenith_cut)
             else:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,verbose=True)        
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,verbose=True,zenith_cut=zenith_cut)        
 
             elevation_best_deg = 90.0 - theta_best
 
@@ -986,14 +1030,20 @@ class Correlator:
             plt.grid(True)
 
             radius = 5.0 #Degrees I think?  Should eventually represent error. 
+
+
             if mollweide == True:
                 circle = plt.Circle((numpy.deg2rad(phi_best), numpy.deg2rad(elevation_best_deg)), numpy.deg2rad(radius), edgecolor='lime',linewidth=0.5,fill=False)
                 ax.axvline(numpy.deg2rad(phi_best),c='lime',ymin=-numpy.pi/2,ymax=numpy.pi/2,linewidth=0.5)
                 ax.axhline(numpy.deg2rad(elevation_best_deg),c='lime',linewidth=0.5)
+                plt.axhspan(numpy.deg2rad(90 - min(zenith_cut)) , numpy.deg2rad(90.0),alpha=0.5)
+                plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut)),alpha=0.5)
             else:
                 circle = plt.Circle((phi_best, elevation_best_deg), radius, edgecolor='lime',linewidth=0.5,fill=False)
                 ax.axvline(phi_best,c='lime',linewidth=0.5)
                 ax.axhline(elevation_best_deg,c='lime',linewidth=0.5)
+                plt.axhspan(90 - min(zenith_cut),90.0,alpha=0.5)
+                plt.axhspan(-90 , 90 - max(zenith_cut),alpha=0.5)
 
             ax.add_artist(circle)
             self.figs.append(fig)
@@ -1133,7 +1183,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def histMapPeak(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, use_weight=False):
+    def histMapPeak(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, use_weight=False, zenith_cut=None):
         '''
         This will loop over eventids and makes a histogram from of location of maximum correlation
         value in the corresponding correlation maps. 
@@ -1159,9 +1209,9 @@ class Correlator:
             sys.stdout.flush()
             m = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert)/len(eventids)
             if max_method is not None:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map)
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map,zenith_cut=zenith_cut)
             else:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map)        
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map,zenith_cut=zenith_cut)        
 
             if use_weight == True:
                 hist[row_index,column_index] += m[row_index,column_index]
@@ -1442,11 +1492,13 @@ if __name__=="__main__":
 
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
 
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True)
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False)
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method,mollweide=True)
-                mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=False)
-                mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True)
+                zenith_cut = [0,120]
+
+                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True,zenith_cut=zenith_cut)
+                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut=zenith_cut)
+                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method,mollweide=True,zenith_cut=zenith_cut)
+                mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=False,zenith_cut=zenith_cut)
+                mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut=zenith_cut)
                 #cor.animatedMap(eventids, 'both', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='W',save=True)
 
                 cors.append(cor) #Need to keep references for animations to work. 
