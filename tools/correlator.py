@@ -350,7 +350,7 @@ class Correlator:
 
                 cbar = fig.colorbar(im)
                 cbar.set_label('Angle off of %s Array Plane'%pol.title())
-                plt.xlabel('Azimuth Angle (Degrees)')
+                plt.xlabel('Azimuth (From East = 0 deg, North = 90 deg)')
                 plt.ylabel('Elevation Angle (Degrees)')
 
                 plt.grid(True)
@@ -668,7 +668,7 @@ class Correlator:
             self.hpol_dot_values = (self.n_hpol[0]*signal_source_direction[:,:,0] + self.n_hpol[1]*signal_source_direction[:,:,1] + self.n_hpol[2]*signal_source_direction[:,:,2])
             self.vpol_dot_values = (self.n_vpol[0]*signal_source_direction[:,:,0] + self.n_vpol[1]*signal_source_direction[:,:,1] + self.n_vpol[2]*signal_source_direction[:,:,2])
 
-            #90 deg off plane for aligned with plane norm. 
+            #90 deg off plane for aligned with plane norm (zenith of 0). 
             self.physical_dot_angle_from_plane_deg = numpy.rad2deg(numpy.arcsin(self.physical_dot_values))
             self.hpol_dot_angle_from_plane_deg = numpy.rad2deg(numpy.arcsin(self.hpol_dot_values))
             self.vpol_dot_angle_from_plane_deg = numpy.rad2deg(numpy.arcsin(self.vpol_dot_values))
@@ -685,6 +685,171 @@ class Correlator:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+
+    def fixZenithAngleWrap(self, azimuth_angles_deg, zenith_angles_deg):
+        '''
+        Given a set of zenith angles, this will make angles > 180 wrap back up, and angles < 0 wrap back down.
+        Helpful for when plotting curves from different reference frames.  This is limited in the checks it does.
+        It will also wrap the azimuth angles appropriately, containing them between -180, 180.
+        '''
+        try: 
+            _zenith_angles_deg = zenith_angles_deg.copy()
+            _azimuth_angles_deg = numpy.tile(azimuth_angles_deg.copy(),(len(self.thetas_deg),1)).T
+
+            _azimuth_angles_deg[numpy.logical_and(_azimuth_angles_deg > 0 , numpy.logical_or(_zenith_angles_deg > 180.0, _zenith_angles_deg < 0.0))] -= 180.0
+            _azimuth_angles_deg[numpy.logical_and(_azimuth_angles_deg < 0 , numpy.logical_or(_zenith_angles_deg > 180.0, _zenith_angles_deg < 0.0))] += 180.0 
+
+            _zenith_angles_deg[_zenith_angles_deg > 90.0] = 180.0 - _zenith_angles_deg[_zenith_angles_deg > 90.0]
+            _zenith_angles_deg[_zenith_angles_deg < -90.0] = 180.0 + _zenith_angles_deg[_zenith_angles_deg < -90.0]
+
+            return azimuth_angles_deg.copy(), _zenith_angles_deg
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
+    def getArrayPlaneZenithCurves(self, zenith_array_plane_deg, azimuth_offset_deg=0):
+        '''
+        For the given zenith angle this will return the indices of the ENU thetas that correspond to that zenith.
+        These indices can be used to index self.thetas_deg and self.thetas_rad. 
+
+        Azimuth_offset_deg can be used to rotate the results to different perspectives.  Default is 0 which returns
+        the azimuth angles with 0deg facing East.  
+        '''
+        try:
+            if zenith_array_plane_deg == 0.0:
+                thetas_physical  = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(self.n_physical[2]/numpy.linalg.norm(self.n_physical)))
+                phis_physical    = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(self.n_physical[1],self.n_physical[0]))
+                phis_physical -= azimuth_offset_deg
+                phis_physical[phis_physical < -180.0] += 360.0
+                phis_physical[phis_physical > 180.0] -= 360.0
+
+                thetas_hpol      = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(self.n_hpol[2]/numpy.linalg.norm(self.n_hpol)))
+                phis_hpol        = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(self.n_hpol[1],self.n_hpol[0]))
+                phis_hpol -= azimuth_offset_deg
+                phis_hpol[phis_hpol < -180.0] += 360.0
+                phis_hpol[phis_hpol > 180.0] -= 360.0
+
+                thetas_vpol      = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(self.n_vpol[2]/numpy.linalg.norm(self.n_vpol)))
+                phis_vpol        = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(self.n_vpol[1],self.n_vpol[0]))
+                phis_vpol -= azimuth_offset_deg
+                phis_vpol[phis_vpol < -180.0] += 360.0
+                phis_vpol[phis_vpol > 180.0] -= 360.0
+
+                #Rotations of az don't matter because the same value.
+                return [phis_physical, thetas_physical] , [phis_hpol, thetas_hpol] , [phis_vpol, thetas_vpol]
+            elif zenith_array_plane_deg == 180.0:
+                thetas_physical  = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(-self.n_physical[2]/numpy.linalg.norm(self.n_physical)))
+                phis_physical    = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(-self.n_physical[1],-self.n_physical[0]))
+                phis_physical -= azimuth_offset_deg
+                phis_physical[phis_physical < -180.0] += 360.0
+                phis_physical[phis_physical > 180.0] -= 360.0
+
+                thetas_hpol      = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(-self.n_hpol[2]/numpy.linalg.norm(self.n_hpol)))
+                phis_hpol        = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(-self.n_hpol[1],-self.n_hpol[0]))
+                phis_hpol -= azimuth_offset_deg
+                phis_hpol[phis_hpol < -180.0] += 360.0
+                phis_hpol[phis_hpol > 180.0] -= 360.0
+
+                thetas_vpol      = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(-self.n_vpol[2]/numpy.linalg.norm(self.n_vpol)))
+                phis_vpol        = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(-self.n_vpol[1],-self.n_vpol[0]))
+                phis_vpol -= azimuth_offset_deg
+                phis_vpol[phis_vpol < -180.0] += 360.0
+                phis_vpol[phis_vpol > 180.0] -= 360.0
+                #Rotations of az don't matter because the same value.
+                return [phis_physical, thetas_physical] , [phis_hpol, thetas_hpol] , [phis_vpol, thetas_vpol]
+            else:
+                def rotateAaboutBbyTheta(a,b,dtheta_rad):
+                    a_par  = b * numpy.dot(a,b) / numpy.dot(b,b)
+                    a_perp = a - a_par
+                    rot_dir = numpy.cross(b,a_perp)
+                    x1 = numpy.cos(dtheta_rad)/numpy.linalg.norm(a_perp)
+                    x2 = numpy.sin(dtheta_rad)/numpy.linalg.norm(rot_dir)
+
+                    a_perp_new = numpy.linalg.norm(a_perp)*(x1*a_perp + x2*rot_dir)
+
+                    return (a_perp_new + a_par)/numpy.linalg.norm(a_perp_new + a_par)
+
+                dtheta_rad = numpy.deg2rad(numpy.diff(self.phis_deg)[0])
+
+                #Calculate Curve for physical Coordinates
+                in_plane_physical_vector = self.A2_physical/numpy.linalg.norm(self.A2_physical) 
+                
+                first_ratation_axis = numpy.cross(self.A2_physical,self.n_physical) / numpy.linalg.norm(numpy.cross(self.A2_physical,self.n_physical)) #Rotate normal about this by zenith_array_plane_deg to get the inital vector at the correct zenith.
+                zenith_vector = rotateAaboutBbyTheta(self.n_physical.copy(),first_ratation_axis,numpy.deg2rad(zenith_array_plane_deg))
+
+                physical_output_az_degs = numpy.zeros(self.n_phi)
+                physical_output_zenith_degs = numpy.zeros(self.n_phi)
+                for i in range(self.n_phi):
+                    #parellel portion of vector is 0 because A2 is in plane and n is defined as perp to plane. 
+                    zenith_vector = rotateAaboutBbyTheta(zenith_vector,self.n_physical.copy(),dtheta_rad)
+
+                    physical_output_az_degs[i] = numpy.rad2deg(numpy.arctan2(zenith_vector[1],zenith_vector[0]))
+                    physical_output_zenith_degs[i] = numpy.rad2deg(numpy.arccos(zenith_vector[2]/numpy.linalg.norm(zenith_vector)))
+
+                physical_output_az_degs -= azimuth_offset_deg
+                physical_output_az_degs[physical_output_az_degs < -180.0] += 360.0
+                physical_output_az_degs[physical_output_az_degs > 180.0] -= 360.0
+
+                #Calculate Curve for hpol Coordinates
+                in_plane_hpol_vector = self.A2_hpol/numpy.linalg.norm(self.A2_hpol) 
+                
+                first_ratation_axis = numpy.cross(self.A2_hpol,self.n_hpol) / numpy.linalg.norm(numpy.cross(self.A2_hpol,self.n_hpol)) #Rotate normal about this by zenith_array_plane_deg to get the inital vector at the correct zenith.
+                zenith_vector = rotateAaboutBbyTheta(self.n_hpol.copy(),first_ratation_axis,numpy.deg2rad(zenith_array_plane_deg))
+
+                hpol_output_az_degs = numpy.zeros(self.n_phi)
+                hpol_output_zenith_degs = numpy.zeros(self.n_phi)
+                for i in range(self.n_phi):
+                    #parellel portion of vector is 0 because A2 is in plane and n is defined as perp to plane. 
+                    zenith_vector = rotateAaboutBbyTheta(zenith_vector,self.n_hpol.copy(),dtheta_rad)
+
+                    hpol_output_az_degs[i] = numpy.rad2deg(numpy.arctan2(zenith_vector[1],zenith_vector[0]))
+                    hpol_output_zenith_degs[i] = numpy.rad2deg(numpy.arccos(zenith_vector[2]/numpy.linalg.norm(zenith_vector)))
+
+                hpol_output_az_degs -= azimuth_offset_deg
+                hpol_output_az_degs[hpol_output_az_degs < -180.0] += 360.0
+                hpol_output_az_degs[hpol_output_az_degs > 180.0] -= 360.0
+
+                #Calculate Curve for vpol Coordinates
+                in_plane_vpol_vector = self.A2_vpol/numpy.linalg.norm(self.A2_vpol) 
+                
+                first_ratation_axis = numpy.cross(self.A2_vpol,self.n_vpol) / numpy.linalg.norm(numpy.cross(self.A2_vpol,self.n_vpol)) #Rotate normal about this by zenith_array_plane_deg to get the inital vector at the correct zenith.
+                zenith_vector = rotateAaboutBbyTheta(self.n_vpol.copy(),first_ratation_axis,numpy.deg2rad(zenith_array_plane_deg))
+
+                vpol_output_az_degs = numpy.zeros(self.n_phi)
+                vpol_output_zenith_degs = numpy.zeros(self.n_phi)
+                for i in range(self.n_phi):
+                    #parellel portion of vector is 0 because A2 is in plane and n is defined as perp to plane. 
+                    zenith_vector = rotateAaboutBbyTheta(zenith_vector,self.n_vpol.copy(),dtheta_rad)
+
+                    vpol_output_az_degs[i] = numpy.rad2deg(numpy.arctan2(zenith_vector[1],zenith_vector[0]))
+                    vpol_output_zenith_degs[i] = numpy.rad2deg(numpy.arccos(zenith_vector[2]/numpy.linalg.norm(zenith_vector)))
+
+                vpol_output_az_degs -= azimuth_offset_deg
+                vpol_output_az_degs[vpol_output_az_degs < -180.0] += 360.0
+                vpol_output_az_degs[vpol_output_az_degs > 180.0] -= 360.0
+
+                numpy.argmin(physical_output_az_degs)
+                physical_indices = numpy.arange(len(physical_output_az_degs))#numpy.argsort(physical_output_az_degs)
+                hpol_indices = numpy.arange(len(hpol_output_az_degs))#numpy.argsort(hpol_output_az_degs)
+                vpol_indices = numpy.arange(len(vpol_output_az_degs))#numpy.argsort(vpol_output_az_degs)
+
+                out_physical = [numpy.roll(physical_output_az_degs,-numpy.argmin(physical_output_az_degs)) , numpy.roll(physical_output_zenith_degs,-numpy.argmin(physical_output_az_degs))]
+                out_hpol     = [numpy.roll(hpol_output_az_degs,-numpy.argmin(hpol_output_az_degs))         , numpy.roll(hpol_output_zenith_degs,-numpy.argmin(hpol_output_az_degs))]
+                out_vpol     = [numpy.roll(vpol_output_az_degs,-numpy.argmin(vpol_output_az_degs))         , numpy.roll(vpol_output_zenith_degs,-numpy.argmin(vpol_output_az_degs))]
+
+                return out_physical , out_hpol , out_vpol
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
 
     def interactivePlotter(self, event, mollweide = False, center_dir='E'):
         '''
@@ -782,7 +947,7 @@ class Correlator:
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 print(exc_type, fname, exc_tb.tb_lineno)
 
-    def mapMax(self, map_values, max_method=0, verbose=False, zenith_cut=None):
+    def mapMax(self, map_values, max_method=0, verbose=False, zenith_cut_ENU=None, zenith_cut_array_plane=None,):
         '''
         Determines the indices in the given map of the optimal source direction.
 
@@ -796,7 +961,7 @@ class Correlator:
             1 : Averages each point in the map with the four surrounding points (by rolling map by 1 index in each direction and summing).
         verbose : bool
             Will print more if True.  Default is False.
-        zenith_cut : list of 2 float values
+        zenith_cut_ENU : list of 2 float values
             Given in degrees, angles within these two values are considered.  If None is given for the first then it is
             assumed to be 0 (overhead), if None is given for the latter then it is assumed to be 180 (straight down).
 
@@ -824,21 +989,28 @@ class Correlator:
             The corresponding values for this parameters for row_index and col_index.
         '''
 
-        if zenith_cut is not None:
-            if len(zenith_cut) != 2:
-                print('zenith_cut must be a 2 valued list.')
+        if zenith_cut_ENU is not None:
+            if len(zenith_cut_ENU) != 2:
+                print('zenith_cut_ENU must be a 2 valued list.')
                 return
             else:
-                if zenith_cut[0] is None:
-                    zenith_cut[0] = 0
-                if zenith_cut[1] is None:
-                    zenith_cut[1] = 180
+                if zenith_cut_ENU[0] is None:
+                    zenith_cut_ENU[0] = 0
+                if zenith_cut_ENU[1] is None:
+                    zenith_cut_ENU[1] = 180
 
-                theta_cut = numpy.logical_and(self.thetas_deg >= min(zenith_cut), self.thetas_deg <= max(zenith_cut))
+                theta_cut = numpy.logical_and(self.thetas_deg >= min(zenith_cut_ENU), self.thetas_deg <= max(zenith_cut_ENU))
         else:
             theta_cut = numpy.ones_like(self.thetas_deg,dtype=bool)
 
+        #self.getArrayPlaneZenithCurves(zenith_array_plane_deg) # Use this with the zenith_array_plane cuts.
+
         theta_cut_row_indices = numpy.where(theta_cut)[0]
+
+
+
+
+
 
         if max_method == 0:
             row_index, column_index = numpy.unravel_index(map_values[theta_cut].argmax(),numpy.shape(map_values[theta_cut]))
@@ -848,7 +1020,7 @@ class Correlator:
             rounded_corr_values = (map_values + numpy.roll(map_values,1,axis=0) + numpy.roll(map_values,-1,axis=0) + numpy.roll(map_values,1,axis=1) + numpy.roll(map_values,-1,axis=1))/5.0
             row_index, column_index = numpy.unravel_index(rounded_corr_values[theta_cut].argmax(),numpy.shape(rounded_corr_values[theta_cut]))
 
-        row_index = theta_cut_row_indices[row_index] #This accounts for zenith_cut having different row labels than the actual map. 
+        row_index = theta_cut_row_indices[row_index] #This accounts for zenith_cut_ENU having different row labels than the actual map. 
 
         theta_best  = self.thetas_deg[row_index]
         phi_best    = self.phis_deg[column_index]
@@ -889,7 +1061,7 @@ class Correlator:
 
 
 
-    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut=None, center_dir='E'):
+    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented. 
@@ -919,19 +1091,26 @@ class Correlator:
             Enables more printing.  Default is False
         mollweide : bool
             Makes the plot with a mollweide projection.  Default is False.
-        zenith_cut : list of floats
-            Cuts on the map within the zenith range given for calculations of max value on plot.  Perhaps in the
-            future this will use the array plane specific zenith, but for now it uses ENU zenith.  
+        zenith_cut_ENU : list of floats
+            Cuts on the map within the zenith range given for calculations of max value on plot.  This uses ENU zenith.
+        zenith_cut_array_plane : list of floats
+            The same as zenith_cut_ENU but uses the zenith angle measured relative to the array plane.  
         center_dir : str
             Specifies the center direction when plotting.  By default this is 'E' which is East (ENU standard).
+        circle_zenith : list of floats
+            List of zenith values to circle on the plot.  These could be known background sources like planes.
+            The length of this must match the length of circle_az.  Should be given in degrees.
+        circle_az : list of floats
+            List of azimuths values to circle on the plot.  These could be known background sources like planes.
+            The length of this must match the length of circle_zenith.  Should be given in degrees.
         '''
         try:
             if hilbert == True:
                 if verbose == True:
                     print('WARNING! Enabling Hilbert envelopes throws off correlation normalization.')
             if pol == 'both':
-                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut=zenith_cut)
-                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut=zenith_cut)
+                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az)
+                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az)
                 return hpol_result, vpol_result
 
             elif pol == 'hpol':
@@ -955,9 +1134,9 @@ class Correlator:
                 mean_corr_values = numpy.mean(numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] ),axis=0)
                 if plot_map == True:
                     if max_method is not None:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut=zenith_cut)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
                     else:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut=zenith_cut)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
 
             elif pol == 'vpol':
                 if waveforms is None:
@@ -1005,9 +1184,9 @@ class Correlator:
                 
                 if plot_map == True:
                     if max_method is not None:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut=zenith_cut)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
                     else:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut=zenith_cut)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
 
             else:
                 print('Invalid polarization option.  Returning nothing.')
@@ -1016,7 +1195,7 @@ class Correlator:
 
 
             if plot_corr:
-                
+
                 fig = plt.figure()
                 fig.canvas.set_window_title('Correlations')
                 center = len(self.times_resampled)
@@ -1074,20 +1253,71 @@ class Correlator:
                 ax.set_title('%i-%i-%s-Hilbert=%s'%(self.reader.run,eventid,pol,str(hilbert))) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
                 #im = ax.imshow(mean_corr_values, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
 
+                # hpol_array_plane_indices = self.hpol_min_elevation_index_per_az.copy()
+                # vpol_array_plane_indices = self.vpol_min_elevation_index_per_az.copy()
+                # if mollweide == True:
+                #     #Automatically converts from rads to degs
+                #     im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
+                #     if pol == 'hpol':
+                #         plt.plot(self.phis_rad, numpy.roll(numpy.pi/2 - self.thetas_rad[hpol_array_plane_indices],roll), linewidth = self.min_elevation_linewidth, color='k')
+                #     elif pol == 'vpol':
+                #         plt.plot(self.phis_rad, numpy.roll(numpy.pi/2 - self.thetas_rad[vpol_array_plane_indices],roll), linewidth = self.min_elevation_linewidth, color='k')
+                # else:
+                #     im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
+                #     if pol == 'hpol':
+                #         plt.plot(self.phis_deg, numpy.roll(90.0 - self.thetas_deg[hpol_array_plane_indices],roll), linewidth = self.min_elevation_linewidth, color='k')
+                #     elif pol == 'vpol':
+                #         plt.plot(self.phis_deg, numpy.roll(90.0 - self.thetas_deg[vpol_array_plane_indices],roll), linewidth = self.min_elevation_linewidth, color='k')
+                
+                
+
+                physical_array_plane_xy, hpol_array_plane_xy, vpol_array_plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)
+
+                physical_array_plane_xy[1] = 90.0 - physical_array_plane_xy[1]
+                hpol_array_plane_xy[1] = 90.0 - hpol_array_plane_xy[1]
+                vpol_array_plane_xy[1] = 90.0 - vpol_array_plane_xy[1]
+                max_diff_hpol_deg = numpy.max(numpy.abs(numpy.diff(hpol_array_plane_xy)))
+                max_diff_vpol_deg = numpy.max(numpy.abs(numpy.diff(vpol_array_plane_xy)))
 
                 if mollweide == True:
                     #Automatically converts from rads to degs
                     im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
-                    if pol == 'hpol':
-                        plt.plot(self.phis_rad, numpy.roll(numpy.pi/2 - self.thetas_rad[self.hpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
-                    elif pol == 'vpol':
-                        plt.plot(self.phis_rad, numpy.roll(numpy.pi/2 - self.thetas_rad[self.vpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
+                    
+                    physical_array_plane_xy[0] = numpy.deg2rad(physical_array_plane_xy[0])
+                    physical_array_plane_xy[1] = numpy.deg2rad(physical_array_plane_xy[1])
+                    hpol_array_plane_xy[0] = numpy.deg2rad(hpol_array_plane_xy[0])
+                    hpol_array_plane_xy[1] = numpy.deg2rad(hpol_array_plane_xy[1])
+                    vpol_array_plane_xy[0] = numpy.deg2rad(vpol_array_plane_xy[0])
+                    vpol_array_plane_xy[1] = numpy.deg2rad(vpol_array_plane_xy[1])
                 else:
                     im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
-                    if pol == 'hpol':
-                        plt.plot(self.phis_deg, numpy.roll(90.0 - self.thetas_deg[self.hpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
-                    elif pol == 'vpol':
-                        plt.plot(self.phis_deg, numpy.roll(90.0 - self.thetas_deg[self.vpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
+
+
+                if pol == 'hpol':
+                    if max_diff_hpol_deg > 350:
+                        #Implies the curve is split across left and right side of the plot.
+                        left_cut = hpol_array_plane_xy[0] <= 0
+                        right_cut = hpol_array_plane_xy[0] >= 0
+                        left_cut = numpy.sort(numpy.where(left_cut)[0])
+                        plt.plot(hpol_array_plane_xy[0][left_cut], hpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k')
+                        plt.plot(hpol_array_plane_xy[0][right_cut], hpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        if numpy.all([len(numpy.unique(hpol_array_plane_xy[0])) == 1,len(numpy.unique(hpol_array_plane_xy[1])) == 1]):
+                            plt.scatter(hpol_array_plane_xy[0][0], hpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                        else:
+                            plt.plot(hpol_array_plane_xy[0], hpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k')
+                elif pol == 'vpol':
+                    if max_diff_vpol_deg > 350:
+                        #Implies the curve is split across left and right side of the plot.
+                        left_cut = vpol_array_plane_xy[0] <= 0
+                        right_cut = vpol_array_plane_xy[0] >= 0
+                        plt.plot(vpol_array_plane_xy[0][left_cut], vpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k')
+                        plt.plot(vpol_array_plane_xy[0][right_cut], vpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        if numpy.all([len(numpy.unique(vpol_array_plane_xy[0])) == 1,len(numpy.unique(vpol_array_plane_xy[1])) == 1]):
+                            plt.scatter(vpol_array_plane_xy[0][0], vpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                        else:
+                            plt.plot(vpol_array_plane_xy[0], vpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k')
 
                 cbar = fig.colorbar(im)
                 cbar.set_label('Mean Correlation Value')
@@ -1095,21 +1325,74 @@ class Correlator:
                 plt.ylabel('Elevation Angle (Degrees)')
 
                 plt.grid(True)
-                
 
+
+
+
+                
+                #Add best circle.
                 radius = 5.0 #Degrees I think?  Should eventually represent error. 
                 if mollweide == True:
-                    circle = plt.Circle((numpy.deg2rad(phi_best) - azimuth_offset_rad, numpy.deg2rad(elevation_best_deg)), numpy.deg2rad(radius), edgecolor='lime',linewidth=0.5,fill=False)
-                    ax.axvline(numpy.deg2rad(phi_best) - azimuth_offset_rad,c='lime',ymin=-numpy.pi/2,ymax=numpy.pi/2,linewidth=0.5)
+                    plot_phi = numpy.deg2rad(phi_best) - azimuth_offset_rad
+                    if plot_phi < -numpy.pi:
+                        plot_phi += 2*numpy.pi
+                    elif plot_phi > numpy.pi:
+                        plot_phi -= 2*numpy.pi
+
+                    circle = plt.Circle((plot_phi, numpy.deg2rad(elevation_best_deg)), numpy.deg2rad(radius), edgecolor='lime',linewidth=0.5,fill=False)
+                    ax.axvline(plot_phi,c='lime',ymin=-numpy.pi/2,ymax=numpy.pi/2,linewidth=0.5)
                     ax.axhline(numpy.deg2rad(elevation_best_deg),c='lime',linewidth=0.5)
-                    plt.axhspan(numpy.deg2rad(90 - min(zenith_cut)) , numpy.deg2rad(90.0),alpha=0.5)
-                    plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut)),alpha=0.5)
+                    plt.axhspan(numpy.deg2rad(90 - min(zenith_cut_ENU)) , numpy.deg2rad(90.0),alpha=0.5)
+                    plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut_ENU)),alpha=0.5)
+
+
                 else:
-                    circle = plt.Circle((phi_best - azimuth_offset_deg, elevation_best_deg), radius, edgecolor='lime',linewidth=0.5,fill=False)
-                    ax.axvline(phi_best - azimuth_offset_deg,c='lime',linewidth=0.5)
+                    plot_phi = phi_best - azimuth_offset_deg
+                    if plot_phi < -180.0:
+                        plot_phi += 2*180.0
+                    elif plot_phi > 180.0:
+                        plot_phi -= 2*180.0
+                    circle = plt.Circle((plot_phi, elevation_best_deg), radius, edgecolor='lime',linewidth=0.5,fill=False)
+                    ax.axvline(plot_phi,c='lime',linewidth=0.5)
                     ax.axhline(elevation_best_deg,c='lime',linewidth=0.5)
-                    plt.axhspan(90 - min(zenith_cut),90.0,alpha=0.5)
-                    plt.axhspan(-90 , 90 - max(zenith_cut),alpha=0.5)
+                    plt.axhspan(90 - min(zenith_cut_ENU),90.0,alpha=0.5)
+                    plt.axhspan(-90 , 90 - max(zenith_cut_ENU),alpha=0.5)
+
+                #Added circles as specified.
+                
+                if circle_az is not None:
+                    if circle_zenith is not None:
+                        if circle_az is list:
+                            circle_az = numpy.array(circle_az)
+                        elif circle_az != numpy.ndarray:
+                            circle_az = numpy.array([circle_az])
+                        _circle_az = circle_az.copy() #These were changing when 'both' was called for pol.  So copying them to ensure original input maintains values.
+
+                        if circle_zenith is list:
+                            circle_zenith = numpy.array(circle_zenith)
+                        elif circle_zenith != numpy.ndarray:
+                            circle_zenith = numpy.array([circle_zenith])
+
+                        _circle_zenith = circle_zenith.copy() #These were changing when 'both' was called for pol.  So copying them to ensure original input maintains values.
+
+                        if len(_circle_zenith) == len(_circle_az):
+                            _circle_az -= numpy.rad2deg(azimuth_offset_rad)
+                            _circle_az[_circle_az < -180.0] += 360.0
+                            _circle_az[_circle_az > 180.0] -= 360.0 
+
+
+                            if mollweide == True:
+                                _circle_az = numpy.deg2rad(_circle_az)
+                                circle_elevation = numpy.pi/2 - numpy.deg2rad(_circle_zenith)
+                            else:
+                                circle_elevation = 90.0 - _circle_zenith
+
+                            for i in range(len(_circle_az)):
+                                if mollweide == True:
+                                    requested_circle = plt.Circle((_circle_az[i], circle_elevation[i]), numpy.deg2rad(radius), edgecolor='fuchsia',linewidth=1.0,fill=False)
+                                else:
+                                    requested_circle = plt.Circle((_circle_az[i], circle_elevation[i]), radius, edgecolor='fuchsia',linewidth=1.0,fill=False)
+                                ax.add_artist(requested_circle)
 
                 ax.add_artist(circle)
                 if interactive == True:
@@ -1130,7 +1413,7 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut=None, center_dir='E'):
+    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None, center_dir='E'):
         '''
         Does the same thing as map, but averages over all eventids given.  Mostly helpful for 
         repeated sources such as background sources or pulsers.
@@ -1151,28 +1434,28 @@ class Correlator:
             Determines how the most probable source direction is from the map.
         '''
         if pol == 'both':
-            hpol_result = self.averagedMap(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut=zenith_cut)
-            vpol_result = self.averagedMap(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut=zenith_cut)
+            hpol_result = self.averagedMap(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut_ENU=zenith_cut_ENU)
+            vpol_result = self.averagedMap(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut_ENU=zenith_cut_ENU)
             return hpol_result, vpol_result
 
         total_mean_corr_values = numpy.zeros((self.n_theta, self.n_phi))
         for event_index, eventid in enumerate(eventids):
             sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
             sys.stdout.flush()
-            total_mean_corr_values += self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=False, zenith_cut=zenith_cut)/len(eventids)  #Don't need to put center_dir here.  Only for plotting.
+            total_mean_corr_values += self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=False, zenith_cut_ENU=zenith_cut_ENU)/len(eventids)  #Don't need to put center_dir here.  Only for plotting.
         print('')
 
-        if zenith_cut is not None:
-            if len(zenith_cut) != 2:
-                print('zenith_cut must be a 2 valued list.')
+        if zenith_cut_ENU is not None:
+            if len(zenith_cut_ENU) != 2:
+                print('zenith_cut_ENU must be a 2 valued list.')
                 return
             else:
-                if zenith_cut[0] is None:
-                    zenith_cut[0] = 0
-                if zenith_cut[1] is None:
-                    zenith_cut[1] = 180
+                if zenith_cut_ENU[0] is None:
+                    zenith_cut_ENU[0] = 0
+                if zenith_cut_ENU[1] is None:
+                    zenith_cut_ENU[1] = 180
 
-                theta_cut = numpy.logical_and(self.thetas_deg >= min(zenith_cut), self.thetas_deg <= max(zenith_cut))
+                theta_cut = numpy.logical_and(self.thetas_deg >= min(zenith_cut_ENU), self.thetas_deg <= max(zenith_cut_ENU))
         else:
             theta_cut = numpy.ones_like(self.thetas_deg,dtype=bool)
 
@@ -1207,9 +1490,9 @@ class Correlator:
             rolled_values = numpy.roll(total_mean_corr_values,roll,axis=1)
 
             if max_method is not None:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,max_method=max_method,verbose=True,zenith_cut=zenith_cut)
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU)
             else:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,verbose=True,zenith_cut=zenith_cut)        
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU)        
 
             elevation_best_deg = 90.0 - theta_best
 
@@ -1267,14 +1550,14 @@ class Correlator:
                 circle = plt.Circle((numpy.deg2rad(phi_best) - azimuth_offset_rad, numpy.deg2rad(elevation_best_deg)), numpy.deg2rad(radius), edgecolor='lime',linewidth=0.5,fill=False)
                 ax.axvline(numpy.deg2rad(phi_best) - azimuth_offset_rad,c='lime',ymin=-numpy.pi/2,ymax=numpy.pi/2,linewidth=0.5)
                 ax.axhline(numpy.deg2rad(elevation_best_deg),c='lime',linewidth=0.5)
-                plt.axhspan(numpy.deg2rad(90 - min(zenith_cut)) , numpy.deg2rad(90.0),alpha=0.5)
-                plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut)),alpha=0.5)
+                plt.axhspan(numpy.deg2rad(90 - min(zenith_cut_ENU)) , numpy.deg2rad(90.0),alpha=0.5)
+                plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut_ENU)),alpha=0.5)
             else:
                 circle = plt.Circle((phi_best - azimuth_offset_deg, elevation_best_deg), radius, edgecolor='lime',linewidth=0.5,fill=False)
                 ax.axvline(phi_best - azimuth_offset_deg,c='lime',linewidth=0.5)
                 ax.axhline(elevation_best_deg,c='lime',linewidth=0.5)
-                plt.axhspan(90 - min(zenith_cut),90.0,alpha=0.5)
-                plt.axhspan(-90 , 90 - max(zenith_cut),alpha=0.5)
+                plt.axhspan(90 - min(zenith_cut_ENU),90.0,alpha=0.5)
+                plt.axhspan(-90 , 90 - max(zenith_cut_ENU),alpha=0.5)
 
             ax.add_artist(circle)
             self.figs.append(fig)
@@ -1284,7 +1567,7 @@ class Correlator:
         else:
             return total_mean_corr_values
 
-    def animatedMap(self, eventids, pol, title, plane_zenith=None, plane_az=None, hilbert=False, max_method=None,center_dir='E',save=True):
+    def animatedMap(self, eventids, pol, title, plane_zenith=None, plane_az=None, hilbert=False, max_method=None,center_dir='E',save=True,dpi=300,fps=3):
         '''
         Does the same thing as map, but updates the canvas for each event creating an animation.
         Mostly helpful for repeated sources that are expected to be moving such as planes.
@@ -1303,6 +1586,12 @@ class Correlator:
             Enables performing calculations with Hilbert envelopes of waveforms. 
         max_method : bool
             Determines how the most probable source direction is from the map.
+        plane_zenith : list of floats
+            List of zenith values to circle on the plot.  These could be known background sources like planes.
+            The length of this must match the length of plane_az.  Should be given in degrees.
+        plane_az : list of floats
+            List of azimuths values to circle on the plot.  These could be known background sources like planes.
+            The length of this must match the length of plane_zenith.  Should be given in degrees.
         '''
         if pol == 'both':
             hpol_result = self.animatedMap(eventids, 'hpol',title, plane_zenith=plane_zenith, plane_az=plane_az, hilbert=hilbert, max_method=max_method,center_dir=center_dir,save=save)
@@ -1348,17 +1637,24 @@ class Correlator:
                 if plane_az is list:
                     plane_az = numpy.array(plane_az)
                 
-                plane_az -= numpy.rad2deg(azimuth_offset_rad)
-                plane_az[plane_az < -180.0] += 360.0
-                plane_az[plane_az > -180.0] -= 360.0 
+                _plane_az = plane_az.copy() #These were changing when 'both' was called for pol.  So copying them to ensure original input maintains values.
 
-                plane_az = numpy.deg2rad(plane_az)
+
+
+                _plane_az -= numpy.rad2deg(azimuth_offset_rad)
+                _plane_az[_plane_az < -180.0] += 360.0
+                _plane_az[_plane_az > 180.0] -= 360.0 
+
+                _plane_az = numpy.deg2rad(_plane_az)
 
 
             if plane_zenith is not None:
                 if plane_zenith is list:
                     plane_zenith = numpy.array(plane_zenith)
-                plane_elevation = numpy.deg2rad(90.0 - plane_zenith)
+                _plane_zenith = plane_zenith.copy() #These were changing when 'both' was called for pol.  So copying them to ensure original input maintains values.
+                
+
+                plane_elevation = numpy.deg2rad(90.0 - _plane_zenith)
             else:
                 plane_elevation = None
 
@@ -1389,9 +1685,9 @@ class Correlator:
             plt.ylabel('Elevation Angle (Degrees)')
             plt.grid(True)
 
-            if plane_elevation is not None and plane_az is not None:
+            if plane_elevation is not None and _plane_az is not None:
                 radius = numpy.deg2rad(5.0) #Radians I think?  Should eventually represent error. 
-                circle = plt.Circle((plane_az[0], plane_elevation[0]), radius, edgecolor='lime',linewidth=1.0,fill=False,zorder=10)
+                circle = plt.Circle((_plane_az[0], plane_elevation[0]), radius, edgecolor='fuchsia',linewidth=1.0,fill=False,zorder=10)
                 ax.add_artist(circle)
 
             #Circle not plotting, what is that all about?
@@ -1404,15 +1700,16 @@ class Correlator:
                 if hilbert == True:
                     im.set_clim(vmin=numpy.min(all_maps[frame]),vmax=numpy.max(all_maps[frame]))
 
-                if plane_elevation is not None and plane_az is not None:
-                    circle.center = plane_az[frame], plane_elevation[frame]
+                if plane_elevation is not None and _plane_az is not None:
+                    circle.center = _plane_az[frame], plane_elevation[frame]
                     ax.add_artist(circle)
                 return [im]
 
             ani = FuncAnimation(fig, update, frames=range(len(eventids)),blit=False,save_count=0)
 
             if save == True:
-                ani.save('./%s_%s_hilbert=%s_%s.mp4'%(title,pol,str(hilbert), center_dir_full + '_centered'), writer='ffmpeg', fps=3,dpi=600)
+                #ani.save('./%s_%s_hilbert=%s_%s.mp4'%(title,pol,str(hilbert), center_dir_full + '_centered'), writer='ffmpeg', fps=fps,dpi=dpi)
+                ani.save('./%s_%s_hilbert=%s_%s.gif'%(title,pol,str(hilbert), center_dir_full + '_centered'), writer='imagemagick', fps=fps,dpi=dpi)
                 plt.close(fig)
             else:
                 self.figs.append(fig)
@@ -1427,7 +1724,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def histMapPeak(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, use_weight=False, zenith_cut=None):
+    def histMapPeak(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, use_weight=False, zenith_cut_ENU=None):
         '''
         This will loop over eventids and makes a histogram from of location of maximum correlation
         value in the corresponding correlation maps. 
@@ -1453,9 +1750,9 @@ class Correlator:
             sys.stdout.flush()
             m = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert)/len(eventids)
             if max_method is not None:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map,zenith_cut=zenith_cut)
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU)
             else:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map,zenith_cut=zenith_cut)        
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU)        
 
             if use_weight == True:
                 hist[row_index,column_index] += m[row_index,column_index]
@@ -1736,16 +2033,20 @@ if __name__=="__main__":
 
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
 
-                zenith_cut = [0,120]
+                zenith_cut_ENU = [0,120]
+                zenith_cut_array_plane = [0,120]
+                #cor.calculateArrayNormalVector(plot_map=True,mollweide=True, pol='both')
 
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True,zenith_cut=zenith_cut,center_dir='W')
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut=zenith_cut,center_dir='W')
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method,mollweide=True,zenith_cut=zenith_cut,center_dir='W')
-                mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=False,zenith_cut=zenith_cut,center_dir='W')
-                mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut=zenith_cut,center_dir='W')
-                # for eventid in eventids:
-                #     cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut=zenith_cut,center_dir='W')
-                #cor.animatedMap(eventids, 'both', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='W',save=True)
+                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
+                # cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
+                # cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
+                # mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,center_dir='W')
+                # mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W')
+                # # for eventid in eventids:
+                #     cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,center_dir='W')
+                #cor.animatedMap(eventids, 'both', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='W',save=True,dpi=300)
+
+                #TODO: ADD A FEATURE THAT DOES WHAT ZENITH_CUT_ENU DOES BUT FOR ANGLES RELATIVE TO THE ARRAY PLANE. 
 
                 cors.append(cor) #Need to keep references for animations to work. 
 
