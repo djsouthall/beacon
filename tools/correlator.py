@@ -947,7 +947,7 @@ class Correlator:
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 print(exc_type, fname, exc_tb.tb_lineno)
 
-    def mapMax(self, map_values, max_method=0, verbose=False, zenith_cut_ENU=None, zenith_cut_array_plane=None,):
+    def mapMax(self, map_values, max_method=0, verbose=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, pol=None):
         '''
         Determines the indices in the given map of the optimal source direction.
 
@@ -964,6 +964,12 @@ class Correlator:
         zenith_cut_ENU : list of 2 float values
             Given in degrees, angles within these two values are considered.  If None is given for the first then it is
             assumed to be 0 (overhead), if None is given for the latter then it is assumed to be 180 (straight down).
+        zenith_cut_array_plane : list of 2 float values
+            Given in degrees, angles within these two values are considered.  If None is given for the first then it is
+            assumed to be 0 (overhead), if None is given for the latter then it is assumed to be 180 (straight down).  This is
+            polarization dependant because it depends on the calibration of the antennas positions.  So if pol=None then this will
+            be ignored.
+
 
         Returns
         -------
@@ -987,7 +993,10 @@ class Correlator:
             The corresponding values for this parameters for row_index and col_index.
         t_best_2subtract3 : float
             The corresponding values for this parameters for row_index and col_index.
+
+
         '''
+        theta_cut = numpy.ones_like(map_values,dtype=bool)
 
         if zenith_cut_ENU is not None:
             if len(zenith_cut_ENU) != 2:
@@ -999,28 +1008,33 @@ class Correlator:
                 if zenith_cut_ENU[1] is None:
                     zenith_cut_ENU[1] = 180
 
-                theta_cut = numpy.logical_and(self.thetas_deg >= min(zenith_cut_ENU), self.thetas_deg <= max(zenith_cut_ENU))
-        else:
-            theta_cut = numpy.ones_like(self.thetas_deg,dtype=bool)
+                theta_cut_1d = numpy.logical_and(self.thetas_deg >= min(zenith_cut_ENU), self.thetas_deg <= max(zenith_cut_ENU))
+                theta_cut = numpy.multiply(theta_cut.T,theta_cut_1d).T
+        if pol is not None:
+            if zenith_cut_array_plane is not None:
+                if len(zenith_cut_array_plane) != 2:
+                    print('zenith_cut_array_plane must be a 2 valued list.')
+                    return
+                else:
+                    if zenith_cut_array_plane[0] is None:
+                        zenith_cut_array_plane[0] = 0
+                    if zenith_cut_array_plane[1] is None:
+                        zenith_cut_array_plane[1] = 180
 
-        #self.getArrayPlaneZenithCurves(zenith_array_plane_deg) # Use this with the zenith_array_plane cuts.
+                    if pol == 'hpol':
+                        theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.hpol_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.hpol_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
+                    if pol == 'vpol':
+                        theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.vpol_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.vpol_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
 
-        theta_cut_row_indices = numpy.where(theta_cut)[0]
-
-
-
-
-
+        masked_map_values = numpy.ma.array(map_values.copy(),mask=~theta_cut) #This way the values not in the range are not included in calculations but the dimensions of the map stay the same.
 
         if max_method == 0:
-            row_index, column_index = numpy.unravel_index(map_values[theta_cut].argmax(),numpy.shape(map_values[theta_cut]))
+            row_index, column_index = numpy.unravel_index(masked_map_values.argmax(),numpy.shape(masked_map_values))
 
         elif max_method == 1:
             #Calculates sum of each point plus surrounding four points to get max.
-            rounded_corr_values = (map_values + numpy.roll(map_values,1,axis=0) + numpy.roll(map_values,-1,axis=0) + numpy.roll(map_values,1,axis=1) + numpy.roll(map_values,-1,axis=1))/5.0
-            row_index, column_index = numpy.unravel_index(rounded_corr_values[theta_cut].argmax(),numpy.shape(rounded_corr_values[theta_cut]))
-
-        row_index = theta_cut_row_indices[row_index] #This accounts for zenith_cut_ENU having different row labels than the actual map. 
+            rounded_corr_values = (masked_map_values + numpy.roll(masked_map_values,1,axis=0) + numpy.roll(masked_map_values,-1,axis=0) + numpy.roll(masked_map_values,1,axis=1) + numpy.roll(masked_map_values,-1,axis=1))/5.0
+            row_index, column_index = numpy.unravel_index(rounded_corr_values.argmax(),numpy.shape(rounded_corr_values))
 
         theta_best  = self.thetas_deg[row_index]
         phi_best    = self.phis_deg[column_index]
@@ -1134,9 +1148,9 @@ class Correlator:
                 mean_corr_values = numpy.mean(numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] ),axis=0)
                 if plot_map == True:
                     if max_method is not None:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
                     else:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
 
             elif pol == 'vpol':
                 if waveforms is None:
@@ -1269,8 +1283,27 @@ class Correlator:
                 #     elif pol == 'vpol':
                 #         plt.plot(self.phis_deg, numpy.roll(90.0 - self.thetas_deg[vpol_array_plane_indices],roll), linewidth = self.min_elevation_linewidth, color='k')
                 
-                
+                # TOMORROW NEED TO ADD THIS VERSION OF CONTOURS TO THE OTHER PLOTS AND THEN ADD THE CUT BASED ON ZENITH ANGLE. 
 
+                if mollweide == True:
+                    #Automatically converts from rads to degs
+                    im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
+                else:
+                    im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
+
+                #Prepare array cut curves
+                if pol is not None:
+                    if zenith_cut_array_plane is not None:
+                        if len(zenith_cut_array_plane) != 2:
+                            print('zenith_cut_array_plane must be a 2 valued list.')
+                            return
+                        else:
+                            if zenith_cut_array_plane[0] is None:
+                                zenith_cut_array_plane[0] = 0
+                            if zenith_cut_array_plane[1] is None:
+                                zenith_cut_array_plane[1] = 180
+
+                #Prepare center line and plot the map.  Prep cut lines as well. 
                 physical_array_plane_xy, hpol_array_plane_xy, vpol_array_plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)
 
                 physical_array_plane_xy[1] = 90.0 - physical_array_plane_xy[1]
@@ -1279,21 +1312,48 @@ class Correlator:
                 max_diff_hpol_deg = numpy.max(numpy.abs(numpy.diff(hpol_array_plane_xy)))
                 max_diff_vpol_deg = numpy.max(numpy.abs(numpy.diff(vpol_array_plane_xy)))
 
-                if mollweide == True:
-                    #Automatically converts from rads to degs
-                    im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
+
+                upper_cut_physical_array_plane_xy, upper_cut_hpol_array_plane_xy, upper_cut_vpol_array_plane_xy = self.getArrayPlaneZenithCurves(zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)
+                upper_cut_physical_array_plane_xy[1] = 90.0 - upper_cut_physical_array_plane_xy[1]
+                upper_cut_hpol_array_plane_xy[1] = 90.0 - upper_cut_hpol_array_plane_xy[1]
+                upper_cut_vpol_array_plane_xy[1] = 90.0 - upper_cut_vpol_array_plane_xy[1]
+                upper_cut_max_diff_hpol_deg = numpy.max(numpy.abs(numpy.diff(upper_cut_hpol_array_plane_xy)))
+                upper_cut_max_diff_vpol_deg = numpy.max(numpy.abs(numpy.diff(upper_cut_vpol_array_plane_xy)))
+
+                lower_cut_physical_array_plane_xy, lower_cut_hpol_array_plane_xy, lower_cut_vpol_array_plane_xy = self.getArrayPlaneZenithCurves(zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)
+                lower_cut_physical_array_plane_xy[1] = 90.0 - lower_cut_physical_array_plane_xy[1]
+                lower_cut_hpol_array_plane_xy[1] = 90.0 - lower_cut_hpol_array_plane_xy[1]
+                lower_cut_vpol_array_plane_xy[1] = 90.0 - lower_cut_vpol_array_plane_xy[1]
+                lower_cut_max_diff_hpol_deg = numpy.max(numpy.abs(numpy.diff(lower_cut_hpol_array_plane_xy)))
+                lower_cut_max_diff_vpol_deg = numpy.max(numpy.abs(numpy.diff(lower_cut_vpol_array_plane_xy)))
+
+
                     
+
+                if mollweide == True:
                     physical_array_plane_xy[0] = numpy.deg2rad(physical_array_plane_xy[0])
                     physical_array_plane_xy[1] = numpy.deg2rad(physical_array_plane_xy[1])
                     hpol_array_plane_xy[0] = numpy.deg2rad(hpol_array_plane_xy[0])
                     hpol_array_plane_xy[1] = numpy.deg2rad(hpol_array_plane_xy[1])
                     vpol_array_plane_xy[0] = numpy.deg2rad(vpol_array_plane_xy[0])
                     vpol_array_plane_xy[1] = numpy.deg2rad(vpol_array_plane_xy[1])
-                else:
-                    im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
 
+                    upper_cut_physical_array_plane_xy[0] = numpy.deg2rad(upper_cut_physical_array_plane_xy[0])
+                    upper_cut_physical_array_plane_xy[1] = numpy.deg2rad(upper_cut_physical_array_plane_xy[1])
+                    upper_cut_hpol_array_plane_xy[0] = numpy.deg2rad(upper_cut_hpol_array_plane_xy[0])
+                    upper_cut_hpol_array_plane_xy[1] = numpy.deg2rad(upper_cut_hpol_array_plane_xy[1])
+                    upper_cut_vpol_array_plane_xy[0] = numpy.deg2rad(upper_cut_vpol_array_plane_xy[0])
+                    upper_cut_vpol_array_plane_xy[1] = numpy.deg2rad(upper_cut_vpol_array_plane_xy[1])
+
+                    lower_cut_physical_array_plane_xy[0] = numpy.deg2rad(lower_cut_physical_array_plane_xy[0])
+                    lower_cut_physical_array_plane_xy[1] = numpy.deg2rad(lower_cut_physical_array_plane_xy[1])
+                    lower_cut_hpol_array_plane_xy[0] = numpy.deg2rad(lower_cut_hpol_array_plane_xy[0])
+                    lower_cut_hpol_array_plane_xy[1] = numpy.deg2rad(lower_cut_hpol_array_plane_xy[1])
+                    lower_cut_vpol_array_plane_xy[0] = numpy.deg2rad(lower_cut_vpol_array_plane_xy[0])
+                    lower_cut_vpol_array_plane_xy[1] = numpy.deg2rad(lower_cut_vpol_array_plane_xy[1])
 
                 if pol == 'hpol':
+                    #Plot the center line.
                     if max_diff_hpol_deg > 350:
                         #Implies the curve is split across left and right side of the plot.
                         left_cut = hpol_array_plane_xy[0] <= 0
@@ -1306,11 +1366,42 @@ class Correlator:
                             plt.scatter(hpol_array_plane_xy[0][0], hpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
                         else:
                             plt.plot(hpol_array_plane_xy[0], hpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k')
+
+                    #Plot upper zenith array cut
+                    if upper_cut_max_diff_hpol_deg > 350:
+                        #Implies the curve is split across left and right side of the plot.
+                        left_cut = upper_cut_hpol_array_plane_xy[0] <= 0
+                        right_cut = upper_cut_hpol_array_plane_xy[0] >= 0
+                        left_cut = numpy.sort(numpy.where(left_cut)[0])
+                        plt.plot(upper_cut_hpol_array_plane_xy[0][left_cut], upper_cut_hpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k',linestyle='--')
+                        plt.plot(upper_cut_hpol_array_plane_xy[0][right_cut], upper_cut_hpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k',linestyle='--')
+                    else:
+                        if numpy.all([len(numpy.unique(upper_cut_hpol_array_plane_xy[0])) == 1,len(numpy.unique(upper_cut_hpol_array_plane_xy[1])) == 1]):
+                            plt.scatter(upper_cut_hpol_array_plane_xy[0][0], upper_cut_hpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                        else:
+                            plt.plot(upper_cut_hpol_array_plane_xy[0], upper_cut_hpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k',linestyle='--')
+
+                    #Plot lower zenith array cut
+                    if lower_cut_max_diff_hpol_deg > 350:
+                        #Implies the curve is split across left and right side of the plot.
+                        left_cut = lower_cut_hpol_array_plane_xy[0] <= 0
+                        right_cut = lower_cut_hpol_array_plane_xy[0] >= 0
+                        left_cut = numpy.sort(numpy.where(left_cut)[0])
+                        plt.plot(lower_cut_hpol_array_plane_xy[0][left_cut], lower_cut_hpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k',linestyle='--')
+                        plt.plot(lower_cut_hpol_array_plane_xy[0][right_cut], lower_cut_hpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k',linestyle='--')
+                    else:
+                        if numpy.all([len(numpy.unique(lower_cut_hpol_array_plane_xy[0])) == 1,len(numpy.unique(lower_cut_hpol_array_plane_xy[1])) == 1]):
+                            plt.scatter(lower_cut_hpol_array_plane_xy[0][0], lower_cut_hpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                        else:
+                            plt.plot(lower_cut_hpol_array_plane_xy[0], lower_cut_hpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k',linestyle='--')
+
                 elif pol == 'vpol':
+                    #Plot the center line.
                     if max_diff_vpol_deg > 350:
                         #Implies the curve is split across left and right side of the plot.
                         left_cut = vpol_array_plane_xy[0] <= 0
                         right_cut = vpol_array_plane_xy[0] >= 0
+                        left_cut = numpy.sort(numpy.where(left_cut)[0])
                         plt.plot(vpol_array_plane_xy[0][left_cut], vpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k')
                         plt.plot(vpol_array_plane_xy[0][right_cut], vpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k')
                     else:
@@ -1318,6 +1409,34 @@ class Correlator:
                             plt.scatter(vpol_array_plane_xy[0][0], vpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
                         else:
                             plt.plot(vpol_array_plane_xy[0], vpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k')
+
+                    #Plot upper zenith array cut
+                    if upper_cut_max_diff_vpol_deg > 350:
+                        #Implies the curve is split across left and right side of the plot.
+                        left_cut = upper_cut_vpol_array_plane_xy[0] <= 0
+                        right_cut = upper_cut_vpol_array_plane_xy[0] >= 0
+                        left_cut = numpy.sort(numpy.where(left_cut)[0])
+                        plt.plot(upper_cut_vpol_array_plane_xy[0][left_cut], upper_cut_vpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k')
+                        plt.plot(upper_cut_vpol_array_plane_xy[0][right_cut], upper_cut_vpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        if numpy.all([len(numpy.unique(upper_cut_vpol_array_plane_xy[0])) == 1,len(numpy.unique(upper_cut_vpol_array_plane_xy[1])) == 1]):
+                            plt.scatter(upper_cut_vpol_array_plane_xy[0][0], upper_cut_vpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                        else:
+                            plt.plot(upper_cut_vpol_array_plane_xy[0], upper_cut_vpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k')
+
+                    #Plot lower zenith array cut
+                    if lower_cut_max_diff_vpol_deg > 350:
+                        #Implies the curve is split across left and right side of the plot.
+                        left_cut = lower_cut_vpol_array_plane_xy[0] <= 0
+                        right_cut = lower_cut_vpol_array_plane_xy[0] >= 0
+                        left_cut = numpy.sort(numpy.where(left_cut)[0])
+                        plt.plot(lower_cut_vpol_array_plane_xy[0][left_cut], lower_cut_vpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k')
+                        plt.plot(lower_cut_vpol_array_plane_xy[0][right_cut], lower_cut_vpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        if numpy.all([len(numpy.unique(lower_cut_vpol_array_plane_xy[0])) == 1,len(numpy.unique(lower_cut_vpol_array_plane_xy[1])) == 1]):
+                            plt.scatter(lower_cut_vpol_array_plane_xy[0][0], lower_cut_vpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                        else:
+                            plt.plot(lower_cut_vpol_array_plane_xy[0], lower_cut_vpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k')
 
                 cbar = fig.colorbar(im)
                 cbar.set_label('Mean Correlation Value')
@@ -1413,7 +1532,7 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None, center_dir='E'):
+    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E'):
         '''
         Does the same thing as map, but averages over all eventids given.  Mostly helpful for 
         repeated sources such as background sources or pulsers.
@@ -1434,8 +1553,8 @@ class Correlator:
             Determines how the most probable source direction is from the map.
         '''
         if pol == 'both':
-            hpol_result = self.averagedMap(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut_ENU=zenith_cut_ENU)
-            vpol_result = self.averagedMap(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut_ENU=zenith_cut_ENU)
+            hpol_result = self.averagedMap(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane)
+            vpol_result = self.averagedMap(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane)
             return hpol_result, vpol_result
 
         total_mean_corr_values = numpy.zeros((self.n_theta, self.n_phi))
@@ -1490,9 +1609,9 @@ class Correlator:
             rolled_values = numpy.roll(total_mean_corr_values,roll,axis=1)
 
             if max_method is not None:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU)
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,pol=pol)
             else:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU)        
+                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,pol=pol)        
 
             elevation_best_deg = 90.0 - theta_best
 
@@ -1524,17 +1643,153 @@ class Correlator:
             if mollweide == True:
                 #Automatically converts from rads to degs
                 im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
-                if pol == 'hpol':
-                    plt.plot(self.phis_rad, numpy.roll(numpy.pi/2 - self.thetas_rad[self.hpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
-                elif pol == 'vpol':
-                    plt.plot(self.phis_rad, numpy.roll(numpy.pi/2 - self.thetas_rad[self.vpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
             else:
                 im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
-                if pol == 'hpol':
-                        plt.plot(self.phis_deg, numpy.roll(90.0 - self.thetas_deg[self.hpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
-                elif pol == 'vpol':
-                    plt.plot(self.phis_deg, numpy.roll(90.0 - self.thetas_deg[self.vpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
 
+
+            #Prepare array cut curves
+            if pol is not None:
+                if zenith_cut_array_plane is not None:
+                    if len(zenith_cut_array_plane) != 2:
+                        print('zenith_cut_array_plane must be a 2 valued list.')
+                        return
+                    else:
+                        if zenith_cut_array_plane[0] is None:
+                            zenith_cut_array_plane[0] = 0
+                        if zenith_cut_array_plane[1] is None:
+                            zenith_cut_array_plane[1] = 180
+
+            #Prepare center line and plot the map.  Prep cut lines as well. 
+            physical_array_plane_xy, hpol_array_plane_xy, vpol_array_plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)
+
+            physical_array_plane_xy[1] = 90.0 - physical_array_plane_xy[1]
+            hpol_array_plane_xy[1] = 90.0 - hpol_array_plane_xy[1]
+            vpol_array_plane_xy[1] = 90.0 - vpol_array_plane_xy[1]
+            max_diff_hpol_deg = numpy.max(numpy.abs(numpy.diff(hpol_array_plane_xy)))
+            max_diff_vpol_deg = numpy.max(numpy.abs(numpy.diff(vpol_array_plane_xy)))
+
+
+            upper_cut_physical_array_plane_xy, upper_cut_hpol_array_plane_xy, upper_cut_vpol_array_plane_xy = self.getArrayPlaneZenithCurves(zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)
+            upper_cut_physical_array_plane_xy[1] = 90.0 - upper_cut_physical_array_plane_xy[1]
+            upper_cut_hpol_array_plane_xy[1] = 90.0 - upper_cut_hpol_array_plane_xy[1]
+            upper_cut_vpol_array_plane_xy[1] = 90.0 - upper_cut_vpol_array_plane_xy[1]
+            upper_cut_max_diff_hpol_deg = numpy.max(numpy.abs(numpy.diff(upper_cut_hpol_array_plane_xy)))
+            upper_cut_max_diff_vpol_deg = numpy.max(numpy.abs(numpy.diff(upper_cut_vpol_array_plane_xy)))
+
+            lower_cut_physical_array_plane_xy, lower_cut_hpol_array_plane_xy, lower_cut_vpol_array_plane_xy = self.getArrayPlaneZenithCurves(zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)
+            lower_cut_physical_array_plane_xy[1] = 90.0 - lower_cut_physical_array_plane_xy[1]
+            lower_cut_hpol_array_plane_xy[1] = 90.0 - lower_cut_hpol_array_plane_xy[1]
+            lower_cut_vpol_array_plane_xy[1] = 90.0 - lower_cut_vpol_array_plane_xy[1]
+            lower_cut_max_diff_hpol_deg = numpy.max(numpy.abs(numpy.diff(lower_cut_hpol_array_plane_xy)))
+            lower_cut_max_diff_vpol_deg = numpy.max(numpy.abs(numpy.diff(lower_cut_vpol_array_plane_xy)))    
+
+            if mollweide == True:
+                physical_array_plane_xy[0] = numpy.deg2rad(physical_array_plane_xy[0])
+                physical_array_plane_xy[1] = numpy.deg2rad(physical_array_plane_xy[1])
+                hpol_array_plane_xy[0] = numpy.deg2rad(hpol_array_plane_xy[0])
+                hpol_array_plane_xy[1] = numpy.deg2rad(hpol_array_plane_xy[1])
+                vpol_array_plane_xy[0] = numpy.deg2rad(vpol_array_plane_xy[0])
+                vpol_array_plane_xy[1] = numpy.deg2rad(vpol_array_plane_xy[1])
+
+                upper_cut_physical_array_plane_xy[0] = numpy.deg2rad(upper_cut_physical_array_plane_xy[0])
+                upper_cut_physical_array_plane_xy[1] = numpy.deg2rad(upper_cut_physical_array_plane_xy[1])
+                upper_cut_hpol_array_plane_xy[0] = numpy.deg2rad(upper_cut_hpol_array_plane_xy[0])
+                upper_cut_hpol_array_plane_xy[1] = numpy.deg2rad(upper_cut_hpol_array_plane_xy[1])
+                upper_cut_vpol_array_plane_xy[0] = numpy.deg2rad(upper_cut_vpol_array_plane_xy[0])
+                upper_cut_vpol_array_plane_xy[1] = numpy.deg2rad(upper_cut_vpol_array_plane_xy[1])
+
+                lower_cut_physical_array_plane_xy[0] = numpy.deg2rad(lower_cut_physical_array_plane_xy[0])
+                lower_cut_physical_array_plane_xy[1] = numpy.deg2rad(lower_cut_physical_array_plane_xy[1])
+                lower_cut_hpol_array_plane_xy[0] = numpy.deg2rad(lower_cut_hpol_array_plane_xy[0])
+                lower_cut_hpol_array_plane_xy[1] = numpy.deg2rad(lower_cut_hpol_array_plane_xy[1])
+                lower_cut_vpol_array_plane_xy[0] = numpy.deg2rad(lower_cut_vpol_array_plane_xy[0])
+                lower_cut_vpol_array_plane_xy[1] = numpy.deg2rad(lower_cut_vpol_array_plane_xy[1])
+
+            if pol == 'hpol':
+                #Plot the center line.
+                if max_diff_hpol_deg > 350:
+                    #Implies the curve is split across left and right side of the plot.
+                    left_cut = hpol_array_plane_xy[0] <= 0
+                    right_cut = hpol_array_plane_xy[0] >= 0
+                    left_cut = numpy.sort(numpy.where(left_cut)[0])
+                    plt.plot(hpol_array_plane_xy[0][left_cut], hpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k')
+                    plt.plot(hpol_array_plane_xy[0][right_cut], hpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k')
+                else:
+                    if numpy.all([len(numpy.unique(hpol_array_plane_xy[0])) == 1,len(numpy.unique(hpol_array_plane_xy[1])) == 1]):
+                        plt.scatter(hpol_array_plane_xy[0][0], hpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        plt.plot(hpol_array_plane_xy[0], hpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k')
+
+                #Plot upper zenith array cut
+                if upper_cut_max_diff_hpol_deg > 350:
+                    #Implies the curve is split across left and right side of the plot.
+                    left_cut = upper_cut_hpol_array_plane_xy[0] <= 0
+                    right_cut = upper_cut_hpol_array_plane_xy[0] >= 0
+                    left_cut = numpy.sort(numpy.where(left_cut)[0])
+                    plt.plot(upper_cut_hpol_array_plane_xy[0][left_cut], upper_cut_hpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k',linestyle='--')
+                    plt.plot(upper_cut_hpol_array_plane_xy[0][right_cut], upper_cut_hpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k',linestyle='--')
+                else:
+                    if numpy.all([len(numpy.unique(upper_cut_hpol_array_plane_xy[0])) == 1,len(numpy.unique(upper_cut_hpol_array_plane_xy[1])) == 1]):
+                        plt.scatter(upper_cut_hpol_array_plane_xy[0][0], upper_cut_hpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        plt.plot(upper_cut_hpol_array_plane_xy[0], upper_cut_hpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k',linestyle='--')
+
+                #Plot lower zenith array cut
+                if lower_cut_max_diff_hpol_deg > 350:
+                    #Implies the curve is split across left and right side of the plot.
+                    left_cut = lower_cut_hpol_array_plane_xy[0] <= 0
+                    right_cut = lower_cut_hpol_array_plane_xy[0] >= 0
+                    left_cut = numpy.sort(numpy.where(left_cut)[0])
+                    plt.plot(lower_cut_hpol_array_plane_xy[0][left_cut], lower_cut_hpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k',linestyle='--')
+                    plt.plot(lower_cut_hpol_array_plane_xy[0][right_cut], lower_cut_hpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k',linestyle='--')
+                else:
+                    if numpy.all([len(numpy.unique(lower_cut_hpol_array_plane_xy[0])) == 1,len(numpy.unique(lower_cut_hpol_array_plane_xy[1])) == 1]):
+                        plt.scatter(lower_cut_hpol_array_plane_xy[0][0], lower_cut_hpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        plt.plot(lower_cut_hpol_array_plane_xy[0], lower_cut_hpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k',linestyle='--')
+
+            elif pol == 'vpol':
+                #Plot the center line.
+                if max_diff_vpol_deg > 350:
+                    #Implies the curve is split across left and right side of the plot.
+                    left_cut = vpol_array_plane_xy[0] <= 0
+                    right_cut = vpol_array_plane_xy[0] >= 0
+                    left_cut = numpy.sort(numpy.where(left_cut)[0])
+                    plt.plot(vpol_array_plane_xy[0][left_cut], vpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k')
+                    plt.plot(vpol_array_plane_xy[0][right_cut], vpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k')
+                else:
+                    if numpy.all([len(numpy.unique(vpol_array_plane_xy[0])) == 1,len(numpy.unique(vpol_array_plane_xy[1])) == 1]):
+                        plt.scatter(vpol_array_plane_xy[0][0], vpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        plt.plot(vpol_array_plane_xy[0], vpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k')
+
+                #Plot upper zenith array cut
+                if upper_cut_max_diff_vpol_deg > 350:
+                    #Implies the curve is split across left and right side of the plot.
+                    left_cut = upper_cut_vpol_array_plane_xy[0] <= 0
+                    right_cut = upper_cut_vpol_array_plane_xy[0] >= 0
+                    left_cut = numpy.sort(numpy.where(left_cut)[0])
+                    plt.plot(upper_cut_vpol_array_plane_xy[0][left_cut], upper_cut_vpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k')
+                    plt.plot(upper_cut_vpol_array_plane_xy[0][right_cut], upper_cut_vpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k')
+                else:
+                    if numpy.all([len(numpy.unique(upper_cut_vpol_array_plane_xy[0])) == 1,len(numpy.unique(upper_cut_vpol_array_plane_xy[1])) == 1]):
+                        plt.scatter(upper_cut_vpol_array_plane_xy[0][0], upper_cut_vpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        plt.plot(upper_cut_vpol_array_plane_xy[0], upper_cut_vpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k')
+
+                #Plot lower zenith array cut
+                if lower_cut_max_diff_vpol_deg > 350:
+                    #Implies the curve is split across left and right side of the plot.
+                    left_cut = lower_cut_vpol_array_plane_xy[0] <= 0
+                    right_cut = lower_cut_vpol_array_plane_xy[0] >= 0
+                    left_cut = numpy.sort(numpy.where(left_cut)[0])
+                    plt.plot(lower_cut_vpol_array_plane_xy[0][left_cut], lower_cut_vpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k')
+                    plt.plot(lower_cut_vpol_array_plane_xy[0][right_cut], lower_cut_vpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k')
+                else:
+                    if numpy.all([len(numpy.unique(lower_cut_vpol_array_plane_xy[0])) == 1,len(numpy.unique(lower_cut_vpol_array_plane_xy[1])) == 1]):
+                        plt.scatter(lower_cut_vpol_array_plane_xy[0][0], lower_cut_vpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        plt.plot(lower_cut_vpol_array_plane_xy[0], lower_cut_vpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k')
 
 
             cbar = fig.colorbar(im)
@@ -1627,7 +1882,7 @@ class Correlator:
                     azimuth_offset_rad = -numpy.pi/2 #This is subtracted from the xaxis to roll it effectively.
                     xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)'
                     roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
-
+                azimuth_offset_deg = numpy.rad2deg(azimuth_offset_rad)
                 m = numpy.roll(m,roll,axis=1) #orients center.
                 all_maps.append(m)
             print('')
@@ -1676,10 +1931,53 @@ class Correlator:
                 cbar = fig.colorbar(im)
                 cbar.set_label('Mean Correlation Value')
 
+            physical_array_plane_xy, hpol_array_plane_xy, vpol_array_plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)
+            physical_array_plane_xy[1] = 90.0 - physical_array_plane_xy[1]
+            hpol_array_plane_xy[1] = 90.0 - hpol_array_plane_xy[1]
+            vpol_array_plane_xy[1] = 90.0 - vpol_array_plane_xy[1]
+            max_diff_hpol_deg = numpy.max(numpy.abs(numpy.diff(hpol_array_plane_xy)))
+            max_diff_vpol_deg = numpy.max(numpy.abs(numpy.diff(vpol_array_plane_xy)))
+
+            #Mollweide always true in this mode
+            physical_array_plane_xy[0] = numpy.deg2rad(physical_array_plane_xy[0])
+            physical_array_plane_xy[1] = numpy.deg2rad(physical_array_plane_xy[1])
+            hpol_array_plane_xy[0] = numpy.deg2rad(hpol_array_plane_xy[0])
+            hpol_array_plane_xy[1] = numpy.deg2rad(hpol_array_plane_xy[1])
+            vpol_array_plane_xy[0] = numpy.deg2rad(vpol_array_plane_xy[0])
+            vpol_array_plane_xy[1] = numpy.deg2rad(vpol_array_plane_xy[1])
+
+
             if pol == 'hpol':
-                plt.plot(self.phis_rad, numpy.roll(numpy.pi/2 - self.thetas_rad[self.hpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
+                if max_diff_hpol_deg > 350:
+                    #Implies the curve is split across left and right side of the plot.
+                    left_cut = hpol_array_plane_xy[0] <= 0
+                    right_cut = hpol_array_plane_xy[0] >= 0
+                    left_cut = numpy.sort(numpy.where(left_cut)[0])
+                    plt.plot(hpol_array_plane_xy[0][left_cut], hpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k')
+                    plt.plot(hpol_array_plane_xy[0][right_cut], hpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k')
+                else:
+                    if numpy.all([len(numpy.unique(hpol_array_plane_xy[0])) == 1,len(numpy.unique(hpol_array_plane_xy[1])) == 1]):
+                        plt.scatter(hpol_array_plane_xy[0][0], hpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        plt.plot(hpol_array_plane_xy[0], hpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k')
             elif pol == 'vpol':
-                plt.plot(self.phis_rad, numpy.roll(numpy.pi/2 - self.thetas_rad[self.vpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
+                if max_diff_vpol_deg > 350:
+                    #Implies the curve is split across left and right side of the plot.
+                    left_cut = vpol_array_plane_xy[0] <= 0
+                    right_cut = vpol_array_plane_xy[0] >= 0
+                    plt.plot(vpol_array_plane_xy[0][left_cut], vpol_array_plane_xy[1][left_cut], linewidth = self.min_elevation_linewidth, color='k')
+                    plt.plot(vpol_array_plane_xy[0][right_cut], vpol_array_plane_xy[1][right_cut], linewidth = self.min_elevation_linewidth, color='k')
+                else:
+                    if numpy.all([len(numpy.unique(vpol_array_plane_xy[0])) == 1,len(numpy.unique(vpol_array_plane_xy[1])) == 1]):
+                        plt.scatter(vpol_array_plane_xy[0][0], vpol_array_plane_xy[1][0], linewidth = self.min_elevation_linewidth, color='k')
+                    else:
+                        plt.plot(vpol_array_plane_xy[0], vpol_array_plane_xy[1], linewidth = self.min_elevation_linewidth, color='k')
+
+
+            # if pol == 'hpol':
+            #     plt.plot(self.phis_rad, numpy.roll(numpy.pi/2 - self.thetas_rad[self.hpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
+            # elif pol == 'vpol':
+            #     plt.plot(self.phis_rad, numpy.roll(numpy.pi/2 - self.thetas_rad[self.vpol_min_elevation_index_per_az],roll), linewidth = self.min_elevation_linewidth, color='k')
 
             plt.xlabel(xlabel)
             plt.ylabel('Elevation Angle (Degrees)')
@@ -1898,7 +2196,7 @@ if __name__=="__main__":
 
     apply_phase_response=False
     n_phi = 720
-    n_theta = 720
+    n_theta = 360
 
     upsample = 2**17
 
@@ -2033,14 +2331,14 @@ if __name__=="__main__":
 
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
 
-                zenith_cut_ENU = [0,120]
-                zenith_cut_array_plane = [0,120]
+                zenith_cut_ENU = [0,170]
+                zenith_cut_array_plane = [10,150]
                 #cor.calculateArrayNormalVector(plot_map=True,mollweide=True, pol='both')
 
                 cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
-                # cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
+                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
                 # cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
-                # mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,center_dir='W')
+                mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W',zenith_cut_array_plane=zenith_cut_array_plane,)
                 # mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W')
                 # # for eventid in eventids:
                 #     cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,center_dir='W')
