@@ -18,7 +18,6 @@ import tools.interpret as interpret #Must be imported before matplotlib or else 
 import tools.info as info
 import analysis.phase_response as pr
 import tools.get_plane_tracks as pt
-from analysis.find_phase_centers_from_planes import PlanePoly
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -711,6 +710,145 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def getPlaneZenithCurves(self, norm, zenith_deg, azimuth_offset_deg):
+        '''
+        Given a normal vector to define the plane this will determine the curve of the plane of the
+        particular zenith from that vector.  This could be used to circle spots on the sky, plot
+        the array plane, or perhaps be used for plotting the different interferometric circles on
+        the map. 
+
+
+        Right now this has not been coded, it is just copied code from getArrayPlaneZenithCurves.
+        '''
+        try:
+            if zenith_deg == 0.0:
+                thetas_physical  = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(self.n_physical[2]/numpy.linalg.norm(self.n_physical)))
+                phis_physical    = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(self.n_physical[1],self.n_physical[0]))
+                phis_physical -= azimuth_offset_deg
+                phis_physical[phis_physical < -180.0] += 360.0
+                phis_physical[phis_physical > 180.0] -= 360.0
+
+                thetas_hpol      = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(self.n_hpol[2]/numpy.linalg.norm(self.n_hpol)))
+                phis_hpol        = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(self.n_hpol[1],self.n_hpol[0]))
+                phis_hpol -= azimuth_offset_deg
+                phis_hpol[phis_hpol < -180.0] += 360.0
+                phis_hpol[phis_hpol > 180.0] -= 360.0
+
+                thetas_vpol      = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(self.n_vpol[2]/numpy.linalg.norm(self.n_vpol)))
+                phis_vpol        = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(self.n_vpol[1],self.n_vpol[0]))
+                phis_vpol -= azimuth_offset_deg
+                phis_vpol[phis_vpol < -180.0] += 360.0
+                phis_vpol[phis_vpol > 180.0] -= 360.0
+
+                #Rotations of az don't matter because the same value.
+                return [phis_physical, thetas_physical] , [phis_hpol, thetas_hpol] , [phis_vpol, thetas_vpol]
+            elif zenith_deg == 180.0:
+                thetas_physical  = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(-self.n_physical[2]/numpy.linalg.norm(self.n_physical)))
+                phis_physical    = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(-self.n_physical[1],-self.n_physical[0]))
+                phis_physical -= azimuth_offset_deg
+                phis_physical[phis_physical < -180.0] += 360.0
+                phis_physical[phis_physical > 180.0] -= 360.0
+
+                thetas_hpol      = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(-self.n_hpol[2]/numpy.linalg.norm(self.n_hpol)))
+                phis_hpol        = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(-self.n_hpol[1],-self.n_hpol[0]))
+                phis_hpol -= azimuth_offset_deg
+                phis_hpol[phis_hpol < -180.0] += 360.0
+                phis_hpol[phis_hpol > 180.0] -= 360.0
+
+                thetas_vpol      = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(-self.n_vpol[2]/numpy.linalg.norm(self.n_vpol)))
+                phis_vpol        = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(-self.n_vpol[1],-self.n_vpol[0]))
+                phis_vpol -= azimuth_offset_deg
+                phis_vpol[phis_vpol < -180.0] += 360.0
+                phis_vpol[phis_vpol > 180.0] -= 360.0
+                #Rotations of az don't matter because the same value.
+                return [phis_physical, thetas_physical] , [phis_hpol, thetas_hpol] , [phis_vpol, thetas_vpol]
+            else:
+                def rotateAaboutBbyTheta(a,b,dtheta_rad):
+                    a_par  = b * numpy.dot(a,b) / numpy.dot(b,b)
+                    a_perp = a - a_par
+                    rot_dir = numpy.cross(b,a_perp)
+                    x1 = numpy.cos(dtheta_rad)/numpy.linalg.norm(a_perp)
+                    x2 = numpy.sin(dtheta_rad)/numpy.linalg.norm(rot_dir)
+
+                    a_perp_new = numpy.linalg.norm(a_perp)*(x1*a_perp + x2*rot_dir)
+
+                    return (a_perp_new + a_par)/numpy.linalg.norm(a_perp_new + a_par)
+
+                dtheta_rad = numpy.deg2rad(numpy.diff(self.phis_deg)[0])
+
+                #Calculate Curve for physical Coordinates
+                in_plane_physical_vector = self.A2_physical/numpy.linalg.norm(self.A2_physical) 
+                
+                first_ratation_axis = numpy.cross(self.A2_physical,self.n_physical) / numpy.linalg.norm(numpy.cross(self.A2_physical,self.n_physical)) #Rotate normal about this by zenith_deg to get the inital vector at the correct zenith.
+                zenith_vector = rotateAaboutBbyTheta(self.n_physical.copy(),first_ratation_axis,numpy.deg2rad(zenith_deg))
+
+                physical_output_az_degs = numpy.zeros(self.n_phi)
+                physical_output_zenith_degs = numpy.zeros(self.n_phi)
+                for i in range(self.n_phi):
+                    #parellel portion of vector is 0 because A2 is in plane and n is defined as perp to plane. 
+                    zenith_vector = rotateAaboutBbyTheta(zenith_vector,self.n_physical.copy(),dtheta_rad)
+
+                    physical_output_az_degs[i] = numpy.rad2deg(numpy.arctan2(zenith_vector[1],zenith_vector[0]))
+                    physical_output_zenith_degs[i] = numpy.rad2deg(numpy.arccos(zenith_vector[2]/numpy.linalg.norm(zenith_vector)))
+
+                physical_output_az_degs -= azimuth_offset_deg
+                physical_output_az_degs[physical_output_az_degs < -180.0] += 360.0
+                physical_output_az_degs[physical_output_az_degs > 180.0] -= 360.0
+
+                #Calculate Curve for hpol Coordinates
+                in_plane_hpol_vector = self.A2_hpol/numpy.linalg.norm(self.A2_hpol) 
+                
+                first_ratation_axis = numpy.cross(self.A2_hpol,self.n_hpol) / numpy.linalg.norm(numpy.cross(self.A2_hpol,self.n_hpol)) #Rotate normal about this by zenith_deg to get the inital vector at the correct zenith.
+                zenith_vector = rotateAaboutBbyTheta(self.n_hpol.copy(),first_ratation_axis,numpy.deg2rad(zenith_deg))
+
+                hpol_output_az_degs = numpy.zeros(self.n_phi)
+                hpol_output_zenith_degs = numpy.zeros(self.n_phi)
+                for i in range(self.n_phi):
+                    #parellel portion of vector is 0 because A2 is in plane and n is defined as perp to plane. 
+                    zenith_vector = rotateAaboutBbyTheta(zenith_vector,self.n_hpol.copy(),dtheta_rad)
+
+                    hpol_output_az_degs[i] = numpy.rad2deg(numpy.arctan2(zenith_vector[1],zenith_vector[0]))
+                    hpol_output_zenith_degs[i] = numpy.rad2deg(numpy.arccos(zenith_vector[2]/numpy.linalg.norm(zenith_vector)))
+
+                hpol_output_az_degs -= azimuth_offset_deg
+                hpol_output_az_degs[hpol_output_az_degs < -180.0] += 360.0
+                hpol_output_az_degs[hpol_output_az_degs > 180.0] -= 360.0
+
+                #Calculate Curve for vpol Coordinates
+                in_plane_vpol_vector = self.A2_vpol/numpy.linalg.norm(self.A2_vpol) 
+                
+                first_ratation_axis = numpy.cross(self.A2_vpol,self.n_vpol) / numpy.linalg.norm(numpy.cross(self.A2_vpol,self.n_vpol)) #Rotate normal about this by zenith_deg to get the inital vector at the correct zenith.
+                zenith_vector = rotateAaboutBbyTheta(self.n_vpol.copy(),first_ratation_axis,numpy.deg2rad(zenith_deg))
+
+                vpol_output_az_degs = numpy.zeros(self.n_phi)
+                vpol_output_zenith_degs = numpy.zeros(self.n_phi)
+                for i in range(self.n_phi):
+                    #parellel portion of vector is 0 because A2 is in plane and n is defined as perp to plane. 
+                    zenith_vector = rotateAaboutBbyTheta(zenith_vector,self.n_vpol.copy(),dtheta_rad)
+
+                    vpol_output_az_degs[i] = numpy.rad2deg(numpy.arctan2(zenith_vector[1],zenith_vector[0]))
+                    vpol_output_zenith_degs[i] = numpy.rad2deg(numpy.arccos(zenith_vector[2]/numpy.linalg.norm(zenith_vector)))
+
+                vpol_output_az_degs -= azimuth_offset_deg
+                vpol_output_az_degs[vpol_output_az_degs < -180.0] += 360.0
+                vpol_output_az_degs[vpol_output_az_degs > 180.0] -= 360.0
+
+                numpy.argmin(physical_output_az_degs)
+                physical_indices = numpy.arange(len(physical_output_az_degs))#numpy.argsort(physical_output_az_degs)
+                hpol_indices = numpy.arange(len(hpol_output_az_degs))#numpy.argsort(hpol_output_az_degs)
+                vpol_indices = numpy.arange(len(vpol_output_az_degs))#numpy.argsort(vpol_output_az_degs)
+
+                out_physical = [numpy.roll(physical_output_az_degs,-numpy.argmin(physical_output_az_degs)) , numpy.roll(physical_output_zenith_degs,-numpy.argmin(physical_output_az_degs))]
+                out_hpol     = [numpy.roll(hpol_output_az_degs,-numpy.argmin(hpol_output_az_degs))         , numpy.roll(hpol_output_zenith_degs,-numpy.argmin(hpol_output_az_degs))]
+                out_vpol     = [numpy.roll(vpol_output_az_degs,-numpy.argmin(vpol_output_az_degs))         , numpy.roll(vpol_output_zenith_degs,-numpy.argmin(vpol_output_az_degs))]
+
+                return out_physical , out_hpol , out_vpol
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def getArrayPlaneZenithCurves(self, zenith_array_plane_deg, azimuth_offset_deg=0):
         '''
@@ -2312,7 +2450,7 @@ if __name__=="__main__":
                 if key != '1773-63659':
                     continue
                 enu = pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2])
-                plane_polys[key] = PlanePoly(output_tracks[key]['timestamps'],enu,plot=False)
+                plane_polys[key] = pt.PlanePoly(output_tracks[key]['timestamps'],enu,plot=False)
 
                 interpolated_plane_locations[key] = plane_polys[key].poly(calibrated_trigtime[key])
                 interpolated_plane_locations[key] = interpolated_plane_locations[key]/numpy.linalg.norm(interpolated_plane_locations[key])

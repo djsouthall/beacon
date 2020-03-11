@@ -43,69 +43,15 @@ datapath = os.environ['BEACON_DATA']
 n = 1.0003 #Index of refraction of air  #Should use https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.453-11-201507-S!!PDF-E.pdf 
 c = 299792458/n #m/s
 
-class PlanePoly:
-    def __init__(self, t, enu, order=7,plot=False):
-        '''
-        Given times (array of numbers) and enu data (tuple of 3 arrays of same length as t),
-        this will create 3 polynomial fit functions to each of the ENU coordinates.  These
-        can then be used to calculate ENU coordinates of the planes at interpolated values
-        in time.
-        '''
-        try:
-            self.order = order
-            self.time_offset = min(t)
-            self.fit_params = []
-            self.poly_funcs = []
-            self.range = (min(t),max(t))
-
-            if plot == True:
-                plane_norm_fig = plt.figure()
-                plane_norm_ax = plt.gca()
-            for i in range(3):
-                index = numpy.sort(numpy.unique(enu[i],return_index=True)[1]) #Indices of values to be used in fit.
-                self.fit_params.append(numpy.polyfit(t[index] - self.time_offset, enu[i][index],self.order)) #Need to shift t to make fit work
-                self.poly_funcs.append(numpy.poly1d(self.fit_params[i]))
-                if plot == True:
-                    plane_norm_ax.plot(t,self.poly_funcs[i](t - self.time_offset)/1000.0,label='Fit %s Coord order %i'%(['E','N','U'][i],order))
-                    plane_norm_ax.scatter(t[index],enu[i][index]/1000.0,label='Data for %s'%(['E','N','U'][i]),alpha=0.3)
-            if plot == True:
-                plt.legend()
-                plt.minorticks_on()
-                plt.grid(b=True, which='major', color='k', linestyle='-')
-                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                plt.xlabel('Timestamp')
-                plt.ylabel('Distance from Ant0 Along Axis (km)')
-
-        except Exception as e:
-            print('\nError in %s'%inspect.stack()[0][3])
-            print(e)
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
-
-
-    def poly(self,t):
-        '''
-        Will return the resulting values of ENU for the given t.
-        '''
-        try:
-            return numpy.vstack((self.poly_funcs[0](t-self.time_offset),self.poly_funcs[1](t-self.time_offset),self.poly_funcs[2](t-self.time_offset))).T
-        except Exception as e:
-            print('\nError in %s'%inspect.stack()[0][3])
-            print(e)
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
-
-
-
 
 if __name__ == '__main__':
     try:
-        plot_planes = False
+        plot_residuals = True
+        plot_planes = True
         plot_interps = False
         plot_time_delays = True
         use_interpolated_tracks = True
+        plot_az_res = True
 
         final_corr_length = 2**18
         crit_freq_low_pass_MHz = None#60 #This new pulser seems to peak in the region of 85 MHz or so
@@ -116,7 +62,7 @@ if __name__ == '__main__':
 
         waveform_index_range = (None,None)#(150,400)
 
-        apply_phase_response = False
+        apply_phase_response = True
         hilbert = False
 
         try_to_use_precalculated_time_delays = False
@@ -133,7 +79,7 @@ if __name__ == '__main__':
             mode = 'hpol'
 
         print('Loading known plane locations.')
-        known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks()
+        known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks(ignore_planes=[]) # ['1728-62026','1773-14413','1773-63659','1774-88800','1783-28830','1784-7166']#'1774-88800','1728-62026'
         origin = info.loadAntennaZeroLocation(deploy_index = 1)
         antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
         if mode == 'hpol':
@@ -154,16 +100,36 @@ if __name__ == '__main__':
         interpolated_plane_locations = {}
         measured_plane_time_delays = {}
         measured_plane_time_delays_weights = {}
-        for key in list(calibrated_trigtime.keys()):
-            enu = pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2])
 
-            plane_polys[key] = PlanePoly(output_tracks[key]['timestamps'],enu,plot=plot_interps)
+        colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+
+        for index, key in enumerate(list(calibrated_trigtime.keys())):
+            enu = numpy.array(pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2]))
+            
+            unique_enu_indices = numpy.sort(numpy.unique(enu,axis=1,return_index=True)[1])
+            distance = numpy.sqrt(enu[0]**2 + enu[0]**2 + enu[0]**2)
+            distance_cut_indices = numpy.where(distance/1000.0 < 100)
+            unique_enu_indices = unique_enu_indices[numpy.isin(unique_enu_indices,distance_cut_indices)]
+            
+
+            plane_polys[key] = pt.PlanePoly(output_tracks[key]['timestamps'][unique_enu_indices],enu[:,unique_enu_indices],plot=plot_interps)
+            #import pdb; pdb.set_trace()
 
             interpolated_plane_locations[key] = plane_polys[key].poly(calibrated_trigtime[key])
             
             if plot_planes == True:
-                plane_ax.plot(enu[0]/1000.0,enu[1]/1000.0,enu[2]/1000.0,label=key + ' : ' + known_planes[key]['known_flight'])
-                plane_ax.scatter(interpolated_plane_locations[key][:,0]/1000.0,interpolated_plane_locations[key][:,1]/1000.0,interpolated_plane_locations[key][:,2]/1000.0,label=key + ' : ' + known_planes[key]['known_flight'])
+                #Alpha ranges from 0.5 to 1, where 0.5 is the earliest times and 1 is the later times.
+                #alpha = 0.5 + (calibrated_trigtime[key] - min(calibrated_trigtime[key]))/(2*(max(calibrated_trigtime[key]) - min(calibrated_trigtime[key])))
+                arrow_index = len(enu[0][unique_enu_indices])//2
+                arrow_dir = numpy.array([(enu[0][unique_enu_indices][arrow_index+1] - enu[0][unique_enu_indices][arrow_index])/1000.0,(enu[1][unique_enu_indices][arrow_index+1] - enu[1][unique_enu_indices][arrow_index])/1000.0,(enu[2][unique_enu_indices][arrow_index+1] - enu[2][unique_enu_indices][arrow_index])/1000.0])
+                arrow_dir = 3*arrow_dir/numpy.linalg.norm(arrow_dir)
+                plane_ax.plot(enu[0][unique_enu_indices]/1000.0,enu[1][unique_enu_indices]/1000.0,enu[2][unique_enu_indices]/1000.0,label=key + ' : ' + known_planes[key]['known_flight'],color=colors[index])
+                plane_ax.quiver(enu[0][unique_enu_indices][arrow_index]/1000.0,enu[1][unique_enu_indices][arrow_index]/1000.0,enu[2][unique_enu_indices][arrow_index]/1000.0, arrow_dir[0],arrow_dir[1],arrow_dir[2],color=colors[index])
+                plane_ax.scatter(interpolated_plane_locations[key][:,0]/1000.0,interpolated_plane_locations[key][:,1]/1000.0,interpolated_plane_locations[key][:,2]/1000.0,label=key + ' : ' + known_planes[key]['known_flight'],color=colors[index])
+
+                plt.grid()
+                plt.show()
+
 
             # enu_az = numpy.rad2deg(numpy.arctan2(interpolated_plane_locations[key][:,1],interpolated_plane_locations[key][:,0]))
             # enu_elevation_angle = numpy.rad2deg(numpy.arctan2(interpolated_plane_locations[key][:,2],numpy.sqrt(interpolated_plane_locations[key][:,0]**2+interpolated_plane_locations[key][:,1]**2)))
@@ -219,8 +185,18 @@ if __name__ == '__main__':
 
         #Limits 
         guess_range = None #Limit to how far from input phase locations to limit the parameter space to
-        fix_ant0 = True
-
+        fix_ant0_x = True
+        fix_ant0_y = True
+        fix_ant0_z = True
+        fix_ant1_x = False
+        fix_ant1_y = False
+        fix_ant1_z = False
+        fix_ant2_x = False
+        fix_ant2_y = False
+        fix_ant2_z = False
+        fix_ant3_x = False
+        fix_ant3_y = False
+        fix_ant3_z = False
 
         if guess_range is not None:
 
@@ -329,7 +305,8 @@ if __name__ == '__main__':
                         
                         vals = ((geometric_time_delay - measured_plane_time_delays[key][pair_index])**2)/(1.0001-measured_plane_time_delays_weights[key][pair_index])**2 #1-max(corr) makes the optimizer see larger variations when accurate time delays aren't well matched.  i.e the smaller max(corr) the smaller (1-max(corr))**2 is, and the larger that chi^2 is.  
                         #chi_2 += numpy.mean(vals)/numpy.std(vals) #This was a completely dumb calculation that biased against planes that actually travelled.  I missed the point.
-                        chi_2 += numpy.sum(vals) 
+                        #chi_2 += numpy.mean(vals)#Weights each plane equally
+                        chi_2 += numpy.sum(vals)#Weights each event equally, planes with more events weighted more.
                 return chi_2
             except Exception as e:
                 print('Error in rawChi2')
@@ -361,16 +338,16 @@ if __name__ == '__main__':
                         ant3_z=antennas_phase_start[3][2],\
                         error_ant0_x=initial_step,\
                         error_ant0_y=initial_step,\
-                        error_ant0_z=initial_step,\
+                        error_ant0_z=5.0*initial_step,\
                         error_ant1_x=initial_step,\
                         error_ant1_y=initial_step,\
-                        error_ant1_z=initial_step,\
+                        error_ant1_z=5.0*initial_step,\
                         error_ant2_x=initial_step,\
                         error_ant2_y=initial_step,\
-                        error_ant2_z=initial_step,\
+                        error_ant2_z=5.0*initial_step,\
                         error_ant3_x=initial_step,\
                         error_ant3_y=initial_step,\
-                        error_ant3_z=initial_step,\
+                        error_ant3_z=5.0*initial_step,\
                         errordef = 1.0,\
                         limit_ant0_x=ant0_physical_limits_x,\
                         limit_ant0_y=ant0_physical_limits_y,\
@@ -384,18 +361,18 @@ if __name__ == '__main__':
                         limit_ant3_x=ant3_physical_limits_x,\
                         limit_ant3_y=ant3_physical_limits_y,\
                         limit_ant3_z=ant3_physical_limits_z,\
-                        fix_ant0_x=fix_ant0,\
-                        fix_ant0_y=fix_ant0,\
-                        fix_ant0_z=fix_ant0,\
-                        fix_ant1_x=False,\
-                        fix_ant1_y=False,\
-                        fix_ant1_z=False,\
-                        fix_ant2_x=False,\
-                        fix_ant2_y=False,\
-                        fix_ant2_z=False,\
-                        fix_ant3_x=False,\
-                        fix_ant3_y=False,\
-                        fix_ant3_z=False)
+                        fix_ant0_x=fix_ant0_x,\
+                        fix_ant0_y=fix_ant0_y,\
+                        fix_ant0_z=fix_ant0_z,\
+                        fix_ant1_x=fix_ant1_x,\
+                        fix_ant1_y=fix_ant1_y,\
+                        fix_ant1_z=fix_ant1_z,\
+                        fix_ant2_x=fix_ant2_x,\
+                        fix_ant2_y=fix_ant2_y,\
+                        fix_ant2_z=fix_ant2_z,\
+                        fix_ant3_x=fix_ant3_x,\
+                        fix_ant3_y=fix_ant3_y,\
+                        fix_ant3_z=fix_ant3_z)
 
 
         result = m.migrad(resume=False)
@@ -456,10 +433,37 @@ if __name__ == '__main__':
 
 
         if plot_time_delays == True:
+            if plot_az_res:
+                az_fig = plt.figure()
+                az_fig.canvas.set_window_title('%s Res v.s. Az'%(mode))
+                az_ax = plt.gca()
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.ylabel('Time Delay (ns)')
+                plt.xlabel('Azimuth Angle (Deg)')
 
             loc_dict = {0:[m.values['ant0_x'],m.values['ant0_y'],m.values['ant0_z']],1:[m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z']],2:[m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z']],3:[m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']]}
             
             for plane in list(known_planes.keys()):
+                d0 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - m.values['ant0_x'])**2 + (interpolated_plane_locations[plane][:,1] - m.values['ant0_y'])**2 + (interpolated_plane_locations[plane][:,2] - m.values['ant0_z'])**2 )/c)*1.0e9 #ns
+                d1 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - m.values['ant1_x'])**2 + (interpolated_plane_locations[plane][:,1] - m.values['ant1_y'])**2 + (interpolated_plane_locations[plane][:,2] - m.values['ant1_z'])**2 )/c)*1.0e9 #ns
+                d2 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - m.values['ant2_x'])**2 + (interpolated_plane_locations[plane][:,1] - m.values['ant2_y'])**2 + (interpolated_plane_locations[plane][:,2] - m.values['ant2_z'])**2 )/c)*1.0e9 #ns
+                d3 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - m.values['ant3_x'])**2 + (interpolated_plane_locations[plane][:,1] - m.values['ant3_y'])**2 + (interpolated_plane_locations[plane][:,2] - m.values['ant3_z'])**2 )/c)*1.0e9 #ns
+
+                d = [d0,d1,d2,d3]
+                if plot_az_res == True:
+                    #SHOULD MAKE THIS V.S. ELEVATION AND ARRAY ELEVATION
+                    azimuths = numpy.rad2deg(numpy.arctan2(interpolated_plane_locations[plane][:,1],interpolated_plane_locations[plane][:,0]))
+                    azimuths[azimuths < 0] = azimuths[azimuths < 0]%360
+                for pair_index, pair in enumerate(known_planes[plane]['baselines'][mode]):
+                    geometric_time_delay = (d[pair[0]] + cable_delays[pair[0]]) - (d[pair[1]] + cable_delays[pair[1]])
+                    #Right now these seem reversed from what I would expect based on the plot?  In time I mean. 
+                    if pair_index == 0:
+                        geometric_time_delays = geometric_time_delay
+                    else:
+                        geometric_time_delays = numpy.vstack((geometric_time_delays,geometric_time_delay))   
+
                 run = int(plane.split('-')[0])
                 eventids = known_planes[plane]['eventids'][:,1]
                 reader = Reader(datapath,run)
@@ -483,14 +487,14 @@ if __name__ == '__main__':
 
 
                 time_delay_fig = plt.figure()
-                time_delay_fig.canvas.set_window_title('%s Delays'%mode)
-                plt.minorticks_on()
-                plt.grid(b=True, which='major', color='k', linestyle='-')
-                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                plt.title(mode + ' ' + plane + ', ' + known_planes[plane]['known_flight'] + '\nAdjusted Antenna Positions')
+                time_delay_fig.canvas.set_window_title('%s , %s Delays'%(plane, mode))
                 plt.ylabel('Time Delay (ns)')
                 plt.xlabel('Readout Time (s)')
+                td_ax = plt.gca()
+                td_ax.minorticks_on()
+                td_ax.grid(b=True, which='major', color='k', linestyle='-')
+                td_ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
 
                 python_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
@@ -516,28 +520,43 @@ if __name__ == '__main__':
                 x = track[plot_distance_cut,3]
 
                 for pair_index, pair in enumerate(known_planes[plane]['baselines'][mode]):
-                    y = measured_plane_time_delays[plane][pair_index]
+                    if plot_residuals == True:
+                        y = measured_plane_time_delays[plane][pair_index] - geometric_time_delays[pair_index]
 
-                    #PLOTTING FIT/IDENTIFIED MEASURED FLIGHT TRACKS
-                    plt.plot(times, y,c=python_colors[pair_index],linestyle = '--',alpha=0.8)
-                    plt.scatter(times, y,c=python_colors[pair_index],label='Measured Time Delays for A%i and A%i'%(pair[0],pair[1]))
+                        #PLOTTING FIT/IDENTIFIED MEASURED FLIGHT TRACKS
+                        td_ax.plot(times, y,c=python_colors[pair_index],linestyle = '--',alpha=0.8)
+                        td_ax.scatter(times, y,c=python_colors[pair_index],label='Residuals for A%i and A%i'%(pair[0],pair[1]))
+                    else:
+                        y = measured_plane_time_delays[plane][pair_index]
 
-                    #PLOTTING EXPECTED FLIGHT TRACKS FOR THE KNOWN CORRELATED FLIGHT
-                    y = dt['expected_time_differences_%s'%mode][(pair[0], pair[1])][plot_distance_cut]
-                    plt.plot(x,y,c=python_colors[pair_index],linestyle = '--',alpha=0.5,label='Flight %s TD: A%i and A%i'%(known_planes[plane]['known_flight'],pair[0],pair[1]))
-                    plt.scatter(x,y,facecolors='none', edgecolors=python_colors[pair_index],alpha=0.4)
+                        #PLOTTING FIT/IDENTIFIED MEASURED FLIGHT TRACKS
+                        td_ax.plot(times, y,c=python_colors[pair_index],linestyle = '--',alpha=0.8)
+                        td_ax.scatter(times, y,c=python_colors[pair_index],label='Measured Time Delays for A%i and A%i'%(pair[0],pair[1]))
 
-                    text_color = plt.gca().lines[-1].get_color()
+                        #PLOTTING EXPECTED FLIGHT TRACKS FOR THE KNOWN CORRELATED FLIGHT
+                        y = dt['expected_time_differences_%s'%mode][(pair[0], pair[1])][plot_distance_cut]
+                        td_ax.plot(x,y,c=python_colors[pair_index],linestyle = '--',alpha=0.5,label='Flight %s TD: A%i and A%i'%(known_planes[plane]['known_flight'],pair[0],pair[1]))
+                        td_ax.scatter(x,y,facecolors='none', edgecolors=python_colors[pair_index],alpha=0.4)
 
-                    #Attempt at avoiding overlapping text.
-                    text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
-                    plt.text(text_loc[0],text_loc[1], 'A%i and A%i'%(pair[0],pair[1]),color=text_color,withdash=True)
-                #plt.legend()
+                        text_color = plt.gca().lines[-1].get_color()
+
+                        #Attempt at avoiding overlapping text.
+                        text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
+                        td_ax.text(text_loc[0],text_loc[1], 'A%i and A%i'%(pair[0],pair[1]),color=text_color,withdash=True)
+                    
+                    if plot_az_res == True:
+                        python_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+                        y = measured_plane_time_delays[plane][pair_index] - geometric_time_delays[pair_index]
+                        az_ax.scatter(azimuths, y,c=python_colors[pair_index],label='Residuals A%i and A%i'%(pair[0],pair[1]))
+
+                if plot_residuals:
+                    td_ax.legend()
+
 
         print('Copy-Paste Prints:\n------------')
         print('')
-        print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, 0.0 ,0.0 ,0.0 ,  m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z'],  m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z'],  m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']))
-        print('antennas_phase_%s_hesse = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, 0.0 ,0.0 ,0.0 ,  m.errors['ant1_x'],m.errors['ant1_y'],m.errors['ant1_z'],  m.errors['ant2_x'],m.errors['ant2_y'],m.errors['ant2_z'],  m.errors['ant3_x'],m.errors['ant3_y'],m.errors['ant3_z']))
+        print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, m.values['ant0_x'],m.values['ant0_y'],m.values['ant0_z'] ,  m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z'],  m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z'],  m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']))
+        print('antennas_phase_%s_hesse = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, m.errors['ant0_x'],m.errors['ant0_y'],m.errors['ant0_z'] ,  m.errors['ant1_x'],m.errors['ant1_y'],m.errors['ant1_z'],  m.errors['ant2_x'],m.errors['ant2_y'],m.errors['ant2_z'],  m.errors['ant3_x'],m.errors['ant3_y'],m.errors['ant3_z']))
 
 
     except Exception as e:

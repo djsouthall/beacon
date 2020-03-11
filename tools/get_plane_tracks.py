@@ -253,7 +253,7 @@ def getTimeDelaysFromTrack(track, adjusted_antennas_physical=None,adjusted_anten
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
 
-def getKnownPlaneTracks():
+def getKnownPlaneTracks(ignore_planes=[]):
     '''
     Given the plane information outlines in loadKnownPlaneDict this will return
     a compisite dtype array with information about lat, lon, alt, and timing for
@@ -263,7 +263,7 @@ def getKnownPlaneTracks():
     position corresponding to events in a run. 
     '''
     try:
-        known_planes = info.loadKnownPlaneDict()
+        known_planes = info.loadKnownPlaneDict(ignore_planes=ignore_planes)
         output_tracks = {}
         calibrated_trigtime = {}
         for key in list(known_planes.keys()):
@@ -297,6 +297,62 @@ def getKnownPlaneTracks():
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
+
+class PlanePoly:
+    def __init__(self, t, enu, order=7,plot=False):
+        '''
+        Given times (array of numbers) and enu data (tuple of 3 arrays of same length as t),
+        this will create 3 polynomial fit functions to each of the ENU coordinates.  These
+        can then be used to calculate ENU coordinates of the planes at interpolated values
+        in time.
+        '''
+        try:
+            self.order = order
+            self.time_offset = min(t)
+            self.fit_params = []
+            self.poly_funcs = []
+            self.range = (min(t),max(t))
+
+            if plot == True:
+                plane_norm_fig = plt.figure()
+                plane_norm_ax = plt.gca()
+            for i in range(3):
+                index = numpy.sort(numpy.unique(enu[i],return_index=True)[1]) #Indices of values to be used in fit.
+                self.fit_params.append(numpy.polyfit(t[index] - self.time_offset, enu[i][index],self.order)) #Need to shift t to make fit work
+                self.poly_funcs.append(numpy.poly1d(self.fit_params[i]))
+                if plot == True:
+                    plane_norm_ax.plot(t,self.poly_funcs[i](t - self.time_offset)/1000.0,label='Fit %s Coord order %i'%(['E','N','U'][i],order))
+                    plane_norm_ax.scatter(t[index],enu[i][index]/1000.0,label='Data for %s'%(['E','N','U'][i]),alpha=0.3)
+            if plot == True:
+                plt.legend()
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.xlabel('Timestamp')
+                plt.ylabel('Distance from Ant0 Along Axis (km)')
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
+    def poly(self,t):
+        '''
+        Will return the resulting values of ENU for the given t.
+        '''
+        try:
+            return numpy.vstack((self.poly_funcs[0](t-self.time_offset),self.poly_funcs[1](t-self.time_offset),self.poly_funcs[2](t-self.time_offset))).T
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
 
 if __name__ == '__main__':
     files = numpy.array(glob.glob(flight_data_location_hdf5+'*.h5')) 
