@@ -1098,7 +1098,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def addCircleToMap(self, ax, azimuth, elevation, azimuth_offset_deg=0, mollweide=False, radius = 5.0, crosshair=False, return_circle=False, color='k', *args, **kwargs):
+    def addCircleToMap(self, ax, azimuth, elevation, azimuth_offset_deg=0, mollweide=False, radius = 5.0, crosshair=False, return_circle=False, return_crosshair=False, color='k', *args, **kwargs):
         '''
         This will add a circle to a map return the map.  If return_circle == True then the circle object is returned as
         well such that the position can be redefined later.
@@ -1109,7 +1109,9 @@ class Correlator:
         linewidth=0.5,fill=False
         Note that color will be used for both crosshair and edge_color of the circle if crosshair == True.  Thus it
         has it's own kwarg.   
-
+    
+        If return_crosshair is True it will plot the crosshair (even if crosshair = False) and will return a tuple (h,v) where
+        h and v are the line2d objects of those lines.  These can then have their xdata and ydata updated. 
         '''
 
         #Add best circle.
@@ -1125,12 +1127,20 @@ class Correlator:
             azimuth = numpy.deg2rad(azimuth)
 
         circle = plt.Circle((azimuth, elevation), radius, edgecolor=color, *args, **kwargs)
-        if crosshair == True:
-            ax.axvline(azimuth,c=color,linewidth=0.5)
-            ax.axhline(elevation,c=color,linewidth=0.5)
+
+        if crosshair == True or return_crosshair == True:
+            h = ax.axhline(elevation,c=color,linewidth=0.5)
+            v = ax.axvline(azimuth,c=color,linewidth=0.5)
 
         ax.add_artist(circle)
-        return ax,  circle
+        if return_circle == False and return_crosshair == False:
+            return ax
+        elif return_circle == True and return_crosshair == False:
+            return ax,  circle
+        elif return_circle == False and return_crosshair == True:
+            return ax,  (h, v)
+        else:
+            return ax, circle, (h, v)
 
     def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None):
         '''
@@ -1391,10 +1401,14 @@ class Correlator:
                                 ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
                                 additional_circles.append(_circ)
 
-                #Block out simple ENU zenith cut region. 
-                plt.axhspan(90 - min(zenith_cut_ENU),90.0,alpha=0.5)
-                plt.axhspan(-90 , 90 - max(zenith_cut_ENU),alpha=0.5)
-
+                if mollweide == True:
+                    #Block out simple ENU zenith cut region. 
+                    plt.axhspan(numpy.deg2rad(90 - min(zenith_cut_ENU)),numpy.deg2rad(90.0),alpha=0.5)
+                    plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut_ENU)),alpha=0.5)
+                else:
+                    #Block out simple ENU zenith cut region. 
+                    plt.axhspan(90 - min(zenith_cut_ENU),90.0,alpha=0.5)
+                    plt.axhspan(-90 , 90 - max(zenith_cut_ENU),alpha=0.5)
                 #Enable Interactive Portion
                 if interactive == True:
                     fig.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event,  mollweide=mollweide, center_dir=center_dir))
@@ -1594,8 +1608,14 @@ class Correlator:
                             additional_circles.append(_circ)
 
             #Block out simple ENU zenith cut region. 
-            plt.axhspan(90 - min(zenith_cut_ENU),90.0,alpha=0.5)
-            plt.axhspan(-90 , 90 - max(zenith_cut_ENU),alpha=0.5)
+            if mollweide == True:
+                #Block out simple ENU zenith cut region. 
+                plt.axhspan(numpy.deg2rad(90 - min(zenith_cut_ENU)),numpy.deg2rad(90.0),alpha=0.5)
+                plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut_ENU)),alpha=0.5)
+            else:
+                #Block out simple ENU zenith cut region. 
+                plt.axhspan(90 - min(zenith_cut_ENU),90.0,alpha=0.5)
+                plt.axhspan(-90 , 90 - max(zenith_cut_ENU),alpha=0.5)
 
             self.figs.append(fig)
             self.axs.append(ax)
@@ -1669,32 +1689,6 @@ class Correlator:
                 all_maps.append(m)
             print('')
 
-            #Convert to radians
-            if plane_az is not None:
-                if plane_az is list:
-                    plane_az = numpy.array(plane_az)
-                
-                _plane_az = plane_az.copy() #These were changing when 'both' was called for pol.  So copying them to ensure original input maintains values.
-
-
-
-                _plane_az -= numpy.rad2deg(azimuth_offset_rad)
-                _plane_az[_plane_az < -180.0] += 360.0
-                _plane_az[_plane_az > 180.0] -= 360.0 
-
-                _plane_az = numpy.deg2rad(_plane_az)
-
-
-            if plane_zenith is not None:
-                if plane_zenith is list:
-                    plane_zenith = numpy.array(plane_zenith)
-                _plane_zenith = plane_zenith.copy() #These were changing when 'both' was called for pol.  So copying them to ensure original input maintains values.
-                
-
-                plane_elevation = numpy.deg2rad(90.0 - _plane_zenith)
-            else:
-                plane_elevation = None
-
             fig = plt.figure(figsize=(16,9))
             ax = fig.add_subplot(1,1,1, projection='mollweide')
             
@@ -1733,12 +1727,26 @@ class Correlator:
 
 
             #Plot circles
-            if plane_elevation is not None and _plane_az is not None:
-                radius = numpy.deg2rad(5.0) #Radians I think?  Should eventually represent error. 
-                circle = plt.Circle((_plane_az[0], plane_elevation[0]), radius, edgecolor='fuchsia',linewidth=1.0,fill=False,zorder=10)
-                ax.add_artist(circle)
+            if plane_az is not None:
+                if plane_az is list:
+                    plane_az = numpy.array(plane_az)
+                _plane_az = plane_az.copy() #These were changing when 'both' was called for pol.  So copying them to ensure original input maintains values.
+                _plane_az -= azimuth_offset_deg #handled here so shouldn't be passed to addCircleToMap or similar functions.
+                _plane_az[_plane_az < -180.0] += 360.0
+                _plane_az[_plane_az > 180.0] -= 360.0
 
-            #Circle not plotting, what is that all about?
+
+            if plane_zenith is not None:
+                if plane_zenith is list:
+                    plane_zenith = numpy.array(plane_zenith)
+                _plane_zenith = plane_zenith.copy() #These were changing when 'both' was called for pol.  So copying them to ensure original input maintains values.
+                plane_elevation = 90.0 - _plane_zenith
+            else:
+                plane_elevation = None
+
+
+            if plane_elevation is not None and _plane_az is not None:
+                ax, circle, lines = self.addCircleToMap(ax, _plane_az[0], plane_elevation[0], azimuth_offset_deg=0.0, mollweide=True, radius=5.0, crosshair=True, return_circle=True, return_crosshair=True, color='fuchsia', linewidth=1.0,fill=False,zorder=10) #azimuth offset_deg already accounted for as passed.
 
             def update(frame):
                 fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[frame]))
@@ -1748,9 +1756,15 @@ class Correlator:
                 if hilbert == True:
                     im.set_clim(vmin=numpy.min(all_maps[frame]),vmax=numpy.max(all_maps[frame]))
 
+                azimuth = numpy.deg2rad(_plane_az[frame]) #Molweide True for animated.
+                elevation = numpy.deg2rad(plane_elevation[frame])
+
                 if plane_elevation is not None and _plane_az is not None:
-                    circle.center = _plane_az[frame], plane_elevation[frame]
+                    circle.center = azimuth, elevation
                     ax.add_artist(circle)
+
+                    lines[0].set_ydata([numpy.deg2rad(plane_elevation[frame]),numpy.deg2rad(plane_elevation[frame])])
+                    lines[1].set_xdata([numpy.deg2rad(_plane_az[frame]),numpy.deg2rad(_plane_az[frame])])
                 return [im]
 
             ani = FuncAnimation(fig, update, frames=range(len(eventids)),blit=False,save_count=0)
@@ -2059,8 +2073,9 @@ if __name__=="__main__":
             interpolated_plane_locations = {}
             origin = info.loadAntennaZeroLocation(deploy_index = 1)
             for index, key in enumerate(list(known_planes.keys())):
-                if key != '1773-63659':
+                if key != '1774-88800':
                     continue
+
                 enu = pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2])
                 plane_polys[key] = pt.PlanePoly(output_tracks[key]['timestamps'],enu,plot=False)
 
@@ -2082,17 +2097,18 @@ if __name__=="__main__":
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
 
                 zenith_cut_ENU = [0,170]
-                zenith_cut_array_plane = [10,150]
+                zenith_cut_array_plane = [0,100]
+
                 #cor.calculateArrayNormalVector(plot_map=True,mollweide=True, pol='both')
 
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
+                #cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
+                #cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
                 # cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
-                mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W',zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=plane_zenith[0],circle_az=plane_az[0])
+                #mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W',zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=plane_zenith[0],circle_az=plane_az[0])
                 # mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W')
                 # # for eventid in eventids:
                 #     cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,center_dir='W')
-                #cor.animatedMap(eventids, 'both', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='W',save=True,dpi=300)
+                cor.animatedMap(eventids, 'both', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='N',save=True,dpi=300)
 
                 #TODO: ADD A FEATURE THAT DOES WHAT ZENITH_CUT_ENU DOES BUT FOR ANGLES RELATIVE TO THE ARRAY PLANE. 
 
