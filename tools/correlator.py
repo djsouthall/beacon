@@ -18,6 +18,7 @@ import tools.interpret as interpret #Must be imported before matplotlib or else 
 import tools.info as info
 import analysis.phase_response as pr
 import tools.get_plane_tracks as pt
+from objects.fftmath import TimeDelayCalculator
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -1201,8 +1202,7 @@ class Correlator:
                     theta_deg = numpy.rad2deg(numpy.arccos(dt/(numpy.linalg.norm(A_ji))))  #Forcing the vector v to be a unit vector pointing towards the source
                     plane_xy = self.getPlaneZenithCurves(A_ji, mode, theta_deg, azimuth_offset_deg=azimuth_offset_deg)
                     #Plot array plane 0 elevation curve.
-                    im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = 4.0*self.min_elevation_linewidth, color=baseline_colors[pair_index], alpha=0.5)
-
+                    im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = 4.0*self.min_elevation_linewidth, color=baseline_colors[pair_index], alpha=0.5, label=pair_key)
             return im
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -1264,12 +1264,11 @@ class Correlator:
                     print('WARNING! Enabling Hilbert envelopes throws off correlation normalization.')
             
             time_delay_dict = time_delay_dict.copy()
+            if ~numpy.isin('hpol', list(time_delay_dict.keys())):
+                time_delay_dict['hpol'] = {}
+            if ~numpy.isin('vpol', list(time_delay_dict.keys())):
+                time_delay_dict['vpol'] = {}
             if pol == 'both':
-                if ~numpy.isin('hpol', list(time_delay_dict.keys())):
-                    time_delay_dict['hpol'] = {}
-                if ~numpy.isin('vpol', list(time_delay_dict.keys())):
-                    time_delay_dict['vpol'] = {}
-
                 hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict)
                 vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict)
                 return hpol_result, vpol_result
@@ -1500,6 +1499,7 @@ class Correlator:
                 if interactive == True:
                     fig.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event,  mollweide=mollweide, center_dir=center_dir))
 
+                ax.legend(loc='lower left')
                 self.figs.append(fig)
                 self.axs.append(ax)
 
@@ -1515,7 +1515,7 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None):
+    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={}):
         '''
         Does the same thing as map, but averages over all eventids given.  Mostly helpful for 
         repeated sources such as background sources or pulsers.
@@ -1535,9 +1535,14 @@ class Correlator:
         max_method : bool
             Determines how the most probable source direction is from the map.
         '''
+        time_delay_dict = time_delay_dict.copy()
+        if ~numpy.isin('hpol', list(time_delay_dict.keys())):
+            time_delay_dict['hpol'] = {}
+        if ~numpy.isin('vpol', list(time_delay_dict.keys())):
+            time_delay_dict['vpol'] = {}
         if pol == 'both':
-            hpol_result = self.averagedMap(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith, circle_az=circle_az)
-            vpol_result = self.averagedMap(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith, circle_az=circle_az)
+            hpol_result = self.averagedMap(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith, circle_az=circle_az,time_delay_dict=time_delay_dict)
+            vpol_result = self.averagedMap(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert,mollweide=mollweide, zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith, circle_az=circle_az,time_delay_dict=time_delay_dict)
             return hpol_result, vpol_result
 
         total_mean_corr_values = numpy.zeros((self.n_theta, self.n_phi))
@@ -1670,6 +1675,9 @@ class Correlator:
                 im = self.addCurveToMap(im, lower_plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
 
 
+            #Add curves for time delays if present.
+            im = self.addTimeDelayCurves(im, time_delay_dict, pol,  mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg)
+
             #Added circles as specified.
             ax, peak_circle = self.addCircleToMap(ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
 
@@ -1705,7 +1713,7 @@ class Correlator:
                     #Block out simple ENU zenith cut region. 
                     plt.axhspan(90 - min(zenith_cut_ENU),90.0,alpha=0.5)
                     plt.axhspan(-90 , 90 - max(zenith_cut_ENU),alpha=0.5)
-
+            ax.legend(loc='lower left')
             self.figs.append(fig)
             self.axs.append(ax)
 
@@ -2048,10 +2056,10 @@ if __name__=="__main__":
     plot_filter=False
 
     apply_phase_response=False
-    n_phi = 720
+    n_phi = 360
     n_theta = 360
 
-    upsample = 2**17
+    upsample = 2**15
 
     max_method = 0
     
@@ -2107,16 +2115,20 @@ if __name__=="__main__":
 
                 known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
                 eventids = {}
-                eventids['hpol'] = numpy.sort(known_pulser_ids['run%i'%run]['hpol'])
-                eventids['vpol'] = numpy.sort(known_pulser_ids['run%i'%run]['vpol'])
+                eventids['hpol'] = numpy.sort(known_pulser_ids['run%i'%run]['hpol'])[0:5]
+                eventids['vpol'] = numpy.sort(known_pulser_ids['run%i'%run]['vpol'])[0:5]
                 all_eventids = numpy.sort(numpy.append(eventids['hpol'],eventids['vpol']))
 
                 hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
                 vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
 
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
+                tdc = TimeDelayCalculator(reader, final_corr_length=upsample, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None,waveform_index_range=(None, None),plot_filters=False,apply_phase_response=True)
+                
+
                 if False:
                     for mode in ['hpol','vpol']:
+
                         eventid = eventids[mode][0]
                         mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method)
 
@@ -2131,14 +2143,22 @@ if __name__=="__main__":
                         pulser_phi = numpy.degrees(numpy.arctan2(pulser_locations_ENU[1],pulser_locations_ENU[0]))
                         print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
 
-                        ax.axvline(pulser_phi,c='r')
-                        ax.axhline(pulser_theta,c='r')
+                        #ax.axvline(pulser_phi,c='r')
+                        #ax.axhline(pulser_theta,c='r')
 
                         all_figs.append(fig)
                         all_axs.append(ax)
                 if True:
+                    #SHOULD FIGURE OUT HOW THE BEST MEASURED TIME DELAYS FOR THE PULSERS AND PLOT THEIR RINGS.
+
+
                     for mode in ['hpol','vpol']:
-                        mean_corr_values, fig, ax = cor.averagedMap(eventids[mode], mode, plot_map=True, hilbert=False, max_method=max_method)
+                        time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids[mode],align_method=0,hilbert=True,plot=False,hpol_cut=None,vpol_cut=None)
+                        
+                        td_dict = {'hpol':{},'vpol':{}}
+                        for pair_index, pair in enumerate([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]):
+                            td_dict['hpol'][str(pair)] = time_shifts[0:12:2]
+                            td_dict['vpol'][str(pair)] = time_shifts[1:12:2]
 
                         pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
                         pulser_locations_ENU = pulser_locations_ENU/numpy.linalg.norm(pulser_locations_ENU)
@@ -2146,8 +2166,11 @@ if __name__=="__main__":
                         pulser_phi = numpy.degrees(numpy.arctan2(pulser_locations_ENU[1],pulser_locations_ENU[0]))
                         print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
 
-                        ax.axvline(pulser_phi,c='r')
-                        ax.axhline(pulser_theta,c='r')
+                        mean_corr_values, fig, ax = cor.averagedMap(eventids[mode], mode, plot_map=True, hilbert=False, max_method=max_method,center_dir='E',circle_zenith=pulser_theta,circle_az=pulser_phi)
+
+
+                        #ax.axvline(pulser_phi,c='r')
+                        #ax.axhline(pulser_theta,c='r')
 
                     all_figs.append(fig)
                     all_axs.append(ax)
@@ -2162,8 +2185,11 @@ if __name__=="__main__":
             interpolated_plane_locations = {}
             origin = info.loadAntennaZeroLocation(deploy_index = 1)
             for index, key in enumerate(list(known_planes.keys())):
-                if key != '1773-14413':
+                if key == '1774-88800':
+                    _dir = 'E'
+                else:
                     continue
+                    _dir = 'W'
 
                 enu = pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2])
                 plane_polys[key] = pt.PlanePoly(output_tracks[key]['timestamps'],enu,plot=False)
@@ -2197,7 +2223,7 @@ if __name__=="__main__":
                 zenith_cut_array_plane = [0,100]
 
                 #cor.calculateArrayNormalVector(plot_map=True,mollweide=True, pol='both')
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0],time_delay_dict=td_dict.copy())
+                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir=_dir,circle_zenith=plane_zenith[0],circle_az=plane_az[0],time_delay_dict=td_dict.copy())
                 #cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
                 # cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
                 #mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W',zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=plane_zenith[0],circle_az=plane_az[0])

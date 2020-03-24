@@ -15,6 +15,7 @@ import pandas as pd
 import itertools
 import h5py
 import tools.info as info
+from pprint import pprint
 
 #Personal Imports
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
@@ -181,7 +182,7 @@ def getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_i
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
 
-def getTimeDelaysFromTrack(track, adjusted_antennas_physical=None,adjusted_antennas_phase_hpol=None,adjusted_antennas_phase_vpol=None):
+def getTimeDelaysFromTrack(track, adjusted_antennas_physical=None,adjusted_antennas_phase_hpol=None,adjusted_antennas_phase_vpol=None, adjusted_cable_delays=None):
     '''
     Given a trajectory (each row specified x,y,z,t in ENU), this will determine the
     expected set of time delays based on the current saved antenna positions.
@@ -189,6 +190,8 @@ def getTimeDelaysFromTrack(track, adjusted_antennas_physical=None,adjusted_anten
     If you want to test a new location for the antennas you can pass dictionaries
     the new locations as kwargs.  They are expected to be the same format as from
     loadAntennaLocationsENU.
+
+    Same for cable delays.
     '''
     try:
         antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()# MAKE SURE TO PUT THE DEPLOY INDEX CORRECTLY
@@ -198,14 +201,20 @@ def getTimeDelaysFromTrack(track, adjusted_antennas_physical=None,adjusted_anten
             print('Using adjusted_antennas_physical rather than antennas_physical.')
             antennas_physical = adjusted_antennas_physical
         if adjusted_antennas_phase_hpol is not None:
-            print('Using adjusted_antennas_phase_hpol rather than atennas_phase_hpol.')
+            print('Using adjusted_antennas_phase_hpol rather than antennas_phase_hpol.')
             antennas_phase_hpol = adjusted_antennas_phase_hpol
         if adjusted_antennas_phase_vpol is not None:
-            print('Using adjusted_antennas_phase_vpol rather than atennas_phase_vpol.')
+            print('Using adjusted_antennas_phase_vpol rather than antennas_phase_vpol.')
             antennas_phase_vpol = adjusted_antennas_phase_vpol
 
+        if adjusted_cable_delays is not None:
+            print('Using given values of cable delays rather than the currently saved values.')
+            cable_delays = adjusted_cable_delays.copy()
+        else:
+            cable_delays = info.loadCableDelays()
 
-        cable_delays = info.loadCableDelays()
+        pprint(cable_delays)
+
         pairs = list(itertools.combinations((0,1,2,3), 2))
 
         labels = ['Physical','Hpol Phase Center','Vpol Phase Center']

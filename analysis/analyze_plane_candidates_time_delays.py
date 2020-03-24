@@ -58,6 +58,8 @@ cable_delays = info.loadCableDelays()
 known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
 ignorable_pulser_ids = info.loadIgnorableEventids()
 cm = plt.cm.get_cmap('plasma')
+rescm = plt.cm.get_cmap('viridis')
+
 
 # all_candidates = {\
 # '1651-49':{     'eventids':numpy.array([[1651,49],[1651,6817],[1651,12761]]),\
@@ -141,7 +143,7 @@ if __name__ == '__main__':
         print('No mode given.  Defaulting to hpol')
         mode = 'hpol'
 
-    final_corr_length = 2**18
+    final_corr_length = 2**16
 
     #FILTER STRING USED IF ABOVE IS FALSE
     default_align_method=0 #WILL BE CHANGED IF GIVEN ABOVE
@@ -228,6 +230,11 @@ if __name__ == '__main__':
     loc_dict = {0:[ant0_x,ant0_y,ant0_z],1:[ant1_x,ant1_y,ant1_z],2:[ant2_x,ant2_y,ant2_z],3:[ant3_x,ant3_y,ant3_z]}
 
     try:
+        all_az = numpy.array([])
+        all_zen = numpy.array([])
+        all_azen = numpy.array([])
+        all_res = numpy.array([])
+
         if plot_residuals:
             az_fig = plt.figure()
             az_fig.canvas.set_window_title('%s Res v.s. Az'%(mode))
@@ -245,7 +252,7 @@ if __name__ == '__main__':
             plt.grid(b=True, which='major', color='k', linestyle='-')
             plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
             plt.ylabel('Time Delay (ns)')
-            plt.xlabel('Azimuth Angle (Deg)')
+            plt.xlabel('Zenith Angle (Deg)')
 
             azen_fig = plt.figure()
             azen_fig.canvas.set_window_title('%s Res v.s. Array Zen'%(mode))
@@ -254,6 +261,24 @@ if __name__ == '__main__':
             plt.grid(b=True, which='major', color='k', linestyle='-')
             plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
             plt.ylabel('Time Delay (ns)')
+            plt.xlabel('Zenith Angle (Deg)')
+
+            aziel_fig = plt.figure()
+            aziel_fig.canvas.set_window_title('%s Azimuth v.s. Elevation'%(mode))
+            aziel_ax = plt.gca()
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            plt.ylabel('Elevation Angle (Deg)')
+            plt.xlabel('Azimuth Angle (Deg)')
+
+            aziael_fig = plt.figure()
+            aziael_fig.canvas.set_window_title('%s Azimuth v.s. Array Elevation'%(mode))
+            aziael_ax = plt.gca()
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            plt.ylabel('Array Elevation Angle (Deg)')
             plt.xlabel('Azimuth Angle (Deg)')
 
         for key_index, key in enumerate(list(calibrated_trigtime.keys())):
@@ -286,6 +311,8 @@ if __name__ == '__main__':
             norms = numpy.sqrt(interpolated_plane_locations[key][:,0]**2 + interpolated_plane_locations[key][:,1]**2 + interpolated_plane_locations[key][:,2]**2 )
             azimuths = numpy.rad2deg(numpy.arctan2(interpolated_plane_locations[key][:,1],interpolated_plane_locations[key][:,0]))
             azimuths[azimuths < 0] = azimuths[azimuths < 0]%360
+            print(azimuths)
+
             zeniths = numpy.rad2deg(numpy.arccos(interpolated_plane_locations[key][:,2]/norms))
 
             if mode == 'hpol':
@@ -336,8 +363,6 @@ if __name__ == '__main__':
 
 
             if plot_time_delays or plot_residuals:
-                plane = key
-
                 min_timestamp = min(calibrated_trigtime[key])
                 max_timestamp = max(calibrated_trigtime[key])
 
@@ -373,7 +398,7 @@ if __name__ == '__main__':
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-                plt.title(mode + ' ' + plane + ', ' + known_planes[key]['known_flight'] + '\nAdjusted Antenna Positions')
+                plt.title(mode + ' ' + key + ', ' + known_planes[key]['known_flight'] + '\nAdjusted Antenna Positions')
                 plt.ylabel('Time Delay (ns)')
                 plt.xlabel('Readout Time (s)')
                 python_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -430,10 +455,27 @@ if __name__ == '__main__':
                         az_ax.scatter(azimuths, y,c=color,label=label)
                         zen_ax.scatter(zeniths, y,c=color,label=label)
                         azen_ax.scatter(array_plane_zeniths, y,c=color,label=label)
+
+                        all_az = numpy.append(all_az, azimuths)
+                        all_zen = numpy.append(all_zen, 90.0-zeniths)
+                        all_azen = numpy.append(all_azen, 90.0-array_plane_zeniths)
+                        all_res = numpy.append(all_res, y)
+
                     if plot_freq_classification_colors == True:
                         az_ax.legend()
                         zen_ax.legend()
                         azen_ax.legend()
+                        # aziel_ax.legend()
+                        # aziael_ax.legend()
+
+                        
+        if plot_residuals:
+            scat = aziel_ax.scatter(all_az,all_zen, c=all_res,cmap=rescm)#norm=plt.Normalize(-15,15)
+            ascat = aziael_ax.scatter(all_az,all_azen, c=all_res,cmap=rescm)
+            cbar = aziel_fig.colorbar(scat)
+            cbar.set_label('Residual (ns)')
+            acbar = aziael_fig.colorbar(ascat)
+            acbar.set_label('Residual (ns)')
 
 
     except Exception as e:
