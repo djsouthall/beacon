@@ -470,8 +470,8 @@ if __name__ == '__main__':
 
                         
         if plot_residuals:
-            scat = aziel_ax.scatter(all_az,all_zen, c=all_res,cmap=rescm)#norm=plt.Normalize(-15,15)
-            ascat = aziael_ax.scatter(all_az,all_azen, c=all_res,cmap=rescm)
+            scat = aziel_ax.scatter(all_az,all_zen, c=all_res,cmap=rescm,norm=plt.Normalize(-2,2))
+            ascat = aziael_ax.scatter(all_az,all_azen, c=all_res,cmap=rescm,norm=plt.Normalize(-2,2))
             cbar = aziel_fig.colorbar(scat)
             cbar.set_label('Residual (ns)')
             acbar = aziael_fig.colorbar(ascat)

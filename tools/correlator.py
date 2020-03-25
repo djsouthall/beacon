@@ -1152,7 +1152,7 @@ class Correlator:
             return ax, circle, (h, v)
 
 
-    def addTimeDelayCurves(self, im, time_delay_dict, mode,  mollweide=False, azimuth_offset_deg=0, *args, **kwargs):
+    def addTimeDelayCurves(self, im, time_delay_dict, mode, include_baselines=numpy.array([0,1,2,3,4,5]), mollweide=False, azimuth_offset_deg=0, *args, **kwargs):
         '''
         This will plot the curves to a map (ax.pcolormesh instance passed as im).
         
@@ -1179,8 +1179,14 @@ class Correlator:
             pairs = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
             baseline_cm = plt.cm.get_cmap('tab10', 10)
             baseline_colors = baseline_cm(numpy.linspace(0, 1, 10))[0:6] #only want the first 6 colours in this list of 10 colors.
-            
+            baseline_index = -1
             for pair_key, pair_time_delay in time_delays.items():
+                baseline_index += 1
+                if numpy.isin(baseline_index ,include_baselines ):
+                    linestyle = '-'
+                else:
+                    linestyle = '--'
+
                 pair = numpy.array(pair_key.replace('[','').replace(']','').split(','),dtype=int)
                 pair_index = numpy.where(numpy.sum(pair == pairs,axis=1) == 2)[0][0] #Used for consistent coloring.
                 i = pair[0]
@@ -1202,7 +1208,7 @@ class Correlator:
                     theta_deg = numpy.rad2deg(numpy.arccos(dt/(numpy.linalg.norm(A_ji))))  #Forcing the vector v to be a unit vector pointing towards the source
                     plane_xy = self.getPlaneZenithCurves(A_ji, mode, theta_deg, azimuth_offset_deg=azimuth_offset_deg)
                     #Plot array plane 0 elevation curve.
-                    im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = 4.0*self.min_elevation_linewidth, color=baseline_colors[pair_index], alpha=0.5, label=pair_key)
+                    im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = 4.0*self.min_elevation_linewidth, color=baseline_colors[pair_index], alpha=0.5, label=pair_key, linestyle=linestyle)
             return im
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -1211,7 +1217,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def map(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={}):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={}):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented. 
@@ -1269,8 +1275,8 @@ class Correlator:
             if ~numpy.isin('vpol', list(time_delay_dict.keys())):
                 time_delay_dict['vpol'] = {}
             if pol == 'both':
-                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict)
-                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict)
+                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines)
+                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines)
                 return hpol_result, vpol_result
 
             elif pol == 'hpol':
@@ -1291,7 +1297,8 @@ class Correlator:
                 corr_value_1subtract3 = corr13[self.delay_indices_hpol_1subtract3]
                 corr_value_2subtract3 = corr23[self.delay_indices_hpol_2subtract3]
 
-                mean_corr_values = numpy.mean(numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] ),axis=0)
+                stacked_corr_values = numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] )
+                mean_corr_values = numpy.mean(stacked_corr_values[include_baselines],axis=0)
                 if plot_map == True:
                     if max_method is not None:
                         row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
@@ -1339,8 +1346,8 @@ class Correlator:
                     print('Error in corr_value_2subtract3')
                     #import pdb; pdb.set_trace()
 
-
-                mean_corr_values = numpy.mean(numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] ),axis=0)
+                stacked_corr_values = numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] )
+                mean_corr_values = numpy.mean(stacked_corr_values[include_baselines],axis=0)
                 
                 if plot_map == True:
                     if max_method is not None:
@@ -1362,41 +1369,45 @@ class Correlator:
                     #To check normalization.  Should be 1 at 0 time. 
                     corr00 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[0])))/len(self.times_resampled) 
                     plt.plot(shifts,corr00,alpha=0.7,label='autocorr00')
-                plt.plot(shifts,corr01,alpha=0.7,label='corr01')
-                plt.plot(shifts,corr02,alpha=0.7,label='corr02')
-                plt.plot(shifts,corr03,alpha=0.7,label='corr03')
-                plt.plot(shifts,corr12,alpha=0.7,label='corr12')
-                plt.plot(shifts,corr13,alpha=0.7,label='corr13')
-                plt.plot(shifts,corr23,alpha=0.7,label='corr23')
+                plt.plot(shifts,corr01,alpha=0.7,label='corr01' + [' (Not Included in Map)', ''][numpy.isin( 0, include_baselines).astype(int)])
+                plt.plot(shifts,corr02,alpha=0.7,label='corr02' + [' (Not Included in Map)', ''][numpy.isin( 1, include_baselines).astype(int)])
+                plt.plot(shifts,corr03,alpha=0.7,label='corr03' + [' (Not Included in Map)', ''][numpy.isin( 2, include_baselines).astype(int)])
+                plt.plot(shifts,corr12,alpha=0.7,label='corr12' + [' (Not Included in Map)', ''][numpy.isin( 3, include_baselines).astype(int)])
+                plt.plot(shifts,corr13,alpha=0.7,label='corr13' + [' (Not Included in Map)', ''][numpy.isin( 4, include_baselines).astype(int)])
+                plt.plot(shifts,corr23,alpha=0.7,label='corr23' + [' (Not Included in Map)', ''][numpy.isin( 5, include_baselines).astype(int)])
                 plt.legend()
                 self.figs.append(fig)
                 self.axs.append(fig.gca())
 
             if plot_map:
+                if ~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))):
+                    add_xtext = '\nIncluded baselines = ' + str(numpy.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])[include_baselines])
+                else:
+                    add_xtext = ''
 
                 if center_dir.upper() == 'E':
                     center_dir_full = 'East'
                     azimuth_offset_rad = 0 #This is subtracted from the xaxis to roll it effectively.
                     azimuth_offset_deg = 0 #This is subtracted from the xaxis to roll it effectively.
-                    xlabel = 'Azimuth (From East = 0 deg, North = 90 deg)'
+                    xlabel = 'Azimuth (From East = 0 deg, North = 90 deg)' + add_xtext
                     roll = 0
                 elif center_dir.upper() == 'N':
                     center_dir_full = 'North'
                     azimuth_offset_rad = numpy.pi/2 #This is subtracted from the xaxis to roll it effectively. 
                     azimuth_offset_deg = 90 #This is subtracted from the xaxis to roll it effectively. 
-                    xlabel = 'Azimuth (From North = 0 deg, West = 90 deg)'
+                    xlabel = 'Azimuth (From North = 0 deg, West = 90 deg)' + add_xtext
                     roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
                 elif center_dir.upper() == 'W':
                     center_dir_full = 'West'
                     azimuth_offset_rad = numpy.pi #This is subtracted from the xaxis to roll it effectively.
                     azimuth_offset_deg = 180 #This is subtracted from the xaxis to roll it effectively.
-                    xlabel = 'Azimuth (From West = 0 deg, South = 90 deg)'
+                    xlabel = 'Azimuth (From West = 0 deg, South = 90 deg)' + add_xtext
                     roll = len(self.phis_rad)//2
                 elif center_dir.upper() == 'S':
                     center_dir_full = 'South'
                     azimuth_offset_rad = -numpy.pi/2 #This is subtracted from the xaxis to roll it effectively.
                     azimuth_offset_deg = -90 #This is subtracted from the xaxis to roll it effectively.
-                    xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)'
+                    xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)' + add_xtext
                     roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
 
                 rolled_values = numpy.roll(mean_corr_values,roll,axis=1)
@@ -1457,7 +1468,7 @@ class Correlator:
                     im = self.addCurveToMap(im, lower_plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
 
                 #Add curves for time delays if present.
-                im = self.addTimeDelayCurves(im, time_delay_dict, pol,  mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg)
+                im = self.addTimeDelayCurves(im, time_delay_dict, pol,  mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg, include_baselines=include_baselines)
 
 
                 #Added circles as specified.
@@ -2184,11 +2195,18 @@ if __name__=="__main__":
             cors = []
             interpolated_plane_locations = {}
             origin = info.loadAntennaZeroLocation(deploy_index = 1)
+            plot_baseline_removal_hists = False
+            plot_compare_trajectory = False
+            plot_individual_maps = False
+            plot_residual_hists = True
+
+            all_event_selected_theta_residual = {}
+            all_event_selected_phi_residual = {}
+
             for index, key in enumerate(list(known_planes.keys())):
                 if key == '1774-88800':
                     _dir = 'E'
                 else:
-                    continue
                     _dir = 'W'
 
                 enu = pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2])
@@ -2223,7 +2241,105 @@ if __name__=="__main__":
                 zenith_cut_array_plane = [0,100]
 
                 #cor.calculateArrayNormalVector(plot_map=True,mollweide=True, pol='both')
-                cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir=_dir,circle_zenith=plane_zenith[0],circle_az=plane_az[0],time_delay_dict=td_dict.copy())
+                all_baselines_matrix_minus_1_baseline = numpy.array([[1,2,3,4,5],[0,2,3,4,5],[0,1,3,4,5],[0,1,2,4,5],[0,1,2,3,5],[0,1,2,3,4]])
+                all_baselines_matrix_minus_1_antenna = numpy.array([[3,4,5],[1,2,5],[0,2,4],[0,1,3]])
+                use_baseline_matrix = all_baselines_matrix_minus_1_antenna
+
+
+                all_event_selected_theta = []
+                all_event_selected_phi = []
+
+                for event_index, eventid in enumerate(eventids):
+                    all_theta_best_per_event = []
+                    all_phi_best_per_event = []
+                    for bl in use_baseline_matrix:
+                        if plot_individual_maps:
+                            map_values, fig, ax = cor.map(eventid, 'hpol', plot_map=plot_individual_maps, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir=_dir,circle_zenith=plane_zenith[0],circle_az=plane_az[0],time_delay_dict=td_dict.copy(),include_baselines=bl)
+                        else:
+                            map_values = cor.map(eventid, 'hpol', plot_map=plot_individual_maps, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir=_dir,circle_zenith=plane_zenith[0],circle_az=plane_az[0],time_delay_dict=td_dict.copy(),include_baselines=bl)
+                        
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = cor.mapMax(map_values, max_method=0, verbose=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,100], pol='hpol')
+                        print(key, bl, theta_best, phi_best)
+                        all_theta_best_per_event.append(theta_best)
+                        all_phi_best_per_event.append(phi_best)
+
+
+                    if event_index == 0:
+                        all_event_selected_theta = all_theta_best_per_event
+                        all_event_selected_phi = all_phi_best_per_event
+
+                        all_event_selected_theta_residual[key] = all_theta_best_per_event - plane_zenith[event_index]
+                        all_event_selected_phi_residual[key] = all_phi_best_per_event - plane_az[event_index]
+                    else:
+                        all_event_selected_theta = numpy.vstack((all_event_selected_theta,all_theta_best_per_event))
+                        all_event_selected_phi = numpy.vstack((all_event_selected_phi,all_phi_best_per_event))
+
+                        all_event_selected_theta_residual[key] = numpy.vstack((all_event_selected_theta_residual[key],all_theta_best_per_event  - plane_zenith[event_index] ))
+                        all_event_selected_phi_residual[key] = numpy.vstack((all_event_selected_phi_residual[key],all_phi_best_per_event  - plane_az[event_index] ))
+
+
+                    if plot_baseline_removal_hists == True:
+                        plt.figure()
+                        plt.suptitle(key + str(eventid))
+                        plt.subplot(2,1,1)
+                        plt.hist(all_theta_best_per_event,label='Map Max')
+                        plt.axvline(plane_zenith[event_index],c='r',linestyle='--',label='Plane zenith')
+                        plt.legend()
+                        plt.xlabel('theta_best for each subset of baselines')
+                        plt.ylabel('Counts')
+                        plt.subplot(2,1,2)
+                        plt.hist(all_phi_best_per_event,label='Map Max')
+                        plt.axvline(plane_az[event_index],c='r',linestyle='--',label='Plane az')
+                        plt.legend()
+                        plt.xlabel('phi_best for each subset of baselines')
+                        plt.ylabel('Counts')
+
+                all_event_selected_theta_means = numpy.mean(all_event_selected_theta,axis=1)
+                all_event_selected_phi_means = numpy.mean(all_event_selected_phi,axis=1)
+
+                if plot_compare_trajectory == True:
+                    print('mean_thetas = ',all_event_selected_theta_means)
+                    print('mean_phis = ',all_event_selected_phi_means)
+                    plt.figure()
+                    plt.plot(all_event_selected_phi_means,all_event_selected_theta_means)
+                    plt.scatter(all_event_selected_phi_means,all_event_selected_theta_means,label='Measured from Maps')
+
+                    plt.plot(plane_az,plane_zenith)
+                    plt.scatter(plane_az,plane_zenith,label='Expected for Plane')
+
+                    plt.legend()
+                    plt.title(key)
+
+            if plot_residual_hists == True:
+                bins = numpy.linspace(-15,15,101 )
+                colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+                for baseline_index, bl in enumerate(use_baseline_matrix):
+                    plt.figure()
+                    plt.suptitle('Residuals for All Events in All Planes')
+                    for index, key in enumerate(list(known_planes.keys())):
+                        if index == 0:
+                            theta_res = all_event_selected_theta_residual[key].T[baseline_index]
+                            phi_res = all_event_selected_phi_residual[key].T[baseline_index]
+                        else:
+                            theta_res = numpy.append(theta_res,all_event_selected_theta_residual[key].T[baseline_index])
+                            phi_res = numpy.append(phi_res,all_event_selected_phi_residual[key].T[baseline_index])
+
+
+                    plt.subplot(2,1,1)
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.hist(theta_res,label=str(bl),alpha=0.8,bins=bins,color=colors[baseline_index])
+                    plt.legend()
+                    plt.xlabel('theta_best for each subset of baselines')
+                    plt.ylabel('Counts')
+                    plt.subplot(2,1,2)
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.hist(phi_res,label=str(bl),alpha=0.8,bins=bins,color=colors[baseline_index])
+                    plt.legend()
+                    plt.xlabel('phi_best for each subset of baselines')
+                    plt.ylabel('Counts')
+
                 #cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
                 # cor.map(eventids[0], 'hpol', plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W',circle_zenith=plane_zenith[0],circle_az=plane_az[0])
                 #mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W',zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=plane_zenith[0],circle_az=plane_az[0])
