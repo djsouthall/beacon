@@ -328,7 +328,7 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def loadFilteredFFTs(self, eventid, hilbert=False, load_upsampled_waveforms=False):
+    def loadFilteredFFTs(self, eventid, hilbert=False, load_upsampled_waveforms=False, shorten_signals=False, shorten_thresh=0.5, shorten_delay=50.0, shorten_length=100.0):
         '''
         Loads the waveforms (with pre applied filters) and upsamples them for
         for the cross correlation. 
@@ -347,11 +347,20 @@ class FFTPrepper:
 
                 temp_raw_wf = temp_raw_wf - numpy.mean(temp_raw_wf) #Subtracting dc offset so cross corrs behave well
 
+                if shorten_signals == True:
+                    trigger_index = numpy.where(temp_raw_wf/max(temp_raw_wf) > shorten_thresh)[0][0]
+                    weights = numpy.ones_like(temp_raw_wf)
+                    cut = numpy.arange(len(temp_raw_wf)) < trigger_index + int(shorten_delay/self.dt_ns_original)
+                    slope = -1.0/(shorten_length/self.dt_ns_original) #Go to zero by 100ns after initial dampening.
+                    weights[~cut] = numpy.max(numpy.vstack((slope * numpy.arange(sum(~cut)) + 1,numpy.zeros(sum(~cut)))),axis=0) #Max so no negative weights
+                    temp_raw_wf = numpy.multiply(temp_raw_wf,weights)
+
                 if hilbert == True:
                     raw_wfs_corr[channel][0:self.buffer_length] = numpy.abs(scipy.signal.hilbert(temp_raw_wf))
                 else:
                     raw_wfs_corr[channel][0:self.buffer_length] = temp_raw_wf
                 
+
                 if load_upsampled_waveforms:
                     temp_upsampled = numpy.fft.irfft(numpy.fft.rfft(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)]),n=self.final_corr_length//2) * ((self.final_corr_length//2)/len(self.waveform_times_padded_to_power2))
                     if hilbert == True:
@@ -359,6 +368,8 @@ class FFTPrepper:
                     else:
                         upsampled_waveforms[channel] = temp_upsampled
             
+
+
             if False:
                 plt.figure()
                 plt.title(str(eventid))
@@ -1389,8 +1400,20 @@ class TemplateCompareTool(FFTPrepper):
 
 if __name__ == '__main__':
     try:
+        plt.close('all')
         datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
-        run = 1650
+        shorten_signals = True
+        shorten_thresh = 0.4 #Percent of max height to trigger leading edge of signal.  Should only apply if a certain snr is met?
+        shorten_delay = 20.0 #The delay in ns after the trigger thresh to wait before an exponential decrease is applied. 
+        shorten_length = 100.0
+        make_plot = False
+        plot_residuals = False
+        verbose = False
+        mode = 'hpol'
+        try_removing_expected_simple_reflection = False
+        allowed_plots = 10
+        current_n_plots = 0
+
         waveform_index_range = (None,None)
         apply_phase_response = True
 
@@ -1403,15 +1426,245 @@ if __name__ == '__main__':
         high_pass_filter_order = None#8
         crit_freq_high_pass_MHz = None#20
 
+        import tools.get_plane_tracks as pt
+        known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks()
         use_filter = True
-        plot_filters= True
-
-
-        reader = Reader(datapath,run)
-
-        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response)
-        tdc.calculateImpulsivityFromEvent(128975, return_full_corrs=False, align_method=0, hilbert=False,plot=True,impulsivity_window=500)
+        plot_filters = False
+        pairs = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
         
+
+        for index, key in enumerate(list(known_planes.keys())):
+            if key == '1774-88800':
+                pass
+            else:
+                pass
+            # if index > 0:
+            #     continue
+            pair_cut = numpy.array([pair in known_planes[key]['baselines'][mode] for pair in [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]] ])
+            run = int(key.split('-')[0])
+            reader = Reader(datapath,run)
+            tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response)
+            eventids = known_planes[key]['eventids'][:,1]
+            if plot_residuals == True:
+                res_figs = []
+                res_axs = []
+                for pair_index, pair in enumerate(pairs):
+                    fig = plt.figure()
+                    ax = plt.gca()
+                    plt.title(pair)
+                    plt.ylabel('Manual Time Delay - Calculated Time Delay (ns)')
+                    plt.xlabel('Event in Plane Track')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    res_figs.append(fig)
+                    res_axs.append(ax)
+
+            for cfd in [0.5]:#numpy.linspace(0.2,1,9):
+                if plot_residuals == True:
+                    residuals = [[],[],[],[],[],[]]
+
+                calculated_time_delays = []
+                for event_index, eventid in enumerate(eventids):
+                    # if event_index != 2:
+                    #     continue
+                    ffts, upsampled_waveforms = tdc.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=False,shorten_signals=shorten_signals,shorten_thresh=shorten_thresh,shorten_delay=shorten_delay,shorten_length=shorten_length)
+
+
+                    indices, corr_time_shifts, max_corrs, output_pairs, corrs = tdc.calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=True, align_method=0, print_warning=False)
+                    
+                    if mode == 'hpol':
+                        corr_time_shifts = corr_time_shifts[0:6]
+                        waveforms = upsampled_waveforms[0::2,:]
+                    else:
+                        corr_time_shifts = corr_time_shifts[6:12]
+                        waveforms = upsampled_waveforms[1::2,:]
+                    
+                    antennas_cm = plt.cm.get_cmap('tab10', 10)
+                    antenna_colors = antennas_cm(numpy.linspace(0, 1, 10))[0:4]
+
+                    times = numpy.arange(len(waveforms[0]))*tdc.dt_ns_upsampled
+                    diff_times = numpy.arange(len(times)-1)+numpy.diff(times)/2.0 
+                    
+                    for pair_index, pair in enumerate(pairs):
+                        if ~pair_cut[pair_index]:
+                            continue
+                        i = pair[0]
+                        j = pair[1]
+                        expected_time_delay_manual = known_planes[key]['time_delays'][mode][event_index][pair_index]
+                        measured_corr_delay = corr_time_shifts[pair_index]
+                        hilbert_corr = numpy.abs(scipy.signal.hilbert(corrs[pair_index]))
+                        peaks = scipy.signal.find_peaks(hilbert_corr,height=0.7*max(hilbert_corr),distance=20.0/tdc.dt_ns_upsampled,prominence=0.05)[0]
+                        #if (len(peaks) > 1) and (current_n_plots < allowed_plots):
+                        if (abs(expected_time_delay_manual - measured_corr_delay) > 5) and (current_n_plots < allowed_plots):
+                            current_n_plots +=1
+                            plt.figure()
+                            plt.suptitle(key + ' ' + str(eventid) + ' ' + str(pair))
+                            plt.subplot(3,1,1)
+                            plt.plot(tdc.corr_time_shifts,corrs[pair_index])
+                            plt.plot(tdc.corr_time_shifts,hilbert_corr)
+                            plt.xlim(-200,200)
+                            plt.axvline(expected_time_delay_manual,linestyle='--',c='k',label='Manual Time Delay = %0.3f'%expected_time_delay_manual)
+                            plt.axvline(measured_corr_delay,linestyle='--',c='g',label='Max Corr Time Delay = %0.3f'%measured_corr_delay)
+                            for peak in peaks:
+                                prom = scipy.signal.peak_prominences(hilbert_corr,[peak])[0]
+                                plt.scatter(tdc.corr_time_shifts[peaks],hilbert_corr[peaks],label='Peak Prominence = ' + str(prom[0]), c='r')
+                            plt.legend()
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                            plt.ylabel('Cross Corr')
+                            plt.xlabel('t (ns)')
+
+
+                            plt.subplot(3,1,2)
+                            max_i = numpy.max(waveforms[i])
+                            max_j = numpy.max(waveforms[j])
+                            plt.plot(times,waveforms[i]/max_i, c = antenna_colors[i] ,label='Raw Signal Ant %i Not Rolled'%i,alpha=0.7)
+                            plt.plot(times,waveforms[j]/max_j, c = antenna_colors[j] ,label='Raw Signal Ant %i Not Rolled'%(j),linewidth=0.5,linestyle='--')
+                            plt.plot(times,numpy.roll(waveforms[j]/max_j,int(expected_time_delay_manual/tdc.dt_ns_upsampled)), c = antenna_colors[j] ,label='Raw Signal Ant %i Rolled %0.3f ns'%(j,expected_time_delay_manual),alpha=0.7)
+                            plt.legend()
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                            plt.ylabel('normalized adu')
+                            plt.xlabel('t (ns)')
+
+                            plt.subplot(3,1,3)
+                            plt.plot(times,waveforms[i]/max_i, c = antenna_colors[i] ,label='Raw Signal Ant %i Not Rolled'%i,alpha=0.7)
+                            plt.plot(times,waveforms[j]/max_j, c = antenna_colors[j] ,label='Raw Signal Ant %i Not Rolled'%(j),linewidth=0.5,linestyle='--')
+                            plt.plot(times,numpy.roll(waveforms[j]/max_j,int(measured_corr_delay/tdc.dt_ns_upsampled)), c = antenna_colors[j] ,label='Raw Signal Ant %i Rolled %0.3f ns'%(j,measured_corr_delay),alpha=0.7)
+                            plt.legend()
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                            plt.ylabel('normalized adu')
+                            plt.xlabel('t (ns)')
+                            
+
+
+                            # hilbert_i = numpy.abs(scipy.signal.hilbert(waveforms[i]))
+                            # peaks_i = scipy.signal.find_peaks(hilbert_i,height=0.8*max(hilbert_corr),distance=25.0/tdc.dt_ns_upsampled,prominence=0.1)[0]
+                            # for peak_i in peaks_i:
+                            #     prom = scipy.signal.peak_prominences(hilbert_i,[peak_i])[0]
+                            #     plt.scatter(times[peak_i],hilbert_i[peak_i],label=str(prom), c= antenna_colors[i])
+                            # hilbert_j = numpy.abs(scipy.signal.hilbert(waveforms[j]))
+                            # peaks_j = scipy.signal.find_peaks(hilbert_j,height=0.8*max(hilbert_corr),distance=25.0/tdc.dt_ns_upsampled,prominence=0.1)[0]
+                            # for peak_j in peaks_j:
+                            #     prom = scipy.signal.peak_prominences(hilbert_j,[peak_j])[0]
+                            #     plt.scatter(times[peak_j], hilbert_j[peak_j], label=str(prom), c = antenna_colors[j])
+
+
+
+                        n = 1.0003 #Index of refraction of air  #Should use https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.453-11-201507-S!!PDF-E.pdf 
+                        c = 299792458/n #m/s
+
+                        expected_reflection_time_delay = 1e9*(1.0 + numpy.cos(numpy.deg2rad(73.0))) * 3.5814/c #~17 deg elevation for 1784-7166, 3.5814m is rough height of antenna.
+                        expected_reflection_roll = int(expected_reflection_time_delay/tdc.dt_ns_upsampled)
+                        mod_i = waveforms[i] + numpy.roll(waveforms[i],expected_reflection_roll)
+                        mod_j = waveforms[j] + numpy.roll(waveforms[j],expected_reflection_roll)
+                        cc_raw = scipy.signal.correlate(waveforms[i],waveforms[j])/(len(mod_i)*numpy.std(waveforms[i])*numpy.std(waveforms[j]))
+                        cc_mod = scipy.signal.correlate(mod_i,mod_j)/(len(mod_i)*numpy.std(mod_i)*numpy.std(mod_j))
+
+                        if try_removing_expected_simple_reflection:
+                            plt.figure()
+
+                            plt.subplot(3,1,1)
+                            plt.plot(times,waveforms[i], c = antenna_colors[i] ,label='Raw Signal Ant %i'%i)
+                            plt.plot(times,waveforms[j], c = antenna_colors[j] ,label='Raw Signal Ant %i'%j)
+                            plt.legend()
+                            plt.ylabel('Signal')
+                            plt.subplot(3,1,2)
+                            plt.plot(times,mod_i, c = antenna_colors[i] ,label='Modified Signal %i'%i) #Subtracting the signal offset by time for reflection (signal would be flipped, so subtracting is adding)
+                            plt.plot(times,mod_j, c = antenna_colors[j] ,label='Modified Signal %i'%j) #Subtracting the signal offset by time for reflection (signal would be flipped, so subtracting is adding)
+                            plt.legend()
+                            plt.ylabel('Signal')
+                            plt.subplot(3,1,3)
+                            plt.plot(scipy.signal.hilbert(cc_raw), c = antenna_colors[i] ,label = 'Raw Signals')
+                            plt.plot(scipy.signal.hilbert(cc_mod), c = antenna_colors[j] ,label = 'Modified Signals')
+                            plt.legend()
+                            plt.ylabel('Cross Corr')
+
+
+                            # test_corr = scipy.signal.correlate(waveforms[0],waveforms[0])
+                            # noref_test_corr = scipy.signal.correlate(waveforms[0] + numpy.roll(waveforms[0],expected_reflection_roll),waveforms[0] + numpy.roll(upsampled_waveforms[0],expected_reflection_roll))
+                            # plt.figure()
+                            # plt.plot(test_corr/max(test_corr))
+                            # plt.plot(noref_test_corr/max(noref_test_corr))
+                        # plt.figure()
+                        # plt.plot(cc_raw)
+                        # plt.plot(numpy.abs(scipy.signal.hilbert(cc_raw)),linestyle='--')
+                        # zero_crossings = numpy.where(numpy.diff(numpy.signbit(cc_raw)))[0]
+                        # plt.scatter(zero_crossings,numpy.zeros_like(zero_crossings),c='k')
+                        # if pair_index != 3:
+                        #     continue
+
+                        raw_wf_i = waveforms[i]
+                        processed_wf_i = raw_wf_i**2
+                        processed_wf_i[raw_wf_i < 0] = 0 #This is so they don't align based on power added from negative adu resulting in alignment off by a cycle. 
+                        processed_wf_i = processed_wf_i/numpy.max(processed_wf_i)
+                        cfd_thresh_index_i = numpy.where(processed_wf_i >= cfd)[0][0]
+
+                        raw_wf_j = waveforms[j]
+                        processed_wf_j = raw_wf_j**2
+                        processed_wf_j[raw_wf_j < 0] = 0 #This is so they don't align based on power added from negative adu resulting in alignment off by a cycle. 
+                        processed_wf_j = processed_wf_j/numpy.max(processed_wf_j)
+                        cfd_thresh_index_j = numpy.where(processed_wf_j >= cfd)[0][0]
+
+                        
+                        time_offset = times[cfd_thresh_index_i] - times[cfd_thresh_index_j] #This is the time delay.  Add to second signal times. 
+                        expected_time_delay_simple_corr = corr_time_shifts[pair_index]
+                        if verbose == True:
+                            print('%s pair '%mode, pair)
+                            print('time_offset = ', time_offset)
+                            print('expected_time_delay_manual = ', expected_time_delay_manual)
+                            print('expected_time_delay_simple_corr = ', expected_time_delay_simple_corr)
+                        if plot_residuals == True:
+                            residuals[pair_index].append(expected_time_delay_manual - time_offset)
+
+                        if make_plot == True:
+                            plt.figure()
+                            ax_1 = plt.subplot(3,1,1)
+                            plt.plot(times, raw_wf_i ,label=i,c = antenna_colors[i],alpha=0.7)
+                            plt.plot(times, raw_wf_j ,label=j,c = antenna_colors[j],alpha=0.7)
+                            plt.legend()
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                            plt.ylabel('normalized adu')
+                            plt.xlabel('t (ns)')
+
+                            plt.subplot(3,1,2,sharex=ax_1)
+                            plt.axhline(cfd,label='CFD Thresh = %f'%cfd,color='r',linestyle='--')
+                            plt.plot(times, processed_wf_i ,label=i,c = antenna_colors[i],alpha=0.7)
+                            plt.axvline(times[cfd_thresh_index_i],c = antenna_colors[i],label='CFD Cross')
+                            plt.plot(times, processed_wf_j ,label=j,c = antenna_colors[j],alpha=0.7)
+                            plt.axvline(times[cfd_thresh_index_j],c = antenna_colors[j],label='CFD Cross')
+                            plt.legend()
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                            plt.ylabel('normalized adu^2')
+                            plt.xlabel('t (ns)')
+
+                            plt.subplot(3,1,3,sharex=ax_1)
+                            plt.plot(times, raw_wf_i/max(raw_wf_i) ,label=i,c = antenna_colors[i],alpha=0.7)
+                            plt.plot(times + time_offset, raw_wf_j/max(raw_wf_j) ,label= '%i Aligned to %i with time delay of %f\nexpected = %f'%(j,i,time_offset,expected_time_delay_manual),c = antenna_colors[j],alpha=0.7)
+                            plt.legend()
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                            plt.ylabel('normalized adu')
+                            plt.xlabel('t (ns)')
+
+                if plot_residuals:
+                    for pair_index, pair in enumerate(pairs):
+                        res_axs[pair_index].plot(numpy.arange(len(residuals[pair_index])),residuals[pair_index],label='cfd = %0.2f'%cfd)
+                        res_axs[pair_index].scatter(numpy.arange(len(residuals[pair_index])),residuals[pair_index])
+            if plot_residuals:
+                for pair_index, pair in enumerate(pairs):
+                    ax = res_axs[pair_index].legend()
+        #indices, corr_time_shifts, max_corrs, pairs, corrs = tdc.calculateTimeDelays(numpy.fft.rfft(averaged_waveforms,axis=1), averaged_waveforms, return_full_corrs=True, align_method=0)
 
         # known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
         # eventids = {}

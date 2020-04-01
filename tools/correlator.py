@@ -143,6 +143,7 @@ class Correlator:
 
             self.mesh_azimuth_rad, self.mesh_elevation_rad = numpy.meshgrid(numpy.deg2rad(numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi+1)), numpy.pi/2.0 - numpy.deg2rad(numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta+1)))
             self.mesh_azimuth_deg, self.mesh_elevation_deg = numpy.meshgrid(numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi+1), 90.0 - numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta+1))
+            self.mesh_zenith_deg = 90.0 - self.mesh_elevation_deg
 
             self.A0_latlonel = info.loadAntennaZeroLocation() #Used for conversion to RA and Dec coordinates.
 
@@ -1151,6 +1152,61 @@ class Correlator:
         else:
             return ax, circle, (h, v)
 
+    def getTimeDelayCurves(self, time_delay_dict, mode):
+        '''
+        This will determine the time delay curves for a particular baseline.  Use addTimeDelayCurves if you just want to plot these
+        on an image.  That will call this function and plot them.  These will be returned in ENU degrees azimuth and zenith.
+
+        These will be formatted simila rto time_delay_dict where each pair key will have a list containing the plane corresponding
+        to each of the given time delays.
+        '''
+        try:
+            if mode == 'hpol':
+                cable_delays = self.cable_delays[0:8:2]
+                all_antennas = numpy.vstack((self.A0_hpol,self.A1_hpol,self.A2_hpol,self.A3_hpol))
+                time_delays = time_delay_dict['hpol']
+            elif mode == 'vpol':
+                cable_delays = self.cable_delays[1:8:2]
+                all_antennas = numpy.vstack((self.A0_vpol,self.A1_vpol,self.A2_vpol,self.A3_vpol))
+                time_delays = time_delay_dict['vpol']
+
+            pairs = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
+            baseline_index = -1
+            output_dict = {}
+            for pair_key, pair_time_delay in time_delays.items():
+                baseline_index += 1
+                output_dict[pair_key] = {}
+                output_dict[pair_key]['zenith_deg'] = []
+                output_dict[pair_key]['azimuth_deg'] = []
+                pair = numpy.array(pair_key.replace('[','').replace(']','').split(','),dtype=int)
+                pair_index = numpy.where(numpy.sum(pair == pairs,axis=1) == 2)[0][0] #Used for consistent coloring.
+                i = pair[0]
+                j = pair[1]
+                A_ji = (all_antennas[j] - all_antennas[i])*(1e9/self.c) #Want these to be time vectors, not distance.  They are currently expressed in ns.
+                #Using time delays defined as i - j, to get the result of positive cos(theta) values between source direction and vector between antennas
+                #I need to have a negitive somewhere if definine the vector as A_ij.  By using A_ji the cos(theta_source) results in the appropriate sign
+                #of dt on the lhs of the equation.   
+                for time_delay in pair_time_delay:
+                    #Calculate geometric dt by removing cable delays from measured dt:
+                    dt = time_delay - (cable_delays[i] - cable_delays[j])
+
+                    #Forcing the vector v to be a unit vector pointing towards the source
+                    #below solvers for theta such that dt = |v||A_ij|cos(theta) where dt
+                    #is the geometric time delay after the cable delays have been removed
+                    #from the measured time delay. Theta is the amount I need to rotate A_ij
+                    #in any perpendicular direction to get a vector that would result in the
+                    #appropriate time delays.
+                    theta_deg = numpy.rad2deg(numpy.arccos(dt/(numpy.linalg.norm(A_ji))))  #Forcing the vector v to be a unit vector pointing towards the source
+                    plane_xy = self.getPlaneZenithCurves(A_ji, mode, theta_deg, azimuth_offset_deg=0)
+                    output_dict[pair_key]['azimuth_deg'].append(plane_xy[0])
+                    output_dict[pair_key]['zenith_deg'].append(plane_xy[1])
+            return output_dict
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def addTimeDelayCurves(self, im, time_delay_dict, mode, include_baselines=numpy.array([0,1,2,3,4,5]), mollweide=False, azimuth_offset_deg=0, *args, **kwargs):
         '''
@@ -1973,6 +2029,14 @@ class Correlator:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+    def defineMasksForGivenTimeDelays(self):
+        '''
+        For a set of time delays, this will determine a mask on top of the given map for
+        each of the time delays for each of the 6 baseline.
+        This could be used for weight cross correlations in the fftmath class.
+        These are expected to be sparse masks so maybe just store indices for each time?  Might just decide to pass
+        a subset of the times and interpolate?  Definitely don't need as fine resolution as I often use for fftmath.
+        '''
 
 def testMain():
     '''
@@ -2236,6 +2300,18 @@ if __name__=="__main__":
                 plane_az = numpy.rad2deg(numpy.arctan2(normalized_plane_locations[:,1],normalized_plane_locations[:,0]))
 
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
+                '''
+                test_planes = cor.getTimeDelayCurves(td_dict, 'hpol')
+
+                loop_indices = []
+                for angle_index in range(len(test_planes['[0, 1]']['azimuth_deg'][0])):
+                    az = test_planes['[0, 1]']['azimuth_deg'][0][angle_index]
+                    zen = test_planes['[0, 1]']['zenith_deg'][0][angle_index]
+
+                    loop_indices.append(numpy.argmin(numpy.sqrt(numpy.abs(cor.mesh_azimuth_deg - az)**2 + numpy.abs(cor.mesh_zenith_deg - zen)**2)))
+
+                import pdb; pdb.set_trace()
+                '''
 
                 zenith_cut_ENU = None#[0,170]
                 zenith_cut_array_plane = [0,100]
