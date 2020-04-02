@@ -328,7 +328,7 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def loadFilteredFFTs(self, eventid, hilbert=False, load_upsampled_waveforms=False, shorten_signals=False, shorten_thresh=0.5, shorten_delay=15.0, shorten_length=110.0):
+    def loadFilteredFFTs(self, eventid, hilbert=False, load_upsampled_waveforms=False, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0):
         '''
         Loads the waveforms (with pre applied filters) and upsamples them for
         for the cross correlation. 
@@ -867,7 +867,7 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateTimeDelaysFromEvent(self, eventid, return_full_corrs=False, align_method=0, hilbert=False, align_method_10_estimate=None, align_method_10_window_ns=8):
+    def calculateTimeDelaysFromEvent(self, eventid, return_full_corrs=False, align_method=0, hilbert=False, align_method_10_estimate=None, align_method_10_window_ns=8, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0):
         '''
         Align method can be one of a few:
         0: argmax of corrs (default)
@@ -882,7 +882,7 @@ class TimeDelayCalculator(FFTPrepper):
         'max_corrs' corresponds to the value of the selected methods peak.
         '''
         try:
-            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert)
+            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length)
             
 
             return self.calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=return_full_corrs, align_method=align_method, print_warning=False, align_method_10_estimate=align_method_10_estimate, align_method_10_window_ns=align_method_10_window_ns)
@@ -893,7 +893,7 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateMultipleTimeDelays(self,eventids, align_method=None,hilbert=False,plot=False,hpol_cut=None,vpol_cut=None,colors=None, align_method_10_estimates=None, align_method_10_window_ns=8):
+    def calculateMultipleTimeDelays(self,eventids, align_method=None,hilbert=False,plot=False,hpol_cut=None,vpol_cut=None,colors=None, align_method_10_estimates=None, align_method_10_window_ns=8, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0):
         '''
         If colors is some set of values that matches len(eventids) then they will be used to color the event curves.
         '''
@@ -939,14 +939,14 @@ class TimeDelayCalculator(FFTPrepper):
                 sys.stdout.flush()
                 if align_method is None:
                     if plot == True:
-                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns) #Using default of the other function
+                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length) #Using default of the other function
                     else:
-                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns) #Using default of the other function
+                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length) #Using default of the other function
                 else:
                     if plot == True:
-                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns)
+                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length)
                     else:
-                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns)
+                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length)
                 timeshifts.append(time_shift)
                 max_corrs.append(corr_value)
                 if plot == True:
@@ -1403,13 +1403,13 @@ if __name__ == '__main__':
         plt.close('all')
         datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
         shorten_signals = True
-        shorten_thresh = 0.5 #Percent of max height to trigger leading edge of signal.  Should only apply if a certain snr is met?
+        shorten_thresh = 0.7 #Percent of max height to trigger leading edge of signal.  Should only apply if a certain snr is met?
         #shorten_delay = 20.0 #The delay in ns after the trigger thresh to wait before an exponential decrease is applied. 
         #shorten_length = 100.0
         plot_shorten_2d = False
 
-        delays = numpy.array([15.0])#numpy.linspace(5,70,15)
-        lengths = numpy.array([110.0])#numpy.linspace(20,200,20)
+        delays = numpy.array([10.0])#numpy.linspace(5,70,15)#numpy.array([12.0])
+        lengths = numpy.array([90.0])#numpy.linspace(20,200,20)#numpy.array([110.0])
         delays_mesh, lengths_mesh = numpy.meshgrid(delays, lengths)
         
 
@@ -1417,7 +1417,7 @@ if __name__ == '__main__':
         verbose = False
         mode = 'hpol'
         try_removing_expected_simple_reflection = False
-        allowed_plots = 10
+        allowed_plots = 15
         current_n_plots = 0
 
         waveform_index_range = (None,None)
@@ -1443,11 +1443,11 @@ if __name__ == '__main__':
 
         for index, key in enumerate(list(known_planes.keys())):
             # if key == '1774-88800':
-            #     pass
+            #     continue
             # else:
             #     pass
-            # if index > 0:
-            #     continue
+            # # if index > 0:
+            # #     continue
             pair_cut = numpy.array([pair in known_planes[key]['baselines'][mode] for pair in [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]] ])
             run = int(key.split('-')[0])
             reader = Reader(datapath,run)
@@ -1490,7 +1490,7 @@ if __name__ == '__main__':
 
                             if (abs(expected_time_delay_manual - measured_corr_delay) > 5) and (current_n_plots < allowed_plots):
                                 hilbert_corr = numpy.abs(scipy.signal.hilbert(corrs[pair_index]))
-                                peaks = scipy.signal.find_peaks(hilbert_corr,height=0.7*max(hilbert_corr),distance=20.0/tdc.dt_ns_upsampled,prominence=0.05)[0]
+                                peaks = scipy.signal.find_peaks(corrs[pair_index],height=0.9*max(hilbert_corr),distance=10.0/tdc.dt_ns_upsampled,prominence=1)[0]
                                 current_n_plots +=1
                                 plt.figure()
                                 plt.suptitle(key + ' ' + str(eventid) + ' ' + str(pair))
@@ -1501,8 +1501,8 @@ if __name__ == '__main__':
                                 plt.axvline(expected_time_delay_manual,linestyle='--',c='k',label='Manual Time Delay = %0.3f'%expected_time_delay_manual)
                                 plt.axvline(measured_corr_delay,linestyle='--',c='g',label='Max Corr Time Delay = %0.3f'%measured_corr_delay)
                                 for peak in peaks:
-                                    prom = scipy.signal.peak_prominences(hilbert_corr,[peak])[0]
-                                    plt.scatter(tdc.corr_time_shifts[peaks],hilbert_corr[peaks],label='Peak Prominence = ' + str(prom[0]), c='r')
+                                    prom = scipy.signal.peak_prominences(corrs[pair_index],[peak])[0]
+                                    plt.scatter(tdc.corr_time_shifts[peaks],corrs[pair_index][peaks],label='Peak Prominence = ' + str(prom[0]), c='r')
                                 plt.legend()
                                 plt.minorticks_on()
                                 plt.grid(b=True, which='major', color='k', linestyle='-')

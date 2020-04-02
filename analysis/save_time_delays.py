@@ -63,6 +63,12 @@ if __name__=="__main__":
     high_pass_filter_order = None
 
     apply_phase_response = False
+
+    shorten_signals = True
+    shorten_thresh = 0.7
+    shorten_delay = 10.0
+    shorten_length = 90.0
+
     hilbert=False
     final_corr_length = 2**18
 
@@ -107,6 +113,24 @@ if __name__=="__main__":
         filter_string += 'align_%s'%('None')
     else:
         filter_string += 'align_%i'%(align_method)
+
+
+    if shorten_signals is None:
+        filter_string += 'shorten_signals-%s'%('None')
+    else:
+        filter_string += 'shorten_signals-%i'%(shorten_signals)
+    if shorten_thresh is None:
+        filter_string += 'shorten_thresh-%s'%('None')
+    else:
+        filter_string += 'shorten_thresh-%0.2f'%(shorten_thresh)
+    if shorten_delay is None:
+        filter_string += 'shorten_delay-%s'%('None')
+    else:
+        filter_string += 'shorten_delay-%0.2f'%(shorten_delay)
+    if shorten_length is None:
+        filter_string += 'shorten_length-%s'%('None')
+    else:
+        filter_string += 'shorten_length-%0.2f'%(shorten_length)
 
 
     print(filter_string)
