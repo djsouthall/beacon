@@ -14,7 +14,6 @@ import datetime
 import pandas as pd
 import itertools
 import h5py
-import tools.info as info
 from pprint import pprint
 
 #Personal Imports
@@ -22,6 +21,7 @@ sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 from tools.data_handler import createFile
+import tools.info as info
 
 #Plotting Imports
 import pymap3d as pm
@@ -380,7 +380,7 @@ if __name__ == '__main__':
     #EW Pairs = (0,1), (2,3)
 
 
-    plot_distance_cut_limit = None# 25 #km
+    plot_distance_cut_limit = 50 #km
 
     if plot_distance_cut_limit is not None:
         norm = plt.Normalize(0,plot_distance_cut_limit)
@@ -395,20 +395,20 @@ if __name__ == '__main__':
     TODO
     '''
 
-    plt.figure()
-    zero = info.loadAntennaZeroLocation()
-    plt.scatter(all_vals['lon'],all_vals['lat'],alpha=0.5,s=1,label='Flight Tracks')
+    # plt.figure()
+    # zero = info.loadAntennaZeroLocation()
+    # plt.scatter(all_vals['lon'],all_vals['lat'],alpha=0.5,s=1,label='Flight Tracks')
 
     
-    #plt.scatter(all_vals['lon'][all_vals['names'] == 'a14c0f'],all_vals['lat'][all_vals['names'] == 'a14c0f'],c=all_vals['timestamps'][all_vals['names'] == 'a14c0f'],alpha=0.5,s=1)
-    #plt.colorbar()    
-    plt.scatter(zero[1],zero[0],c='r',label='Beacon Ant 0')
-    plt.xlabel('Longitude')
-    plt.ylabel('Latitude')
-    plt.minorticks_on()
-    plt.grid(b=True, which='major', color='k', linestyle='-')
-    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-    plt.legend()
+    # #plt.scatter(all_vals['lon'][all_vals['names'] == 'a14c0f'],all_vals['lat'][all_vals['names'] == 'a14c0f'],c=all_vals['timestamps'][all_vals['names'] == 'a14c0f'],alpha=0.5,s=1)
+    # #plt.colorbar()    
+    # plt.scatter(zero[1],zero[0],c='r',label='Beacon Ant 0')
+    # plt.xlabel('Longitude')
+    # plt.ylabel('Latitude')
+    # plt.minorticks_on()
+    # plt.grid(b=True, which='major', color='k', linestyle='-')
+    # plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+    # plt.legend()
 
 
 

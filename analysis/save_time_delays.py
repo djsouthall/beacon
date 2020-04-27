@@ -51,18 +51,18 @@ if __name__=="__main__":
             align_method = default_align_method#4#0#4#8
         print('Using align_method = %i'%align_method)
     else:
-        run = 1702
+        run = 1703
         align_method = default_align_method#4#0#4#8
 
     datapath = os.environ['BEACON_DATA']
-
+    align_method_13_n = 2
     crit_freq_low_pass_MHz = None #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = None
 
     crit_freq_high_pass_MHz = None
     high_pass_filter_order = None
 
-    apply_phase_response = False
+    apply_phase_response = True
 
     shorten_signals = True
     shorten_thresh = 0.7
@@ -70,7 +70,7 @@ if __name__=="__main__":
     shorten_length = 90.0
 
     hilbert=False
-    final_corr_length = 2**18
+    final_corr_length = 2**15
 
     filter_string = ''
 
@@ -110,23 +110,22 @@ if __name__=="__main__":
         filter_string += 'corlen_%i-'%(final_corr_length)
 
     if align_method is None:
-        filter_string += 'align_%s'%('None')
+        filter_string += 'align_%s-'%('None')
     else:
-        filter_string += 'align_%i'%(align_method)
-
+        filter_string += 'align_%i-'%(align_method)
 
     if shorten_signals is None:
-        filter_string += 'shorten_signals-%s'%('None')
+        filter_string += 'shorten_signals-%s-'%('None')
     else:
-        filter_string += 'shorten_signals-%i'%(shorten_signals)
+        filter_string += 'shorten_signals-%i-'%(shorten_signals)
     if shorten_thresh is None:
-        filter_string += 'shorten_thresh-%s'%('None')
+        filter_string += 'shorten_thresh-%s-'%('None')
     else:
-        filter_string += 'shorten_thresh-%0.2f'%(shorten_thresh)
+        filter_string += 'shorten_thresh-%0.2f-'%(shorten_thresh)
     if shorten_delay is None:
-        filter_string += 'shorten_delay-%s'%('None')
+        filter_string += 'shorten_delay-%s-'%('None')
     else:
-        filter_string += 'shorten_delay-%0.2f'%(shorten_delay)
+        filter_string += 'shorten_delay-%0.2f-'%(shorten_delay)
     if shorten_length is None:
         filter_string += 'shorten_length-%s'%('None')
     else:
@@ -177,13 +176,18 @@ if __name__=="__main__":
 
                 #Time Delays
                 #01
+                file.attrs['align_method_13_n'] = align_method_13_n
+                if align_method == 13:
+                    time_delay_dimensions = (file.attrs['N'],file.attrs['align_method_13_n'])
+                else:
+                    time_delay_dimensions = (file.attrs['N'],)
                 if not numpy.isin('hpol_t_0subtract1',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('hpol_t_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('hpol_t_0subtract1', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in hpol_t_0subtract1 of %s will be overwritten by this analysis script.'%filename)
 
                 if not numpy.isin('vpol_t_0subtract1',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('vpol_t_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('vpol_t_0subtract1', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in vpol_t_0subtract1 of %s will be overwritten by this analysis script.'%filename)
 
@@ -191,12 +195,12 @@ if __name__=="__main__":
 
                 #02
                 if not numpy.isin('hpol_t_0subtract2',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('hpol_t_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('hpol_t_0subtract2', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in hpol_t_0subtract2 of %s will be overwritten by this analysis script.'%filename)
 
                 if not numpy.isin('vpol_t_0subtract2',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('vpol_t_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('vpol_t_0subtract2', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in vpol_t_0subtract2 of %s will be overwritten by this analysis script.'%filename)
 
@@ -204,12 +208,12 @@ if __name__=="__main__":
 
                 #03
                 if not numpy.isin('hpol_t_0subtract3',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('hpol_t_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('hpol_t_0subtract3', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in hpol_t_0subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                 if not numpy.isin('vpol_t_0subtract3',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('vpol_t_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('vpol_t_0subtract3', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in vpol_t_0subtract3 of %s will be overwritten by this analysis script.'%filename)
 
@@ -217,12 +221,12 @@ if __name__=="__main__":
 
                 #12
                 if not numpy.isin('hpol_t_1subtract2',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('hpol_t_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('hpol_t_1subtract2', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in hpol_t_1subtract2 of %s will be overwritten by this analysis script.'%filename)
 
                 if not numpy.isin('vpol_t_1subtract2',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('vpol_t_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('vpol_t_1subtract2', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in vpol_t_1subtract2 of %s will be overwritten by this analysis script.'%filename)
 
@@ -230,12 +234,12 @@ if __name__=="__main__":
 
                 #13
                 if not numpy.isin('hpol_t_1subtract3',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('hpol_t_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('hpol_t_1subtract3', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in hpol_t_1subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                 if not numpy.isin('vpol_t_1subtract3',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('vpol_t_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('vpol_t_1subtract3', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in vpol_t_1subtract3 of %s will be overwritten by this analysis script.'%filename)
 
@@ -243,12 +247,12 @@ if __name__=="__main__":
 
                 #23
                 if not numpy.isin('hpol_t_2subtract3',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('hpol_t_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('hpol_t_2subtract3', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in hpol_t_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                 if not numpy.isin('vpol_t_2subtract3',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('vpol_t_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('vpol_t_2subtract3', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in vpol_t_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
@@ -257,12 +261,12 @@ if __name__=="__main__":
                 #Correlation values.
                 #01
                 if not numpy.isin('hpol_max_corr_0subtract1',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('hpol_max_corr_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('hpol_max_corr_0subtract1', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in hpol_max_corr_0subtract1 of %s will be overwritten by this analysis script.'%filename)
 
                 if not numpy.isin('vpol_max_corr_0subtract1',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('vpol_max_corr_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('vpol_max_corr_0subtract1', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in vpol_max_corr_0subtract1 of %s will be overwritten by this analysis script.'%filename)
                 
@@ -270,12 +274,12 @@ if __name__=="__main__":
 
                 #02
                 if not numpy.isin('hpol_max_corr_0subtract2',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('hpol_max_corr_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('hpol_max_corr_0subtract2', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in hpol_max_corr_0subtract2 of %s will be overwritten by this analysis script.'%filename)
 
                 if not numpy.isin('vpol_max_corr_0subtract2',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('vpol_max_corr_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('vpol_max_corr_0subtract2', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in vpol_max_corr_0subtract2 of %s will be overwritten by this analysis script.'%filename)
 
@@ -283,12 +287,12 @@ if __name__=="__main__":
 
                 #03
                 if not numpy.isin('hpol_max_corr_0subtract3',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('hpol_max_corr_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('hpol_max_corr_0subtract3', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in hpol_max_corr_0subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                 if not numpy.isin('vpol_max_corr_0subtract3',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('vpol_max_corr_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('vpol_max_corr_0subtract3', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in vpol_max_corr_0subtract3 of %s will be overwritten by this analysis script.'%filename)
 
@@ -296,12 +300,12 @@ if __name__=="__main__":
 
                 #12
                 if not numpy.isin('hpol_max_corr_1subtract2',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('hpol_max_corr_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('hpol_max_corr_1subtract2', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in hpol_max_corr_1subtract2 of %s will be overwritten by this analysis script.'%filename)
 
                 if not numpy.isin('vpol_max_corr_1subtract2',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('vpol_max_corr_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('vpol_max_corr_1subtract2', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in vpol_max_corr_1subtract2 of %s will be overwritten by this analysis script.'%filename)
 
@@ -309,12 +313,12 @@ if __name__=="__main__":
 
                 #13
                 if not numpy.isin('hpol_max_corr_1subtract3',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('hpol_max_corr_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('hpol_max_corr_1subtract3', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in hpol_max_corr_1subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                 if not numpy.isin('vpol_max_corr_1subtract3',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('vpol_max_corr_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('vpol_max_corr_1subtract3', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in vpol_max_corr_1subtract3 of %s will be overwritten by this analysis script.'%filename)
 
@@ -322,58 +326,102 @@ if __name__=="__main__":
 
                 #23
                 if not numpy.isin('hpol_max_corr_2subtract3',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('hpol_max_corr_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('hpol_max_corr_2subtract3', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in hpol_max_corr_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                 if not numpy.isin('vpol_max_corr_2subtract3',time_delay_dsets):
-                    file['time_delays'][filter_string].create_dataset('vpol_max_corr_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                    file['time_delays'][filter_string].create_dataset('vpol_max_corr_2subtract3', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in vpol_max_corr_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
 
                 if sum(rf_cut) > 0:
+                    #rf_cut = numpy.multiply(rf_cut ,numpy.cumsum(rf_cut) < 10) #limits it to the first 100 Trues for testing.
                     tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response)
-                    time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids[rf_cut],align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=None,vpol_cut=None)
+                    time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids[rf_cut],align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=None,vpol_cut=None,shorten_signals=shorten_signals,shorten_thresh=shorten_thresh,shorten_delay=shorten_delay,shorten_length=shorten_length)
+
+                    if align_method == 13:
+                        rf_cut = numpy.where(rf_cut)[0]
 
                     for pair_index, pair in enumerate(pairs):
-                        if numpy.all(pair == numpy.array([0,2])):
-                            file['time_delays'][filter_string]['hpol_t_0subtract1'][rf_cut] = time_shifts[pair_index]
-                            file['time_delays'][filter_string]['hpol_max_corr_0subtract1'][rf_cut] = corrs[pair_index]
-                        elif numpy.all(pair == numpy.array([0,4])):
-                            file['time_delays'][filter_string]['hpol_t_0subtract2'][rf_cut] = time_shifts[pair_index]
-                            file['time_delays'][filter_string]['hpol_max_corr_0subtract2'][rf_cut] = corrs[pair_index]
-                        elif numpy.all(pair == numpy.array([0,6])):
-                            file['time_delays'][filter_string]['hpol_t_0subtract3'][rf_cut] = time_shifts[pair_index]
-                            file['time_delays'][filter_string]['hpol_max_corr_0subtract3'][rf_cut] = corrs[pair_index]
-                        elif numpy.all(pair == numpy.array([2,4])):
-                            file['time_delays'][filter_string]['hpol_t_1subtract2'][rf_cut] = time_shifts[pair_index]
-                            file['time_delays'][filter_string]['hpol_max_corr_1subtract2'][rf_cut] = corrs[pair_index]
-                        elif numpy.all(pair == numpy.array([2,6])):
-                            file['time_delays'][filter_string]['hpol_t_1subtract3'][rf_cut] = time_shifts[pair_index]
-                            file['time_delays'][filter_string]['hpol_max_corr_1subtract3'][rf_cut] = corrs[pair_index]
-                        elif numpy.all(pair == numpy.array([4,6])):
-                            file['time_delays'][filter_string]['hpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
-                            file['time_delays'][filter_string]['hpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
+                        if align_method != 13:
+                            #The cut is different because the dimensions are different.
+                            if numpy.all(pair == numpy.array([0,2])):
+                                file['time_delays'][filter_string]['hpol_t_0subtract1'][rf_cut] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['hpol_max_corr_0subtract1'][rf_cut] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([0,4])):
+                                file['time_delays'][filter_string]['hpol_t_0subtract2'][rf_cut] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['hpol_max_corr_0subtract2'][rf_cut] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([0,6])):
+                                file['time_delays'][filter_string]['hpol_t_0subtract3'][rf_cut] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['hpol_max_corr_0subtract3'][rf_cut] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([2,4])):
+                                file['time_delays'][filter_string]['hpol_t_1subtract2'][rf_cut] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['hpol_max_corr_1subtract2'][rf_cut] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([2,6])):
+                                file['time_delays'][filter_string]['hpol_t_1subtract3'][rf_cut] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['hpol_max_corr_1subtract3'][rf_cut] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([4,6])):
+                                file['time_delays'][filter_string]['hpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['hpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
 
-                        elif numpy.all(pair == numpy.array([1,3])):
-                            file['time_delays'][filter_string]['vpol_t_0subtract1'][rf_cut] = time_shifts[pair_index]
-                            file['time_delays'][filter_string]['vpol_max_corr_0subtract1'][rf_cut] = corrs[pair_index]
-                        elif numpy.all(pair == numpy.array([1,5])):
-                            file['time_delays'][filter_string]['vpol_t_0subtract2'][rf_cut] = time_shifts[pair_index]
-                            file['time_delays'][filter_string]['vpol_max_corr_0subtract2'][rf_cut] = corrs[pair_index]
-                        elif numpy.all(pair == numpy.array([1,7])):
-                            file['time_delays'][filter_string]['vpol_t_0subtract3'][rf_cut] = time_shifts[pair_index]
-                            file['time_delays'][filter_string]['vpol_max_corr_0subtract3'][rf_cut] = corrs[pair_index]
-                        elif numpy.all(pair == numpy.array([3,5])):
-                            file['time_delays'][filter_string]['vpol_t_1subtract2'][rf_cut] = time_shifts[pair_index]
-                            file['time_delays'][filter_string]['vpol_max_corr_1subtract2'][rf_cut] = corrs[pair_index]
-                        elif numpy.all(pair == numpy.array([3,7])):
-                            file['time_delays'][filter_string]['vpol_t_1subtract3'][rf_cut] = time_shifts[pair_index]
-                            file['time_delays'][filter_string]['vpol_max_corr_1subtract3'][rf_cut] = corrs[pair_index]
-                        elif numpy.all(pair == numpy.array([5,7])):
-                            file['time_delays'][filter_string]['vpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
-                            file['time_delays'][filter_string]['vpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([1,3])):
+                                file['time_delays'][filter_string]['vpol_t_0subtract1'][rf_cut] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['vpol_max_corr_0subtract1'][rf_cut] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([1,5])):
+                                file['time_delays'][filter_string]['vpol_t_0subtract2'][rf_cut] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['vpol_max_corr_0subtract2'][rf_cut] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([1,7])):
+                                file['time_delays'][filter_string]['vpol_t_0subtract3'][rf_cut] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['vpol_max_corr_0subtract3'][rf_cut] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([3,5])):
+                                file['time_delays'][filter_string]['vpol_t_1subtract2'][rf_cut] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['vpol_max_corr_1subtract2'][rf_cut] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([3,7])):
+                                file['time_delays'][filter_string]['vpol_t_1subtract3'][rf_cut] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['vpol_max_corr_1subtract3'][rf_cut] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([5,7])):
+                                file['time_delays'][filter_string]['vpol_t_2subtract3'][rf_cut] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['vpol_max_corr_2subtract3'][rf_cut] = corrs[pair_index]
+                        else:
+                            if numpy.all(pair == numpy.array([0,2])):
+                                file['time_delays'][filter_string]['hpol_t_0subtract1'][rf_cut,:] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['hpol_max_corr_0subtract1'][rf_cut,:] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([0,4])):
+                                file['time_delays'][filter_string]['hpol_t_0subtract2'][rf_cut,:] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['hpol_max_corr_0subtract2'][rf_cut,:] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([0,6])):
+                                file['time_delays'][filter_string]['hpol_t_0subtract3'][rf_cut,:] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['hpol_max_corr_0subtract3'][rf_cut,:] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([2,4])):
+                                file['time_delays'][filter_string]['hpol_t_1subtract2'][rf_cut,:] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['hpol_max_corr_1subtract2'][rf_cut,:] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([2,6])):
+                                file['time_delays'][filter_string]['hpol_t_1subtract3'][rf_cut,:] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['hpol_max_corr_1subtract3'][rf_cut,:] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([4,6])):
+                                file['time_delays'][filter_string]['hpol_t_2subtract3'][rf_cut,:] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['hpol_max_corr_2subtract3'][rf_cut,:] = corrs[pair_index]
+
+                            elif numpy.all(pair == numpy.array([1,3])):
+                                file['time_delays'][filter_string]['vpol_t_0subtract1'][rf_cut,:] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['vpol_max_corr_0subtract1'][rf_cut,:] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([1,5])):
+                                file['time_delays'][filter_string]['vpol_t_0subtract2'][rf_cut,:] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['vpol_max_corr_0subtract2'][rf_cut,:] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([1,7])):
+                                file['time_delays'][filter_string]['vpol_t_0subtract3'][rf_cut,:] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['vpol_max_corr_0subtract3'][rf_cut,:] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([3,5])):
+                                file['time_delays'][filter_string]['vpol_t_1subtract2'][rf_cut,:] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['vpol_max_corr_1subtract2'][rf_cut,:] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([3,7])):
+                                file['time_delays'][filter_string]['vpol_t_1subtract3'][rf_cut,:] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['vpol_max_corr_1subtract3'][rf_cut,:] = corrs[pair_index]
+                            elif numpy.all(pair == numpy.array([5,7])):
+                                file['time_delays'][filter_string]['vpol_t_2subtract3'][rf_cut,:] = time_shifts[pair_index]
+                                file['time_delays'][filter_string]['vpol_max_corr_2subtract3'][rf_cut,:] = corrs[pair_index]
                 else:
                     print('No RF signals, skipping calculation.')
                 file.close()

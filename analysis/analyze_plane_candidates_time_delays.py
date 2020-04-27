@@ -116,7 +116,7 @@ all_candidates = {\
 
 
 candidates = all_candidates
-# test_track = '1784-7166'#'1728-62026'
+# test_track = '1773-14413'#'1784-7166'#'1728-62026'
 # candidates = {test_track:all_candidates[test_track]}
 
 if __name__ == '__main__':
@@ -179,9 +179,9 @@ if __name__ == '__main__':
     plot_fft_signals = False
     plot_planes = False
     plot_interps = False
-    plot_time_delays = False
-    plot_residuals = True
-    plot_freq_classification_colors = True #PLF,LF,HF,PHF,BB
+    plot_time_delays = True
+    plot_residuals = False
+    plot_freq_classification_colors = False #PLF,LF,HF,PHF,BB
     
     freq_classications = ['PLF','LF','HF','PHF','BB']
     freq_colors_cm = plt.cm.get_cmap('Set3', len(freq_classications))
@@ -283,6 +283,8 @@ if __name__ == '__main__':
 
         for key_index, key in enumerate(list(calibrated_trigtime.keys())):
             #Prepare tools and such
+            # if key != test_track:
+            #     continue
             run = int(key.split('-')[0])
             eventids = known_planes[key]['eventids'][:,1]
             reader = Reader(datapath,run)
@@ -398,7 +400,7 @@ if __name__ == '__main__':
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-                plt.title(mode + ' ' + key + ', ' + known_planes[key]['known_flight'] + '\nAdjusted Antenna Positions')
+                #plt.title(mode + ' ' + key + ', ' + known_planes[key]['known_flight'] + '\nAdjusted Antenna Positions')
                 plt.ylabel('Time Delay (ns)')
                 plt.xlabel('Readout Time (s)')
                 python_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -416,23 +418,24 @@ if __name__ == '__main__':
                         plt.text(text_loc[0],text_loc[1], 'A%i and A%i'%(pair[0],pair[1]),color=text_color,withdash=True)
 
                     else:
-                        #PLOTTING FIT/IDENTIFIED MEASURED FLIGHT TRACKS
-                        y = measured_plane_time_delays[key][pair_index]
-                        plt.plot(calibrated_trigtime[key], y,c=python_colors[pair_index],linestyle = '--',alpha=0.8)
-                        plt.scatter(calibrated_trigtime[key], y,c=python_colors[pair_index],label='Measured Time Delays for A%i and A%i'%(pair[0],pair[1]))
 
                         #PLOTTING EXPECTED FLIGHT TRACKS FOR THE KNOWN CORRELATED FLIGHT
                         y = dt['expected_time_differences_%s'%mode][(pair[0], pair[1])][plot_distance_cut]
-                        plt.plot(x,y,c=python_colors[pair_index],linestyle = '--',alpha=0.5,label='Flight %s TD: A%i and A%i'%(known_planes[key]['known_flight'],pair[0],pair[1]))
-                        plt.scatter(x,y,facecolors='none', edgecolors=python_colors[pair_index],alpha=0.4)
+                        plt.plot(x,y,c=python_colors[pair_index],linestyle = '--',linewidth=4,alpha=0.7,label='Expected Airplane Time Delays: A%i and A%i'%(pair[0],pair[1]))
+                        #plt.scatter(x,y,facecolors='none', edgecolors=python_colors[pair_index],alpha=0.4)
+
+                        #PLOTTING FIT/IDENTIFIED MEASURED FLIGHT TRACKS
+                        y = measured_plane_time_delays[key][pair_index]
+                        #plt.plot(calibrated_trigtime[key], y,c=python_colors[pair_index],linestyle = '--',alpha=0.8)
+                        plt.scatter(calibrated_trigtime[key], y,s=200,c=python_colors[pair_index],label='Measured Time Delays: A%i and A%i'%(pair[0],pair[1]))
 
                         text_color = plt.gca().lines[-1].get_color()
-
                         #Attempt at avoiding overlapping text.
-                        text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
-                        plt.text(text_loc[0],text_loc[1], 'A%i and A%i'%(pair[0],pair[1]),color=text_color,withdash=True)
-                plt.legend()
-
+                        #text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
+                        #plt.text(text_loc[0],text_loc[1], 'A%i and A%i'%(pair[0],pair[1]),color=text_color,withdash=True)
+                
+                plt.legend(loc='lower left')
+                plt.xlim([1.574181e9+500,1.574181e9+800])
 
                 
 

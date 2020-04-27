@@ -581,7 +581,7 @@ class TimeDelayCalculator(FFTPrepper):
     --------
     examples.beacon_data_reader.reader
     '''
-    def calculateTimeDelays(self, ffts, upsampled_waveforms, return_full_corrs=False, align_method=0, print_warning=True, align_method_10_estimate=None, align_method_10_window_ns=8):
+    def calculateTimeDelays(self, ffts, upsampled_waveforms, return_full_corrs=False, align_method=0, print_warning=True, align_method_10_estimate=None, align_method_10_window_ns=8, align_method_13_n=2):
         '''
         Align method can be one of a few:
         0:  argmax of corrs (default)
@@ -597,6 +597,7 @@ class TimeDelayCalculator(FFTPrepper):
         10: This requires expected time delays, and will just snap to the highest value within a small window around that.  Good for fine adjustments after using method 9.  
         11: For hpol baselines this will use 0, and for vpol it will use 9.
         12: For vpol baselines this will use 0, and for hpol it will use 9.
+        13: This will return the top align_method_13_n peaks of the correlations for each baseline of each event.
         'max_corrs' corresponds to the value of the selected methods peak. 
         '''
         try:
@@ -833,33 +834,57 @@ class TimeDelayCalculator(FFTPrepper):
                         max_corrs[pair_index] = numpy.max(corrs[pair_index][search_window_cut])
 
 
+            elif align_method == 13:
+                indices = numpy.argmax(corrs,axis=1)
+                max_corrs = numpy.max(corrs,axis=1)
+                
+                indices = numpy.zeros((numpy.shape(corrs)[0],align_method_13_n))
+                time_shifts = numpy.zeros((numpy.shape(corrs)[0],align_method_13_n))
+                max_corrs = numpy.zeros((numpy.shape(corrs)[0],align_method_13_n))
+                for corr_index, corr in enumerate(corrs):
+                    prom = 0.5
+                    peaks, properties = scipy.signal.find_peaks(corr,height=0.25*max(corr),distance=10.0/self.dt_ns_upsampled,prominence=prom)
+                    while len(peaks) < align_method_13_n:
+                        prom *= 0.8
+                        peaks, properties = scipy.signal.find_peaks(corr,height=0.25*max(corr),distance=10.0/self.dt_ns_upsampled,prominence=prom)
 
+                    peak_heights = properties['peak_heights']
+                    max_indices = peaks[numpy.argsort(peak_heights)[::-1][0:align_method_13_n]]
+                    indices[corr_index][:] = max_indices
+                    time_shifts[corr_index][:] = self.corr_time_shifts[max_indices]
+                    max_corrs[corr_index][:] = peak_heights[0:align_method_13_n]
 
-            if False:
-                if True:#numpy.any(self.corr_time_shifts[indices] > 2000):
-                    plt.figure()
-                    for channel, wf in enumerate(upsampled_waveforms):
-                        plt.plot(self.dt_ns_upsampled*numpy.arange(len(wf)),wf,label=str(channel))
-                    plt.legend()
-                    plt.figure()
-                    for channel, wf in enumerate(corrs):
-                        plt.plot(self.corr_time_shifts,wf,label=str(channel))
-                    plt.legend()
-                    plt.figure()
-                    try:
-                        for channel, wf in enumerate(corr_hilbert):
+            if align_method != 13:
+                if False:
+                    if True:#numpy.any(self.corr_time_shifts[indices] > 2000):
+                        plt.figure()
+                        for channel, wf in enumerate(upsampled_waveforms):
+                            plt.plot(self.dt_ns_upsampled*numpy.arange(len(wf)),wf,label=str(channel))
+                        plt.legend()
+                        plt.figure()
+                        for channel, wf in enumerate(corrs):
                             plt.plot(self.corr_time_shifts,wf,label=str(channel))
                         plt.legend()
-                    except:
-                        corr_hilbert = numpy.abs(scipy.signal.hilbert(corrs,axis=1))
-                        for channel, wf in enumerate(corr_hilbert):
-                            plt.plot(self.corr_time_shifts,wf,label=str(channel))
-                        plt.legend()
-                    import pdb; pdb.set_trace()
-            if return_full_corrs == True:
-                return indices, self.corr_time_shifts[indices], max_corrs, self.pairs, corrs
+                        plt.figure()
+                        try:
+                            for channel, wf in enumerate(corr_hilbert):
+                                plt.plot(self.corr_time_shifts,wf,label=str(channel))
+                            plt.legend()
+                        except:
+                            corr_hilbert = numpy.abs(scipy.signal.hilbert(corrs,axis=1))
+                            for channel, wf in enumerate(corr_hilbert):
+                                plt.plot(self.corr_time_shifts,wf,label=str(channel))
+                            plt.legend()
+                        import pdb; pdb.set_trace()
+                if return_full_corrs == True:
+                    return indices, self.corr_time_shifts[indices], max_corrs, self.pairs, corrs
+                else:
+                    return indices, self.corr_time_shifts[indices], max_corrs, self.pairs
             else:
-                return indices, self.corr_time_shifts[indices], max_corrs, self.pairs
+                if return_full_corrs == True:
+                    return indices, time_shifts, max_corrs, self.pairs, corrs
+                else:
+                    return indices, time_shifts, max_corrs, self.pairs
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -1001,7 +1026,16 @@ class TimeDelayCalculator(FFTPrepper):
                     ax.legend()
             sys.stdout.write('\n')
             sys.stdout.flush()
-            return numpy.array(timeshifts).T, numpy.array(max_corrs).T, self.pairs
+            timeshifts = numpy.array(timeshifts)
+            max_corrs = numpy.array(max_corrs)
+
+            if len(numpy.shape(timeshifts)) == 3:
+                timeshifts = numpy.transpose(timeshifts,axes=(1,0,2))
+                max_corrs = numpy.transpose(max_corrs,axes=(1,0,2))
+            else:
+                timeshifts = numpy.transpose(timeshifts)
+                max_corrs = numpy.transpose(max_corrs)
+            return timeshifts, max_corrs, self.pairs
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -1458,6 +1492,9 @@ if __name__ == '__main__':
             for shorten_delay_index, shorten_delay in enumerate(delays):
                 for shorten_length_index, shorten_length in enumerate(lengths):
                     time_delay_residuals_all_events = []
+                    
+                    multi_out_timeshifts, multi_out_max_corrs, multi_out_pairs = tdc.calculateMultipleTimeDelays(eventids, align_method=13,hilbert=False, shorten_signals=True, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0)
+                    
                     for event_index, eventid in enumerate(eventids):
                         # if event_index != 2:
                         #     continue

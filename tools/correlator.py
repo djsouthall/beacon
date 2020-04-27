@@ -1139,8 +1139,8 @@ class Correlator:
         circle = plt.Circle((azimuth, elevation), radius, edgecolor=color, *args, **kwargs)
 
         if crosshair == True or return_crosshair == True:
-            h = ax.axhline(elevation,c=color,linewidth=0.5)
-            v = ax.axvline(azimuth,c=color,linewidth=0.5)
+            h = ax.axhline(elevation,c=color,linewidth=1,alpha=0.5)
+            v = ax.axvline(azimuth,c=color,linewidth=1,alpha=0.5)
 
         ax.add_artist(circle)
         if return_circle == False and return_crosshair == False:
@@ -1856,8 +1856,11 @@ class Correlator:
             fig = plt.figure(figsize=(16,9))
             ax = fig.add_subplot(1,1,1, projection='mollweide')
             
-            fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
-            ax.set_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
+            # fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
+            # ax.set_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
+
+            fig.canvas.set_window_title('Correlation Map Airplane Event %i'%(0))
+            ax.set_title('Correlation Map Airplane Event %i'%(0))
 
 
             if hilbert == True:
@@ -1910,28 +1913,31 @@ class Correlator:
 
 
             if plane_elevation is not None and _plane_az is not None:
-                ax, circle, lines = self.addCircleToMap(ax, _plane_az[0], plane_elevation[0], azimuth_offset_deg=0.0, mollweide=True, radius=5.0, crosshair=True, return_circle=True, return_crosshair=True, color='fuchsia', linewidth=1.0,fill=False,zorder=10) #azimuth offset_deg already accounted for as passed.
+                ax, circle, lines = self.addCircleToMap(ax, _plane_az[0], plane_elevation[0], azimuth_offset_deg=0.0, mollweide=True, radius=6.0, crosshair=True, return_circle=True, return_crosshair=True, color='fuchsia', linewidth=2.0,fill=False,zorder=10) #azimuth offset_deg already accounted for as passed.
 
             def update(frame):
-                fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[frame]))
-                ax.set_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[frame]))
-                im.set_array(all_maps[frame].ravel())
+                _frame = frame%len(eventids) #lets it loop multiple times.  i.e. give animation more frames but same content looped.
+                fig.canvas.set_window_title('Correlation Map Airplane Event %i'%(_frame))
+                ax.set_title('Correlation Map Airplane Event %i'%(_frame))
+                # fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[_frame]))
+                # ax.set_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[_frame]))
+                im.set_array(all_maps[_frame].ravel())
 
                 if hilbert == True:
-                    im.set_clim(vmin=numpy.min(all_maps[frame]),vmax=numpy.max(all_maps[frame]))
+                    im.set_clim(vmin=numpy.min(all_maps[_frame]),vmax=numpy.max(all_maps[_frame]))
 
-                azimuth = numpy.deg2rad(_plane_az[frame]) #Molweide True for animated.
-                elevation = numpy.deg2rad(plane_elevation[frame])
+                azimuth = numpy.deg2rad(_plane_az[_frame]) #Molweide True for animated.
+                elevation = numpy.deg2rad(plane_elevation[_frame])
 
                 if plane_elevation is not None and _plane_az is not None:
                     circle.center = azimuth, elevation
                     ax.add_artist(circle)
 
-                    lines[0].set_ydata([numpy.deg2rad(plane_elevation[frame]),numpy.deg2rad(plane_elevation[frame])])
-                    lines[1].set_xdata([numpy.deg2rad(_plane_az[frame]),numpy.deg2rad(_plane_az[frame])])
+                    lines[0].set_ydata([numpy.deg2rad(plane_elevation[_frame]),numpy.deg2rad(plane_elevation[_frame])])
+                    lines[1].set_xdata([numpy.deg2rad(_plane_az[_frame]),numpy.deg2rad(_plane_az[_frame])])
                 return [im]
 
-            ani = FuncAnimation(fig, update, frames=range(len(eventids)),blit=False,save_count=0)
+            ani = FuncAnimation(fig, update, frames=range(2*len(eventids)),blit=False,save_count=0)
 
             if save == True:
                 #ani.save('./%s_%s_hilbert=%s_%s.mp4'%(title,pol,str(hilbert), center_dir_full + '_centered'), writer='ffmpeg', fps=fps,dpi=dpi)
@@ -2268,10 +2274,12 @@ if __name__=="__main__":
             all_event_selected_phi_residual = {}
 
             for index, key in enumerate(list(known_planes.keys())):
-                if key == '1774-88800':
-                    _dir = 'E'
+                print(key)
+                if key == '1773-14413':
+                    _dir = 'W'
                 else:
                     _dir = 'W'
+                    continue
 
                 enu = pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2])
                 plane_polys[key] = pt.PlanePoly(output_tracks[key]['timestamps'],enu,plot=False)
@@ -2300,6 +2308,8 @@ if __name__=="__main__":
                 plane_az = numpy.rad2deg(numpy.arctan2(normalized_plane_locations[:,1],normalized_plane_locations[:,0]))
 
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
+                
+                #cor.animatedMap(eventids, 'hpol', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='W',save=True,dpi=300)
                 '''
                 test_planes = cor.getTimeDelayCurves(td_dict, 'hpol')
 
@@ -2315,7 +2325,7 @@ if __name__=="__main__":
 
                 zenith_cut_ENU = None#[0,170]
                 zenith_cut_array_plane = [0,100]
-
+                '''
                 #cor.calculateArrayNormalVector(plot_map=True,mollweide=True, pol='both')
                 all_baselines_matrix_minus_1_baseline = numpy.array([[1,2,3,4,5],[0,2,3,4,5],[0,1,3,4,5],[0,1,2,4,5],[0,1,2,3,5],[0,1,2,3,4]])
                 all_baselines_matrix_minus_1_antenna = numpy.array([[3,4,5],[1,2,5],[0,2,4],[0,1,3]])
@@ -2385,7 +2395,8 @@ if __name__=="__main__":
 
                     plt.legend()
                     plt.title(key)
-
+                '''
+            '''
             if plot_residual_hists == True:
                 bins = numpy.linspace(-15,15,101 )
                 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -2422,9 +2433,10 @@ if __name__=="__main__":
                 # mean_corr_values, fig, ax = cor.averagedMap(eventids[0:2], 'hpol', plot_map=True, hilbert=False, max_method=max_method,mollweide=True,zenith_cut_ENU=zenith_cut_ENU,center_dir='W')
                 # # for eventid in eventids:
                 #     cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,mollweide=False,zenith_cut_ENU=zenith_cut_ENU,center_dir='W')
-                #cor.animatedMap(eventids, 'both', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='N',save=True,dpi=300)
+                #cor.animatedMap(eventids, 'hpol', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='W',save=True,dpi=600)
 
                 #TODO: ADD A FEATURE THAT DOES WHAT ZENITH_CUT_ENU DOES BUT FOR ANGLES RELATIVE TO THE ARRAY PLANE. 
 
                 cors.append(cor) #Need to keep references for animations to work. 
 
+            '''
