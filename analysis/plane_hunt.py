@@ -23,10 +23,18 @@ from objects.fftmath import TemplateCompareTool
 import tools.info as info
 from tools.data_handler import createFile
 from objects.fftmath import TimeDelayCalculator
+import tools.get_plane_tracks as pt
+from tools.correlator import Correlator
+
+
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import LogNorm
+from matplotlib.widgets import LassoSelector
+from matplotlib.path import Path
+from matplotlib.widgets import Button
+
 from pprint import pprint
 import itertools
 import warnings
@@ -97,10 +105,6 @@ def countSimilar(delays,similarity_atol=2,verbose=True):
         print(exc_type, fname, exc_tb.tb_lineno)
 
 
-from matplotlib.widgets import LassoSelector
-from matplotlib.path import Path
-
-
 class SelectFromCollection(object):
     """
     This is an adapted bit of code that prints out information
@@ -132,6 +136,7 @@ class SelectFromCollection(object):
 
         self.total_hpol_delays = total_hpol_delays
         self.total_vpol_delays = total_vpol_delays
+
 
 
 
@@ -176,11 +181,6 @@ class SelectFromCollection(object):
                 plt.scatter(times, y,label='A%i and A%i'%(pair[0],pair[1]))
             plt.legend(loc='upper right')
 
-
-
-
-
-
     def alignSelectedEvents(self, plot_aligned_wf=False,save_template=False,plot_timedelays=True):
         '''
         My plan is for this to be called when some events are circled in the plot.
@@ -210,7 +210,13 @@ class SelectFromCollection(object):
 
         tct = TemplateCompareTool(_reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=True)
         tdc = TimeDelayCalculator(_reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=True)
+        self.cor = Correlator(_reader,  upsample=2**15, n_phi=360, n_theta=360, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=True)
         
+        if True:
+            print('TRYING TO MAKE CORRELATOR PLOT.')
+            print(eventids)
+            self.cor.animatedMap(eventids, 'both', '', plane_zenith=None,plane_az=None,hilbert=False, max_method=None,center_dir='E',save=False,dpi=300)
+
         times, averaged_waveforms = tct.averageAlignedSignalsPerChannel( eventids, align_method=0, template_eventid=eventids[0], plot=plot_aligned_wf,event_type=None)
         
         resampled_averaged_waveforms_original_length = numpy.zeros((8,len(_reader.t())))
@@ -251,13 +257,47 @@ class SelectFromCollection(object):
         self.canvas.draw_idle()
 
 
+class Skipper(object):
+    '''
+    This uses the code from https://matplotlib.org/3.1.1/gallery/widgets/buttons.html.
+    The goal is to give buttons to skip back and forth in time to avoid using the drag
+    function which is very slow over xlaunch applications.  I will likely do skip forward
+    be +60 s, skip back is - 15 s.  Window width of 60s.  
+    '''
+    def __init__(self, ax, next_skip_s=60, prev_skip_s=15):
+        self.ax = ax
+        self.next_skip_s = next_skip_s
+        self.prev_skip_s = prev_skip_s
+        self.axprev = plt.axes([0.7, 0.05, 0.1, 0.075])
+        self.axnext = plt.axes([0.81, 0.05, 0.1, 0.075])
+        self.bnext = Button(self.axnext, 'Next')
+        self.bnext.on_clicked(self.next)
+        self.bprev = Button(self.axprev, 'Previous')
+        self.bprev.on_clicked(self.prev)
+
+    def next(self,event):
+        xlim = self.ax.get_xlim()
+        self.ax.set_xlim(xlim[0] + self.next_skip_s, xlim[1] + self.next_skip_s )
+        plt.draw()
+
+    def prev(self,event):
+        xlim = self.ax.get_xlim()
+        self.ax.set_xlim(xlim[0] - self.prev_skip_s, xlim[1] - self.prev_skip_s )
+        plt.draw()
+
 
 
 if __name__ == '__main__':
-    runs = numpy.arange(1700,1701)#numpy.array([1728])#numpy.arange(1770,1800) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
-    runs = [1763]
+    plt.close('all')
+    if len(sys.argv) > 1:
+        run = int(sys.argv[1])
+        
+    else:
+        run = 1701
+    #runs = numpy.arange(1700,1701)#numpy.array([1728])#numpy.arange(1770,1800) #No RF triggers before 1642, but 1642,43,44,45 don't have pointing?
+    runs = [run]
     colormap_mode = 7
-    add_plane_tracks = False
+    add_plane_tracks = True
     #0 : Color Corresponds to Peak Frequency In Band (MHz)
     #1 : Uniqueness (1 = Unique, 0 = Common)
     #2 : Number of Similar Events in Run
@@ -288,7 +328,7 @@ if __name__ == '__main__':
     
 
     #filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'
-    filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_13-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00'
+    filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00'
     
 
     #filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_%i-align_0'%corr_length
@@ -311,7 +351,7 @@ if __name__ == '__main__':
     vpol_minimum_correlating_baselines = 4 # Atleast this many of the 6 baselines must pass the above threshold for the event to count.
 
     apply_rough_dir_cut = False
-    cut_angle = 110 #Angles below this are ignored
+    cut_angle = 100 #Angles below this are ignored
     map_filter_string = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_0-Hilb_0-upsample_32768-maxmethod_0' #The settings used you want to cut dir on. 
 
     cut_48MHz_signals = False
@@ -321,8 +361,8 @@ if __name__ == '__main__':
 
     apply_template_cut = False
 
-    apply_similarity_count_cut = False
-    similarity_count_cut_limit = 2
+    apply_similarity_count_cut = True
+    similarity_count_cut_limit = 3000
 
     apply_hpol_impuslivity_cut = False
     hpol_impulsivity_threshold = 0.5
@@ -336,107 +376,10 @@ if __name__ == '__main__':
     similarity_hist_threshold = 100 #Events in bins with less than this number of counts are plotted.  
 
 
-    if add_plane_tracks:
-        flight_data_location_hdf5 = '/project2/avieregg/beacon/flight_backup_jan2020/data/altered/' #The files will be hdf5.
-        
-        #SHOULD GET START AND STOP FROM THE FILES
-        start = time.timestamp()
-        stop = time.timestamp()+0.5*60*60
-        min_approach_cut_km = 25 #km
-        #unique_flights,all_vals = getTracks(start,stop,min_approach_cut_km,hour_window = 12)
-        flight_tracks_ENU, all_vals = getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 0,flights_of_interest=[])
-
-
-        # cm = plt.cm.get_cmap('viridis')
-
-        # #pairs = (0,1),(0,2),(0,3),(1,2),(1,3),(2,3)
-        # #NS Pairs = (0,2), (1,3)
-        # #EW Pairs = (0,1), (2,3)
-
-
-        # plot_distance_cut_limit = 50 #km
-
-        # if plot_distance_cut_limit is not None:
-        #     norm = plt.Normalize(0,plot_distance_cut_limit)
-        # else:
-        #     norm = plt.Normalize(0,100)
-
-
-        # #Plot lonlat
-        # '''
-        # Make a plot that hopefully illustrates where planes are visible for us.  Why are the tracks
-        # disappear where they do?
-        # TODO
-        # '''
-
-        # # plt.figure()
-        # # zero = info.loadAntennaZeroLocation()
-        # # plt.scatter(all_vals['lon'],all_vals['lat'],alpha=0.5,s=1,label='Flight Tracks')
-
-        
-        # # #plt.scatter(all_vals['lon'][all_vals['names'] == 'a14c0f'],all_vals['lat'][all_vals['names'] == 'a14c0f'],c=all_vals['timestamps'][all_vals['names'] == 'a14c0f'],alpha=0.5,s=1)
-        # # #plt.colorbar()    
-        # # plt.scatter(zero[1],zero[0],c='r',label='Beacon Ant 0')
-        # # plt.xlabel('Longitude')
-        # # plt.ylabel('Latitude')
-        # # plt.minorticks_on()
-        # # plt.grid(b=True, which='major', color='k', linestyle='-')
-        # # plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-        # # plt.legend()
 
 
 
-        # for ant_i, ant_j in [(0,1),(0,2),(0,3),(1,2),(1,3),(2,3)]:
-        #     #pairs = (0,1),(0,2),(0,3),(1,2),(1,3),(2,3)
-        #     #NS Pairs = (0,2), (1,3)
-        #     #EW Pairs = (0,1), (2,3)
-        #     #Plot tracks
-        #     plt.figure()
-        #     existing_locations_A = numpy.array([])
-        #     existing_locations_B = numpy.array([])
-
-        #     for flight in list(flight_tracks_ENU.keys()):
-        #         track = flight_tracks_ENU[flight]
-        #         tof, dof, dt = getTimeDelaysFromTrack(track)
-        #         distance = numpy.sqrt(numpy.sum(track[:,0:3]**2,axis=1))/1000 #km
-
-        #         if plot_distance_cut_limit is not None:
-        #             plot_distance_cut = distance <= plot_distance_cut_limit
-        #         else:
-        #             plot_distance_cut = numpy.ones_like(distance,dtype=bool)
-
-        #         x = (track[plot_distance_cut,3] - start)/60
-        #         y = dt['expected_time_differences_hpol'][(ant_i, ant_j)][plot_distance_cut]
-        #         plt.plot(x,y,linestyle = '--',alpha=0.5)
-        #         text_color = plt.gca().lines[-1].get_color()
-        #         plt.scatter(x,y,c=distance[plot_distance_cut],cmap=cm,norm=norm)
-
-        #         #Attempt at avoiding overlapping text.
-        #         text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
-        #         if existing_locations_A.size != 0:
-        #             if len(numpy.shape(existing_locations_A)) == 1:
-        #                 dist = numpy.sqrt((text_loc[0]-existing_locations_A[0])**2 + (text_loc[1]-existing_locations_A[1])**2) #weird units but works
-        #                 while dist < 15:
-        #                     text_loc[1] -= 1
-        #                     dist = numpy.sqrt((text_loc[0]-existing_locations_A[0])**2 + (text_loc[1]-existing_locations_A[1])**2) #weird units but works
-        #             else:
-        #                 dist = min(numpy.sqrt((existing_locations_A[:,0] - text_loc[0])**2 + (existing_locations_A[:,1] - text_loc[1])**2))
-        #                 while dist < 15:
-        #                     text_loc[1] -= 1
-        #                     dist = min(numpy.sqrt((existing_locations_A[:,0] - text_loc[0])**2 + (existing_locations_A[:,1] - text_loc[1])**2)) #weird units but works
-        #             existing_locations_A = numpy.vstack((existing_locations_A,text_loc))
-        #         else:
-        #             existing_locations_A = text_loc           
-
-        #         plt.text(text_loc[0],text_loc[1],flight,color=text_color,withdash=True)
-
-        #     plt.xlabel('Time Since Timestamp=%0.1f (min)'%start)
-        #     plt.ylabel('Expected Observed Time Difference\nB/w Hpol %i and %i (ns)'%(ant_i,ant_j))
-        #     cbar = plt.colorbar()
-        #     cbar.set_label('Distance From BEACON (km)', rotation=90)
-
-
-
+    
 
     for run_index, run in enumerate(runs):
         try:
@@ -608,8 +551,11 @@ if __name__ == '__main__':
                         if numpy.logical_or(colormap_mode in [1,2,4,5],apply_similarity_count_cut == True):
                             #similarity_count needed for colormap at least (if not also cut)
                             try:
+                                print('KEYS FOR SIMILARAITY_COUNT:')
+                                print(list(file['similarity_count'].keys()))
                                 file['similarity_count'][filter_string]['%s_count'%(pol)][total_loading_cut]
                                 similarity_count = file['similarity_count'][filter_string]['%s_count'%(pol)][total_loading_cut]
+
                                 if False:
                                     plt.figure()
                                     plt.hist(file['similarity_count'][filter_string]['%s_count'%('hpol')][total_loading_cut],label='hpol similarity count',bins=1000)
@@ -782,6 +728,73 @@ if __name__ == '__main__':
     #total_hpol_delays = delays[cut,:]
     #similarity_percent = similarity_count/numpy.shape(delays)[0]
     try:
+        ###############################################
+        # Finding planes that are potentially visible #
+        ###############################################
+        if add_plane_tracks:
+            flight_data_location_hdf5 = '/project2/avieregg/beacon/flight_backup_jan2020/data/altered/' #The files will be hdf5.
+            
+            #SHOULD GET START AND STOP FROM THE FILES
+            start = numpy.min(times)
+            stop = numpy.max(times)
+            min_approach_cut_km = 50 #km
+            #unique_flights,all_vals = getTracks(start,stop,min_approach_cut_km,hour_window = 12)
+            flight_tracks_ENU, all_vals = pt.getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 0,flights_of_interest=[])
+
+            def addPlaneTracks(_ax, antenna_pair_list, _flight_tracks_ENU, add_label=False):
+                min_y = 1000
+                max_y = -1000
+                for ant_i, ant_j in antenna_pair_list:
+                    #pairs = (0,1),(0,2),(0,3),(1,2),(1,3),(2,3)
+                    #NS Pairs = (0,2), (1,3)
+                    #EW Pairs = (0,1), (2,3)
+                    #Plot tracks
+                    existing_locations_A = numpy.array([])
+                    existing_locations_B = numpy.array([])
+
+                    for flight in list(_flight_tracks_ENU.keys()):
+                        track = _flight_tracks_ENU[flight]
+                        tof, dof, dt = pt.getTimeDelaysFromTrack(track)
+                        distance = numpy.sqrt(numpy.sum(track[:,0:3]**2,axis=1))/1000 #km
+                        plot_distance_cut_limit = None
+                        if plot_distance_cut_limit is not None:
+                            plot_distance_cut = distance <= plot_distance_cut_limit
+                        else:
+                            plot_distance_cut = numpy.ones_like(distance,dtype=bool)
+
+                        x = (track[plot_distance_cut,3] - numpy.min(times))/60.0
+                        y = dt['expected_time_differences_hpol'][(ant_i, ant_j)][plot_distance_cut]
+                        _ax.plot(x,y,linestyle = '--',alpha=0.5)
+                        text_color = _ax.lines[-1].get_color()
+                        #_ax.scatter(x,y,cmap=cm,norm=norm)
+
+                        #Attempt at avoiding overlapping text.
+                        text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
+                        if existing_locations_A.size != 0:
+                            if len(numpy.shape(existing_locations_A)) == 1:
+                                dist = numpy.sqrt((text_loc[0]-existing_locations_A[0])**2 + (text_loc[1]-existing_locations_A[1])**2) #weird units but works
+                                while dist < 15:
+                                    text_loc[1] -= 1
+                                    dist = numpy.sqrt((text_loc[0]-existing_locations_A[0])**2 + (text_loc[1]-existing_locations_A[1])**2) #weird units but works
+                            else:
+                                dist = min(numpy.sqrt((existing_locations_A[:,0] - text_loc[0])**2 + (existing_locations_A[:,1] - text_loc[1])**2))
+                                while dist < 15:
+                                    text_loc[1] -= 1
+                                    dist = min(numpy.sqrt((existing_locations_A[:,0] - text_loc[0])**2 + (existing_locations_A[:,1] - text_loc[1])**2)) #weird units but works
+                            existing_locations_A = numpy.vstack((existing_locations_A,text_loc))
+                        else:
+                            existing_locations_A = text_loc           
+                        if add_label == True:
+                            _ax.text(text_loc[0],text_loc[1],flight,color=text_color,withdash=True)
+                        _max_y = max(y)
+                        _min_y = min(y)
+                        if _max_y > max_y:
+                            max_y = _max_y
+                        if _min_y < min_y:
+                            min_y = _min_y
+                _ax.set_ylim(min(1.1*min_y,0.9*min_y),max(1.1*max_y,0.9*max_y))
+                return _ax
+
         if False:
             remove_top_n_bins = 0
             n_bins = 500
@@ -858,6 +871,7 @@ if __name__ == '__main__':
             plt.xlabel('t0 - t1')
             plt.ylabel('t0 - t3')
 
+        ax1_exists = False
         if True:
 
             c = total_colors
@@ -871,11 +885,14 @@ if __name__ == '__main__':
                 #NS Pairs = (0,2), (1,3)
                 #EW Pairs = (0,1), (2,3)
 
-                fig = plt.figure()
+                fig_A = plt.figure()
                 plt.suptitle('North South ' + suptitle)
                 ax1 = plt.subplot(2,1,1)
-                
+                ax1_exists = True
                 scatter1 = plt.scatter((times[hist_cut] - numpy.min(times))/60.0, total_hpol_delays[hist_cut,1],label = 't0 - t2',c=c,cmap=cm,norm=norm)
+                
+                if add_plane_tracks:
+                    ax1 = addPlaneTracks(ax1, [(0,2)], flight_tracks_ENU)
                 #cbar = ax1.colorbar(scatter)
                 plt.xlabel('Calibrated trigtime From Start of Run (min)')
                 plt.ylabel('t0 - t2 (ns)')
@@ -886,16 +903,16 @@ if __name__ == '__main__':
                 
                 divider = make_axes_locatable(ax1)
                 cax = divider.append_axes('right', size='5%', pad=0.05)
-                fig.colorbar(scatter1, cax=cax, orientation='vertical')
+                fig_A.colorbar(scatter1, cax=cax, orientation='vertical')
                 plt.minorticks_on()
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-
-
                 ax2 = plt.subplot(2,1,2,sharex=ax1)
                 
                 scatter2 = plt.scatter((times[hist_cut] - numpy.min(times))/60.0, total_hpol_delays[hist_cut,4],label = 't1 - t3',c=c,cmap=cm,norm=norm)
+                if add_plane_tracks:
+                    ax2 = addPlaneTracks(ax2, [(1,3)], flight_tracks_ENU)
                 #cbar = ax2.colorbar(scatter)
                 plt.xlabel('Calibrated trigtime From Start of Run (min)')
                 plt.ylabel('t1 - t3 (ns)')
@@ -906,7 +923,7 @@ if __name__ == '__main__':
 
                 divider = make_axes_locatable(ax2)
                 cax2 = divider.append_axes('right', size='5%', pad=0.05)
-                fig.colorbar(scatter2, cax=cax2, orientation='vertical')
+                fig_A.colorbar(scatter2, cax=cax2, orientation='vertical')
                 plt.minorticks_on()
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
@@ -915,6 +932,7 @@ if __name__ == '__main__':
                 selector1 = SelectFromCollection(ax1, scatter1,cut_eventids,cut_runnum,total_hpol_delays[hist_cut],total_vpol_delays[hist_cut])
                 selector2 = SelectFromCollection(ax2, scatter2,cut_eventids,cut_runnum,total_hpol_delays[hist_cut],total_vpol_delays[hist_cut])
 
+                skipperA = Skipper(ax2) #On the lower axis.  
 
             if True:
                 #EAST WEST SENSITIVE PLOT
@@ -923,11 +941,16 @@ if __name__ == '__main__':
                 #EW Pairs = (0,1), (2,3)
 
                 
-                fig = plt.figure()
+                fig_B = plt.figure()
                 plt.suptitle('East West ' + suptitle)
-                ax3 = plt.subplot(2,1,1)
+                if ax1_exists:
+                    ax3 = plt.subplot(2,1,1,sharex=ax1)
+                else:
+                    ax3 = plt.subplot(2,1,1)
                 
                 scatter3 = plt.scatter((times[hist_cut] - numpy.min(times))/60.0, total_hpol_delays[hist_cut,0],label = 't0 - t1',c=c,cmap=cm,norm=norm)
+                if add_plane_tracks:
+                    ax3 = addPlaneTracks(ax3, [(0,1)], flight_tracks_ENU)
                 #cbar = ax3.colorbar(scatter)
                 plt.xlabel('Calibrated trigtime From Start of Run (min)')
                 plt.ylabel('t0 - t1 (ns)')
@@ -938,7 +961,7 @@ if __name__ == '__main__':
                 
                 divider = make_axes_locatable(ax3)
                 cax = divider.append_axes('right', size='5%', pad=0.05)
-                fig.colorbar(scatter3, cax=cax, orientation='vertical')
+                fig_B.colorbar(scatter3, cax=cax, orientation='vertical')
                 plt.minorticks_on()
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
@@ -946,8 +969,15 @@ if __name__ == '__main__':
 
 
                 ax4 = plt.subplot(2,1,2,sharex=ax3)
+
+                if ax1_exists:
+                    ax4 = plt.subplot(2,1,2,sharex=ax1)
+                else:
+                    ax4 = plt.subplot(2,1,2,sharex=ax3)
                 
                 scatter4 = plt.scatter((times[hist_cut] - numpy.min(times))/60.0, total_hpol_delays[hist_cut,5],label = 't2 - t3',c=c,cmap=cm,norm=norm)
+                if add_plane_tracks:
+                    ax4 = addPlaneTracks(ax4, [(2,3)], flight_tracks_ENU)
                 #cbar = ax4.colorbar(scatter)
                 plt.xlabel('Calibrated trigtime From Start of Run (min)')
                 plt.ylabel('t2 - t3 (ns)')
@@ -958,7 +988,7 @@ if __name__ == '__main__':
 
                 divider = make_axes_locatable(ax4)
                 cax4 = divider.append_axes('right', size='5%', pad=0.05)
-                fig.colorbar(scatter4, cax=cax4, orientation='vertical')
+                fig_B.colorbar(scatter4, cax=cax4, orientation='vertical')
                 plt.minorticks_on()
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
@@ -967,8 +997,77 @@ if __name__ == '__main__':
                 selector3 = SelectFromCollection(ax3, scatter3,cut_eventids,cut_runnum,total_hpol_delays[hist_cut],total_vpol_delays[hist_cut])
                 selector4 = SelectFromCollection(ax4, scatter4,cut_eventids,cut_runnum,total_hpol_delays[hist_cut],total_vpol_delays[hist_cut])
 
+                skipperB = Skipper(ax4) #On the lower axis.
+                if ~ax1_exists:
+                    ax3.set_xlim(0,60)
+            if True:
+                #Remaining PLOT
+                #pairs = (0,1),(0,2),(0,3),(1,2),(1,3),(2,3)
+                #NS Pairs = (0,2), (1,3)
+                #EW Pairs = (0,1), (2,3)
+                #Remaining Pairs = (0,3), (1,2)
+
+                
+                fig_C = plt.figure()
+                plt.suptitle('East West ' + suptitle)
+                if ax1_exists:
+                    ax5 = plt.subplot(2,1,1,sharex=ax1)
+                else:
+                    ax6 = plt.subplot(2,1,1)
+                
+                scatter5 = plt.scatter((times[hist_cut] - numpy.min(times))/60.0, total_hpol_delays[hist_cut,2],label = 't0 - t3',c=c,cmap=cm,norm=norm)
+                if add_plane_tracks:
+                    ax5 = addPlaneTracks(ax5, [(0,3)], flight_tracks_ENU)
+                #cbar = ax5.colorbar(scatter)
+                plt.xlabel('Calibrated trigtime From Start of Run (min)')
+                plt.ylabel('t0 - t3 (ns)')
+                plt.legend()
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                
+                divider = make_axes_locatable(ax5)
+                cax = divider.append_axes('right', size='5%', pad=0.05)
+                fig_C.colorbar(scatter5, cax=cax, orientation='vertical')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
 
+
+                if ax1_exists:
+                    ax6 = plt.subplot(2,1,2,sharex=ax1)
+                else:
+                    ax6 = plt.subplot(2,1,2,sharex=ax5)
+                
+                scatter6 = plt.scatter((times[hist_cut] - numpy.min(times))/60.0, total_hpol_delays[hist_cut,3],label = 't1 - t2',c=c,cmap=cm,norm=norm)
+                if add_plane_tracks:
+                    ax6 = addPlaneTracks(ax6, [(1,2)], flight_tracks_ENU)
+                #cbar = ax6.colorbar(scatter)
+                plt.xlabel('Calibrated trigtime From Start of Run (min)')
+                plt.ylabel('t1 - t2 (ns)')
+                plt.minorticks_on()
+                plt.legend()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                divider = make_axes_locatable(ax6)
+                cax6 = divider.append_axes('right', size='5%', pad=0.05)
+                fig_C.colorbar(scatter6, cax=cax6, orientation='vertical')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+                selector5 = SelectFromCollection(ax5, scatter5,cut_eventids,cut_runnum,total_hpol_delays[hist_cut],total_vpol_delays[hist_cut])
+                selector6 = SelectFromCollection(ax6, scatter6,cut_eventids,cut_runnum,total_hpol_delays[hist_cut],total_vpol_delays[hist_cut])
+
+
+                skipperC = Skipper(ax6) #On the lower axis.
+                if ~ax1_exists:
+                    ax5.set_xlim(0,60)
+            if ax1_exists:
+                ax1.set_xlim(0,60)
             ############################
             '''
             c = total_colors

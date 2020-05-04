@@ -1856,11 +1856,11 @@ class Correlator:
             fig = plt.figure(figsize=(16,9))
             ax = fig.add_subplot(1,1,1, projection='mollweide')
             
-            # fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
-            # ax.set_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
+            fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
+            ax.set_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
 
-            fig.canvas.set_window_title('Correlation Map Airplane Event %i'%(0))
-            ax.set_title('Correlation Map Airplane Event %i'%(0))
+            # fig.canvas.set_window_title('Correlation Map Airplane Event %i'%(0))
+            # ax.set_title('Correlation Map Airplane Event %i'%(0))
 
 
             if hilbert == True:
@@ -1911,30 +1911,31 @@ class Correlator:
             else:
                 plane_elevation = None
 
-
             if plane_elevation is not None and _plane_az is not None:
                 ax, circle, lines = self.addCircleToMap(ax, _plane_az[0], plane_elevation[0], azimuth_offset_deg=0.0, mollweide=True, radius=6.0, crosshair=True, return_circle=True, return_crosshair=True, color='fuchsia', linewidth=2.0,fill=False,zorder=10) #azimuth offset_deg already accounted for as passed.
 
             def update(frame):
                 _frame = frame%len(eventids) #lets it loop multiple times.  i.e. give animation more frames but same content looped.
-                fig.canvas.set_window_title('Correlation Map Airplane Event %i'%(_frame))
-                ax.set_title('Correlation Map Airplane Event %i'%(_frame))
-                # fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[_frame]))
-                # ax.set_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[_frame]))
+                # fig.canvas.set_window_title('Correlation Map Airplane Event %i'%(_frame))
+                # ax.set_title('Correlation Map Airplane Event %i'%(_frame))
+                fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[_frame]))
+                ax.set_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[_frame]))
                 im.set_array(all_maps[_frame].ravel())
 
                 if hilbert == True:
                     im.set_clim(vmin=numpy.min(all_maps[_frame]),vmax=numpy.max(all_maps[_frame]))
 
-                azimuth = numpy.deg2rad(_plane_az[_frame]) #Molweide True for animated.
-                elevation = numpy.deg2rad(plane_elevation[_frame])
+                try:
+                    azimuth = numpy.deg2rad(_plane_az[_frame]) #Molweide True for animated.
+                    elevation = numpy.deg2rad(plane_elevation[_frame])
+                    if plane_elevation is not None and _plane_az is not None:
+                        circle.center = azimuth, elevation
+                        ax.add_artist(circle)
 
-                if plane_elevation is not None and _plane_az is not None:
-                    circle.center = azimuth, elevation
-                    ax.add_artist(circle)
-
-                    lines[0].set_ydata([numpy.deg2rad(plane_elevation[_frame]),numpy.deg2rad(plane_elevation[_frame])])
-                    lines[1].set_xdata([numpy.deg2rad(_plane_az[_frame]),numpy.deg2rad(_plane_az[_frame])])
+                        lines[0].set_ydata([numpy.deg2rad(plane_elevation[_frame]),numpy.deg2rad(plane_elevation[_frame])])
+                        lines[1].set_xdata([numpy.deg2rad(_plane_az[_frame]),numpy.deg2rad(_plane_az[_frame])])
+                except Exception as e:
+                    pass
                 return [im]
 
             ani = FuncAnimation(fig, update, frames=range(2*len(eventids)),blit=False,save_count=0)
@@ -1948,7 +1949,7 @@ class Correlator:
                 self.axs.append(ax)
                 self.animations.append(ani)
             
-            return        
+            return      
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)

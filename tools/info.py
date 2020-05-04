@@ -110,6 +110,7 @@ def loadKnownPlaneDict(ignore_planes=[]):
                                                 [0.06910693, 0.09430286, 0.0840499 , 0.24675524, 0.27775983, 0.17633311]])}}
 
     if ~numpy.isin('1773-63659',ignore_planes):
+        #Note:  I FOUND AFTER THAT EVENT 62999 IS LIKELY ALSO PART OF THIS PLANE AND AT A SIGNIFICANTLY DIFFERENT ANGLE.  WOULD BE INTERESTING TO LOOK AT.
         known_planes['1773-63659'] = {  'eventids':numpy.array([[1773,63659],[1773,63707],[1773,63727],[1773,63752],[1773,63757]]),\
                         'known_flight':'a28392',\
                         'signal_classification':'HF',\
@@ -246,6 +247,7 @@ def loadKnownPlaneDict(ignore_planes=[]):
                                                 [0.07720588, 0.06618241, 0.06720744, 0.94268425, 0.93906486, 0.92917063]])}}
 
     if ~numpy.isin('1783-28830',ignore_planes):
+        #NOTE I FOUND SOME MORE EVENTS I THINK TO BE PART OF THIS PLANE.
         known_planes['1783-28830'] = {  'eventids':numpy.array([[1783,28830],[1783,28832],[1783,28861]]),\
                         'known_flight':'a52e4f',\
                         'signal_classification':'LF',\
@@ -921,11 +923,21 @@ MAKE AN EXPECTED PULSER TIME DELAY FUNCTION
 
 if __name__ == '__main__':
     try:
+        from pprint import pprint
+        
         print('Loaded run info dictionaries.')
         #plt.ion()
         #loadBeamDelays()
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = loadAntennaLocationsENU(deploy_index=default_deploy)
+        print('antenna_physical = ')
+        pprint(antennas_physical)
 
-        known_planes, calibrated_trigtime, output_tracks = getKnownPlaneTracks()
+        print('antenna_phase_hpol = ')
+        pprint(antennas_phase_hpol)
+
+        print('antenna_phase_vpol = ')
+        pprint(antennas_phase_vpol)
+        #known_planes, calibrated_trigtime, output_tracks = getKnownPlaneTracks()
 
     except Exception as e:
         print('Error in main loop.')

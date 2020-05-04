@@ -88,7 +88,7 @@ def countSimilar(delays,similarity_atol=2.5,verbose=True):
         return e
 
 if __name__=="__main__":
-    if len(sys.argv) == 2:
+    if len(sys.argv) >= 2:
         run = int(sys.argv[1])
     else:
         run = 1701
@@ -118,7 +118,6 @@ if __name__=="__main__":
                 if numpy.size(eventids) != 0:
                     print('run = ',run)
                 dsets = list(file.keys()) #Existing datasets
-
                 if not numpy.isin('time_delays',dsets):
                     print('time delays not present to perform similarity count in run %i'%run)
                     file.close()
@@ -133,6 +132,11 @@ if __name__=="__main__":
                     similarity_count_dsets = list(file['similarity_count'].keys())
 
                     for tdset in time_delays_dsets:
+                        align_method = int(tdset.split('align_')[1].split('-')[0])
+                        if align_method == 13:
+                            print('Similarity currently not designed to work with align method 13, which results in multiple alignment times.')
+                            print('Skipping %s'%tdset)
+                            continue
                         if not numpy.isin(tdset,similarity_count_dsets):
                             file['similarity_count'].create_group(tdset)
                         else:
