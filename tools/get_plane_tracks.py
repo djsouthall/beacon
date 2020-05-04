@@ -15,6 +15,7 @@ import pandas as pd
 import itertools
 import h5py
 from pprint import pprint
+import inspect
 
 #Personal Imports
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])

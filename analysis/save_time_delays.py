@@ -134,7 +134,7 @@ if __name__=="__main__":
 
     print(filter_string)
 
-
+    import pdb; pdb.set_trace()
 
     plot_filter = False
     plot_multiple = False

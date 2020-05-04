@@ -80,7 +80,7 @@ cm = plt.cm.get_cmap('plasma')
 # }
 
 #Now all means only the ones that are planes! 
-all_candidates = {\
+confirmed_candidates = {\
 '1728-62026':{  'eventids':numpy.array([[1728,62026],[1728,62182],[1728,62370],[1728,62382],[1728,62552],[1728,62577]]),\
                 'known_flight':'a44585',\
                 'align_method':0,\
@@ -107,6 +107,97 @@ all_candidates = {\
                 'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}}\
 }
 
+all_candidates = {\
+'1705-55163':{  'eventids':numpy.array([[1705,55163],[1705,55296],[1705,55643]]),\
+                'known_flight':'a405d9',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+'1720-71316':{  'eventids':numpy.array([[1720,71316],[1720,71324]]),\
+                'known_flight':'a678ef',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+'1728-62026':{  'eventids':numpy.array([[1728,62026],[1728,62182],[1728,62370],[1728,62382],[1728,62552],[1728,62577]]),\
+                'known_flight':'a44585',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+'1759-510':{  'eventids':numpy.array([[1759,510]]),\
+                'known_flight':'a04abd',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+'1772-71053':{  'eventids':numpy.array([[1772,71053]]),\
+                'known_flight':'ab81b5',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+'1773-14413':{  'eventids':numpy.array([[1773,14413],[1773,14540],[1773,14590]]),\
+                'known_flight':'aa8c39',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+'1773-63659':{  'eventids':numpy.array([[1773,62999],[1773,63659],[1773,63707],[1773,63727],[1773,63752],[1773,63757]]),\
+                'known_flight':'a28392',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+'1774-178':{  'eventids':numpy.array([[1774,178],[1774,381],[1774,533],[1774,1348],[1774,1485]]),\
+                'known_flight':'a1c2b3',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+'1774-88800':{  'eventids':numpy.array([[1774,88800],[1774,88810],[1774,88815],[1774,88895],[1774,88913],[1774,88921],[1774,88923],[1774,88925],[1774,88944],[1774,88955],[1774,88959],[1774,88988],[1774,88993],[1774,89029],[1774,89030],[1774,89032],[1774,89034],[1774,89041],[1774,89043],[1774,89052],[1774,89172],[1774,89175],[1774,89181],[1774,89203],[1774,89204],[1774,89213]]),\
+                'known_flight':'ab5f43',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+'1783-28830':{  'eventids':numpy.array([[1783,28830],[1783,28832],[1783,28842],[1783,28843],[1783,28861],[1783,28886]]),\
+                'known_flight':'a52e4f',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+'1783-34681':{  'eventids':numpy.array([[1783,34681],[1783,34725],[1783,34730],[1783,34738],[1783,34778],[1783,34793],[1783,34811],[1783,34826]]),\
+                'known_flight':None,\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+'1784-7166':{   'eventids':numpy.array([[1784,7166],[1784,7176],[1784,7179],[1784,7195],[1784,7203],[1784,7244],[1784,7255]]),\
+                'known_flight':'acf975',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}}\
+}
+
+#THESE ARE JUST THE NEW ONES FROM THE UNBLINDED SEARCH.
+all_candidates = {\
+'1705-55163':{  'eventids':numpy.array([[1705,55163],[1705,55296],[1705,55643]]),\
+                'known_flight':'a405d9',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+'1720-71316':{  'eventids':numpy.array([[1720,71316],[1720,71324]]),\
+                'known_flight':'a678ef',\
+                'align_method':9,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+'1759-510':{  'eventids':numpy.array([[1759,510]]),\
+                'known_flight':'a04abd',\
+                'align_method':9,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+'1772-71053':{  'eventids':numpy.array([[1772,71053]]),\
+                'known_flight':'ab81b5',\
+                'align_method':9,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+'1773-63659':{  'eventids':numpy.array([[1773,62999]]),\
+                'known_flight':'a28392',\
+                'align_method':9,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+'1774-178':{  'eventids':numpy.array([[1774,178],[1774,381],[1774,533],[1774,1348],[1774,1485]]),\
+                'known_flight':'a1c2b3',\
+                'align_method':9,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+'1784-7166':{   'eventids':numpy.array([[1784,7203]]),\
+                'known_flight':'acf975',\
+                'align_method':9,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}}\
+}
+
+
+
+all_candidates = {\
+'1720-71316':{  'eventids':numpy.array([[1720,71324]]),\
+                'known_flight':'a678ef',\
+                'align_method':9,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+}
 
 '''
 
@@ -137,14 +228,6 @@ all_candidates = {\
 
 '''
 
-all_candidates = {\
-'1774-88800':{  'eventids':numpy.array([[1774,88944],[1774,88955],[1774,88959],[1774,88988]]),\
-                'known_flight':'ab5f43',\
-                'align_method':11,\
-                'baselines':{'hpol':[],'vpol':[[1,2],[1,3],[2,3]]}}
-}
-
-
 
 candidates = all_candidates
 # test_track = '1784-7166'#'1728-62026'
@@ -170,7 +253,6 @@ if __name__ == '__main__':
 
     #FILTER STRING USED IF ABOVE IS FALSE
     default_align_method=0 #WILL BE CHANGED IF GIVEN ABOVE
-    filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_%i-align_%i'%(final_corr_length,default_align_method)
 
 
     crit_freq_low_pass_MHz = None#60 #This new pulser seems to peak in the region of 85 MHz or so
@@ -193,6 +275,14 @@ if __name__ == '__main__':
     plot_time_delays = True
 
     plot_plane_tracks = True #if True then plot_time_delays is set to True
+
+    shorten_signals = False
+    shorten_thresh = 0.7
+    shorten_delay = 10.0
+    shorten_length = 90.0
+
+    filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_%i-align_%i'%(final_corr_length,default_align_method)
+    
 
     try:
         for candidates_key in list(candidates.keys()):
@@ -242,16 +332,16 @@ if __name__ == '__main__':
 
                         if calculate_time_delays == True:
                             tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filter,apply_phase_response=apply_phase_response)
-                            time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids,align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=None,vpol_cut=None, colors=calibrated_trigtime)
+                            time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids,align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=None,vpol_cut=None, colors=calibrated_trigtime,shorten_signals = shorten_signals,shorten_thresh = shorten_thresh,shorten_delay = shorten_delay,shorten_length = shorten_length)
                             hpol_delays = time_shifts[0:6,:].T
                             vpol_delays = time_shifts[6:12,:].T
                             hpol_corrs = corrs[0:6,:].T
                             vpol_corrs = corrs[6:12,:].T
                         else:
-                            hpol_delays = numpy.vstack((file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,1)][load_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,2)][load_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,3)][load_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(1,2)][load_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(1,3)][load_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(2,3)][load_cut])).T.T
-                            vpol_delays = numpy.vstack((file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(0,1)][load_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(0,2)][load_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(0,3)][load_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(1,2)][load_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(1,3)][load_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(2,3)][load_cut])).T.T
-                            hpol_corrs = numpy.vstack((file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(0,1)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(0,2)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(0,3)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(1,2)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(1,3)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(2,3)][load_cut])).T.T
-                            vpol_corrs = numpy.vstack((file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(0,1)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(0,2)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(0,3)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(1,2)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(1,3)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(2,3)][load_cut])).T.T
+                            hpol_delays = numpy.vstack((file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,1)][load_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,2)][load_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(0,3)][load_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(1,2)][load_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(1,3)][load_cut],file['time_delays'][filter_string]['hpol_t_%isubtract%i'%(2,3)][load_cut])).T
+                            vpol_delays = numpy.vstack((file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(0,1)][load_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(0,2)][load_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(0,3)][load_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(1,2)][load_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(1,3)][load_cut],file['time_delays'][filter_string]['vpol_t_%isubtract%i'%(2,3)][load_cut])).T
+                            hpol_corrs = numpy.vstack((file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(0,1)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(0,2)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(0,3)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(1,2)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(1,3)][load_cut],file['time_delays'][filter_string]['hpol_max_corr_%isubtract%i'%(2,3)][load_cut])).T
+                            vpol_corrs = numpy.vstack((file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(0,1)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(0,2)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(0,3)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(1,2)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(1,3)][load_cut],file['time_delays'][filter_string]['vpol_max_corr_%isubtract%i'%(2,3)][load_cut])).T
                         print('\n\n')
 
                         pp = pprint.PrettyPrinter(width=200,indent=0) #Width isn't really working which is lame.
@@ -310,7 +400,7 @@ if __name__ == '__main__':
                 
 
 
-                for pol in ['Vpol']:#['Hpol','Vpol']:
+                for pol in ['Hpol']:#['Hpol','Vpol']:
                     pair_cut = numpy.array([pair in candidates[candidates_key]['baselines'][pol.lower()] for pair in [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]] ]) #Checks which pairs are worth looping over.
                     time_delay_fig = plt.figure()
                     time_delay_fig.canvas.set_window_title('%s Delays'%pol)
@@ -355,6 +445,7 @@ if __name__ == '__main__':
                                     x = track[plot_distance_cut,3]
 
                                     #cable_delays = info.loadCableDelays()[mode]
+                                    plt.xlim(min(x),max(x))
 
 
                                     y = dt['expected_time_differences_hpol'][(pair[0], pair[1])][plot_distance_cut]

@@ -1,14 +1,6 @@
 '''
-This is meant to generate plots for plane candidates as identified by the
-plane_hunt.py script.  My hopes for this script are to:
-
-1 : Plot time delays curves for all baselines
-2 : Plot some directional information.  Perhaps estimated with simple montecarlo?
-3 : Determine the max correlation between signals in the same channel to give some
-    metric that the events are the same in nature.  Not sure how to do this combinatorically
-    but it might be fine just to do it for each pair. 
-4 : Plot correlation maps that scan across events in plane.  Maybe with interpolated time delay
-    steps for smooth animation?
+This is useful for plotting event time delays that are already associated
+with a particular plane and stored in info.py.
 '''
 
 import numpy
@@ -59,65 +51,6 @@ known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
 ignorable_pulser_ids = info.loadIgnorableEventids()
 cm = plt.cm.get_cmap('plasma')
 rescm = plt.cm.get_cmap('viridis')
-
-
-# all_candidates = {\
-# '1651-49':{     'eventids':numpy.array([[1651,49],[1651,6817],[1651,12761]]),\
-#                 'known_flight':None},\
-# '1661-34206':{  'eventids':numpy.array([[1661,34206],[1661,35542],[1661,36609]]),\
-#                 'known_flight':None},\
-# '1662-58427':{  'eventids':numpy.array([[1662,58427],[1662,58647]]),\
-#                 'known_flight':None},\
-# '1718-25660':{  'eventids':numpy.array([[1718,25660],[1718,26777],[1718,27756],[1718,28605]]),\
-#                 'known_flight':None},\
-# '1728-62026':{  'eventids':numpy.array([[1728,62026],[1728,62182],[1728,62370],[1728,62382],[1728,62552],[1728,62577]]),\
-#                 'known_flight':'a44585'},\
-# '1773-14413':{  'eventids':numpy.array([[1773,14413],[1773,14540],[1773,14590]]),\
-#                 'known_flight':'aa8c39'},\
-# '1773-63659':{  'eventids':numpy.array([[1773,63659],[1773,63707],[1773,63727],[1773,63752],[1773,63757]]),\
-#                 'known_flight':'a28392'},\
-# '1774-88800':{  'eventids':numpy.array([[1774,88800],[1774,88810],[1774,88815],[1774,88895],[1774,88913],[1774,88921],[1774,88923],[1774,88925],[1774,88944],[1774,88955],[1774,88959],[1774,88988],[1774,88993],[1774,89029],[1774,89030],[1774,89032],[1774,89034],[1774,89041],[1774,89043],[1774,89052],[1774,89172],[1774,89175],[1774,89181],[1774,89203],[1774,89204],[1774,89213]]),\
-#                 'known_flight':'ab5f43'},\
-# '1783-28830':{  'eventids':numpy.array([[1783,28830],[1783,28832],[1783,28861]]),\
-#                 'known_flight':'a52e4f'},\
-# '1783-35725':{  'eventids':numpy.array([[1783,35725],[1783,34730],[1783,34738],[1783,34778],[1783,34793]]),\
-#                 'known_flight':None},\
-# '1784-7166':{   'eventids':numpy.array([[1784,7166],[1784,7176],[1784,7179],[1784,7195],[1784,7244],[1784,7255]]),\
-#                 'known_flight':'acf975'}\
-# }
-
-#Now all means only the ones that are planes! 
-all_candidates = {\
-'1728-62026':{  'eventids':numpy.array([[1728,62026],[1728,62182],[1728,62370],[1728,62382],[1728,62552],[1728,62577]]),\
-                'known_flight':'a44585',\
-                'align_method':0,\
-                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
-'1773-14413':{  'eventids':numpy.array([[1773,14413],[1773,14540],[1773,14590]]),\
-                'known_flight':'aa8c39',\
-                'align_method':0,\
-                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
-'1773-63659':{  'eventids':numpy.array([[1773,63659],[1773,63707],[1773,63727],[1773,63752],[1773,63757]]),\
-                'known_flight':'a28392',\
-                'align_method':0,\
-                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
-'1774-88800':{  'eventids':numpy.array([[1774,88800],[1774,88810],[1774,88815],[1774,88895],[1774,88913],[1774,88921],[1774,88923],[1774,88925],[1774,88944],[1774,88955],[1774,88959],[1774,88988],[1774,88993],[1774,89029],[1774,89030],[1774,89032],[1774,89034],[1774,89041],[1774,89043],[1774,89052],[1774,89172],[1774,89175],[1774,89181],[1774,89203],[1774,89204],[1774,89213]]),\
-                'known_flight':'ab5f43',\
-                'align_method':0,\
-                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
-'1783-28830':{  'eventids':numpy.array([[1783,28830],[1783,28832],[1783,28861]]),\
-                'known_flight':'a52e4f',\
-                'align_method':0,\
-                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
-'1784-7166':{   'eventids':numpy.array([[1784,7166],[1784,7176],[1784,7179],[1784,7195],[1784,7244],[1784,7255]]),\
-                'known_flight':'acf975',\
-                'align_method':0,\
-                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}}\
-}
-
-
-candidates = all_candidates
-# test_track = '1773-14413'#'1784-7166'#'1728-62026'
-# candidates = {test_track:all_candidates[test_track]}
 
 if __name__ == '__main__':
     #################################
@@ -434,8 +367,8 @@ if __name__ == '__main__':
                         #text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
                         #plt.text(text_loc[0],text_loc[1], 'A%i and A%i'%(pair[0],pair[1]),color=text_color,withdash=True)
                 
-                plt.legend(loc='lower left')
-                plt.xlim([1.574181e9+500,1.574181e9+800])
+                #plt.legend(loc='lower left')
+                #plt.xlim([1.574181e9+500,1.574181e9+800])
 
                 
 

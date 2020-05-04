@@ -741,7 +741,7 @@ if __name__ == '__main__':
             #unique_flights,all_vals = getTracks(start,stop,min_approach_cut_km,hour_window = 12)
             flight_tracks_ENU, all_vals = pt.getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 0,flights_of_interest=[])
 
-            def addPlaneTracks(_ax, antenna_pair_list, _flight_tracks_ENU, add_label=False):
+            def addPlaneTracks(_ax, antenna_pair_list, _flight_tracks_ENU, add_label=True):
                 min_y = 1000
                 max_y = -1000
                 for ant_i, ant_j in antenna_pair_list:

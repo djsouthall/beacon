@@ -61,6 +61,11 @@ if __name__ == '__main__':
 
     hilbert = False #Apply hilbert envelope to wf before correlating
     align_method = 0
+
+    shorten_signals = True
+    shorten_thresh = 0.7
+    shorten_delay = 10.0
+    shorten_length = 90.0
     
 
     #Plotting info
