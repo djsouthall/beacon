@@ -108,7 +108,7 @@ confirmed_candidates = {\
 }
 
 all_candidates = {\
-'1705-55163':{  'eventids':numpy.array([[1705,55163],[1705,55296],[1705,55643]]),\
+'1705-55163':{  'eventids':numpy.array([[1705,55163],[1705,55643]]),\
                 'known_flight':'a405d9',\
                 'align_method':0,\
                 'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
@@ -136,7 +136,7 @@ all_candidates = {\
                 'known_flight':'a28392',\
                 'align_method':0,\
                 'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
-'1774-178':{  'eventids':numpy.array([[1774,178],[1774,381],[1774,533],[1774,1348],[1774,1485]]),\
+'1774-178':{  'eventids':numpy.array([[1774,178],[1774,381],[1774,1348],[1774,1485]]),\
                 'known_flight':'a1c2b3',\
                 'align_method':0,\
                 'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
@@ -160,7 +160,7 @@ all_candidates = {\
 
 #THESE ARE JUST THE NEW ONES FROM THE UNBLINDED SEARCH.
 all_candidates = {\
-'1705-55163':{  'eventids':numpy.array([[1705,55163],[1705,55296],[1705,55643]]),\
+'1705-55163':{  'eventids':numpy.array([[1705,55163],[1705,55643]]),\
                 'known_flight':'a405d9',\
                 'align_method':0,\
                 'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
@@ -180,7 +180,7 @@ all_candidates = {\
                 'known_flight':'a28392',\
                 'align_method':9,\
                 'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
-'1774-178':{  'eventids':numpy.array([[1774,178],[1774,381],[1774,533],[1774,1348],[1774,1485]]),\
+'1774-178':{  'eventids':numpy.array([[1774,178],[1774,381],[1774,1348],[1774,1485]]),\
                 'known_flight':'a1c2b3',\
                 'align_method':9,\
                 'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
@@ -190,15 +190,12 @@ all_candidates = {\
                 'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}}\
 }
 
-
-
 all_candidates = {\
-'1720-71316':{  'eventids':numpy.array([[1720,71324]]),\
-                'known_flight':'a678ef',\
+'1774-178':{  'eventids':numpy.array([[1774,381]]),\
+                'known_flight':'a1c2b3',\
                 'align_method':9,\
-                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+                'baselines':{'hpol':[],'vpol':[[1,2],[1,3],[2,3]]}},\
 }
-
 '''
 
 
@@ -261,7 +258,7 @@ if __name__ == '__main__':
     crit_freq_high_pass_MHz = None#60
     high_pass_filter_order = None#6
 
-    waveform_index_range = (None,None)#(150,400)
+    waveform_index_range = (0,400)
 
     apply_phase_response = False
     hilbert = False
