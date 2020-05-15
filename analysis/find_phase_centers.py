@@ -543,19 +543,19 @@ if __name__ == '__main__':
                         fix_ant3_x=False,\
                         fix_ant3_y=False,\
                         fix_ant3_z=False,\
-                        fix_puls1_x=False,\
-                        fix_puls1_y=False,\
-                        fix_puls1_z=False,\
-                        fix_puls2_x=False,\
-                        fix_puls2_y=False,\
-                        fix_puls2_z=False,\
-                        fix_puls3_x=False,\
-                        fix_puls3_y=False,\
-                        fix_puls3_z=False,\
-                        fix_cable_delay_ant0=True,\
-                        fix_cable_delay_ant1=True,\
-                        fix_cable_delay_ant2=True,\
-                        fix_cable_delay_ant3=True)
+                        fix_puls1_x=True,\
+                        fix_puls1_y=True,\
+                        fix_puls1_z=True,\
+                        fix_puls2_x=True,\
+                        fix_puls2_y=True,\
+                        fix_puls2_z=True,\
+                        fix_puls3_x=True,\
+                        fix_puls3_y=True,\
+                        fix_puls3_z=True,\
+                        fix_cable_delay_ant0=False,\
+                        fix_cable_delay_ant1=False,\
+                        fix_cable_delay_ant2=False,\
+                        fix_cable_delay_ant3=False)
 
 
         result = m.migrad(resume=False)
@@ -675,15 +675,15 @@ if __name__ == '__main__':
                             fix_ant3_x=False,\
                             fix_ant3_y=False,\
                             fix_ant3_z=False,\
-                            fix_puls1_x=False,\
-                            fix_puls1_y=False,\
-                            fix_puls1_z=False,\
-                            fix_puls2_x=False,\
-                            fix_puls2_y=False,\
-                            fix_puls2_z=False,\
-                            fix_puls3_x=False,\
-                            fix_puls3_y=False,\
-                            fix_puls3_z=False,\
+                            fix_puls1_x=True,\
+                            fix_puls1_y=True,\
+                            fix_puls1_z=True,\
+                            fix_puls2_x=True,\
+                            fix_puls2_y=True,\
+                            fix_puls2_z=True,\
+                            fix_puls3_x=True,\
+                            fix_puls3_y=True,\
+                            fix_puls3_z=True,\
                             fix_cable_delay_ant0=True,\
                             fix_cable_delay_ant1=True,\
                             fix_cable_delay_ant2=True,\
@@ -739,7 +739,7 @@ if __name__ == '__main__':
             out_corr, out_fig, out_ax = cor.map(43,mode,plot_map=True, interactive=True)
 
 
-        if True:
+        if False:
             print('\n\nATTEMPTING SECOND CHI^2 WITH FIRST AS INPUT\n')
             initial_chi_2 = rawChi2(m.values['ant1_x'], m.values['ant1_y'], m.values['ant1_z'], m.values['ant2_x'], m.values['ant2_y'], m.values['ant2_z'], m.values['ant3_x'], m.values['ant3_y'], m.values['ant3_z'], m.values['puls1_x'], m.values['puls1_y'], m.values['puls1_z'], m.values['puls2_x'], m.values['puls2_y'], m.values['puls2_z'], m.values['puls3_x'], m.values['puls3_y'], m.values['puls3_z'],m.values['cable_delay_ant0'], m.values['cable_delay_ant1'], m.values['cable_delay_ant2'], m.values['cable_delay_ant3'])
             print('Initial Chi^2 is %0.3f\n'%(initial_chi_2))
@@ -822,15 +822,15 @@ if __name__ == '__main__':
                             fix_ant3_x=False,\
                             fix_ant3_y=False,\
                             fix_ant3_z=False,\
-                            fix_puls1_x=False,\
-                            fix_puls1_y=False,\
-                            fix_puls1_z=False,\
-                            fix_puls2_x=False,\
-                            fix_puls2_y=False,\
-                            fix_puls2_z=False,\
-                            fix_puls3_x=False,\
-                            fix_puls3_y=False,\
-                            fix_puls3_z=False,\
+                            fix_puls1_x=True,\
+                            fix_puls1_y=True,\
+                            fix_puls1_z=True,\
+                            fix_puls2_x=True,\
+                            fix_puls2_y=True,\
+                            fix_puls2_z=True,\
+                            fix_puls3_x=True,\
+                            fix_puls3_y=True,\
+                            fix_puls3_z=True,\
                             fix_cable_delay_ant0=True,\
                             fix_cable_delay_ant1=True,\
                             fix_cable_delay_ant2=True,\

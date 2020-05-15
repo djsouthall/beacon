@@ -46,10 +46,25 @@ c = 299792458/n #m/s
 
 if __name__ == '__main__':
     try:
-        plt.close('all')
-        signal_classifications_to_use = ['PLF','LF','HF','PHF','BB']
+        #plt.close('all')
+        if len(sys.argv) == 2:
+            if str(sys.argv[1]) in ['vpol', 'hpol']:
+                mode = str(sys.argv[1])
+            else:
+                print('Given mode not in options.  Defaulting to hpol')
+                mode = 'hpol'
+        else:
+            print('No mode given.  Defaulting to hpol')
+            mode = 'hpol'
+
+
+        signal_classifications_to_use = ['PLF','LF','HF','PHF','BB']#['LF','HF','BB']#['PLF','LF','HF','PHF','BB']
+
+        #direction_weights = {'N':0.1,'E':1.0,'S':0.1,'W':0.0}
+        #direction_weights = {'N':0.25,'E':0.0,'S':0.1,'W':1.0}
+        direction_weights = {'N':1.0,'E':0.0,'S':1.0,'W':1.0}
         
-        plot_residuals = True
+        plot_residuals = False
         plot_planes = False
         plot_interps = False
         plot_time_delays = True
@@ -69,40 +84,31 @@ if __name__ == '__main__':
         apply_phase_response = True
         hilbert = False
 
-        try_to_use_precalculated_time_delays = False
-        try_to_use_precalculated_time_delays_but_just_as_guess_for_real_time_delays_why_is_this_so_long = True
+        try_to_use_precalculated_time_delays = True
+        try_to_use_precalculated_time_delays_but_just_as_guess_for_real_time_delays_why_is_this_so_long = False
 
         #Limits 
         cable_delay_guess_range = None #ns
         antenna_position_guess_range = None #Limit to how far from input phase locations to limit the parameter space to
-        fix_ant0_x = True#True
-        fix_ant0_y = True#True
+        fix_ant0_x = True
+        fix_ant0_y = True
         fix_ant0_z = True
-        fix_ant1_x = False#True
-        fix_ant1_y = False#True
+        fix_ant1_x = False
+        fix_ant1_y = False
         fix_ant1_z = False
-        fix_ant2_x = False#True
-        fix_ant2_y = False#True
-        fix_ant2_z = False
-        fix_ant3_x = False#True
-        fix_ant3_y = False#True
+        fix_ant2_x = False
+        fix_ant2_y = False
+        fix_ant2_z = False#mode == 'vpol' #Most vpols don't have antenna 0, so the array would float in optimization otherwise.
+        fix_ant3_x = False
+        fix_ant3_y = False
         fix_ant3_z = False
         fix_cable_delay0 = False
         fix_cable_delay1 = False
         fix_cable_delay2 = False
         fix_cable_delay3 = False
 
-        #I think adding an obsolute time offset for each antenna and letting that vary could be interesting.  It could be used to adjust the cable delays.
+        #I think adding an absolute time offset for each antenna and letting that vary could be interesting.  It could be used to adjust the cable delays.
 
-        if len(sys.argv) == 2:
-            if str(sys.argv[1]) in ['vpol', 'hpol']:
-                mode = str(sys.argv[1])
-            else:
-                print('Given mode not in options.  Defaulting to hpol')
-                mode = 'hpol'
-        else:
-            print('No mode given.  Defaulting to hpol')
-            mode = 'hpol'
 
         print('Loading known plane locations.')
         known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks(ignore_planes=[]) # ['1728-62026','1773-14413','1773-63659','1774-88800','1783-28830','1784-7166']#'1774-88800','1728-62026'
@@ -210,7 +216,7 @@ if __name__ == '__main__':
 
         
 
-        if antenna_position_guess_range is not None:
+        if cable_delay_guess_range is not None:
 
             limit_cable_delay0 = (cable_delays[0] - cable_delay_guess_range , cable_delays[0] + cable_delay_guess_range)
             limit_cable_delay1 = (cable_delays[1] - cable_delay_guess_range , cable_delays[1] + cable_delay_guess_range)
@@ -251,11 +257,11 @@ if __name__ == '__main__':
 
             ant2_physical_limits_x = None#None
             ant2_physical_limits_y = None#(None,0.0) #Forced south of 0 
-            ant2_physical_limits_z = None#None
+            ant2_physical_limits_z = (antennas_phase_start[2][2] - 2.5 ,antennas_phase_start[2][2] + 2.5)#None#None
 
             ant3_physical_limits_x = None#(None,0.0) #Forced West of 0
             ant3_physical_limits_y = None#(None,0.0) #Forced South of 0
-            ant3_physical_limits_z = None#(0.0,None) #Forced above 0
+            ant3_physical_limits_z = None#(10.0,None) #Forced above 0
 
 
         ##########
@@ -301,6 +307,8 @@ if __name__ == '__main__':
 
                 for key in list(known_planes.keys()):
                     if known_planes[key]['signal_classification'] in signal_classifications_to_use:
+                        dir_weight = direction_weights[known_planes[key]['dir']]
+
                         # print(interpolated_plane_locations[key][:,0] - ant0_x)
                         # print(interpolated_plane_locations[key][:,1] - ant0_y)
                         # print(interpolated_plane_locations[key][:,2] - ant0_z)
@@ -326,7 +334,9 @@ if __name__ == '__main__':
                         for pair_index, pair in enumerate(known_planes[key]['baselines'][mode]):
                             geometric_time_delay = (d[pair[0]] + _cable_delays[0]) - (d[pair[1]] + _cable_delays[1])
                             
-                            vals = ((geometric_time_delay - measured_plane_time_delays[key][pair_index])**2)/(1.0001-measured_plane_time_delays_weights[key][pair_index])**2 #1-max(corr) makes the optimizer see larger variations when accurate time delays aren't well matched.  i.e the smaller max(corr) the smaller (1-max(corr))**2 is, and the larger that chi^2 is.  
+                            #vals = ((geometric_time_delay - measured_plane_time_delays[key][pair_index])**2)/(1.0001-measured_plane_time_delays_weights[key][pair_index])**2 #1-max(corr) makes the optimizer see larger variations when accurate time delays aren't well matched.  i.e the smaller max(corr) the smaller (1-max(corr))**2 is, and the larger that chi^2 is.  
+                            vals = ((geometric_time_delay - measured_plane_time_delays[key][pair_index])**2) #Assumes time delays are accurate, which is should do because I did them by eye?  So hopefully I overrode the accuracy of corr.
+                            vals *= dir_weight
                             #chi_2 += numpy.mean(vals)/numpy.std(vals) #This was a completely dumb calculation that biased against planes that actually travelled.  I missed the point.
                             #chi_2 += numpy.mean(vals)#Weights each plane equally
                             chi_2 += numpy.sum(vals)#Weights each event equally, planes with more events weighted more.
@@ -439,8 +449,6 @@ if __name__ == '__main__':
         ant3_phase_z = m.values['ant3_z']
 
 
-        fit_cable_delays = info.loadCableDelays(return_raw=True).copy()
-        fit_cable_delays[mode] = numpy.array([m.values['cable_delay0'],m.values['cable_delay1'],m.values['cable_delay2'],m.values['cable_delay3']])
 
         chi2_ax.plot([antennas_phase_start[0][0],ant0_phase_x], [antennas_phase_start[0][1],ant0_phase_y], [antennas_phase_start[0][2],ant0_phase_z],c='r',alpha=0.5,linestyle='--')
         chi2_ax.plot([antennas_phase_start[1][0],ant1_phase_x], [antennas_phase_start[1][1],ant1_phase_y], [antennas_phase_start[1][2],ant1_phase_z],c='g',alpha=0.5,linestyle='--')
@@ -483,24 +491,51 @@ if __name__ == '__main__':
                 plt.minorticks_on()
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                plt.ylabel('Time Delay (ns)')
+                plt.ylabel('Time Delay Residuals (ns)')
                 plt.xlabel('Azimuth Angle (Deg)')
 
-            loc_dict = {0:[m.values['ant0_x'],m.values['ant0_y'],m.values['ant0_z']],1:[m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z']],2:[m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z']],3:[m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']]}
+            use_new_phase_centers = True #SHOULD ALWAYS BE TRUE UNLESS SPECIFICALLY TESTING SOMETHING
             
-            for plane in list(known_planes.keys()):
-                d0 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - m.values['ant0_x'])**2 + (interpolated_plane_locations[plane][:,1] - m.values['ant0_y'])**2 + (interpolated_plane_locations[plane][:,2] - m.values['ant0_z'])**2 )/c)*1.0e9 #ns
-                d1 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - m.values['ant1_x'])**2 + (interpolated_plane_locations[plane][:,1] - m.values['ant1_y'])**2 + (interpolated_plane_locations[plane][:,2] - m.values['ant1_z'])**2 )/c)*1.0e9 #ns
-                d2 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - m.values['ant2_x'])**2 + (interpolated_plane_locations[plane][:,1] - m.values['ant2_y'])**2 + (interpolated_plane_locations[plane][:,2] - m.values['ant2_z'])**2 )/c)*1.0e9 #ns
-                d3 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - m.values['ant3_x'])**2 + (interpolated_plane_locations[plane][:,1] - m.values['ant3_y'])**2 + (interpolated_plane_locations[plane][:,2] - m.values['ant3_z'])**2 )/c)*1.0e9 #ns
+            if use_new_phase_centers == True:
+                loc_dict = {0:[m.values['ant0_x'],m.values['ant0_y'],m.values['ant0_z']],1:[m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z']],2:[m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z']],3:[m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']]}
+            else:
+                loc_dict = {0:[antennas_phase_start[0][0],antennas_phase_start[0][1],antennas_phase_start[0][2]],1:[antennas_phase_start[1][0],antennas_phase_start[1][1],antennas_phase_start[1][2]],2:[antennas_phase_start[2][0],antennas_phase_start[2][1],antennas_phase_start[2][2]],3:[antennas_phase_start[3][0],antennas_phase_start[3][1],antennas_phase_start[3][2]]}
+            
+            all_az = [[],[],[],[],[],[]]
+            all_el = [[],[],[],[],[],[]]
+            all_res = [[],[],[],[],[],[]]
+
+            for plane_index, plane in enumerate(list(known_planes.keys())):
+                if len(known_planes[plane]['baselines'][mode]) == 0:
+                    continue
+
+                if use_new_phase_centers == True:
+                    fit_cable_delays = info.loadCableDelays(return_raw=True).copy()
+                    fit_cable_delays[mode] = numpy.array([m.values['cable_delay0'],m.values['cable_delay1'],m.values['cable_delay2'],m.values['cable_delay3']])
+                    d0 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - m.values['ant0_x'])**2 + (interpolated_plane_locations[plane][:,1] - m.values['ant0_y'])**2 + (interpolated_plane_locations[plane][:,2] - m.values['ant0_z'])**2 )/c)*1.0e9 #ns
+                    d1 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - m.values['ant1_x'])**2 + (interpolated_plane_locations[plane][:,1] - m.values['ant1_y'])**2 + (interpolated_plane_locations[plane][:,2] - m.values['ant1_z'])**2 )/c)*1.0e9 #ns
+                    d2 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - m.values['ant2_x'])**2 + (interpolated_plane_locations[plane][:,1] - m.values['ant2_y'])**2 + (interpolated_plane_locations[plane][:,2] - m.values['ant2_z'])**2 )/c)*1.0e9 #ns
+                    d3 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - m.values['ant3_x'])**2 + (interpolated_plane_locations[plane][:,1] - m.values['ant3_y'])**2 + (interpolated_plane_locations[plane][:,2] - m.values['ant3_z'])**2 )/c)*1.0e9 #ns
+
+                else:
+                    print('\n\n\nWARNING CALCULATING RESIDUALS USING INPUT POSITIONS NOT REFINED OUTPUT POSITIONS!!!!!!!!!!!!!!!!!\n\n\n')
+                    fit_cable_delays = info.loadCableDelays(return_raw=True).copy()
+                    d0 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - antennas_phase_start[0][0])**2 + (interpolated_plane_locations[plane][:,1] - antennas_phase_start[0][1])**2 + (interpolated_plane_locations[plane][:,2] - antennas_phase_start[0][2])**2 )/c)*1.0e9 #ns
+                    d1 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - antennas_phase_start[1][0])**2 + (interpolated_plane_locations[plane][:,1] - antennas_phase_start[1][1])**2 + (interpolated_plane_locations[plane][:,2] - antennas_phase_start[1][2])**2 )/c)*1.0e9 #ns
+                    d2 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - antennas_phase_start[2][0])**2 + (interpolated_plane_locations[plane][:,1] - antennas_phase_start[2][1])**2 + (interpolated_plane_locations[plane][:,2] - antennas_phase_start[2][2])**2 )/c)*1.0e9 #ns
+                    d3 = (numpy.sqrt((interpolated_plane_locations[plane][:,0] - antennas_phase_start[3][0])**2 + (interpolated_plane_locations[plane][:,1] - antennas_phase_start[3][1])**2 + (interpolated_plane_locations[plane][:,2] - antennas_phase_start[3][2])**2 )/c)*1.0e9 #ns
+
 
 
                 d = [d0,d1,d2,d3]
                 if plot_az_res == True:
                     #SHOULD MAKE THIS V.S. ELEVATION AND ARRAY ELEVATION
+                    mag = numpy.sqrt(interpolated_plane_locations[plane][:,0]**2 + interpolated_plane_locations[plane][:,1]**2 + interpolated_plane_locations[plane][:,2]**2)
+                    elevations = 90.0 - numpy.rad2deg(numpy.arccos(interpolated_plane_locations[plane][:,2]/mag))
                     azimuths = numpy.rad2deg(numpy.arctan2(interpolated_plane_locations[plane][:,1],interpolated_plane_locations[plane][:,0]))
                     azimuths[azimuths < 0] = azimuths[azimuths < 0]%360
-                    print(azimuths)
+                    #print(azimuths)
+
                 for pair_index, pair in enumerate(known_planes[plane]['baselines'][mode]):
                     geometric_time_delay = (d[pair[0]] + fit_cable_delays[mode][pair[0]]) - (d[pair[1]] + fit_cable_delays[mode][pair[1]])
                     #Right now these seem reversed from what I would expect based on the plot?  In time I mean. 
@@ -595,10 +630,61 @@ if __name__ == '__main__':
                         python_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
                         y = measured_plane_time_delays[plane][pair_index] - geometric_time_delays[pair_index]
                         az_ax.scatter(azimuths, y,c=python_colors[pair_index],label='Residuals A%i and A%i'%(pair[0],pair[1]))
+                        az_ax.set_ylim([-50,50])
+                        all_res[pair_index].append(y)
+                        all_az[pair_index].append(azimuths)
+                        all_el[pair_index].append(elevations)
+                        if plane_index == 0:
+                            plt.legend()
+
+                        
+
+                td_ax.set_xlim(min(x),max(x))
 
                 if plot_residuals:
                     td_ax.legend()
 
+            
+            if plot_az_res:
+                for pair_index in range(6):
+                    try:
+                        all_res[pair_index] = numpy.concatenate(numpy.array(all_res[pair_index]))
+                        all_az[pair_index] = numpy.concatenate(numpy.array(all_az[pair_index]))
+                        all_el[pair_index] = numpy.concatenate(numpy.array(all_el[pair_index]))
+                    except:
+                        all_res[pair_index] = numpy.array([])
+                        all_az[pair_index] = numpy.array([])
+                        all_el[pair_index] = numpy.array([])
+
+                min_res = numpy.concatenate(numpy.array(all_res)).min()
+                max_res = numpy.concatenate(numpy.array(all_res)).max()
+
+                if min_res < 0 and max_res > 0:
+                    max_mag = numpy.max([abs(min_res),abs(max_res)])
+                    min_res = -max_mag
+                    max_res = max_mag
+
+                markers = ['o','s','X','d','P','^']
+                azzen_fig = plt.figure()
+                azzen_fig.canvas.set_window_title('%s Res'%(mode))
+                if use_new_phase_centers == False:
+                    plt.suptitle('%s Using Input Positions'%mode)
+                else:
+                    plt.suptitle('%s Using Output Positions'%mode)
+                for pair_index in range(6):
+                    azzen_ax = plt.subplot(2,3,pair_index+1)
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.ylabel('Zenith Angle (Deg)')
+                    plt.xlabel('Azimuth Angle (Deg) %s'%str([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]][pair_index]))
+                    azzen_scatter = azzen_ax.scatter(all_az[pair_index],all_el[pair_index],c=all_res[pair_index],marker=markers[pair_index],cmap='coolwarm')
+                    azzen_scatter.set_clim([min_res,max_res])
+                    cbar = plt.colorbar(azzen_scatter)
+
+                    cbar.set_label('Time Delay Residuals (ns)', rotation=90)
+                    plt.ylim(-20,90)
+                    plt.xlim(0,360)
 
         print('Copy-Paste Prints:\n------------')
         print('')

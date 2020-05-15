@@ -1436,7 +1436,7 @@ if __name__ == '__main__':
     try:
         plt.close('all')
         datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
-        shorten_signals = True
+        shorten_signals = False
         shorten_thresh = 0.7 #Percent of max height to trigger leading edge of signal.  Should only apply if a certain snr is met?
         #shorten_delay = 20.0 #The delay in ns after the trigger thresh to wait before an exponential decrease is applied. 
         #shorten_length = 100.0

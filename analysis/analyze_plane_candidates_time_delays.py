@@ -109,7 +109,7 @@ if __name__ == '__main__':
     plot_multiple = False
     plot_averaged_waveforms = False
     plot_averaged_waveforms_aligned = False
-    plot_fft_signals = False
+    plot_fft_signals = True
     plot_planes = False
     plot_interps = False
     plot_time_delays = True

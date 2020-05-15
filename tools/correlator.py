@@ -19,7 +19,8 @@ import tools.info as info
 import analysis.phase_response as pr
 import tools.get_plane_tracks as pt
 from objects.fftmath import TimeDelayCalculator
-
+import matplotlib
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
@@ -28,7 +29,6 @@ import scipy.stats
 import numpy
 import sys
 import math
-import matplotlib
 from scipy.fftpack import fft
 import datetime as dt
 from ast import literal_eval
@@ -1938,12 +1938,24 @@ class Correlator:
                     pass
                 return [im]
 
-            ani = FuncAnimation(fig, update, frames=range(2*len(eventids)),blit=False,save_count=0)
+            ani = FuncAnimation(fig, update, frames=range(len(eventids)),blit=False,save_count=0)
 
             if save == True:
-                #ani.save('./%s_%s_hilbert=%s_%s.mp4'%(title,pol,str(hilbert), center_dir_full + '_centered'), writer='ffmpeg', fps=fps,dpi=dpi)
-                ani.save('./%s_%s_hilbert=%s_%s.gif'%(title,pol,str(hilbert), center_dir_full + '_centered'), writer='imagemagick', fps=fps,dpi=dpi)
-                plt.close(fig)
+                try:
+                    #ani.save('./%s_%s_hilbert=%s_%s.mp4'%(title,pol,str(hilbert), center_dir_full + '_centered'), writer='ffmpeg', fps=fps,dpi=dpi)
+                    print('Attempting to save animated correlation map as:')
+                    save_name = './%s_%s_hilbert=%s_%s.gif'%(title,pol,str(hilbert), center_dir_full + '_centered')
+                    print(save_name)
+                    print('len(eventids) = ',len(eventids))
+                    ani.save(save_name, writer='imagemagick', fps=fps,dpi=dpi)
+                    plt.close(fig)
+                except Exception as e:
+                    plt.close(fig)
+                    print('\nError in %s'%inspect.stack()[0][3])
+                    print(e)
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    print(exc_type, fname, exc_tb.tb_lineno)
             else:
                 self.figs.append(fig)
                 self.axs.append(ax)
@@ -2181,17 +2193,17 @@ if __name__=="__main__":
         all_axs = []
         all_cors = []
 
-        if False:
+        if True:
+
             for run in [1507,1509,1511]:
 
                 if run == 1507:
                     waveform_index_range = (1500,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
                 elif run == 1509:
-                    waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
+                    waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.
                 elif run == 1511:
                     waveform_index_range = (1250,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
-                else:
-                    waveform_index_range = (None,None)
+
 
                 reader = Reader(datapath,run)
 
@@ -2208,29 +2220,45 @@ if __name__=="__main__":
                 tdc = TimeDelayCalculator(reader, final_corr_length=upsample, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None,waveform_index_range=(None, None),plot_filters=False,apply_phase_response=True)
                 
 
-                if False:
+                if True:
                     for mode in ['hpol','vpol']:
 
+                        site1_measured_time_delays =  {'hpol':{'[0, 1]' : [-33.67217794735314], '[0, 2]': [105.45613390568445], '[0, 3]': [30.139256769961403], '[1, 2]': [139.22210622057898], '[1, 3]': [64.03028824157775], '[2, 3]': [-75.19181797900121]},\
+                                                       'vpol':{'[0, 1]' : [-38.04924843261725], '[0, 2]': [101.73562399320996], '[0, 3]': [36.36094981687252], '[1, 2]': [139.78487242582722], '[1, 3]': [74.50399261703114], '[2, 3]': [-65.34340938715698]}}
+                        site2_measured_time_delays =  {'hpol':{'[0, 1]' : [-75.67357058767381], '[0, 2]': [40.63430060469886], '[0, 3]': [-44.603959202234826], '[1, 2]': [116.27661403806135], '[1, 3]': [31.225897156995508], '[2, 3]': [-85.14448834399977]},\
+                                                       'vpol':{'[0, 1]' : [-79.95580072832284], '[0, 2]': [36.75841347009681], '[0, 3]': [-38.38378549428477], '[1, 2]': [116.62044273548572], '[1, 3]': [41.665786696971985], '[2, 3]': [-75.11094181007027]}}
+                        site3_measured_time_delays =  {'hpol':{'[0, 1]' : [-88.02014654064], '[0, 2]': [-143.62662406045482], '[0, 3]': [-177.19680779079835], '[1, 2]': [-55.51270605688091], '[1, 3]': [-88.89534686135659], '[2, 3]': [-33.32012649585307]},\
+                                                       'vpol':{'[0, 1]' : [-92.05231944679858], '[0, 2]': [-147.1274253433212], '[0, 3]': [-172.476977489791], '[1, 2]': [-55.10636305083391], '[1, 3]': [-80.36214373436982], '[2, 3]': [-25.34955214646983]}}
+                        
+                        if run == 1507:
+                            time_delay_dict = site1_measured_time_delays
+                        elif run == 1509:
+                            time_delay_dict = site2_measured_time_delays  
+                        elif run == 1511:
+                            time_delay_dict = site3_measured_time_delays
+                        else:
+                            time_delay_dict = None
+
                         eventid = eventids[mode][0]
-                        mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, interactive=True, max_method=max_method)
 
                         pulser_locations_ENU = info.loadPulserPhaseLocationsENU()[mode]['run%i'%run]
                         #Do I need to adjust the height of the pulser?  Cosmin thinks there is a 20 m discrepency in alt between the two metrics.
                         #pulser_locations_ENU[2] -= 20.0
-
                         pulser_locations_ENU = pulser_locations_ENU/numpy.linalg.norm(pulser_locations_ENU)
 
 
                         pulser_theta = numpy.degrees(numpy.arccos(pulser_locations_ENU[2]))
                         pulser_phi = numpy.degrees(numpy.arctan2(pulser_locations_ENU[1],pulser_locations_ENU[0]))
+
                         print('%s Expected pulser location: Zenith = %0.2f, Az = %0.2f'%(mode.title(), pulser_theta,pulser_phi))
 
                         #ax.axvline(pulser_phi,c='r')
                         #ax.axhline(pulser_theta,c='r')
 
+                        mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,circle_zenith=pulser_theta,circle_az=pulser_phi,time_delay_dict=time_delay_dict)
                         all_figs.append(fig)
                         all_axs.append(ax)
-                if True:
+                if False:
                     #SHOULD FIGURE OUT HOW THE BEST MEASURED TIME DELAYS FOR THE PULSERS AND PLOT THEIR RINGS.
 
 
@@ -2258,7 +2286,7 @@ if __name__=="__main__":
                     all_axs.append(ax)
                 all_cors.append(cor)
 
-        if True:
+        if False:
             #Preparing for planes:
             known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks()
 
@@ -2276,10 +2304,7 @@ if __name__=="__main__":
 
             for index, key in enumerate(list(known_planes.keys())):
                 print(key)
-                if key == '1773-14413':
-                    _dir = 'W'
-                else:
-                    _dir = 'W'
+                if known_planes[key]['dir'] != 'E':
                     continue
 
                 enu = pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2])
@@ -2308,9 +2333,21 @@ if __name__=="__main__":
                 plane_zenith = numpy.rad2deg(numpy.arccos(normalized_plane_locations[:,2]))
                 plane_az = numpy.rad2deg(numpy.arctan2(normalized_plane_locations[:,1],normalized_plane_locations[:,0]))
 
+                test_az = plane_az[len(plane_az)//2]%360
+
+                if numpy.logical_or(test_az >= 270 + 45, test_az < 45):
+                    _dir = 'E'
+                elif numpy.logical_and(test_az >= 0 + 45, test_az < 90 + 45):
+                    _dir = 'N'
+                elif numpy.logical_and(test_az >= 90 + 45, test_az < 180 + 45):
+                    _dir = 'W'
+                elif numpy.logical_and(test_az >= 180 + 45, test_az < 270 + 45):
+                    _dir = 'S'
+
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
                 
-                #cor.animatedMap(eventids, 'hpol', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir='W',save=True,dpi=300)
+                cor.animatedMap(eventids, 'hpol', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir=_dir,save=True,dpi=300)
+                
                 '''
                 test_planes = cor.getTimeDelayCurves(td_dict, 'hpol')
 
