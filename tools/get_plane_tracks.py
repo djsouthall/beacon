@@ -16,7 +16,9 @@ import itertools
 import h5py
 from pprint import pprint
 import inspect
-
+import copy
+import matplotlib
+from matplotlib import gridspec
 #Personal Imports
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
@@ -27,6 +29,7 @@ import tools.info as info
 #Plotting Imports
 import pymap3d as pm
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from matplotlib.collections import LineCollection
 
 
@@ -362,9 +365,10 @@ class PlanePoly:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-
-
-if __name__ == '__main__':
+def oldMain():
+    '''
+    Just some code I am dumping to clear up main.
+    '''
     files = numpy.array(glob.glob(flight_data_location_hdf5+'*.h5')) 
     time = filenameToDatetime(numpy.random.choice(files)) #random time just to test code. 
     start = time.timestamp()
@@ -461,6 +465,8 @@ if __name__ == '__main__':
         plt.ylabel('Expected Observed Time Difference\nB/w Hpol %i and %i (ns)'%(ant_i,ant_j))
         cbar = plt.colorbar()
         cbar.set_label('Distance From BEACON (km)', rotation=90)
+
+
 
     #use_north_south = False
     '''
@@ -562,3 +568,226 @@ if __name__ == '__main__':
         cbar.set_label('Distance From BEACON (km)', rotation=90)
 
         '''
+def gaussian2D(x, y, mu_x, mu_y, sig_x, sig_y):
+    return numpy.exp(-(numpy.power(x - mu_x, 2.) / (2 * numpy.power(sig_x, 2.)) + numpy.power(y - mu_y, 2.) / (2 * numpy.power(sig_y, 2.))))
+
+if __name__ == '__main__':
+    plt.close('all')
+    min_approach_cut_km = 200 #km
+    plot_distance_cut_limit = 200 #km
+    
+    utc_offset = 7*60*60 #Timestamps below are start of days at utc.  BEACON is 7 hours behind those, so add 7 hours to timestamps below to get start of days at BEACON.
+    
+    overall_start_timestamp = 1572566400 + utc_offset #November 1st, 2019
+    overall_stop_timestamp = 1575158400 + utc_offset #December 1st, 2019
+
+
+    window_width_s = 24*60*60 #Each calculation cycle only looks at planes in this window.  
+    time_bin_edges = numpy.arange(overall_start_timestamp,overall_stop_timestamp+window_width_s,window_width_s) #1 hour windows.
+    plane_interp_s = 1 #For each plane, how often to determine its location (given in s).  
+    
+    angular_resolution_sig_deg = 3
+
+    norm_x = numpy.linspace(-3*angular_resolution_sig_deg, 3*angular_resolution_sig_deg, 200)
+    norm_y = numpy.linspace(-3*angular_resolution_sig_deg, 3*angular_resolution_sig_deg, 200)
+    #These are the x and y coordinates of a guassian pdf that will be used to determine the weight of a particular angle when added
+    #to a histogram.  Simply add the z content of norm_zv at xv + x and yv + y, x being azimuth, y being zenith.  
+    #Unsure if this will work considering angles are weird. Assumes psf squared in angular.
+    norm_xv, norm_yv = numpy.meshgrid(norm_x, norm_y) 
+    norm_xv_1d = numpy.concatenate(norm_xv)
+    norm_yv_1d = numpy.concatenate(norm_yv)
+    norm_zv = gaussian2D(norm_xv, norm_yv, 0.0, 0.0, angular_resolution_sig_deg, angular_resolution_sig_deg)
+    norm_zv_1d = numpy.concatenate(norm_zv)
+
+    hist_az_edges = numpy.linspace(-180.0,180.0,361)
+    hist_zenith_edges = numpy.linspace(0.0,100.0,101)
+
+    use_interpolated_values = True
+    mollweide = False
+    lognorm = False
+    cmap = copy.copy(matplotlib.cm.get_cmap('viridis')) # copy the default cmap
+    cmap.set_bad((0,0,0))
+    plot_perbin_scatters = True
+    plot_perbin_skymaps = True
+
+    total_hist, xedges, yedges = numpy.histogram2d([0.0], [0.0], weights=[0.0], bins=(hist_az_edges, hist_zenith_edges))
+
+    for hour_index in range(len(time_bin_edges)-1):
+        
+        H, xedges, yedges = numpy.histogram2d([0.0], [0.0], weights=[0.0], bins=(hist_az_edges, hist_zenith_edges))
+        X, Y = numpy.meshgrid(xedges, yedges)
+
+        start = time_bin_edges[hour_index]
+        stop = time_bin_edges[hour_index+1]
+        flight_tracks_ENU, all_vals = getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 0,flights_of_interest=[])
+        print('Number of planes in hour:')
+        print(len(list(flight_tracks_ENU.keys())))
+        if plot_perbin_scatters:
+            fig = plt.figure()
+            if mollweide == True:
+                ax = fig.add_subplot(1,1,1, projection='mollweide')
+            else:
+                plt.ylim(hist_zenith_edges[0],hist_zenith_edges[-1])
+                plt.xlim(hist_az_edges[0],hist_az_edges[-1])
+        print(list(flight_tracks_ENU.keys()))
+        for plane_index, key in enumerate(list(flight_tracks_ENU.keys())):
+            try:
+                # if plane_index > 1:
+                #     continue
+                print(plane_index,'/',len(list(flight_tracks_ENU.keys())))
+                if use_interpolated_values == True:
+                    original_norms = numpy.sqrt(flight_tracks_ENU[key][:,0]**2 + flight_tracks_ENU[key][:,1]**2 + flight_tracks_ENU[key][:,2]**2 )
+                    cut = numpy.logical_and(original_norms/1000.0 < plot_distance_cut_limit,numpy.logical_and(flight_tracks_ENU[key][:,3] >= start ,flight_tracks_ENU[key][:,3] < stop))
+                    if numpy.sum(cut) == 0:
+                        continue
+                    poly = PlanePoly(flight_tracks_ENU[key][cut,3],(flight_tracks_ENU[key][cut,0],flight_tracks_ENU[key][cut,1],flight_tracks_ENU[key][cut,2]),plot=False)
+                    t = numpy.arange(flight_tracks_ENU[key][cut,3][0],flight_tracks_ENU[key][cut,3][-1] + plane_interp_s,plane_interp_s)
+                    interpolated_plane_locations = poly.poly(t)
+                    #Geometry
+                    norms = numpy.sqrt(interpolated_plane_locations[:,0]**2 + interpolated_plane_locations[:,1]**2 + interpolated_plane_locations[:,2]**2 )
+                    azimuths = numpy.rad2deg(numpy.arctan2(interpolated_plane_locations[:,1],interpolated_plane_locations[:,0]))
+                    #azimuths[azimuths < 0] = azimuths[azimuths < 0]%360
+                    zeniths = numpy.rad2deg(numpy.arccos(interpolated_plane_locations[:,2]/norms))
+                    if plot_perbin_scatters:
+                        if mollweide == True:
+                            plt.scatter(numpy.deg2rad(azimuths),numpy.deg2rad(90.0 - zeniths),alpha=0.5)
+                        else:
+                            plt.scatter(azimuths,zeniths,alpha=0.5)
+
+                    for i in range(len(t)):
+                        current = numpy.histogram2d(norm_xv_1d + azimuths[i], norm_yv_1d + zeniths[i], weights=norm_zv_1d/(norms[i])**2.0, bins=(hist_az_edges, hist_zenith_edges))[0]
+                        H += current
+                        total_hist += current
+                        #H += numpy.histogram2d([azimuths[i]], [zeniths[i]], weights=[1], bins=(hist_az_edges, hist_zenith_edges))[0]
+                else:
+                    norms = numpy.sqrt(flight_tracks_ENU[key][:,0]**2 + flight_tracks_ENU[key][:,1]**2 + flight_tracks_ENU[key][:,2]**2 )
+                    cut = numpy.logical_and(norms/1000.0 < plot_distance_cut_limit,numpy.logical_and(flight_tracks_ENU[key][:,3] >= start ,flight_tracks_ENU[key][:,3] < stop))
+                    #Geometry
+                    azimuths = numpy.rad2deg(numpy.arctan2(flight_tracks_ENU[key][:,1],flight_tracks_ENU[key][:,0]))
+                    #azimuths[azimuths < 0] = azimuths[azimuths < 0]%360
+                    zeniths = numpy.rad2deg(numpy.arccos(flight_tracks_ENU[key][:,2]/norms))
+                    if plot_perbin_scatters:
+                        if mollweide == True:
+                            plt.scatter(numpy.deg2rad(azimuths[cut]),numpy.deg2rad(90.0 - zeniths[cut]),alpha=0.5)
+                        else:
+                            plt.scatter(azimuths[cut],zeniths[cut],alpha=0.5)
+                    for i in range(len(azimuths)):
+                        if cut[i] == True:
+                            current = numpy.histogram2d(norm_xv_1d + azimuths[i], norm_yv_1d + zeniths[i], weights=norm_zv_1d/(norms[i])**2.0, bins=(hist_az_edges, hist_zenith_edges))[0]
+                            H += current
+                            total_hist += current
+
+            except Exception as e:
+                print('Error in hist making.')
+                print(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+        
+        #Finishing touches on scatter plots.
+
+        if mollweide == True:
+            plt.ylabel('Elevation (deg)')
+        else:
+            plt.ylabel('Zenith (deg)')
+            plt.gca().invert_yaxis()
+
+        plt.xlabel('Azimuth (deg)')
+        plt.minorticks_on()
+        plt.grid(b=True, which='major', color='k', linestyle='-')
+        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+        if len(list(flight_tracks_ENU.keys())) > 0:
+            plt.savefig('./scatter_%s_mollweide=%s_lognorm=%s.png'%(str(start),str(mollweide),str(lognorm)),dpi=600)
+        plt.close(fig)
+
+        #Making skymap histogram plot.
+        if numpy.sum(H) > 0:
+            fig = plt.figure()
+            gs = gridspec.GridSpec(1, 2, width_ratios=[1, 3])
+            if mollweide == True:
+                ax0 = plt.subplot(gs[1], projection='mollweide')
+                if lognorm == True:
+                    plt.pcolormesh(numpy.deg2rad(X),numpy.deg2rad(90.0 - Y),H.T,norm=LogNorm(vmin=H[H>0].min(), vmax=H.max()), cmap=cmap)
+                plt.pcolormesh(numpy.deg2rad(X),numpy.deg2rad(90.0 - Y),H.T, cmap=cmap)
+                plt.colorbar()
+                plt.ylabel('Elevation (deg)')
+            else:
+                ax0 = plt.subplot(gs[1])
+                plt.ylim(hist_zenith_edges[0],hist_zenith_edges[-1])
+                plt.xlim(hist_az_edges[0],hist_az_edges[-1])
+                if lognorm == True:
+                    plt.pcolormesh(X,Y,H.T,norm=LogNorm(vmin=H[H>0].min(), vmax=H.max()), cmap=cmap)
+                else:
+                    plt.pcolormesh(X,Y,H.T, cmap=cmap)
+                plt.colorbar()
+                plt.gca().invert_yaxis()
+                plt.ylabel('Zenith (deg)')
+
+            plt.xlabel('Azimuth (deg)')
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            ax1 = plt.subplot(gs[0])
+            plt.ylim(hist_zenith_edges[0],hist_zenith_edges[-1])
+            bin_centers = (yedges[:-1] + yedges[1:]) / 2
+            bar_width = 0.9 * (yedges[1] - yedges[0])
+            y = numpy.sum(H.T,axis=1)
+            plt.barh(bin_centers, y/max(y) , height=bar_width)
+            plt.gca().invert_yaxis()
+            plt.gca().invert_xaxis()
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+            plt.savefig('./skymap_%s_mollweide=%s_lognorm=%s.png'%(str(start),str(mollweide),str(lognorm)),dpi=600)
+            plt.close(fig)
+
+    #Making skymap histogram plot.
+    if numpy.sum(total_hist) > 0:
+        fig = plt.figure()
+        gs = gridspec.GridSpec(1, 2, width_ratios=[1, 3])
+        if mollweide == True:
+            ax0 = plt.subplot(gs[1], projection='mollweide')
+            #ax = fig.add_subplot(1,1,1, projection='mollweide')
+            if lognorm == True:
+                plt.pcolormesh(numpy.deg2rad(X),numpy.deg2rad(Y),total_hist.T,norm=LogNorm(vmin=total_hist[total_hist>0].min(), vmax=total_hist.max()), cmap=cmap)
+            else:
+                plt.pcolormesh(numpy.deg2rad(X),numpy.deg2rad(Y),total_hist.T, cmap=cmap)
+            plt.colorbar()
+            plt.ylabel('Elevation (deg)')
+
+        else:
+            ax0 = plt.subplot(gs[1])
+            plt.ylim(hist_zenith_edges[0],hist_zenith_edges[-1])
+            plt.xlim(hist_az_edges[0],hist_az_edges[-1])
+            if lognorm == True:
+                plt.pcolormesh(X,Y,total_hist.T,norm=LogNorm(vmin=total_hist[total_hist>0].min(), vmax=total_hist.max()), cmap=cmap)
+            else:
+                plt.pcolormesh(X,Y,total_hist.T, cmap=cmap)
+            plt.colorbar()
+            plt.gca().invert_yaxis()
+            plt.ylabel('Zenith (deg)')
+
+        plt.xlabel('Azimuth (deg)')
+        plt.minorticks_on()
+        plt.grid(b=True, which='major', color='k', linestyle='-')
+        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+        
+        ax1 = plt.subplot(gs[0])
+        plt.ylim(hist_zenith_edges[0],hist_zenith_edges[-1])
+        bin_centers = (yedges[:-1] + yedges[1:]) / 2
+        bar_width = 0.9 * (yedges[1] - yedges[0])
+        y = numpy.sum(total_hist.T,axis=1)
+        plt.barh(bin_centers, y , height=bar_width)
+        plt.gca().invert_yaxis()
+        plt.gca().invert_xaxis()
+        plt.minorticks_on()
+        plt.grid(b=True, which='major', color='k', linestyle='-')
+        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+        plt.savefig('./total_skymap_%s-%s_mollweide=%s_lognorm=%s.png'%(str(overall_start_timestamp),str(overall_stop_timestamp),str(mollweide),str(lognorm)),dpi=600)
+        plt.close(fig)
+
+   
