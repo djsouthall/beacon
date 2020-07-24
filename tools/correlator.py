@@ -1489,8 +1489,8 @@ class Correlator:
                     cbar.set_label('Mean Correlation Value (Arb)')
                 else:
                     cbar.set_label('Mean Correlation Value')
-                plt.xlabel(xlabel)
-                plt.ylabel('Elevation Angle (Degrees)')
+                plt.xlabel(xlabel,fontsize=18)
+                plt.ylabel('Elevation Angle (Degrees)',fontsize=18)
                 plt.grid(True)
 
                 #Prepare array cut curves
@@ -1566,7 +1566,7 @@ class Correlator:
                 if interactive == True:
                     fig.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event,  mollweide=mollweide, center_dir=center_dir))
 
-                ax.legend(loc='lower left')
+                #ax.legend(loc='lower left')
                 self.figs.append(fig)
                 self.axs.append(ax)
 
@@ -2193,7 +2193,7 @@ if __name__=="__main__":
         all_axs = []
         all_cors = []
 
-        if True:
+        if False:
 
             for run in [1507,1509,1511]:
 
@@ -2286,7 +2286,7 @@ if __name__=="__main__":
                     all_axs.append(ax)
                 all_cors.append(cor)
 
-        if False:
+        if True:
             #Preparing for planes:
             known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks()
 
@@ -2304,8 +2304,8 @@ if __name__=="__main__":
 
             for index, key in enumerate(list(known_planes.keys())):
                 print(key)
-                if known_planes[key]['dir'] != 'E':
-                    continue
+                # if known_planes[key]['dir'] != 'E':
+                #     continue
 
                 enu = pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2])
                 plane_polys[key] = pt.PlanePoly(output_tracks[key]['timestamps'],enu,plot=False)
@@ -2346,8 +2346,8 @@ if __name__=="__main__":
 
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
                 
-                cor.animatedMap(eventids, 'hpol', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir=_dir,save=True,dpi=300)
-                
+                #cor.animatedMap(eventids, 'hpol', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir=_dir,save=True,dpi=300)
+                map_values, fig, ax = cor.map(eventids[0], 'hpol',center_dir='W', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=None,mollweide=True,circle_zenith=plane_zenith[0],circle_az=plane_az[0])
                 '''
                 test_planes = cor.getTimeDelayCurves(td_dict, 'hpol')
 

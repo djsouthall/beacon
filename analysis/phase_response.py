@@ -37,6 +37,96 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 plt.ion()
 
 
+def loadInterpolatedMeanPreampResponse(goal_freqs,  plot=False):
+    '''
+    THIS IS LEFT OFF TRYING TO GET THE RESPONSES AVERAGED IN THE TIME DOMAIN.  IT IS CLEAR LOOKING AT THE RESPONSES
+    AS CURRENTLY PRESENT THAT THEY ARE ACAUSAL.  THIS IS A PROBLEM.  YOU SHOULD LOOK AT THE RESPONSES BEFORE INTERPOLATING
+    IN THE FREQUENCY DOMAIN, AND JUST DO THIS FROM THE TO-ZERO-MHZ VALUES.  THEN UPSAMPLE AFTER TO GET THE "INTERPOLATED"
+    VALUE. 
+
+
+    This function uses code originally use in loadInterpolatedPhaseResponseMeanPreamp, but is seperated such that the
+    system response (at least the portions we have measured) can be used seperately. 
+
+    Because we don't know which board goes to which ant, I am just taking the mean.  They are all similar anyways. 
+    These responses are intended to be used for making a crude CR template and should be double checked if needed for a
+    more precise application.   
+
+    Parameters
+    ----------
+
+    goal_freqs : numpy.array
+        This is the set of frequencies you wish the system response to be returned for.  The function in interpolate
+        when possible, but will likely extrapolate with zeros down to 0 MHz (because data taken from field fox only
+        extends to 2 MHz).  These frequencies should be given in Hz.
+    plot : bool
+        If True then the preamp response will be plotted.
+    '''
+    try:
+        all_response_fft_to_zero = numpy.zeros((8,len(goal_freqs)))
+        if plot == True:
+            plt.figure()
+        for channel in numpy.arange(8):
+            #Below is loading in the signals and making them into complex numbers
+            phase_filename = os.environ['BEACON_ANALYSIS_DIR'] + 'data/calibration/beacon_amp_chain_sparams/' + 'beacon_preamp_%i_s21phase.csv'%(channel+1)
+            mag_filename = os.environ['BEACON_ANALYSIS_DIR'] + 'data/calibration/beacon_amp_chain_sparams/' + 'beacon_preamp_%i_s21mag.csv'%(channel+1)
+            freqs, phase = ff.readerFieldFox(phase_filename,header=17) #Phase in degrees
+            freqs, logmag = ff.readerFieldFox(mag_filename,header=17)
+            if False:
+                plt.figure()
+                plt.subplot(2,1,1)
+                plt.plot(freqs,phase)
+                plt.subplot(2,1,2)
+                plt.plot(freqs,logmag)
+                import pdb; pdb.set_trace() 
+            phase = numpy.unwrap(numpy.deg2rad(phase))
+            mag = ff.logMagToLin(logmag)
+            real,imag = ff.magPhaseToReIm(mag,numpy.rad2deg(phase)) #needs phase in degrees
+
+            response_fft = numpy.add(real,imag*1j)
+
+            #Now with the response I try to extend it to zero (added ~ 3 sample, as lowest freq is 2Mhz and sampling of 0.62 MHz)
+            freqs_to_zero = numpy.linspace(0,freqs[-1],len(freqs)+3,endpoint=True) #The original did not include 0 Mhz, which I think messes up ffts. 
+            response_fft_to_zero = scipy.interpolate.interp1d(numpy.append(0,freqs),numpy.append(0,response_fft),fill_value=0.0,bounds_error=False,kind='linear')(freqs_to_zero)
+            #tukey = scipy.signal.tukey(len(response_fft_to_zero), alpha=0.005, sym=True)
+            #response_fft_to_zero = numpy.multiply(tukey,response_fft_to_zero)
+
+            interpolated_response_fft = scipy.interpolate.interp1d(freqs_to_zero,response_fft_to_zero,fill_value=0.0,bounds_error=False,kind='linear')(goal_freqs) * numpy.sqrt(len(goal_freqs)/len(freqs))
+            all_response_fft_to_zero[channel] = interpolated_response_fft
+      
+            if plot == True:
+                #Convert mag to dB ish values.  
+                real_power_multiplier = 2.0*numpy.ones_like(response_fft) #The factor of 2 because rfft lost half of the power except for dc and Nyquist bins (handled below).
+                real_power_multiplier[[0,-1]] = 1.0
+                response_fft_dbish = 10.0*numpy.log10( real_power_multiplier*response_fft * numpy.conj(response_fft) / (2*len(response_fft))) #10 because doing power in log.  Dividing by N to match monutau. 
+
+                real_power_multiplier = 2.0*numpy.ones_like(interpolated_response_fft) #The factor of 2 because rfft lost half of the power except for dc and Nyquist bins (handled below).
+                real_power_multiplier[[0,-1]] = 1.0
+                interpolated_response_fft_dbish = 10.0*numpy.log10( real_power_multiplier*interpolated_response_fft * numpy.conj(interpolated_response_fft) / (2*len(interpolated_response_fft))) #10 because doing power in log.  Dividing by N to match monutau. 
+
+                #phase = phase - phase[freqs/1e6 >= 50][0] #Align at 50Mhz
+                print('HERE')
+                plt.plot(freqs,response_fft_dbish,label='Board %i Raw'%(channel+1))
+                plt.scatter(goal_freqs,interpolated_response_fft_dbish,s=4,label='Board %i Interp'%(channel+1))
+                plt.xlim(0,max(freqs))
+                plt.ylabel('dBish')
+
+
+        all_response_td = numpy.fft.fftshift(numpy.fft.irfft(all_response_fft_to_zero,axis=1),axes=1) #Not aligned time domain signals.  Should align then average. 
+
+        if plot == True:
+            plt.figure()
+            for channel in range(8):
+                plt.plot(all_response_td[channel])
+        return goal_freqs, all_response_td 
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+
+
 def loadInterpolatedPhaseResponseMeanPreamp(goal_freqs,  plot=False):
     '''
     This will load the phase response for the preamp.
@@ -284,6 +374,17 @@ if __name__ == '__main__':
                 t = cor.t()/1e9
                 t = t[-1]*numpy.arange(upsample)/upsample
                 goal_freqs = numpy.fft.rfftfreq(len(t),t[1]-t[0])
+
+
+
+
+
+                loadInterpolatedMeanPreampResponse(goal_freqs,  plot=True)
+                continue
+
+
+
+
                 loadInterpolatedPhaseResponseMeanPreamp(goal_freqs,  plot=False)
                 freqs, phase_response_2nd_stage = loadInterpolatedPhaseResponse2ndStage(goal_freqs, plot=True)
                 freqs, phase_response_preamp = loadInterpolatedPhaseResponseMeanPreamp(goal_freqs, plot=True)

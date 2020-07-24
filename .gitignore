@@ -1,2 +1,5 @@
 */__pycache__/
 */slurm*.out
+*/*.png
+*/*.svg
+*/*.jpg

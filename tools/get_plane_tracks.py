@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 '''
 This will process the hdf5 files created using convert_flight_csv_to_hdf5
 providing functions for searching through multiple hdf5 files.
@@ -17,8 +18,6 @@ import h5py
 from pprint import pprint
 import inspect
 import copy
-import matplotlib
-from matplotlib import gridspec
 #Personal Imports
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
@@ -29,8 +28,11 @@ import tools.info as info
 #Plotting Imports
 import pymap3d as pm
 import matplotlib.pyplot as plt
+plt.ioff()
 from matplotlib.colors import LogNorm
 from matplotlib.collections import LineCollection
+import matplotlib
+from matplotlib import gridspec
 
 
 c = 2.99700e8 #m/s
@@ -573,6 +575,11 @@ def gaussian2D(x, y, mu_x, mu_y, sig_x, sig_y):
 
 if __name__ == '__main__':
     plt.close('all')
+    if len(sys.argv) == 2:
+        add_string = str(sys.argv[1])
+    else:
+        add_string = ''
+
     min_approach_cut_km = 200 #km
     plot_distance_cut_limit = 200 #km
     
@@ -582,14 +589,14 @@ if __name__ == '__main__':
     overall_stop_timestamp = 1575158400 + utc_offset #December 1st, 2019
 
 
-    window_width_s = 24*60*60 #Each calculation cycle only looks at planes in this window.  
+    window_width_s = 7*24*60*60#24*60*60 #Each calculation cycle only looks at planes in this window.  
     time_bin_edges = numpy.arange(overall_start_timestamp,overall_stop_timestamp+window_width_s,window_width_s) #1 hour windows.
-    plane_interp_s = 1 #For each plane, how often to determine its location (given in s).  
+    plane_interp_s = 10 #For each plane, how often to determine its location (given in s).  
     
     angular_resolution_sig_deg = 3
 
-    norm_x = numpy.linspace(-3*angular_resolution_sig_deg, 3*angular_resolution_sig_deg, 200)
-    norm_y = numpy.linspace(-3*angular_resolution_sig_deg, 3*angular_resolution_sig_deg, 200)
+    norm_x = numpy.linspace(-3*angular_resolution_sig_deg, 3*angular_resolution_sig_deg, 100)
+    norm_y = numpy.linspace(-3*angular_resolution_sig_deg, 3*angular_resolution_sig_deg, 100)
     #These are the x and y coordinates of a guassian pdf that will be used to determine the weight of a particular angle when added
     #to a histogram.  Simply add the z content of norm_zv at xv + x and yv + y, x being azimuth, y being zenith.  
     #Unsure if this will work considering angles are weird. Assumes psf squared in angular.
@@ -599,7 +606,7 @@ if __name__ == '__main__':
     norm_zv = gaussian2D(norm_xv, norm_yv, 0.0, 0.0, angular_resolution_sig_deg, angular_resolution_sig_deg)
     norm_zv_1d = numpy.concatenate(norm_zv)
 
-    hist_az_edges = numpy.linspace(-180.0,180.0,361)
+    hist_az_edges = numpy.linspace(-180.0,180.0,17)
     hist_zenith_edges = numpy.linspace(0.0,100.0,101)
 
     use_interpolated_values = True
@@ -698,7 +705,7 @@ if __name__ == '__main__':
         plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
         if len(list(flight_tracks_ENU.keys())) > 0:
-            plt.savefig('./scatter_%s_mollweide=%s_lognorm=%s.png'%(str(start),str(mollweide),str(lognorm)),dpi=600)
+            plt.savefig('./%sscatter_%s_mollweide=%s_lognorm=%s.png'%(add_string, str(start),str(mollweide),str(lognorm)),dpi=600)
         plt.close(fig)
 
         #Making skymap histogram plot.
@@ -742,7 +749,7 @@ if __name__ == '__main__':
             plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
 
-            plt.savefig('./skymap_%s_mollweide=%s_lognorm=%s.png'%(str(start),str(mollweide),str(lognorm)),dpi=600)
+            plt.savefig('./%sskymap_%s_mollweide=%s_lognorm=%s.png'%(add_string, str(start),str(mollweide),str(lognorm)),dpi=600)
             plt.close(fig)
 
     #Making skymap histogram plot.
@@ -787,7 +794,7 @@ if __name__ == '__main__':
         plt.minorticks_on()
         plt.grid(b=True, which='major', color='k', linestyle='-')
         plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-        plt.savefig('./total_skymap_%s-%s_mollweide=%s_lognorm=%s.png'%(str(overall_start_timestamp),str(overall_stop_timestamp),str(mollweide),str(lognorm)),dpi=600)
+        plt.savefig('./%stotal_skymap_%s-%s_mollweide=%s_lognorm=%s.png'%(add_string, str(overall_start_timestamp),str(overall_stop_timestamp),str(mollweide),str(lognorm)),dpi=600)
         plt.close(fig)
 
    

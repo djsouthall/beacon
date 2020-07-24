@@ -14,8 +14,12 @@ from pprint import pprint
 plt.ion()
 
 
+
+
+
 if __name__ == '__main__':
     plt.close('all')
+    printCredit()
     # If your data is elsewhere, pass it as an argument
     datapath = sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
     run = 1509 #Selects which run to examine
