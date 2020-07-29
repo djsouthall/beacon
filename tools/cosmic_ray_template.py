@@ -12,13 +12,290 @@ sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.info as info
+import tools.field_fox as ff
 
 import numpy
+import scipy
+import scipy.signal
 import matplotlib.pyplot as plt
 
 datapath = os.environ['BEACON_DATA']
 
 plt.ion()
+
+
+def loadInterpolatedMeanResponse(mode, upsample_factor=16, plot=False):
+    '''
+    THIS IS LEFT OFF TRYING TO GET THE RESPONSES AVERAGED IN THE TIME DOMAIN.  IT IS CLEAR LOOKING AT THE RESPONSES
+    AS CURRENTLY PRESENT THAT THEY ARE ACAUSAL.  THIS IS A PROBLEM.  YOU SHOULD LOOK AT THE RESPONSES BEFORE INTERPOLATING
+    IN THE FREQUENCY DOMAIN, AND JUST DO THIS FROM THE TO-ZERO-MHZ VALUES.  THEN UPSAMPLE AFTER TO GET THE "INTERPOLATED"
+    VALUE. 
+
+
+    This function uses code originally use in loadInterpolatedPhaseResponseMeanPreamp, but is seperated such that the
+    system response (at least the portions we have measured) can be used seperately. 
+
+    Because we don't know which board goes to which ant, I am just taking the mean.  They are all similar anyways. 
+    These responses are intended to be used for making a crude CR template and should be double checked if needed for a
+    more precise application.   
+
+    Parameters
+    ----------
+    mode : str
+        This determines which response to load.  Options: 'preamp', 'stage2', 'all'.  When all is selected, this function
+        will call itself recursively and output all responses in the order listed in Options. 
+    upsample_factor : int
+        This will be used to multiply the length of the time domain responses using scipy.signal.resample.  This should 
+        be a factor of 2.  This is used to allow for better precision in the time domain aligning of signals before 
+        averaging.  The responses for both preamp and stage2 are both relatively well lined up by default so this could
+        be low, with a smaller change in the output.  By default this is set to 16. 
+    plot : bool
+        If True then the preamp response will be plotted.
+
+    Returns
+    ----------
+    (mode_freq_Hz, mode_response_fft) or (modeA_freq_Hz, modeA_response_fft, modeB_freq_Hz, modeB_response_fft) if 
+    mode == 'all'.
+
+    '''
+    try:
+        if mode in ['preamp','stage2']:
+            # Pseudo Code:
+
+            # Load in responses as is.  
+            for channel in numpy.arange(8):
+                #Below is loading in the signals and making them into complex numbers
+                if mode == 'preamp':
+                    phase_filename = os.environ['BEACON_ANALYSIS_DIR'] + 'data/calibration/beacon_amp_chain_sparams/' + 'beacon_preamp_%i_s21phase.csv'%(channel+1) #These should probably not be hardcoded, and added to info.py somewhere. 
+                    mag_filename = os.environ['BEACON_ANALYSIS_DIR'] + 'data/calibration/beacon_amp_chain_sparams/' + 'beacon_preamp_%i_s21mag.csv'%(channel+1)
+                elif mode == 'stage2':
+                    phase_filename = os.environ['BEACON_ANALYSIS_DIR'] + 'data/calibration/beacon_amp_chain_sparams/' + 'beacon_2ndStage_ch%i_s21phase.csv'%channel
+                    mag_filename = os.environ['BEACON_ANALYSIS_DIR'] + 'data/calibration/beacon_amp_chain_sparams/' + 'beacon_2ndStage_ch%i_s21mag.csv'%channel
+                freqs, phase = ff.readerFieldFox(phase_filename,header=17) #Phase in degrees
+                freqs, logmag = ff.readerFieldFox(mag_filename,header=17)
+
+                phase = numpy.unwrap(numpy.deg2rad(phase))
+                mag = ff.logMagToLin(logmag)
+                real,imag = ff.magPhaseToReIm(mag,numpy.rad2deg(phase)) #needs phase in degrees
+                response_fft = numpy.add(real,imag*1.0j)
+                #import pdb; pdb.set_trace()
+
+                #Extend measured response down to 0 MHz. 
+                #Now with the response I try to extend it to zero (added ~ 3 sample, as lowest freq is 2Mhz and sampling of 0.62 MHz)
+                freqs_to_zero = numpy.linspace(0,freqs[-1],len(freqs)+3,endpoint=True) #The original did not include 0 Mhz, which I think messes up ffts. This is a hard coded solution to the data taken.
+                response_fft_to_zero = scipy.interpolate.interp1d(numpy.append(0,freqs),numpy.append(0,response_fft),fill_value=0.0,bounds_error=False,kind='linear')(freqs_to_zero)
+
+
+                if channel == 0:
+                    responses_fft = numpy.zeros((8,len(response_fft)),dtype='complex')
+                responses_fft[channel] = response_fft
+
+                if channel == 0:
+                    responses_fft_to_zero = numpy.zeros((8,len(response_fft_to_zero)),dtype='complex')
+                responses_fft_to_zero[channel] = response_fft_to_zero
+
+
+            if plot == True:
+                plt.figure()
+                plt.suptitle('%s : Comparing Extended Response Magnitudes'%mode)
+                plt.subplot(2,1,1)
+                for channel in range(8):
+                    plt.plot(freqs/1e6, 10*numpy.log10(numpy.abs(responses_fft[channel])),label='channel %i'%channel)
+                    plt.ylabel('dBish')
+                    plt.xlabel('Freq (MHz)')
+                    #plt.ylim(-35,12)
+                    plt.xlim(0,250)
+
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+
+
+                plt.subplot(2,1,2)
+                for channel in range(8):
+                    plt.plot(freqs_to_zero/1e6, 10*numpy.log10(numpy.abs(responses_fft_to_zero[channel])),label='channel %i extended'%channel)
+                    plt.ylabel('dBish')
+                    plt.xlabel('Freq (MHz)')
+                    #plt.ylim(-35,12)
+                    plt.xlim(0,250)
+
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+
+                plt.figure()
+                plt.suptitle('%s : Comparing Extended Response Real'%mode)
+                plt.subplot(2,1,1)
+                for channel in range(8):
+                    plt.plot(freqs/1e6, numpy.real(responses_fft[channel]),label='channel %i'%channel)
+                    plt.ylabel('Real(Response)')
+                    plt.xlabel('Freq (MHz)')
+                    ##plt.ylim(-35,12)
+                    plt.xlim(0,250)
+
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+
+
+                plt.subplot(2,1,2)
+                for channel in range(8):
+                    plt.plot(freqs_to_zero/1e6, numpy.real(responses_fft_to_zero[channel]),label='channel %i extended'%channel)
+                    plt.ylabel('Real(Response)')
+                    plt.xlabel('Freq (MHz)')
+                    ##plt.ylim(-35,12)
+                    plt.xlim(0,250)
+
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+
+                plt.figure()
+                plt.suptitle('%s : Comparing Extended Response Imag'%mode)
+                plt.subplot(2,1,1)
+                for channel in range(8):
+                    plt.plot(freqs/1e6, numpy.imag(responses_fft[channel]),label='channel %i'%channel)
+                    plt.ylabel('imag(Response)')
+                    plt.xlabel('Freq (MHz)')
+                    ##plt.ylim(-35,12)
+                    plt.xlim(0,250)
+
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+
+
+                plt.subplot(2,1,2)
+                for channel in range(8):
+                    plt.plot(freqs_to_zero/1e6, numpy.imag(responses_fft_to_zero[channel]),label='channel %i extended'%channel)
+                    plt.ylabel('imag(Response)')
+                    plt.xlabel('Freq (MHz)')
+                    ##plt.ylim(-35,12)
+                    plt.xlim(0,250)
+
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+
+
+
+
+            # Convert to time domain.
+            #freqs_to_zero
+            #response_fft_to_zero
+
+            #import pdb; pdb.set_trace()
+
+            responses = numpy.fft.fftshift(numpy.fft.irfft(responses_fft_to_zero,axis=1))
+            N = numpy.shape(responses)[1] #Number of samples in time
+            df = freqs_to_zero[1]-freqs_to_zero[0] #frequency step in Hz.  df = 1/T = 1/(N*dt)
+            dt = 1.0/(N*df) #Time step in seconds
+            t = numpy.arange(N)*dt
+
+            # Plot time domain responses to ensure they are causal. 
+            if plot == True:
+                plt.figure()
+                plt.suptitle('%s : Time Domain Response'%mode)
+                for channel in range(8):
+                    plt.plot(t*1e9, responses[channel],label='channel %i'%channel)
+                    plt.ylabel('Response')
+                    plt.xlabel('ns')
+
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+
+            # Align time domain responses.
+
+            #upsample for more precise alignment
+            upsample_factor = 16
+            upsampled_responses, upsampled_time = scipy.signal.resample(responses,upsample_factor*N,t=t,axis=1)
+
+            if plot == True:
+                plt.figure()
+                plt.suptitle('%s : Time Domain Response'%mode)
+                for channel in range(8):
+                    plt.plot(upsampled_time*1e9, upsampled_responses[channel]/numpy.max(upsampled_responses[channel]),label='channel %i'%channel)
+                    plt.ylabel('Normalized Response')
+                    plt.xlabel('ns')
+
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+                ax = plt.gca()
+
+            #align all signals to 0 based on cross correlation
+            # if plot == True:
+            #     plt.figure()
+            #     plt.suptitle('%s : Time Domain Response'%mode)
+
+            for channel in range(numpy.shape(upsampled_responses)[0] - 1):
+                #Using channel + 1 because cross correlating and aligning every signal to channel zero.
+                c = numpy.correlate(upsampled_responses[0],upsampled_responses[channel + 1],mode='full') 
+                roll_amount = numpy.argmax(c) - upsample_factor*N + 1 #This makes it so zero with zero would result in 0 roll as desired.  
+                #print('channel = %i, roll_amount = %i'%(channel,roll_amount))
+
+                upsampled_responses[channel + 1] = numpy.roll(upsampled_responses[channel + 1],roll_amount)
+                # if plot == True:
+                #     plt.plot(c)
+
+            # Average waveforms in time domain.  
+
+            #import pdb; pdb.set_trace()
+            averaged_upsampled_response = numpy.mean(upsampled_responses,axis=0)
+            
+            if plot == True:
+                plt.figure()
+                plt.suptitle('%s : Aligned Time Domain Response'%mode)
+                plt.subplot(1,1,1,sharex=ax,sharey=ax)
+                plt.plot(upsampled_time*1e9,averaged_upsampled_response/numpy.max(averaged_upsampled_response),label='Averaged',linewidth=4,c='k',alpha=0.8)
+                for channel in range(8):
+                    plt.plot(upsampled_time*1e9, upsampled_responses[channel]/numpy.max(upsampled_responses[channel]),label='channel %i'%channel)
+
+                plt.ylabel('Normalized Response')
+                plt.xlabel('ns')
+
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.legend()
+
+            #Downsample to original measurement sampling
+            downsampled_response, downsampled_time = scipy.signal.resample(averaged_upsampled_response,N,t=upsampled_time)
+            
+            if plot == True:
+                plt.scatter(upsampled_time*1e9,averaged_upsampled_response/numpy.max(averaged_upsampled_response),label='Averaged Downsampled',s=20,c='r')
+
+            #Return Frequency domain response with original sampling.
+            out_response_fft = numpy.fft.rfft(downsampled_response)
+            out_freq_Hz = numpy.fft.rfftfreq(len(downsampled_time),downsampled_time[1]-downsampled_time[0])
+
+            return out_freq_Hz, out_response_fft
+
+            # Leave upsampling to another function?
+        elif mode == 'all':
+            preamp_freq_Hz, preamp_response_fft = loadInterpolatedMeanResponse('preamp',plot=plot)
+            stage2_freq_Hz, stage2_response_fft = loadInterpolatedMeanResponse('stage2',plot=plot)
+
+            return preamp_freq_Hz, preamp_response_fft, stage2_freq_Hz, stage2_response_fft
+
+        else:
+            print('Given mode not in list of acceptable modes.  Please give any of: "peamp", "stage2", or "all"')
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+
 
 class CosmicRayGenerator():
     """
@@ -56,12 +333,10 @@ class CosmicRayGenerator():
 
             #One-time preparation required for each model can be performed or called below.
             if self.model == 'bi-delta':
-                self.system_response = numpy.zeros(1000)#filler.  This is where I should load the sytem response.
-
-                '''
-                phase_response.py is the only response data I remember.  I need to refresh myself the meaning of this data
-                and if it is the system impulse response I want.  Additionally do we have any measure of antenna response?
-                ''' 
+                preamp_freq_Hz, preamp_response_fft, stage2_freq_Hz, stage2_response_fft = loadInterpolatedMeanResponse('all', plot=False)
+                self.preamp_response_fft = preamp_response_fft
+                self.stage2_response_fft = stage2_response_fft
+                self.response_freqs = preamp_response #Same for preamp and stage2
 
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -71,7 +346,7 @@ class CosmicRayGenerator():
             print(exc_type, fname, exc_tb.tb_lineno)
         
 
-    def eFieldGenerator(self,t_ns,t_offset=0):
+    def eFieldGenerator(self,t_ns,t_offset=0,extent_ns=5):
         '''
         For a given set of time data this will produce a signal for the set model.
 
@@ -83,10 +358,12 @@ class CosmicRayGenerator():
             This is the time offset within the given time serious the signal should start.  What "start" means will be 
             model dependant likely.  Descriptions of meanings for each model are:
             'bi-delta' : The initial rise time value will occur at the time step closest to this offset (rounded up).
+        extent_ns : float
+            How long the entire bipolar signal will take to return to no signal (roughly).  Only used in certain models
+            (model == 'bi-delta').  Given in ns.
         '''
         if self.model == 'bi-delta':
             #Generate "Electric field" portion of bipolar signal (signal before response)
-            extent_ns = 5.0#ns How long the entire bipolar signal will take to return to no signal (roughly).
             half_extent_index = int(numpy.ceil(extent_ns/(2*(t_ns[1] - t_ns[0])))) #The number of indices corresponding to half of the extent.  I.e. the extent in time (indices) of each pol of the bipolar signal.
             print(half_extent_index)
             efield = numpy.zeros_like(t_ns)
@@ -102,11 +379,13 @@ class CosmicRayGenerator():
         return efield
 
 
+
+
 if __name__ == '__main__':
     try:
         plt.close('all')
         #Get timing info from real BEACON data for testing.
-
+        '''
         run = 1509
         known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
         eventid = known_pulser_ids['run%i'%run]['hpol'][0]
@@ -145,6 +424,11 @@ if __name__ == '__main__':
         plt.minorticks_on()
         plt.grid(b=True, which='major', color='k', linestyle='-')
         plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+        '''
+
+        preamp_freq_Hz, preamp_response, stage2_freq_Hz, stage2_response = loadInterpolatedMeanResponse('all', plot=False)
+
     except Exception as e:
         print('Error in main loop.')
         print(e)

@@ -621,12 +621,13 @@ if __name__=="__main__":
                 pprint(s)
                 #'''
                 getEventTimes(reader,plot=True) #WHAT I AM CURRENTLY WORKING ON
-            
+                '''
                 filename = createFile(reader,redo_defaults=redo_defaults)
                 with h5py.File(filename, 'r') as file:
                     cut = file['trigger_type'][:] == 2
                     for channel in range(8):
                         hist[channel] += numpy.histogram(file['inband_peak_freq_MHz'][:,int(channel)][cut],bins=bins)[0]
+                '''
 
 
             if False:
