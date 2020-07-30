@@ -24,7 +24,7 @@ datapath = os.environ['BEACON_DATA']
 plt.ion()
 
 
-def loadInterpolatedMeanResponse(mode, return_domain='time', upsample_factor=16, plot=False):
+def loadInterpolatedMeanResponse(mode, return_domain='time', upsample_factor=8, plot=False):
     '''
     This function uses code originally use in loadInterpolatedPhaseResponseMeanPreamp, but is seperated such that the
     system response (at least the portions we have measured) can be used seperately. 
@@ -212,9 +212,9 @@ def loadInterpolatedMeanResponse(mode, return_domain='time', upsample_factor=16,
                     plt.legend()
 
             # Align time domain responses.
-
-            #upsample for more precise alignment
-            upsample_factor = 16
+            
+            print('Aligning %s responses with upsample factor of %i'%(mode, upsample_factor))
+            
             upsampled_responses, upsampled_time = scipy.signal.resample(responses,upsample_factor*N,t=t,axis=1)
 
             if plot == True:
@@ -315,9 +315,15 @@ class CosmicRayGenerator():
     model : str
         This is the model you wish to use.  Currently the options include:
         'bi-delta' : A bi polar delta function convolved with the system response.
+    t_ns : array of float
+            This should be the time series of the electric field to be output.  Expected in ns.
+    t_offset : float
+        This is the time offset within the given time serious the signal should start.  What "start" means will be 
+        model dependant likely.  Descriptions of meanings for each model are:
+        'bi-delta' : The initial rise time value will occur at the time step closest to this offset (rounded up).
     """
 
-    def __init__(self, model='bi-delta'):
+    def __init__(self, t_ns, t_offset=0, model='bi-delta'):
         try:
             self.accepted_model_list = ['bi-delta']
             if not type(model) == str:
@@ -340,6 +346,7 @@ class CosmicRayGenerator():
                 self.stage2_response = stage2_response
                 self.response_t_s = preamp_t_s #Same for preamp and stage2
                 self.response_t_ns = self.response_t_s*1.0e9
+                self.adjustResponsesToTime(t_ns, t_offset=t_offset)
 
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -347,11 +354,11 @@ class CosmicRayGenerator():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-        
 
-    def eFieldGenerator(self,t_ns,t_offset=0,extent_ns=5,plot=False):
+    def adjustResponsesToTime(self, t_ns, t_offset=0):
         '''
-        For a given set of time data this will produce a signal for the set model.
+        Given the values of t_ns and t_offset, this will resample the stored responses to match the expected output time
+        series.  This will be called on init and can be called later to change the times of output waveforms.
 
         Parameters
         ----------
@@ -361,52 +368,70 @@ class CosmicRayGenerator():
             This is the time offset within the given time serious the signal should start.  What "start" means will be 
             model dependant likely.  Descriptions of meanings for each model are:
             'bi-delta' : The initial rise time value will occur at the time step closest to this offset (rounded up).
-        extent_ns : float
-            How long the entire bipolar signal will take to return to no signal (roughly).  Only used in certain models
-            (model == 'bi-delta').  Given in ns.
+
+        '''
+        self.t_ns = t_ns
+        self.t_offset = t_offset
+
+        #Compare time of response v.s. expected time.  Might be best to abstract this from the individual calling
+        #of the function and to put it in the setup.  Surely this is a stable request.
+        self.resample_factor = (self.response_t_ns[1] - self.response_t_ns[0])/(self.t_ns[1] - self.t_ns[0])
+        #If resample_factor > 1 then responses need to be upsampled by this factor to have the same time step.
+        #Less concerned about overall length, more concerned about matching time step for convolution.
+        self.stage2_response_resampled, self.response_t_s_resampled  = scipy.signal.resample(self.stage2_response,int(len(self.response_t_s)*self.resample_factor),t=self.response_t_s)
+        self.preamp_response_resampled, self.response_t_s_resampled  = scipy.signal.resample(self.preamp_response,int(len(self.response_t_s)*self.resample_factor),t=self.response_t_s)
+        if len(self.response_t_s_resampled) > len(self.t_ns):
+            #convolve mode 'same' will match max length of input array.  Can cut down the signal after matching.
+            #should ultimately match len(t_ns)
+            self.efield_convolved_t_ns = self.response_t_s_resampled*1e9
+        else:
+            self.efield_convolved_t_ns = t_ns
+
+    def eFieldGenerator(self,plot=False):
+        '''
+        For a given set of time data this will produce a signal for the set model.
+
+        Parameters
+        ----------
+        
+
+        Returns
+        -------
+        t, Efield
+            The time and field (time domain) signal of a mock CR as it may be percieved in the BEACON array.  
         '''
         try:
             if self.model == 'bi-delta':
                 #Generate "Electric field" portion of bipolar signal (signal before response)
-                half_extent_index = int(numpy.ceil(extent_ns/(2*(t_ns[1] - t_ns[0])))) #The number of indices corresponding to half of the extent.  I.e. the extent in time (indices) of each pol of the bipolar signal.
-                print(half_extent_index)
-                efield = numpy.zeros_like(t_ns)
-                start_index = numpy.where(t_ns >= t_offset)[0][0]
-                efield[start_index:start_index+half_extent_index] = 1.0
-                efield[start_index + half_extent_index:start_index+2*half_extent_index] = -1.0
+                
+                #Extents refer to how long the bipolar signal is set positive versus negative.  Roughly based off of 
+                #Signals in Figure 8 of https://arxiv.org/pdf/1811.01750.pdf
+                negative_extent = 5#ns
+                positive_extent = 20#ns
 
-                # self.preamp_response
-                # self.stage2_response
-                # self.response_t_s
+                negative_extent_index = int(numpy.ceil(negative_extent/(self.t_ns[1] - self.t_ns[0]))) #The number of indices corresponding to the negative the extent.  I.e. the extent in time (indices) of each pol of the bipolar signal.
+                positive_extent_index = int(numpy.ceil(positive_extent/(self.t_ns[1] - self.t_ns[0]))) #The number of indices corresponding to the negative the extent.  I.e. the extent in time (indices) of each pol of the bipolar signal.
 
-                #Compare time of response v.s. expected time.  Might be best to abstract this from the individual calling
-                #of the function and to put it in the setup.  Surely this is a stable request.
-                resample_factor = (self.response_t_ns[1] - self.response_t_ns[0])/(t_ns[1] - t_ns[0])
-                #If resample_factor > 1 then responses need to be upsampled by this factor to have the same time step.
-                #Less concerned about overall length, more concerned about matching time step for convolution.
-                stage2_response_resampled, response_t_s_resampled  = scipy.signal.resample(self.stage2_response,int(len(self.response_t_s)*resample_factor),t=self.response_t_s)
-                preamp_response_resampled, response_t_s_resampled  = scipy.signal.resample(self.preamp_response,int(len(self.response_t_s)*resample_factor),t=self.response_t_s)
+                efield = numpy.zeros_like(self.t_ns)
+                start_index = numpy.where(self.t_ns >= self.t_offset)[0][0]
+
+                efield[start_index:start_index+negative_extent_index] = -1.0
+                efield[start_index+negative_extent_index:start_index+negative_extent_index+positive_extent_index] = 1.0 * float(negative_extent_index)/float(positive_extent_index) #Making the signal integrate to 0.  
 
                 #Use impulse response to get signal.
-                efield_convolved = numpy.convolve(numpy.convolve(efield,stage2_response_resampled,mode='same'),1.0e6*preamp_response_resampled,mode='same')
-                if len(response_t_s_resampled) > len(t_ns):
-                    #convolve mode 'same' will match max length of input array.  Can cut down the signal after matching.
-                    #should ultimately match len(t_ns)
-                    efield_convolved_t_ns = response_t_s_resampled*1e9
-                else:
-                    efield_convolved_t_ns = t_ns
-
-
+                efield_convolved = numpy.convolve(numpy.convolve(efield,self.stage2_response_resampled,mode='same'),1.0e6*self.preamp_response_resampled,mode='same')
+                #Time precalculated to be self.efield_convolved_t_ns for requested time series. 
 
                 #Plot efield signal.
                 if plot == True:
                     plt.figure()
-                    
-                    plt.plot(response_t_s_resampled*1e9,stage2_response_resampled/numpy.max(stage2_response_resampled),label='stage2')
-                    plt.plot(response_t_s_resampled*1e9,preamp_response_resampled/numpy.max(preamp_response_resampled),label='preamp')
-                    plt.plot(t_ns,efield/numpy.max(efield),label='bipolar delta')
+                    plt.subplot(2,1,1)
+
+                    plt.plot(self.response_t_s_resampled*1e9,self.stage2_response_resampled/numpy.max(numpy.abs(self.stage2_response_resampled)),linewidth=3,label='stage2')
+                    plt.plot(self.response_t_s_resampled*1e9,self.preamp_response_resampled/numpy.max(numpy.abs(self.preamp_response_resampled)),linewidth=3,label='preamp')
+                    plt.plot(self.t_ns,efield/numpy.max(numpy.abs(efield)),linewidth=3,label='bipolar delta')
             
-                    plt.plot(efield_convolved_t_ns,efield_convolved/numpy.max(efield_convolved),c='r',linestyle='--',label='Resultant Convolved "E Field" Signal')#Where the output convolved signal will be plotted.  
+                    plt.plot(self.efield_convolved_t_ns,efield_convolved/numpy.max(numpy.abs(efield_convolved)),c='r',linewidth=4,label='Resultant Convolved "E Field" Signal')#Where the output convolved signal will be plotted.  
 
                     plt.ylabel('Normalized Responses and Signals')
                     plt.xlabel('ns')
@@ -415,10 +440,29 @@ class CosmicRayGenerator():
                     plt.grid(b=True, which='major', color='k', linestyle='-')
                     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
+                    plt.subplot(2,1,2)
+                    plot_freq_A = numpy.fft.rfftfreq(len(self.response_t_s_resampled),self.response_t_s_resampled[1]-self.response_t_s_resampled[0])
+                    plt.plot(plot_freq_A/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(self.stage2_response_resampled/numpy.max(numpy.abs(self.stage2_response_resampled))))),linewidth=3,label='stage2')
+                    plt.plot(plot_freq_A/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(self.preamp_response_resampled/numpy.max(numpy.abs(self.preamp_response_resampled))))),linewidth=3,label='preamp')
+                    
+                    plot_freq_B = numpy.fft.rfftfreq(len(self.t_ns),(self.t_ns[1]-self.t_ns[0])/1.0e9)
+                    plt.plot(plot_freq_B/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(efield/numpy.max(numpy.abs(efield))))),linewidth=3,label='bipolar delta')
+                    
+                    plot_freq_C = numpy.fft.rfftfreq(len(self.efield_convolved_t_ns),(self.efield_convolved_t_ns[1]-self.efield_convolved_t_ns[0])/1.0e9)
+                    plt.plot(plot_freq_C/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(efield_convolved/numpy.max(numpy.abs(efield_convolved))))),c='r',linewidth=4,label='Resultant Convolved "E Field" Signal')#Where the output convolved signal will be plotted.  
+
+                    plt.ylabel('Response/Signal Powers (arb/dBish)\n[Post Time Domain Normalization]')
+                    plt.xlabel('Freq (MHz)')
+                    plt.legend()
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
             else:
                 print('Model not yet programmed in function: eFieldGenerator')
 
-            return efield
+            return self.efield_convolved_t_ns, efield_convolved/numpy.max(numpy.abs(efield_convolved))
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -442,9 +486,8 @@ if __name__ == '__main__':
         test_pulser_adu = reader.wf(0)
 
         #Creating test signal
-        cr_gen = CosmicRayGenerator(model='bi-delta')
-
-        test_e = cr_gen.eFieldGenerator(test_t,t_offset=800.0,plot=True)
+        cr_gen = CosmicRayGenerator(test_t,t_offset=800.0,model='bi-delta')
+        out_t, out_E = cr_gen.eFieldGenerator(plot=True)
 
 
         plt.figure()
@@ -459,8 +502,8 @@ if __name__ == '__main__':
         plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
         plt.subplot(2,1,2)
-        plt.plot(test_t,test_e,label='Test CR Signal')
-        plt.scatter(test_t,test_e,c='r')
+        plt.plot(out_t,out_E,label='Test CR Signal')
+        plt.scatter(out_t,out_E,c='r')
         plt.ylabel('E (adu)')
         plt.xlabel('t (ns)')
 
