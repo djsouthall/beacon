@@ -19,6 +19,7 @@ import scipy
 import scipy.signal
 import matplotlib.pyplot as plt
 
+
 datapath = os.environ['BEACON_DATA']
 
 plt.ion()
@@ -387,7 +388,7 @@ class CosmicRayGenerator():
         else:
             self.efield_convolved_t_ns = t_ns
 
-    def eFieldGenerator(self,plot=False):
+    def eFieldGenerator(self,plot=False,curve_choice=0):
         '''
         For a given set of time data this will produce a signal for the set model.
 
@@ -403,11 +404,31 @@ class CosmicRayGenerator():
         try:
             if self.model == 'bi-delta':
                 #Generate "Electric field" portion of bipolar signal (signal before response)
-                
                 #Extents refer to how long the bipolar signal is set positive versus negative.  Roughly based off of 
                 #Signals in Figure 8 of https://arxiv.org/pdf/1811.01750.pdf
-                negative_extent = 5#ns
-                positive_extent = 20#ns
+                #Red: 27.3-31.9, 31.9-60
+                if curve_choice == 0:
+                    # 4.6, 28.1
+                    negative_extent = 5#ns
+                    positive_extent = 28#ns
+
+                #Orange: 84.5-96.3, 93.3-125
+                elif curve_choice == 1:
+                    # 11.8, 31.7
+                    negative_extent = 12#ns
+                    positive_extent = 32#ns
+
+                #Green: 144-152.6, 152.6-185.9
+                elif curve_choice == 2:
+                    # 8.6, 33.3
+                    negative_extent = 9#ns
+                    positive_extent = 33#ns
+
+                #Blue: 201-219.4, 219.4-268.8
+                elif curve_choice == 3:
+                    # 18.4, 49.4
+                    negative_extent = 18#ns
+                    positive_extent = 49#ns
 
                 negative_extent_index = int(numpy.ceil(negative_extent/(self.t_ns[1] - self.t_ns[0]))) #The number of indices corresponding to the negative the extent.  I.e. the extent in time (indices) of each pol of the bipolar signal.
                 positive_extent_index = int(numpy.ceil(positive_extent/(self.t_ns[1] - self.t_ns[0]))) #The number of indices corresponding to the negative the extent.  I.e. the extent in time (indices) of each pol of the bipolar signal.
@@ -435,6 +456,7 @@ class CosmicRayGenerator():
 
                     plt.ylabel('Normalized Responses and Signals')
                     plt.xlabel('ns')
+                    plt.xlim(700,1000)
                     plt.legend()
                     plt.minorticks_on()
                     plt.grid(b=True, which='major', color='k', linestyle='-')
@@ -453,6 +475,35 @@ class CosmicRayGenerator():
 
                     plt.ylabel('Response/Signal Powers (arb/dBish)\n[Post Time Domain Normalization]')
                     plt.xlabel('Freq (MHz)')
+                    plt.xlim(2,100)
+                    plt.ylim(-100,40)
+                    plt.legend()
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+                    plt.figure()
+                    plt.subplot(2,1,1)
+
+                    plt.plot(self.efield_convolved_t_ns,efield_convolved/numpy.max(numpy.abs(efield_convolved)),c='r',linewidth=4,label='Resultant Convolved "E Field" Signal')#Where the output convolved signal will be plotted.  
+
+                    plt.ylabel('Normalized CR Signal')
+                    plt.xlabel('ns')
+                    plt.xlim(700,1000)
+                    plt.legend()
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                    plt.subplot(2,1,2)
+                    plot_freq_C = numpy.fft.rfftfreq(len(self.efield_convolved_t_ns),(self.efield_convolved_t_ns[1]-self.efield_convolved_t_ns[0])/1.0e9)
+                    plt.plot(plot_freq_C/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(efield_convolved/numpy.max(numpy.abs(efield_convolved))))),c='r',linewidth=4,label='Resultant Convolved "E Field" Signal')#Where the output convolved signal will be plotted.  
+
+                    plt.ylabel('Signal Power (arb/dBish)\n[Post Time Domain Normalization]')
+                    plt.xlabel('Freq (MHz)')
+                    plt.xlim(2,100)
+                    plt.ylim(-100,40)
                     plt.legend()
                     plt.minorticks_on()
                     plt.grid(b=True, which='major', color='k', linestyle='-')
@@ -487,9 +538,9 @@ if __name__ == '__main__':
 
         #Creating test signal
         cr_gen = CosmicRayGenerator(test_t,t_offset=800.0,model='bi-delta')
-        out_t, out_E = cr_gen.eFieldGenerator(plot=True)
-
-
+        for curve_choice in range(4):
+            out_t, out_E = cr_gen.eFieldGenerator(plot=True,curve_choice=curve_choice)
+                  
         plt.figure()
         plt.subplot(2,1,1)
         plt.plot(test_t,test_pulser_adu,label='Pulser Signal')
@@ -511,6 +562,7 @@ if __name__ == '__main__':
         plt.minorticks_on()
         plt.grid(b=True, which='major', color='k', linestyle='-')
         plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+        
 
 
     except Exception as e:
