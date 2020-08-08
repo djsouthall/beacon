@@ -239,14 +239,14 @@ if __name__ == '__main__':
         runs = numpy.array([1642,1643,1644,1645,1646,1647])
 
     try:
-        if plot_impulsivity:
-            impulsivity_hv_counts = numpy.zeros((3,len(bins_2dhist_v)-1,len(bins_2dhist_h)-1)) #v going to be plotted vertically, h horizontall, with 3 of such matrices representing the different trigger types.
         if plot_1dhists:
             hpol_counts = numpy.zeros((3,len(bins_1dhist)-1)) #3 rows, one for each trigger type.  
             vpol_counts = numpy.zeros((3,len(bins_1dhist)-1))
         if plot_2dhists:
             hv_counts = numpy.zeros((3,len(bins_2dhist_v)-1,len(bins_2dhist_h)-1)) #v going to be plotted vertically, h horizontall, with 3 of such matrices representing the different trigger types.
-
+        if plot_impulsivity:
+            impulsivity_hv_counts = numpy.zeros((3,len(bins_2dhist_v)-1,len(bins_2dhist_h)-1)) #v going to be plotted vertically, h horizontall, with 3 of such matrices representing the different trigger types.
+            impulsivity_roi_counts = numpy.zeros((numpy.shape(roi)[0],3,len(bins_2dhist_v)-1,len(bins_2dhist_h)-1)) #A seperate histogram for each roi.  The above is a total histogram.
         for run in runs:
             #Prepare to load correlation values.
             reader = Reader(datapath,run)
@@ -293,14 +293,22 @@ if __name__ == '__main__':
                     trigger_cut = trigger_type == trig_index+1
                     trigger_cut_indices = numpy.where(trigger_cut)[0]
 
+                    max_output_correlation_values_h = numpy.max(output_correlation_values[trigger_cut_indices][:,[0,2,4,6]],axis=1)
+                    max_output_correlation_values_v = numpy.max(output_correlation_values[trigger_cut_indices][:,[1,3,5,7]],axis=1)
                     if plot_1dhists:
-                        hpol_counts[trig_index] += numpy.histogram(numpy.max(output_correlation_values[trigger_cut_indices][:,[0,2,4,6]],axis=1),bins=bins_1dhist)[0]
-                        vpol_counts[trig_index] += numpy.histogram(numpy.max(output_correlation_values[trigger_cut_indices][:,[1,3,5,7]],axis=1),bins=bins_1dhist)[0]
+                        hpol_counts[trig_index] += numpy.histogram(max_output_correlation_values_h,bins=bins_1dhist)[0]
+                        vpol_counts[trig_index] += numpy.histogram(max_output_correlation_values_v,bins=bins_1dhist)[0]
                     if plot_2dhists:
-                        hv_counts[trig_index] += numpy.histogram2d(numpy.max(output_correlation_values[trigger_cut_indices][:,[0,2,4,6]],axis=1), numpy.max(output_correlation_values[trigger_cut_indices][:,[1,3,5,7]],axis=1), bins = [bins_2dhist_h,bins_2dhist_v])[0].T 
+                        hv_counts[trig_index] += numpy.histogram2d(max_output_correlation_values_h, max_output_correlation_values_v, bins = [bins_2dhist_h,bins_2dhist_v])[0].T 
                     if plot_impulsivity:
                         impulsivity_hv_counts[trig_index] += numpy.histogram2d(hpol_output_impulsivity[trigger_cut_indices], vpol_output_impulsivity[trigger_cut_indices], bins = [bins_impulsivity_h,bins_impulsivity_v])[0].T 
-
+                        if plot_roi:
+                            for roi_index, roi_coords in enumerate(roi):
+                                roi_cut = numpy.logical_and(numpy.logical_and(max_output_correlation_values_h >= roi_coords[0], max_output_correlation_values_h <= roi_coords[1]),numpy.logical_and(max_output_correlation_values_v >= roi_coords[2], max_output_correlation_values_v <= roi_coords[3]))
+                                roi_cut_indices = trigger_cut_indices[roi_cut]
+                                # if roi_index == 0:
+                                #     import pdb; pdb.set_trace()
+                                impulsivity_roi_counts[roi_index][trig_index] += numpy.histogram2d(hpol_output_impulsivity[roi_cut_indices], vpol_output_impulsivity[roi_cut_indices], bins = [bins_impulsivity_h,bins_impulsivity_v])[0].T 
         if plot_1dhists:
             summed_counts = hpol_counts + vpol_counts
 
@@ -369,6 +377,29 @@ if __name__ == '__main__':
                 #plt.ylim(0,1)
                 cbar = fig4.colorbar(im)
                 cbar.set_label('Counts')
+                if plot_roi:
+                    legend_properties = []
+                    legend_labels = []
+                    for roi_index, roi_coords in enumerate(roi):
+                        cs = ax4.contour(bin_centers_mesh_h, bin_centers_mesh_v, impulsivity_roi_counts[roi_index][trig_index], colors=[roi_colors[roi_index]],levels=5)#,label='roi %i'%roi_index)
+                        legend_properties.append(cs.legend_elements()[0][0])
+                        legend_labels.append('roi %i'%roi_index)
+                        # strs = ['', '', '', '', 'roi %i'%roi_index, '', '']
+                        # fmt = {}
+                        # for l, s in zip(cs.levels, strs):
+                        #     fmt[l] = s
+                        #cs.levels[4] = 'roi %i'%roi_index
+
+                        # try:
+                        #     ax4.clabel(cs,cs.levels,fmt=fmt,fontsize=16,inline=False)
+                        # except Exception as e:
+                        #     print('Error when adding contour.')
+                        #     print(e)
+                        #     exc_type, exc_obj, exc_tb = sys.exc_info()
+                        #     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                        #     print(exc_type, fname, exc_tb.tb_lineno)
+                    #import pdb; pdb.set_trace()
+                    plt.legend(legend_properties,legend_labels)
                 # if plot_roi:
                 #Need to turn this into a contour plotted over top using 2dhist with points just form each ROI
                 #     for roi_index, roi_coords in enumerate(roi): 
