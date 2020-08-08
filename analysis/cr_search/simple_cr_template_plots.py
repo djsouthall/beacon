@@ -18,6 +18,7 @@ from objects.fftmath import TemplateCompareTool
 
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 plt.ion()
 
 import numpy
@@ -43,8 +44,11 @@ if __name__ == '__main__':
     bins_1dhist = numpy.linspace(0,1,201)
 
     #2dhist Params:
+    plot_2dhists = True
     bins_2dhist_h = numpy.linspace(0,1,201)
     bins_2dhist_v = numpy.linspace(0,1,201)
+    
+    bin_centers_mesh_h, bin_centers_mesh_v = numpy.meshgrid((bins_2dhist_h[:-1] + bins_2dhist_h[1:]) / 2, (bins_2dhist_v[:-1] + bins_2dhist_v[1:]) / 2)
 
     #In progress.
 
@@ -59,6 +63,10 @@ if __name__ == '__main__':
         if plot_1dhists:
             hpol_counts = numpy.zeros((3,len(bins_1dhist)-1)) #3 rows, one for each trigger type.  
             vpol_counts = numpy.zeros((3,len(bins_1dhist)-1))
+        if plot_2dhists:
+            hpol_counts = numpy.zeros((3,len(bins_2dhist_h)-1)) #3 rows, one for each trigger type.  
+            vpol_counts = numpy.zeros((3,len(bins_2dhist_v)-1))
+            hv_counts = numpy.zeros((3,len(bins_2dhist_v)-1,len(bins_2dhist_h)-1)) #v going to be plotted vertically, h horizontall, with 3 of such matrices representing the different trigger types.
 
         for run in runs:
             #Prepare to load correlation values.
@@ -101,6 +109,10 @@ if __name__ == '__main__':
                     hpol_counts[trig_index] += numpy.histogram(numpy.max(output_correlation_values[numpy.where(trigger_type == trig_index+1)[0]][:,[0,2,4,6]],axis=1),bins=bins_1dhist)[0]
                     vpol_counts[trig_index] += numpy.histogram(numpy.max(output_correlation_values[numpy.where(trigger_type == trig_index+1)[0]][:,[1,3,5,7]],axis=1),bins=bins_1dhist)[0]
 
+            if plot_2dhists:
+                for trig_index in range(3):
+                    hv_counts[trig_index] += numpy.histogram2d(numpy.max(output_correlation_values[numpy.where(trigger_type == trig_index+1)[0]][:,[0,2,4,6]],axis=1), numpy.max(output_correlation_values[numpy.where(trigger_type == trig_index+1)[0]][:,[1,3,5,7]],axis=1), bins = [bins_2dhist_h,bins_2dhist_v])[0].T 
+
         if plot_1dhists:
             summed_counts = hpol_counts + vpol_counts
 
@@ -115,7 +127,7 @@ if __name__ == '__main__':
             ax2.bar(bins_1dhist[:-1], summed_counts[0], width=numpy.diff(bins_1dhist), edgecolor='black', align='edge',label='Trigger Type = Software',alpha=0.7,)
             ax2.bar(bins_1dhist[:-1], summed_counts[1], width=numpy.diff(bins_1dhist), edgecolor='black', align='edge',label='Trigger Type = RF',alpha=0.7,)
             ax2.bar(bins_1dhist[:-1], summed_counts[2], width=numpy.diff(bins_1dhist), edgecolor='black', align='edge',label='Trigger Type = GPS',alpha=0.7,)
-            plt.legend(loc='upper right')
+            plt.legend(loc='upper left')
             plt.ylabel('Counts')
             plt.xlabel('Correlation Value with bi-delta CR Template')
             
@@ -132,13 +144,23 @@ if __name__ == '__main__':
                 ax_b.bar(bins_1dhist[:-1], max_output_correlation_values[0], width=numpy.diff(bins_1dhist), edgecolor='black', align='edge',label='Trigger Type = Software',alpha=0.7,)
                 ax_b.bar(bins_1dhist[:-1], max_output_correlation_values[1], width=numpy.diff(bins_1dhist), edgecolor='black', align='edge',label='Trigger Type = RF',alpha=0.7,)
                 ax_b.bar(bins_1dhist[:-1], max_output_correlation_values[2], width=numpy.diff(bins_1dhist), edgecolor='black', align='edge',label='Trigger Type = GPS',alpha=0.7,)
-                plt.legend(loc='upper right')
+                plt.legend(loc='upper left')
                 plt.ylabel('%s Counts'%pol.title())
                 plt.xlabel('Correlation Value with bi-delta CR Template')
 
-                #This is the starting kernal for looking at sample events from the different peaks. 
-                #eventid_gps_max = eventids[trigger_type == 3][numpy.argmax(max_output_correlation_values[trigger_type == 3])]
-        
+
+
+        if plot_2dhists:
+            for trig_index in range(3):
+                fig4, ax4 = plt.subplots()
+                plt.title('bi-delta CR Template Correlations, Runs = %s\nTrigger = %s'%(str(runs),['Software','RF','GPS'][trig_index]))
+                im = ax4.pcolormesh(bin_centers_mesh_h, bin_centers_mesh_v, hv_counts[trig_index],norm=colors.LogNorm(vmin=0.5, vmax=hv_counts[trig_index].max()))#cmap=plt.cm.coolwarm
+                plt.xlabel('HPol Correlation Values')
+                plt.xlim(0,1)
+                plt.ylabel('VPol Correlation Values')
+                plt.ylim(0,1)
+                cbar = fig4.colorbar(im)
+                cbar.set_label('Counts')
 
     except Exception as e:
         print('Error in main loop.')
@@ -147,4 +169,3 @@ if __name__ == '__main__':
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
   
-    
