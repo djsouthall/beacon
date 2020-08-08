@@ -221,6 +221,13 @@ if __name__ == '__main__':
                        [0.16,0.36,0.16,0.45]])
     roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, numpy.shape(roi)[0])]
 
+    #Impulsivity Plot Params:
+    plot_impulsivity = True
+    impulsivity_dset = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_262144-align_0'
+    bins_impulsivity_h = numpy.linspace(0,1,201)
+    bins_impulsivity_v = numpy.linspace(0,1,201)
+    
+    impulsivity_bin_centers_mesh_h, impulsivity_bin_centers_mesh_v = numpy.meshgrid((bins_impulsivity_h[:-1] + bins_impulsivity_h[1:]) / 2, (bins_impulsivity_v[:-1] + bins_impulsivity_v[1:]) / 2)
 
 
 
@@ -232,12 +239,12 @@ if __name__ == '__main__':
         runs = numpy.array([1642,1643,1644,1645,1646,1647])
 
     try:
+        if plot_impulsivity:
+            impulsivity_hv_counts = numpy.zeros((3,len(bins_2dhist_v)-1,len(bins_2dhist_h)-1)) #v going to be plotted vertically, h horizontall, with 3 of such matrices representing the different trigger types.
         if plot_1dhists:
             hpol_counts = numpy.zeros((3,len(bins_1dhist)-1)) #3 rows, one for each trigger type.  
             vpol_counts = numpy.zeros((3,len(bins_1dhist)-1))
         if plot_2dhists:
-            hpol_counts = numpy.zeros((3,len(bins_2dhist_h)-1)) #3 rows, one for each trigger type.  
-            vpol_counts = numpy.zeros((3,len(bins_2dhist_v)-1))
             hv_counts = numpy.zeros((3,len(bins_2dhist_v)-1,len(bins_2dhist_h)-1)) #v going to be plotted vertically, h horizontall, with 3 of such matrices representing the different trigger types.
 
         for run in runs:
@@ -266,6 +273,11 @@ if __name__ == '__main__':
                         event_times = file['calibrated_trigtime'][...]
                         trigger_type = file['trigger_type'][...]
                         output_correlation_values = file['cr_template_search'][this_dset][...]
+                        if plot_impulsivity:
+                            # impulsivity_dsets = list(file['impulsivity'].keys())
+                            # print(impulsivity_dsets)
+                            hpol_output_impulsivity = file['impulsivity'][impulsivity_dset]['hpol'][...]
+                            vpol_output_impulsivity = file['impulsivity'][impulsivity_dset]['vpol'][...]
                         file.close()
                     except Exception as e:
                         print('Error loading data.')
@@ -276,14 +288,18 @@ if __name__ == '__main__':
 
             max_output_correlation_values = numpy.max(output_correlation_values,axis=1)
             
-            if plot_1dhists:
+            if numpy.any([plot_1dhists,plot_2dhists,plot_impulsivity]):
                 for trig_index in range(3):
-                    hpol_counts[trig_index] += numpy.histogram(numpy.max(output_correlation_values[numpy.where(trigger_type == trig_index+1)[0]][:,[0,2,4,6]],axis=1),bins=bins_1dhist)[0]
-                    vpol_counts[trig_index] += numpy.histogram(numpy.max(output_correlation_values[numpy.where(trigger_type == trig_index+1)[0]][:,[1,3,5,7]],axis=1),bins=bins_1dhist)[0]
+                    trigger_cut = trigger_type == trig_index+1
+                    trigger_cut_indices = numpy.where(trigger_cut)[0]
 
-            if plot_2dhists:
-                for trig_index in range(3):
-                    hv_counts[trig_index] += numpy.histogram2d(numpy.max(output_correlation_values[numpy.where(trigger_type == trig_index+1)[0]][:,[0,2,4,6]],axis=1), numpy.max(output_correlation_values[numpy.where(trigger_type == trig_index+1)[0]][:,[1,3,5,7]],axis=1), bins = [bins_2dhist_h,bins_2dhist_v])[0].T 
+                    if plot_1dhists:
+                        hpol_counts[trig_index] += numpy.histogram(numpy.max(output_correlation_values[trigger_cut_indices][:,[0,2,4,6]],axis=1),bins=bins_1dhist)[0]
+                        vpol_counts[trig_index] += numpy.histogram(numpy.max(output_correlation_values[trigger_cut_indices][:,[1,3,5,7]],axis=1),bins=bins_1dhist)[0]
+                    if plot_2dhists:
+                        hv_counts[trig_index] += numpy.histogram2d(numpy.max(output_correlation_values[trigger_cut_indices][:,[0,2,4,6]],axis=1), numpy.max(output_correlation_values[trigger_cut_indices][:,[1,3,5,7]],axis=1), bins = [bins_2dhist_h,bins_2dhist_v])[0].T 
+                    if plot_impulsivity:
+                        impulsivity_hv_counts[trig_index] += numpy.histogram2d(hpol_output_impulsivity[trigger_cut_indices], vpol_output_impulsivity[trigger_cut_indices], bins = [bins_impulsivity_h,bins_impulsivity_v])[0].T 
 
         if plot_1dhists:
             summed_counts = hpol_counts + vpol_counts
@@ -341,6 +357,23 @@ if __name__ == '__main__':
                     for roi_index, roi_coords in enumerate(roi): 
                         ax4.add_patch(Rectangle((roi_coords[0], roi_coords[2]), roi_coords[1] - roi_coords[0], roi_coords[3] - roi_coords[2],fill=False, edgecolor=roi_colors[roi_index]))
                         plt.text((roi_coords[1]+roi_coords[0])/2, roi_coords[3]+0.02,'roi %i'%roi_index,color=roi_colors[roi_index],fontweight='bold')
+
+        if plot_impulsivity:
+            for trig_index in range(3):
+                fig4, ax4 = plt.subplots()
+                plt.title('bi-delta CR Impulsivity Values, Runs = %s\nTrigger = %s'%(str(runs),['Software','RF','GPS'][trig_index]))
+                im = ax4.pcolormesh(impulsivity_bin_centers_mesh_h, impulsivity_bin_centers_mesh_v, impulsivity_hv_counts[trig_index],norm=colors.LogNorm(vmin=0.5, vmax=impulsivity_hv_counts[trig_index].max()))#cmap=plt.cm.coolwarm
+                plt.xlabel('HPol Impulsivity Values')
+                #plt.xlim(0,1)
+                plt.ylabel('VPol Impulsivity Values')
+                #plt.ylim(0,1)
+                cbar = fig4.colorbar(im)
+                cbar.set_label('Counts')
+                # if plot_roi:
+                #Need to turn this into a contour plotted over top using 2dhist with points just form each ROI
+                #     for roi_index, roi_coords in enumerate(roi): 
+                #         ax4.add_patch(Rectangle((roi_coords[0], roi_coords[2]), roi_coords[1] - roi_coords[0], roi_coords[3] - roi_coords[2],fill=False, edgecolor=roi_colors[roi_index]))
+                #         plt.text((roi_coords[1]+roi_coords[0])/2, roi_coords[3]+0.02,'roi %i'%roi_index,color=roi_colors[roi_index],fontweight='bold')
 
     except Exception as e:
         print('Error in main loop.')
