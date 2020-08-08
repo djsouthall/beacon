@@ -217,8 +217,7 @@ if __name__ == '__main__':
     #This should be a list with coords x1,x2, y1, y2 for each row.  These will be used to produce plots pertaining to 
     #these specific regions of interest.  x and y should be correlation values, and ordered.
     plot_roi = True
-    roi = numpy.array([[0.56,0.745,0.88,0.94],
-                       [0.16,0.36,0.16,0.45]])
+    roi = numpy.array([[0.16,0.36,0.16,0.45],[0.56,0.745,0.88,0.94],[0.67,0.79,0.53,0.60],[0.70,0.82,0.38,0.46]])
     roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, numpy.shape(roi)[0])]
 
     #Impulsivity Plot Params:
@@ -381,7 +380,8 @@ if __name__ == '__main__':
                     legend_properties = []
                     legend_labels = []
                     for roi_index, roi_coords in enumerate(roi):
-                        cs = ax4.contour(bin_centers_mesh_h, bin_centers_mesh_v, impulsivity_roi_counts[roi_index][trig_index], colors=[roi_colors[roi_index]],levels=5)#,label='roi %i'%roi_index)
+                        levels = numpy.linspace(0,numpy.max(impulsivity_roi_counts[roi_index][trig_index]),6)[1:7] #Not plotting bottom contour because it is often background and clutters plot.
+                        cs = ax4.contour(bin_centers_mesh_h, bin_centers_mesh_v, impulsivity_roi_counts[roi_index][trig_index], colors=[roi_colors[roi_index]],levels=levels)#,label='roi %i'%roi_index)
                         legend_properties.append(cs.legend_elements()[0][0])
                         legend_labels.append('roi %i'%roi_index)
                         # strs = ['', '', '', '', 'roi %i'%roi_index, '', '']
