@@ -260,6 +260,7 @@ if __name__ == '__main__':
                         metric_rand = diffFromPeriodic(randomized_times,window_s=window_s, atol=0.001, normalize_by_window_index=normalize_by_window_index, plot_sample_hist=True)
                         bins = numpy.linspace(min(min(metric),min(metric_rand)),max(max(metric),max(metric_rand)),100)
                         bin_centers = (bins[:-1] + bins[1:]) / 2.0
+                        TS_cut_level = 0.1
 
                         plt.figure()
                         plt.hist(metric,alpha=0.8,label='Real Data',bins=bins)
@@ -268,7 +269,6 @@ if __name__ == '__main__':
                         plt.ylabel('Counts')
                         plt.xlabel('TS')
 
-                        TS_cut_level = 0.1
                         cut = metric <= TS_cut_level
                         plt.axvline(TS_cut_level,c='r',linestyle='--',label='Cut')
                         plt.legend()

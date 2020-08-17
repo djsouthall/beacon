@@ -38,8 +38,8 @@ if __name__ == '__main__':
     if len(sys.argv) >= 2:
         try:
             print(sys.argv)
-            print(bool(int(sys.argv[2])))
             if len(sys.argv) == 3:
+                print(bool(int(sys.argv[2])))
                 farm_mode = bool(int(sys.argv[2]))
             else:
                 farm_mode = False
