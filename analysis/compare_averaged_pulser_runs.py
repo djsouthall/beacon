@@ -61,11 +61,11 @@ if __name__ == '__main__':
             #Filter settings
             final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
             
-            crit_freq_low_pass_MHz = None#70 #This new pulser seems to peak in the region of 85 MHz or so
-            low_pass_filter_order = None#24
+            crit_freq_low_pass_MHz = [75,75,80,80,85,85,90,90] #This new pulser seems to peak in the region of 85 MHz or so
+            low_pass_filter_order = [12,12,11,11,10,10,9,9]
             
-            crit_freq_high_pass_MHz = None#35
-            high_pass_filter_order = None#4
+            crit_freq_high_pass_MHz = [35,35,30,30,25,25,20,20]
+            high_pass_filter_order = [5,5,4,4,3,3,2,2]
             
             use_filter = True
             plot_filters= True

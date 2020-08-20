@@ -45,14 +45,26 @@ class FFTPrepper:
     final_corr_length : int
         Should be given as a power of 2.  This is the goal length of the cross correlations, and can set the time resolution
         of the time delays.
-    crit_freq_low_pass_MHz : float
-        Sets the critical frequency of the low pass filter to be applied to the data.
-    crit_freq_high_pass_MHz
-        Sets the critical frequency of the high pass filter to be applied to the data.
-    low_pass_filter_order
-        Sets the order of the low pass filter to be applied to the data.
-    high_pass_filter_order
-        Sets the order of the high pass filter to be applied to the data.
+    crit_freq_low_pass_MHz : None, float, or numpy.array of length 2 or 8
+        Sets the critical frequency of the low pass filter to be applied to the data.  If given as a single float value
+        then the same filter will be applied to all channels.  If given as an array of 2 values, the first will be 
+        applied to all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values then each
+        channel will use a different filter. 
+    crit_freq_high_pass_MHz : None, float, or numpy.array of length 2 or 8
+        Sets the critical frequency of the high pass filter to be applied to the data.  If given as a single float value
+        then the same filter will be applied to all channels.  If given as an array of 2 values, the first will be 
+        applied to all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values then each
+        channel will use a different filter.
+    low_pass_filter_order : None, int, or numpy.array of length 2 or 8
+        Sets the order of the low pass filter to be applied to the data.  If given as a single float value
+        then the same filter will be applied to all channels.  If given as an array of 2 values, the first will be 
+        applied to all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values then each
+        channel will use a different filter.
+    high_pass_filter_order : None, int, or numpy.array of length 2 or 8
+        Sets the order of the high pass filter to be applied to the data.  If given as a single float value
+        then the same filter will be applied to all channels.  If given as an array of 2 values, the first will be 
+        applied to all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values then each
+        channel will use a different filter.
     waveform_index_range
         Tuple of values.  If the first is None then the signals will be loaded from the beginning of their default buffer,
         otherwise it will start at this index.  If the second is None then the window will go to the end of the default
@@ -71,10 +83,12 @@ class FFTPrepper:
             self.reader = reader
             self.buffer_length = reader.header().buffer_length
             self.final_corr_length = final_corr_length #Should be a factor of 2 for fastest performance
-            self.crit_freq_low_pass_MHz = crit_freq_low_pass_MHz
-            self.crit_freq_high_pass_MHz = crit_freq_high_pass_MHz
-            self.low_pass_filter_order = low_pass_filter_order
-            self.high_pass_filter_order = high_pass_filter_order
+
+            self.interpretFiltersPerChannel(crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, low_pass_filter_order, high_pass_filter_order)
+            # self.crit_freq_low_pass_MHz = crit_freq_low_pass_MHz
+            # self.crit_freq_high_pass_MHz = crit_freq_high_pass_MHz
+            # self.low_pass_filter_order = low_pass_filter_order
+            # self.high_pass_filter_order = high_pass_filter_order
 
             self.hpol_pairs = numpy.array(list(itertools.combinations((0,2,4,6), 2)))
             self.vpol_pairs = numpy.array(list(itertools.combinations((1,3,5,7), 2)))
@@ -115,6 +129,130 @@ class FFTPrepper:
             self.tukey = scipy.signal.tukey(self.buffer_length, alpha=tukey_alpha, sym=True)
 
             self.prepForFFTs(plot=plot_filters,apply_phase_response=apply_phase_response)
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def interpretFiltersPerChannel(self, crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, low_pass_filter_order, high_pass_filter_order):
+        '''
+        This is a chunk of code that will interpet the values from input filter parameters, and organize them in a
+        consistent way for use elsewhere.  The result will be 4 numbers per channel indicating the filter orders and
+        frequencies of the corresponding filter to be applied to each filter.
+
+        Parameters
+        ----------
+        crit_freq_low_pass_MHz : None, float, or numpy.array of length 2 or 8
+            Sets the critical frequency of the low pass filter to be applied to the data.  If given as a single float 
+            value then the same filter will be applied to all channels.  If given as an array of 2 values, the first 
+            will be applied to all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values
+            then each channel will use a different filter. 
+        crit_freq_high_pass_MHz : None, float, or numpy.array of length 2 or 8
+            Sets the critical frequency of the high pass filter to be applied to the data.  If given as a single float 
+            value then the same filter will be applied to all channels.  If given as an array of 2 values, the first 
+            will be applied to all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values
+            then each channel will use a different filter.
+        low_pass_filter_order : None, int, or numpy.array of length 2 or 8
+            Sets the order of the low pass filter to be applied to the data.  If given as a single float value then the 
+            same filter will be applied to all channels.  If given as an array of 2 values, the first will be applied to
+            all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values then each channel 
+            will use a different filter.
+        high_pass_filter_order : None, int, or numpy.array of length 2 or 8
+            Sets the order of the high pass filter to be applied to the data.  If given as a single float value then the 
+            same filter will be applied to all channels.  If given as an array of 2 values, the first will be applied to 
+            all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values then each channel 
+            will use a different filter.
+        '''
+        try:
+            if crit_freq_low_pass_MHz is None:
+                self.crit_freq_low_pass_MHz = None
+            elif type(crit_freq_low_pass_MHz) is float:
+                self.crit_freq_low_pass_MHz = numpy.ones(8)*crit_freq_low_pass_MHz
+            elif type(crit_freq_low_pass_MHz) is int:
+                self.crit_freq_low_pass_MHz = numpy.ones(8)*float(crit_freq_low_pass_MHz)
+            elif type(crit_freq_low_pass_MHz) is numpy.ndarray or type(crit_freq_low_pass_MHz) is list:
+                if len(crit_freq_low_pass_MHz) == 2:
+                    self.crit_freq_low_pass_MHz = numpy.ones(8)
+                    self.crit_freq_low_pass_MHz[0::2] = crit_freq_low_pass_MHz[0] #Hpol filters
+                    self.crit_freq_low_pass_MHz[1::2] = crit_freq_low_pass_MHz[1] #Vpol filters
+                elif len(crit_freq_low_pass_MHz) == 8:
+                    self.crit_freq_low_pass_MHz = crit_freq_low_pass_MHz
+                else:
+                    print('WARNING!!!\ncrit_freq_low_pass_MHz SHOULD BE FLOAT, OR ARRAY OF LEN 1, 2, OR 8.  SETTING VALUE TO None.')
+                    self.crit_freq_low_pass_MHz = None
+            else:
+                print('WARNING!!!\ncrit_freq_low_pass_MHz SHOULD BE FLOAT, OR ARRAY OF LEN 1, 2, OR 8.  CODE WILL BREAK')
+                self.crit_freq_low_pass_MHz = None
+
+            if crit_freq_high_pass_MHz is None:
+                self.crit_freq_high_pass_MHz = None
+            elif type(crit_freq_high_pass_MHz) is float:
+                self.crit_freq_high_pass_MHz = numpy.ones(8)*crit_freq_high_pass_MHz
+            elif type(crit_freq_high_pass_MHz) is int:
+                self.crit_freq_high_pass_MHz = numpy.ones(8)*float(crit_freq_high_pass_MHz)
+            elif type(crit_freq_high_pass_MHz) is numpy.ndarray or type(crit_freq_high_pass_MHz) is list:
+                if len(crit_freq_high_pass_MHz) == 2:
+                    self.crit_freq_high_pass_MHz = numpy.ones(8)
+                    self.crit_freq_high_pass_MHz[0::2] = crit_freq_high_pass_MHz[0] #Hpol filters
+                    self.crit_freq_high_pass_MHz[1::2] = crit_freq_high_pass_MHz[1] #Vpol filters
+                elif len(crit_freq_high_pass_MHz) == 8:
+                    self.crit_freq_high_pass_MHz = crit_freq_high_pass_MHz
+                else:
+                    print('WARNING!!!\ncrit_freq_high_pass_MHz SHOULD BE FLOAT, OR ARRAY OF LEN 1, 2, OR 8.  SETTING VALUE TO None.')
+                    self.crit_freq_high_pass_MHz = None
+            else:
+                print('WARNING!!!\ncrit_freq_high_pass_MHz SHOULD BE FLOAT, OR ARRAY OF LEN 1, 2, OR 8.  CODE WILL BREAK')
+                self.crit_freq_high_pass_MHz = None
+
+            if low_pass_filter_order is None:
+                self.low_pass_filter_order = None
+            elif type(low_pass_filter_order) is float or type(low_pass_filter_order) is int:
+                self.low_pass_filter_order = numpy.ones(8,dtype=int)*int(low_pass_filter_order)
+            elif type(low_pass_filter_order) is numpy.ndarray or type(low_pass_filter_order) is list:
+                if len(low_pass_filter_order) == 2:
+                    self.low_pass_filter_order = numpy.ones(8)
+                    self.low_pass_filter_order[0::2] = low_pass_filter_order[0] #Hpol filters
+                    self.low_pass_filter_order[1::2] = low_pass_filter_order[1] #Vpol filters
+                elif len(low_pass_filter_order) == 8:
+                    self.low_pass_filter_order = low_pass_filter_order
+                else:
+                    print('WARNING!!!\ncrit_freq_low_pass_MHz SHOULD BE int, OR ARRAY OF LEN 1, 2, OR 8.  SETTING VALUE TO None.')
+                    self.crit_freq_low_pass_MHz = None
+            else:
+                print('WARNING!!!\ncrit_freq_low_pass_MHz SHOULD BE int, OR ARRAY OF LEN 1, 2, OR 8.  CODE WILL BREAK')
+                self.crit_freq_low_pass_MHz = None
+
+            if high_pass_filter_order is None:
+                self.high_pass_filter_order = None
+            elif type(high_pass_filter_order) is float or type(high_pass_filter_order) is int:
+                self.high_pass_filter_order = numpy.ones(8,dtype=int)*int(high_pass_filter_order)
+            elif type(high_pass_filter_order) is numpy.ndarray or type(high_pass_filter_order) is list:
+                if len(high_pass_filter_order) == 2:
+                    self.high_pass_filter_order = numpy.ones(8)
+                    self.high_pass_filter_order[0::2] = high_pass_filter_order[0] #Hpol filters
+                    self.high_pass_filter_order[1::2] = high_pass_filter_order[1] #Vpol filters
+                elif len(high_pass_filter_order) == 8:
+                    self.high_pass_filter_order = high_pass_filter_order
+                else:
+                    print('WARNING!!!\nhigh_pass_filter_order SHOULD BE int, OR ARRAY OF LEN 1, 2, OR 8.  SETTING VALUE TO None.')
+                    self.high_pass_filter_order = None
+            else:
+                print('WARNING!!!\nhigh_pass_filter_order SHOULD BE int, OR ARRAY OF LEN 1, 2, OR 8.  CODE WILL BREAK')
+                self.high_pass_filter_order = None
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+        try:
+            self.low_pass_filter_order
+            self.crit_freq_low_pass_MHz
+            self.high_pass_filter_order
+            self.crit_freq_high_pass_MHz
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -236,7 +374,7 @@ class FFTPrepper:
             self.corr_index_to_delay_index = -numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1) #Negative because with how it is programmed you would want to roll the template the normal amount, but I will be rolling the waveforms.
 
             #Prepare Filters
-            self.filter_original = self.makeFilter(self.freqs_original,plot_filter=plot,apply_phase_response=apply_phase_response)
+            self.filter_original = self.makeFilter(self.freqs_original, plot_filter=plot, apply_phase_response=apply_phase_response)
             #self.filter_padded_to_power2 = self.makeFilter(self.freqs_padded_to_power2,plot_filter=False)
             #self.filter_corr = self.makeFilter(self.freqs_corr,plot_filter=False)
             
@@ -267,48 +405,22 @@ class FFTPrepper:
     def makeFilter(self,freqs, plot_filter=False,apply_phase_response=False):
         '''
         This will make a frequency domain filter based on the given specifications. 
+
+        Parameters
+        ----------
+        freqs : numpy.array of floats
+            These are the frequencies for which you would like the values of the filters to be generated.  These should 
+            be given in Hz.  These are usually the default frequencies of the BEACON signal.
+        plot_filter : bool
+            Enables plotting of the generated filters to be used.
+        apply_phase_response : bool
+            If True, then the phase response will be included with the filter for each channel.  This hopefully 
+            deconvolves the effects of the phase response in the signal. 
         '''
         try:
             filter_x = freqs
+            filter_y = numpy.zeros((8,len(filter_x)),dtype='complex128')
             
-            if numpy.logical_and(self.low_pass_filter_order is not None, self.crit_freq_low_pass_MHz is not None):
-                b, a = scipy.signal.butter(self.low_pass_filter_order, self.crit_freq_low_pass_MHz*1e6, 'low', analog=True)
-                filter_x_low_pass, filter_y_low_pass = scipy.signal.freqs(b, a,worN=freqs)
-            else:
-                filter_x_low_pass = filter_x
-                filter_y_low_pass = numpy.ones_like(filter_x)
-
-            if numpy.logical_and(self.high_pass_filter_order is not None, self.crit_freq_high_pass_MHz is not None):
-                d, c = scipy.signal.butter(self.high_pass_filter_order, self.crit_freq_high_pass_MHz*1e6, 'high', analog=True)
-                filter_x_high_pass, filter_y_high_pass = scipy.signal.freqs(d, c,worN=freqs)
-            else:
-                filter_x_high_pass = filter_x
-                filter_y_high_pass = numpy.ones_like(filter_x)
-
-            filter_y = numpy.multiply(filter_y_low_pass,filter_y_high_pass)
-
-            if plot_filter == True:
-                fig = plt.figure()
-                fig.canvas.set_window_title('Filter')
-                numpy.seterr(divide = 'ignore') 
-                plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y)),color='k',label='final filter')
-                plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_low_pass)),color='r',linestyle='--',label='low pass')
-                plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_high_pass)),color='orange',linestyle='--',label='high pass')
-                numpy.seterr(divide = 'warn') 
-                plt.title('Butterworth filter frequency response')
-                plt.xlabel('Frequency [MHz]')
-                plt.ylabel('Amplitude [dB]')
-                plt.margins(0, 0.1)
-                plt.grid(which='both', axis='both')
-                if self.crit_freq_low_pass_MHz is not None:
-                    plt.axvline(self.crit_freq_low_pass_MHz, color='magenta',label='LP Crit') # cutoff frequency
-                if self.crit_freq_high_pass_MHz is not None:
-                    plt.axvline(self.crit_freq_high_pass_MHz, color='cyan',label='HP Crit') # cutoff frequency
-                plt.xlim(0,200)
-                plt.ylim(-50,10)
-                plt.legend()
-
-            filter_y = numpy.tile(filter_y,(8,1))
             if apply_phase_response == True:
                 phase_response_filter = self.prepPhaseFilter(filter_x)
                 if False:
@@ -319,7 +431,57 @@ class FFTPrepper:
                         plt.subplot(3,1,2)
                         plt.plot(filter_x,numpy.log(phase_response_filter[channel])/(-1j))
                     import pdb; pdb.set_trace()
-                filter_y = numpy.multiply(phase_response_filter,filter_y)
+
+            if plot_filter == True:
+                #NEEDS TO BE REMADE TO PLOT ON CHANNEL BY CHANNEL BASIS
+                fig = plt.figure()
+                fig.canvas.set_window_title('Filter')
+                numpy.seterr(divide = 'ignore') 
+                plt.suptitle('Butterworth filter frequency response')
+            
+            for channel in range(8):
+                if numpy.logical_and(self.low_pass_filter_order is not None, self.crit_freq_low_pass_MHz is not None):
+                    b, a = scipy.signal.butter(self.low_pass_filter_order[channel], self.crit_freq_low_pass_MHz[channel]*1e6, 'low', analog=True)
+                    filter_x_low_pass, filter_y_low_pass = scipy.signal.freqs(b, a,worN=freqs)
+                else:
+                    filter_x_low_pass = filter_x
+                    filter_y_low_pass = numpy.ones_like(filter_x)
+
+                if numpy.logical_and(self.high_pass_filter_order is not None, self.crit_freq_high_pass_MHz is not None):
+                    d, c = scipy.signal.butter(self.high_pass_filter_order[channel], self.crit_freq_high_pass_MHz[channel]*1e6, 'high', analog=True)
+                    filter_x_high_pass, filter_y_high_pass = scipy.signal.freqs(d, c,worN=freqs)
+                else:
+                    filter_x_high_pass = filter_x
+                    filter_y_high_pass = numpy.ones_like(filter_x)
+
+
+                
+                if apply_phase_response == True:
+                    filter_y[channel] = numpy.multiply(phase_response_filter,numpy.multiply(filter_y_low_pass,filter_y_high_pass))
+                else:
+                    filter_y[channel] = numpy.multiply(filter_y_low_pass,filter_y_high_pass)
+                
+                if plot_filter == True:
+                    plt.subplot(4,2,channel+1)
+                    plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y[channel])),color='k',label='final filter ch %i'%channel)
+                    plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_low_pass)),color='r',linestyle='--',label='low pass = order %i'%self.low_pass_filter_order[channel])
+                    plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_high_pass)),color='orange',linestyle='--',label='high pass = order %i'%self.high_pass_filter_order[channel])
+                    numpy.seterr(divide = 'warn') 
+                    if channel %2 == 0:
+                        plt.ylabel('Amplitude [dB]')
+                    if channel >= 6:
+                        plt.xlabel('Frequency [MHz]')
+                    plt.margins(0, 0.1)
+                    plt.grid(which='both', axis='both')
+                    
+                    if self.crit_freq_low_pass_MHz is not None:
+                        plt.axvline(self.crit_freq_low_pass_MHz[channel], color='magenta',label='LP Crit at %0.2f MHz'%self.crit_freq_low_pass_MHz[channel]) # cutoff frequency
+                    if self.crit_freq_high_pass_MHz is not None:
+                        plt.axvline(self.crit_freq_high_pass_MHz[channel], color='cyan',label='HP Crit at %0.2f MHz'%self.crit_freq_high_pass_MHz[channel]) # cutoff frequency
+                    plt.xlim(0,200)
+                    plt.ylim(-50,10)
+                    plt.legend()
+
             return filter_y
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -368,8 +530,6 @@ class FFTPrepper:
                     else:
                         upsampled_waveforms[channel] = temp_upsampled
             
-
-
             if False:
                 plt.figure()
                 plt.title(str(eventid))

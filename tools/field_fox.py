@@ -174,6 +174,57 @@ def linToComplexZ( complexS11, z_0 = 50.0 ):
 
     z = z_0 * numpy.divide( 1.0 + complexS11 , 1.0 - complexS11 )
     return z
+def logToComplexZ(logmag, unwrapped_phase, z_0 = 50.0 ):
+    '''
+    Converts the log magnitude S11 to the reflection coefficient.
+    Converts linear complex s11 of and phase measurement to Re and Imag.  Expects phase to be
+    in degrees.  Assumes magnitude is given in linear units. 
+    
+    Paramaters
+    ----------
+    logmag : numpy.ndarray of floats
+        The values to be converted from Log Magnitude to Linear values.
+    unwrapped_phase : numpy.ndarray of floats
+        The unwrapped phase.
+    z_0 : float
+        The characteristic impedance you are matching to.
+
+    Returns
+    -------
+    z : numpy.ndarray of complex floats
+        The complex impedance.
+    '''
+
+    lin = logMagToLin(logmag)
+    re, im = magPhaseToReIm(lin,unwrapped_phase)
+    complexS11 = re + 1.0j*im
+    z = linToComplexZ(complexS11,z_0=z_0)
+    return z
+
+def logMagToReflectionCoefficient( logmag, unwrapped_phase, z=None, z_0 = 50.0 ):
+    '''
+    Converts the log magnitude S11 to the reflection coefficient.
+    Converts linear complex s11 of and phase measurement to Re and Imag.  Expects phase to be
+    in degrees.  Assumes magnitude is given in linear units. 
+    
+    Paramaters
+    ----------
+    logmag : numpy.ndarray of floats
+        The values to be converted from Log Magnitude to Linear values.
+    unwrapped_phase : numpy.ndarray of floats
+        The unwrapped phase.
+    z_0 : float
+        The characteristic impedance you are matching to.
+
+    Returns
+    -------
+    gamma : numpy.ndarray of complex floats
+        The reflection coefficient.
+    '''
+    if z is None:
+        z = logToComplexZ(logmag, unwrapped_phase, z_0 = 50.0 )
+    gamma = numpy.divide(z - z_0, z + z_0)
+    return gamma
 
 def skyIntensity(freqs, plot = False, fig = None, ax = None):
     '''
