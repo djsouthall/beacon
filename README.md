@@ -54,3 +54,9 @@ Many of the scripts in this beacon analysis git will expect some system variable
   - *BEACON_INSTALL_DIR* : This is the location of where beaconroot is installed (see the beaconroot guide).  Note that the examples folder has typically been copied to this directory such that the script defining the reader is easily found.
   - *BEACON_DATA* : This is the location of the BEACON data.  This will be the folder than contins myriad of run folders you will want to examine with this code. 
   - *BEACON_ANALYSIS_DIR* : This is the location of this package (the folder that contains the .git file).
+
+I am also moving towards using package-like import, which will require you to add the relevant paths to your PYTHONPATH.  An example of the lines I have in my bashrc for BEACON can be found below:
+
+BEACON_ANALYSIS_DIR="/home/dsouthall/Projects/Beacon/beacon/"
+export BEACON_ANALYSIS_DIR
+export PYTHONPATH=$PYTHONPATH:/home/dsouthall/Projects/Beacon/
