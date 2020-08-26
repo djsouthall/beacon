@@ -1511,7 +1511,7 @@ class Correlator:
                 elif pol == 'vpol':
                     selection_index = 2 
                 
-                plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                plane_xy = self.getArrayPlanZeenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]
                 #Plot array plane 0 elevation curve.
                 im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
 
@@ -1989,32 +1989,37 @@ class Correlator:
         max_method : bool
             Determines how the most probable source direction is from the map.
         '''
-        hist = numpy.zeros((self.n_theta, self.n_phi))
-        for event_index, eventid in enumerate(eventids):
-            sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
-            sys.stdout.flush()
-            m = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert)/len(eventids)
-            if max_method is not None:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU)
-            else:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU)        
+        if pol == 'both':
+            hpol_hist = self.histMapPeak(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert, max_method=max_method, use_weight=use_weight, zenith_cut_ENU=zenith_cut_ENU)
+            vpol_hist = self.histMapPeak(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert, max_method=max_method, use_weight=use_weight, zenith_cut_ENU=zenith_cut_ENU)
+            return (hpol_hist,vpol_hist)
+        else:
+            hist = numpy.zeros((self.n_theta, self.n_phi))
+            for event_index, eventid in enumerate(eventids):
+                sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
+                sys.stdout.flush()
+                m = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert)/len(eventids)
+                if max_method is not None:
+                    row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU)
+                else:
+                    row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU)        
 
-            if use_weight == True:
-                hist[row_index,column_index] += m[row_index,column_index]
-            else:
-                hist[row_index,column_index] += 1
+                if use_weight == True:
+                    hist[row_index,column_index] += m[row_index,column_index]
+                else:
+                    hist[row_index,column_index] += 1
 
-        if plot_map:
-            fig = plt.figure()
-            fig.canvas.set_window_title('r%i %s Peak Correlation Map Hist'%(self.reader.run,pol.title()))
-            ax = fig.add_subplot(1,1,1)
-            im = ax.imshow(hist, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.winter,norm=matplotlib.colors.LogNorm()) #cmap=plt.cm.jet)
-            cbar = fig.colorbar(im)
-            cbar.set_label('Counts (Maybe Weighted)')
-            plt.xlabel('Azimuth Angle (Degrees)')
-            plt.ylabel('Elevation Angle (Degrees)')
+            if plot_map:
+                fig = plt.figure()
+                fig.canvas.set_window_title('r%i %s Peak Correlation Map Hist'%(self.reader.run,pol.title()))
+                ax = fig.add_subplot(1,1,1)
+                im = ax.imshow(hist, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.winter,norm=matplotlib.colors.LogNorm()) #cmap=plt.cm.jet)
+                cbar = fig.colorbar(im)
+                cbar.set_label('Counts (Maybe Weighted)')
+                plt.xlabel('Azimuth Angle (Degrees)')
+                plt.ylabel('Elevation Angle (Degrees)')
 
-            return hist
+                return hist
 
     def beamMap(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None):
         '''
@@ -2320,8 +2325,6 @@ if __name__=="__main__":
                 reader = Reader(os.environ['BEACON_DATA'],run)
                 eventids = known_planes[key]['eventids'][run_cut,1]
 
-                
-                #Load Values
 
                 td_dict = {'hpol':{},'vpol':{}}
                 for k in td_dict.keys():
@@ -2345,7 +2348,8 @@ if __name__=="__main__":
                     _dir = 'S'
 
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
-                
+
+                #Load Values
                 #cor.animatedMap(eventids, 'hpol', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir=_dir,save=True,dpi=300)
                 map_values, fig, ax = cor.map(eventids[0], 'hpol',center_dir='W', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=None,mollweide=True,circle_zenith=plane_zenith[0],circle_az=plane_az[0])
                 '''
