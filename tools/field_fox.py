@@ -17,7 +17,7 @@ import scipy
 import scipy.interpolate
 sys.path.append('/home/dsouthall/Beacon')
 #from pySmithPlot.smithplot import SmithAxes
-import tools.constants as constants
+import beacon.tools.constants as constants
 pylab.ion()
 
 # CALCULATION FUNCTIONS
