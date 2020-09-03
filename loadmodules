@@ -1,7 +1,20 @@
-#!/bin/bash 
+#!/bin/bash
 module unload python
-module unload ROOT
+
+#Below loads the appropriate conda version
+module load python
+
+#Below will set the conda setting that adds an ugly environment name extension to the command prompt.
+conda config --set changeps1 False
+
+#Below will put you in a conda environment with ROOT 6.22 loaded.
+echo "ROOT and Python 3 Loaded"
+
+
+#The below commands are deprecated
+#module unload python
+#module unload ROOT
 #The below package of ROOT was built specifically for our purposes to support a recent build of python and ROOT.  It will load python 3.7.1.
-module load ROOT/6.16.00
-echo "ROOT/6.16.00 and Python 3.7.1 Loaded"
+#module load ROOT/6.16.00
+#echo "ROOT/6.16.00 and Python 3.7.1 Loaded"
 #Note that loading this module in a bashrc may cause issues if accessing midway2 with thinlinc.  The rcc guys couldn't really explain to me why, but I would recommend just loading it as you need it or finding a work around to a bashrc load.
