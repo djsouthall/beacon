@@ -1511,7 +1511,7 @@ class Correlator:
                 elif pol == 'vpol':
                     selection_index = 2 
                 
-                plane_xy = self.getArrayPlanZeenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]
                 #Plot array plane 0 elevation curve.
                 im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
 
