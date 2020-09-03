@@ -29,7 +29,7 @@ Currently this is only contains working files that I (Dan Southall) have been wo
 
 ## 0.1.0 Dependencies
 
-The code was developed using compatible builds of Python 3.7.1 (or newer) and ROOT 6.16.00 (or newer).  A module has been built on Midway2 specifically for this purpose, however due to recent changes in how UChicago/RCC handle python modules this is no longer available.  An updated process has been developed to handle the new guidlines.  This will bring the user into a conda environment with ROOT installed.  The user will need to recompile beaconroot with the new version of ROOT if they want this code to work.  Because this module is no longer a custom built module, it does not have all of the python packages we use pre-loaded.  See SECTION 0.1.1 for a list of known missing modules, and how to install them to run this BEACON analysis code.  Python and ROOT can still be loaded using the command:
+The code was developed using compatible builds of Python 3.7.1 (or newer) and ROOT 6.16.00 (or newer).  A module has been built on Midway2 specifically for this purpose, however due to recent changes in how UChicago/RCC handle python modules this is no longer available.  An updated process has been developed to handle the new guidlines.  This will bring the user into a conda environment with ROOT installed.  The user will need to recompile beaconroot with the new version of ROOT if they want this code to work.  Because this module is no longer a custom built module, it does not have all of the python packages we use pre-loaded.  See [Section 0.1.1](https://github.com/djsouthall/beacon/blob/master/README.md#011-known-missing-python-modules) for a list of known missing modules, and how to install them to run this BEACON analysis code.  Python and ROOT can still be loaded using the command:
 
     . beacon/loadmodules
 
@@ -52,11 +52,14 @@ beaconroot - https://github.com/beaconTau/beaconroot
 
 For any of the following modules that you find are missing (by running code and getting errors), simply run the line of code:
 
-pip3 install PACKAGE
+    pip3 install PACKAGE
+    
+With the appropriate version of python loaded.
 
-*Known Packages*
-astropy
-pymap3d
+**Known Packages**
+
+- astropy
+- pymap3d
 
 ## 0.2.0 Paths
 
