@@ -701,7 +701,7 @@ def loadPulserLocations():
 
     return pulser_locations    
 
-def loadPulserLocationsENU():
+def loadPulserLocationsENU(deploy_index=default_deploy):
     '''
     Loads the locations of the antennas converted to
     be relative to antenna 0.
@@ -714,12 +714,13 @@ def loadPulserLocationsENU():
     pulser_locations_ENU = {}
     pulser_locations = loadPulserLocations()
 
-    origin = loadAntennaZeroLocation()
+    origin = loadAntennaZeroLocation(deploy_index=deploy_index)
+    print(origin)
     for key, location in pulser_locations.items():
         pulser_locations_ENU[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
     return pulser_locations_ENU
 
-def loadPulserPhaseLocationsENU():
+def loadPulserPhaseLocationsENU(deploy_index=default_deploy):
     '''
     Loads the locations of the antennas converted to
     be relative to antenna 0.
@@ -735,7 +736,7 @@ def loadPulserPhaseLocationsENU():
 
     pulser_locations_ENU['physical'] = {}
 
-    origin = loadAntennaZeroLocation()
+    origin = loadAntennaZeroLocation(deploy_index=deploy_index)
     for key, location in pulser_locations.items():
         pulser_locations_ENU['physical'][key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
 
@@ -1074,6 +1075,9 @@ if __name__ == '__main__':
         #plt.ion()
         #loadBeamDelays()
         antennas_physical, antennas_phase_hpol, antennas_phase_vpol = loadAntennaLocationsENU(deploy_index=default_deploy)
+
+
+
         print('antenna_physical = ')
         pprint(antennas_physical)
 
@@ -1084,6 +1088,35 @@ if __name__ == '__main__':
         pprint(antennas_phase_vpol)
         #known_planes, calibrated_trigtime, output_tracks = getKnownPlaneTracks()
 
+        print('\n\n\n\n')
+
+        for deploy_index in [1,2,3]:
+            pulser_locations_ENU = loadPulserLocationsENU(deploy_index=deploy_index)
+            print('deploy_index = %i'%deploy_index)
+
+            #Pulser Location 1
+            p1_enu = pulser_locations_ENU['run1507']        
+            p1_phi = numpy.arctan2(p1_enu[1],p1_enu[0])
+            if p1_phi < 0:
+                print('Pulser location 1 phi is: %0.2f degrees South of East'%abs(numpy.rad2deg(p1_phi)))
+            else:
+                print('Pulser location 1 phi is: %0.2f degrees North of East'%abs(numpy.rad2deg(p1_phi)))
+
+            #Pulser Location 2
+            p2_enu = pulser_locations_ENU['run1509']        
+            p2_phi = numpy.arctan2(p2_enu[1],p2_enu[0])
+            if p2_phi < 0:
+                print('Pulser location 2 phi is: %0.2f degrees South of East'%abs(numpy.rad2deg(p2_phi)))
+            else:
+                print('Pulser location 2 phi is: %0.2f degrees North of East'%abs(numpy.rad2deg(p2_phi)))
+
+            #Pulser Location 3
+            p3_enu = pulser_locations_ENU['run1511']        
+            p3_phi = numpy.arctan2(p3_enu[1],p3_enu[0])
+            if p3_phi < 0:
+                print('Pulser location 3 phi is: %0.2f degrees South of East'%abs(numpy.rad2deg(p3_phi)))
+            else:
+                print('Pulser location 3 phi is: %0.2f degrees North of East'%abs(numpy.rad2deg(p3_phi)))
     except Exception as e:
         print('Error in main loop.')
         print(e)
