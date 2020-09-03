@@ -8,6 +8,8 @@ module load python
 conda config --set changeps1 False
 
 #Below will put you in a conda environment with ROOT 6.22 loaded.
+source activate root-6.22.02
+
 echo "ROOT and Python 3 Loaded"
 
 
