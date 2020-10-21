@@ -332,7 +332,7 @@ def impedanceMismatchEfficiency(complex_z, z_0 = 50.0):
     #ime = 1.0 - numpy.absolute( ratio )
     return ime
 
-def skyNoiseDominance(freqs,complex_z, lna_temp,z_0 = 50.0,ground_temp = 0.0, ime = None):
+def skyNoiseDominance(freqs,complex_z, lna_temp, z_0 = 50.0,ground_temp = 0.0, ime = None):
     '''
     Calculates the Sky Noise Dominance (SND) as defined by the first source below using 
     the Impedance Mismatch Efficiency (IME) (also defined in the first source), and the 

@@ -341,7 +341,7 @@ def createFile(reader,redo_defaults=False):
             header_keys_to_copy = []
             h = interpret.getHeaderDict(reader)
 
-            initial_expected_datasets = numpy.array(['eventids','trigger_type','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','calibrated_trigtime','inband_peak_freq_MHz','p2p']) #expand as more things are added.  This should only include datasets that this function will add.
+            initial_expected_datasets = numpy.array(['eventids','trigger_type','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','calibrated_trigtime','inband_peak_freq_MHz','p2p','std']) #expand as more things are added.  This should only include datasets that this function will add.
             initial_expected_attrs    = numpy.array(['N','run'])
 
             #outdated_datasets_to_remove should include things that were once in each file but should no longer be.  They might be useful if a dataset
@@ -367,7 +367,7 @@ def createFile(reader,redo_defaults=False):
                         else:
                             attempt_list = initial_expected_datasets
 
-                        if numpy.any(numpy.isin(attempt_list,['eventids','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','inband_peak_freq_MHz','p2p'])):
+                        if numpy.any(numpy.isin(attempt_list,['eventids','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','inband_peak_freq_MHz','p2p','std'])):
                             times_loaded = True
                             raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids = getTimes(reader)
 
@@ -441,6 +441,24 @@ def createFile(reader,redo_defaults=False):
                                         file['p2p'][event_index,channel] = numpy.max(wf) - numpy.min(wf)
 
                                 print('\n')
+                            elif key == 'std':
+                                if ('std'  in list(file.keys())) == False:
+                                    file.create_dataset('std', (N,8), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
+                                reader.setEntry(eventids[0])
+                                t = reader.t()/1e9
+                                print('Calculating std\n')
+                                print_every = int(N/1000)
+                                for event_index,eventid in enumerate(eventids):
+                                    if event_index%print_every == 0:
+                                        sys.stdout.write('\r%i/%i'%(event_index+1,len(eventids)))
+                                        sys.stdout.flush()
+
+                                    reader.setEntry(eventid)
+                                    for channel in range(8):
+                                        wf = reader.wf(channel)
+                                        file['std'][event_index,channel] = numpy.std(wf)
+
+                                print('\n')
                             else:
                                 print('key: %s currently has no hardcoded support in this loop.'%key)
 
@@ -512,6 +530,7 @@ def createFile(reader,redo_defaults=False):
                     #Used for gating obvious backgrounds like known CW
                     file.create_dataset('inband_peak_freq_MHz', (N,8), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
                     file.create_dataset('p2p', (N,8), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
+                    file.create_dataset('std', (N,8), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
                     reader.setEntry(eventids[0])
                     t = reader.t()/1e9
                     freqs = numpy.fft.rfftfreq(len(t),t[1]-t[0])/1e6
@@ -527,6 +546,7 @@ def createFile(reader,redo_defaults=False):
                         for channel in range(8):
                             wfs[channel] = reader.wf(channel)
                             file['p2p'][event_index,channel] = numpy.max(wfs[channel]) - numpy.min(wfs[channel])
+                            file['std'][event_index,channel] = numpy.std(wfs[channel])
 
                         fft = numpy.fft.rfft(wfs,axis=1)
                         for channel in range(8):
