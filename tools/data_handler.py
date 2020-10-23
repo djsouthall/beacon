@@ -346,6 +346,9 @@ def createFile(reader,redo_defaults=False):
 
             #outdated_datasets_to_remove should include things that were once in each file but should no longer be.  They might be useful if a dataset
             #is given a new name and you want to delete the old dataset for instance. 
+            #If a data set is in both initial_expected_datasets and outdated_datasets_to_remove it will be removed FIRST, then recalculated.
+            #This has been used in the past to correct a type error in storing values (storing std as int instead of float),
+            #where the data set cannot only be recalculated, but must have the type changed.  
             outdated_datasets_to_remove = numpy.array(['trigger_tpes','times','subtimes','trigtimes','hpol_impulsivity','vpol_impulsivity']) #Currently working on similarity.  Will want the old one to be in here after complete.
 
             if os.path.exists(filename):
@@ -443,7 +446,7 @@ def createFile(reader,redo_defaults=False):
                                 print('\n')
                             elif key == 'std':
                                 if ('std'  in list(file.keys())) == False:
-                                    file.create_dataset('std', (N,8), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
+                                    file.create_dataset('std', (N,8), dtype=numpy.float64, compression='gzip', compression_opts=9, shuffle=True)
                                 reader.setEntry(eventids[0])
                                 t = reader.t()/1e9
                                 print('Calculating std\n')
@@ -455,7 +458,7 @@ def createFile(reader,redo_defaults=False):
 
                                     reader.setEntry(eventid)
                                     for channel in range(8):
-                                        wf = reader.wf(channel)
+                                        wf = reader.wf(channel).astype(numpy.float64)
                                         file['std'][event_index,channel] = numpy.std(wf)
 
                                 print('\n')
@@ -530,7 +533,7 @@ def createFile(reader,redo_defaults=False):
                     #Used for gating obvious backgrounds like known CW
                     file.create_dataset('inband_peak_freq_MHz', (N,8), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
                     file.create_dataset('p2p', (N,8), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
-                    file.create_dataset('std', (N,8), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
+                    file.create_dataset('std', (N,8), dtype=numpy.float64, compression='gzip', compression_opts=9, shuffle=True)
                     reader.setEntry(eventids[0])
                     t = reader.t()/1e9
                     freqs = numpy.fft.rfftfreq(len(t),t[1]-t[0])/1e6
@@ -542,7 +545,7 @@ def createFile(reader,redo_defaults=False):
                             sys.stdout.write('\r%i/%i'%(event_index+1,len(eventids)))
                             sys.stdout.flush()
                         reader.setEntry(eventid)
-                        wfs = numpy.zeros((8,len(t)))
+                        wfs = numpy.zeros((8,len(t)),dtype=numpy.float64)
                         for channel in range(8):
                             wfs[channel] = reader.wf(channel)
                             file['p2p'][event_index,channel] = numpy.max(wfs[channel]) - numpy.min(wfs[channel])

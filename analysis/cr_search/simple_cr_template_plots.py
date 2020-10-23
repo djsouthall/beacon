@@ -89,11 +89,34 @@ class dataSlicerSingleRun():
         The number of bins in the y dimension of the cr template search plot.
     impulsivity_hv_n_bins : int
         The number of bins in the impulsivity_hv plot.
+    std_n_bins_h :
+        The number of bins for plotting std of the h antennas.
+    std_n_bins_v :
+        The number of bins for plotting std of the v antennas.
+    max_std_val :
+        The max bin edge value for plotting std on both antennas.  Default is None.  If None is given then this will be
+        automatically calculated (though likely too high).
+    p2p_n_bins_h :
+        The number of bins for plotting p2p of the h antennas.
+    p2p_n_bins_v :
+        The number of bins for plotting p2p of the v antennas.
+    max_p2p_val :
+        The max bin edge value for plotting p2p on both antennas.  Default is 128.  If None is given then this will be
+        automatically calculated.
+    snr_n_bins_h :
+        The number of bins for plotting snr of the h antennas.
+    snr_n_bins_v :
+        The number of bins for plotting snr of the v antennas.
+    max_snr_val :
+        The max bin edge value for plotting snr on both antennas.  Default is None.  If None is given then this will be
+        automatically calculated (though likely too high).
+    include_test_roi :
+        This will include test regions of interest that are more for testing the class itself. 
     '''
     def __init__(self,  reader, impulsivity_dset_key, curve_choice=0, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7],\
-                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_hv_n_bins_y=200,\
-                        std_n_bins_h=200,std_hv_n_bins_y=200,p2p_n_bins_h=200,p2p_hv_n_bins_y=200,\
-                        snr_n_bins_h=200,snr_hv_n_bins_y=200,include_test_roi=False):
+                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=None,p2p_n_bins_h=256,p2p_n_bins_v=256,max_p2p_val=128,\
+                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=None,include_test_roi=False):
         try:
             #
             self.included_antennas = included_antennas#[0,1,2,3,4,5,6,7]
@@ -121,19 +144,22 @@ class dataSlicerSingleRun():
             #Impulsivity Plot Params:
             self.impulsivity_dset_key = impulsivity_dset_key
             self.impulsivity_n_bins_h = impulsivity_n_bins_h
-            self.impulsivity_n_bins_v = impulsivity_hv_n_bins_y
+            self.impulsivity_n_bins_v = impulsivity_n_bins_v
 
             #std Plot Params:
+            self.max_std_val = max_std_val
             self.std_n_bins_h = std_n_bins_h
-            self.std_n_bins_v = std_hv_n_bins_y
+            self.std_n_bins_v = std_n_bins_v
 
             #p2p Plot Params:
+            self.max_p2p_val = max_p2p_val
             self.p2p_n_bins_h = p2p_n_bins_h
-            self.p2p_n_bins_v = p2p_hv_n_bins_y
+            self.p2p_n_bins_v = p2p_n_bins_v
 
             #snr Plot Params:
+            self.max_snr_val = max_snr_val
             self.snr_n_bins_h = snr_n_bins_h
-            self.snr_n_bins_v = snr_hv_n_bins_y
+            self.snr_n_bins_v = snr_n_bins_v
 
             self.trigger_types = trigger_types
 
@@ -406,36 +432,45 @@ class dataSlicerSingleRun():
             self.current_bin_edges_x     = numpy.linspace(0,1,self.impulsivity_n_bins_h + 1) #These are bin edges
             self.current_bin_edges_y     = numpy.linspace(0,1,self.impulsivity_n_bins_v + 1) #These are bin edges
         elif main_param_key == 'std':
-            with h5py.File(self.analysis_filename, 'r') as file:
-                print('Calculating max_std')
-                max_std = numpy.max(file['std'][eventids,:])
-                file.close()
-            #std Plot Params:
-            #Bounds not 0 to 1, should be custom set here from data. 
+            if self.max_std_val is None:
+                with h5py.File(self.analysis_filename, 'r') as file:
+                    print('Calculating max_std')
+                    max_std = numpy.max(file['std'][eventids,:])
+                    file.close()
+                #std Plot Params:
+                #Bounds not 0 to 1, should be custom set here from data.
+            else:
+                max_std = self.max_std_val 
             print('Max std = ', max_std)
 
             self.current_bin_edges_x     = numpy.linspace(0,max_std,self.std_n_bins_h + 1) #These are bin edges
             self.current_bin_edges_y     = numpy.linspace(0,max_std,self.std_n_bins_v + 1) #These are bin edges
         elif main_param_key == 'p2p': 
-            with h5py.File(self.analysis_filename, 'r') as file:
-                print('Calculating max_p2p')
-                max_p2p = numpy.max(file['p2p'][eventids,:])
-                file.close()
-            #p2p Plot Params:
-            #Bounds not 0 to 1, should be custom set here from data. 
+            if self.max_std_val is None:
+                with h5py.File(self.analysis_filename, 'r') as file:
+                    print('Calculating max_p2p')
+                    max_p2p = numpy.max(file['p2p'][eventids,:])
+                    file.close()
+                #p2p Plot Params:
+                #Bounds not 0 to 1, should be custom set here from data.
+            else:
+                max_p2p = self.max_p2p_val 
             print('Max P2P = ', max_p2p)
 
             self.current_bin_edges_x     = numpy.linspace(0,max_p2p,self.p2p_n_bins_h + 1) #These are bin edges
             self.current_bin_edges_y     = numpy.linspace(0,max_p2p,self.p2p_n_bins_v + 1) #These are bin edges
         elif main_param_key == 'snr':
-            with h5py.File(self.analysis_filename, 'r') as file:
-                print('Calculating max_snr')
-                max_p2p = numpy.max(file['p2p'][eventids,:])
-                min_std = numpy.min((file['std'][eventids,:]))
-                max_snr = max_p2p/min_std
-                file.close()
-            #snr Plot Params:
-            #Bounds not 0 to 1, should be custom set here from data. 
+            if self.max_snr_val is None:
+                with h5py.File(self.analysis_filename, 'r') as file:
+                    print('Calculating max_snr')
+                    max_p2p = numpy.max(file['p2p'][eventids,:])
+                    min_std = numpy.min((file['std'][eventids,:]))
+                    max_snr = max_p2p/min_std
+                    file.close()
+                #snr Plot Params:
+                #Bounds not 0 to 1, should be custom set here from data. 
+            else:
+                max_snr = self.max_snr_val
             print('Max SNR = ', max_snr)
             self.current_bin_edges_x     = numpy.linspace(0,max_snr,self.snr_n_bins_h + 1) #These are bin edges
             self.current_bin_edges_y     = numpy.linspace(0,max_snr,self.snr_n_bins_v + 1) #These are bin edges
@@ -856,15 +891,15 @@ def main():
 if __name__ == '__main__':
     plt.close('all')
     #runs = [1642,1643,1644,1645,1646,1647]
-    runs = [1643]
+    runs = [1644]
     for run in runs:
         reader = Reader(datapath,run)
         impulsivity_dset_key = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_262144-align_0'
         print("Preparing dataSlicerSingleRun")
         ds = dataSlicerSingleRun(reader, impulsivity_dset_key, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
-                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_hv_n_bins_y=200,\
-                        std_n_bins_h=200,std_hv_n_bins_y=200,p2p_n_bins_h=400,p2p_hv_n_bins_y=400,\
-                        snr_n_bins_h=200,snr_hv_n_bins_y=200,include_test_roi=False)
+                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False)
 
         print('Adding ROI to dataSlicerSingleRun')
         ds.addROI('corr A',{'cr_template_search':[0.575,0.665,0.385,0.46]})
@@ -872,7 +907,7 @@ if __name__ == '__main__':
         ds.addROI('small h.4 v.4 imp',{'impulsivity_hv':[0.34,0.45,0.42,0.5]})
         
         print('Generating plots:')
-        for key in ds.known_param_keys:
+        for key in ['p2p']:#ds.known_param_keys:
             print('Generating %s plot'%key)
             ds.plotROI2dHist(key, cmap='coolwarm', include_roi=False)
     
