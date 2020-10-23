@@ -77,6 +77,12 @@ class dataSlicerSingleRun():
     trigger_types : list of ints
         The trigger types you want to include in each plot.  This may be later done on a function by function basis, but
         for now is called at the beginning. 
+    included_antennas : list of ints
+        List should contain list of antennas trusted for this particular run.  This will be used in certain cuts which
+        may look at the max or average values of a certain polarization.  If the antenna is not included on this list
+        then it will not be included in those calculations.  This does not apply to any precalculated values that already
+        washed out antenna specific information.  This can also be used to investigate particular antenna pairings by
+        leaving only them remaining.  
     cr_template_n_bins_h : int
         The number of bins in the x dimension of the cr template search plot.
     cr_template_n_bins_v : int
@@ -84,9 +90,18 @@ class dataSlicerSingleRun():
     impulsivity_hv_n_bins : int
         The number of bins in the impulsivity_hv plot.
     '''
-    def __init__(self, reader, impulsivity_dset_key, curve_choice=0, trigger_types=[1,2,3],cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_hv_n_bins_y=200,include_test_roi=False):
+    def __init__(self,  reader, impulsivity_dset_key, curve_choice=0, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7],\
+                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_hv_n_bins_y=200,\
+                        std_n_bins_h=200,std_hv_n_bins_y=200,p2p_n_bins_h=200,p2p_hv_n_bins_y=200,\
+                        snr_n_bins_h=200,snr_hv_n_bins_y=200,include_test_roi=False):
         try:
-            self.known_param_keys = ['impulsivity_hv', 'cr_template_search'] #If it is not listed in here then it cannot be used.
+            #
+            self.included_antennas = included_antennas#[0,1,2,3,4,5,6,7]
+            self.included_hpol_antennas = numpy.array([0,2,4,6])[numpy.isin([0,2,4,6],self.included_antennas)]
+            self.included_vpol_antennas = numpy.array([1,3,5,7])[numpy.isin([1,3,5,7],self.included_antennas)]
+
+            #I want to work on adding: 'std', 'p2p', and 'snr', where snr is p2p/std.  I think these could be interesting, and are already available by default per signal. 
+            self.known_param_keys = ['impulsivity_hv', 'cr_template_search', 'std', 'p2p', 'snr'] #If it is not listed in here then it cannot be used.
 
             self.updateReader(reader)
 
@@ -97,23 +112,28 @@ class dataSlicerSingleRun():
             #These will be used for plotting each parameter against eachother. 
 
             #2dhist Params:
+            #Should move away from precomputing these as I move to more possible plots.
             #plot_2dhists = True
             self.cr_template_curve_choice = curve_choice #Which curve to select from correlation data.
-
             self.cr_template_n_bins_h = cr_template_n_bins_h
             self.cr_template_n_bins_v = cr_template_n_bins_v
-            self.cr_template_bin_edges_h = numpy.linspace(0,1,self.cr_template_n_bins_h + 1) #These are bin edges
-            self.cr_template_bin_edges_v = numpy.linspace(0,1,self.cr_template_n_bins_v + 1) #These are bin edges
-            self.cr_template_bin_centers_mesh_h, self.cr_template_bin_centers_mesh_v = numpy.meshgrid((self.cr_template_bin_edges_h[:-1] + self.cr_template_bin_edges_h[1:]) / 2, (self.cr_template_bin_edges_v[:-1] + self.cr_template_bin_edges_v[1:]) / 2)
             
             #Impulsivity Plot Params:
-            self.impulsivity_dset_key   = impulsivity_dset_key
-
+            self.impulsivity_dset_key = impulsivity_dset_key
             self.impulsivity_n_bins_h = impulsivity_n_bins_h
             self.impulsivity_n_bins_v = impulsivity_hv_n_bins_y
-            self.impulsivity_bin_edges_h     = numpy.linspace(0,1,self.impulsivity_n_bins_h + 1) #These are bin edges
-            self.impulsivity_bin_edges_v     = numpy.linspace(0,1,self.impulsivity_n_bins_v + 1) #These are bin edges
-            self.impulsivity_bin_centers_mesh_h, self.impulsivity_bin_centers_mesh_v = numpy.meshgrid((self.impulsivity_bin_edges_h[:-1] + self.impulsivity_bin_edges_h[1:]) / 2, (self.impulsivity_bin_edges_v[:-1] + self.impulsivity_bin_edges_v[1:]) / 2)
+
+            #std Plot Params:
+            self.std_n_bins_h = std_n_bins_h
+            self.std_n_bins_v = std_hv_n_bins_y
+
+            #p2p Plot Params:
+            self.p2p_n_bins_h = p2p_n_bins_h
+            self.p2p_n_bins_v = p2p_hv_n_bins_y
+
+            #snr Plot Params:
+            self.snr_n_bins_h = snr_n_bins_h
+            self.snr_n_bins_v = snr_hv_n_bins_y
 
             self.trigger_types = trigger_types
 
@@ -165,6 +185,19 @@ class dataSlicerSingleRun():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+
+    def printSampleROI(self):
+        '''
+        This will print and return an example ROI dictionary.  This is to provide examples of what a dictionary input
+        to self.addROI might look like. 
+        '''
+        sample_ROI = {  'corr A',{'cr_template_search':[0.575,0.665,0.385,0.46]},\
+                        'high v imp',{'impulsivity_hv':[0.479,0.585,0.633,0.7]},\
+                        'small h.4 v.4 imp',{'impulsivity_hv':[0.34,0.45,0.42,0.5]}}
+        print('Sample ROI dict:')
+        print(sample_ROI)
+        return sample_ROI
 
     def addROI(self, roi_key, roi_dict):
         '''
@@ -234,10 +267,35 @@ class dataSlicerSingleRun():
                         elif param_key == 'cr_template_search':
                             this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
                             output_correlation_values = file['cr_template_search'][this_dset][eventids]
-                            param_x = numpy.max(output_correlation_values[:,[0,2,4,6]],axis=1) #hpol correlation values
-                            param_y = numpy.max(output_correlation_values[:,[1,3,5,7]],axis=1) #vpol_correlation values
+                            param_x = numpy.max(output_correlation_values[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD 
+                            param_y = numpy.max(output_correlation_values[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                        elif param_key == 'std':
+                            std = file['std'][eventids]
+                            param_x = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                            param_y = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                        elif param_key == 'p2p': 
+                            p2p = file['p2p'][eventids]
+                            param_x = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                            param_y = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+
+                        elif param_key == 'snr':
+                            std = file['std'][eventids]
+                            param_x1 = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                            param_y1 = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+
+                            p2p = file['p2p'][eventids]
+                            param_x2 = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                            param_y2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+
+                            param_x = numpy.divide(param_x2, param_x1)
+                            param_y = numpy.divide(param_y2, param_y1)
+
                         #Reduce eventids by box cut
                         eventids = eventids[numpy.logical_and(numpy.logical_and(param_x >= self.roi[roi_key][param_key][0], param_x < self.roi[roi_key][param_key][1]), numpy.logical_and(param_y >= self.roi[roi_key][param_key][2], param_y < self.roi[roi_key][param_key][3]))]
+
+
+
+
                     else:
                         print('\nWARNING!!!\nOther parameters have not been accounted for yet.\n%s'%(param_key))
 
@@ -268,10 +326,17 @@ class dataSlicerSingleRun():
                 print('Given key [%s] is not listed in known_param_keys:\n%s'%(main_param_key,str(self.known_param_keys)))
                 return
 
+            print('\tPreparing to get counts for %s'%main_param_key)
             if main_param_key == 'impulsivity_hv':
                 counts = numpy.zeros((self.impulsivity_n_bins_v,self.impulsivity_n_bins_h)) #v going to be plotted vertically, h horizontall, with 3 of such matrices representing the different trigger types.
             elif main_param_key == 'cr_template_search':
                 counts = numpy.zeros((self.cr_template_n_bins_v,self.cr_template_n_bins_h)) # (rows, columns), so this is (n_y, n_x)
+            elif main_param_key == 'std':
+                counts = numpy.zeros((self.std_n_bins_v,self.std_n_bins_h)) # (rows, columns), so this is (n_y, n_x)
+            elif main_param_key == 'p2p':
+                counts = numpy.zeros((self.p2p_n_bins_v,self.p2p_n_bins_h)) # (rows, columns), so this is (n_y, n_x)
+            elif main_param_key == 'snr':
+                counts = numpy.zeros((self.snr_n_bins_v,self.snr_n_bins_h)) # (rows, columns), so this is (n_y, n_x)
             else:
                 print('Other parameters have not been accounted for yet.')
 
@@ -281,16 +346,30 @@ class dataSlicerSingleRun():
                     if main_param_key == 'impulsivity_hv':
                         param_x = file['impulsivity'][self.impulsivity_dset_key]['hpol'][eventids]
                         param_y = file['impulsivity'][self.impulsivity_dset_key]['vpol'][eventids]
-                        x_bins = self.impulsivity_bin_edges_h
-                        y_bins = self.impulsivity_bin_edges_v
                     elif main_param_key == 'cr_template_search':
                         this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
                         output_correlation_values = file['cr_template_search'][this_dset][eventids]
-                        param_x = numpy.max(output_correlation_values[:,[0,2,4,6]],axis=1) #hpol correlation values
-                        param_y = numpy.max(output_correlation_values[:,[1,3,5,7]],axis=1) #vpol_correlation values
+                        param_x = numpy.max(output_correlation_values[:,self.included_hpol_antennas],axis=1) #hpol correlation values
+                        param_y = numpy.max(output_correlation_values[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                    elif main_param_key == 'std':
+                        std = file['std'][eventids]
+                        param_x = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                        param_y = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                    elif main_param_key == 'p2p': 
+                        p2p = file['p2p'][eventids]
+                        param_x = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                        param_y = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                    elif main_param_key == 'snr':
+                        std = file['std'][eventids]
+                        param_x1 = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                        param_y1 = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
 
-                        x_bins = self.cr_template_bin_edges_h
-                        y_bins = self.cr_template_bin_edges_v
+                        p2p = file['p2p'][eventids]
+                        param_x2 = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                        param_y2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+
+                        param_x = numpy.divide(param_x2, param_x1)
+                        param_y = numpy.divide(param_y2, param_y1)
                     else:
                         print('Other parameters have not been accounted for yet.')
                     file.close()
@@ -300,8 +379,9 @@ class dataSlicerSingleRun():
                     exc_type, exc_obj, exc_tb = sys.exc_info()
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                     print(exc_type, fname, exc_tb.tb_lineno)
-
-            counts += numpy.histogram2d(param_x, param_y, bins = [x_bins,y_bins])[0].T #Outside of file being open 
+            
+            print('\tGetting counts for %s'%main_param_key)
+            counts += numpy.histogram2d(param_x, param_y, bins = [self.current_bin_edges_x,self.current_bin_edges_y])[0].T #Outside of file being open 
 
             return counts
 
@@ -312,13 +392,64 @@ class dataSlicerSingleRun():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def setCurrentPlotBins(self, main_param_key, eventids):
+        '''
+        Sets the current bins to be used for main_param_key.  These can then be accessed easily by other functions for
+        producing the hist count data.  This should be called by any functions starting a plot. 
+        '''
+
+        if main_param_key == 'impulsivity_hv':            
+            self.current_bin_edges_x = numpy.linspace(0,1,self.cr_template_n_bins_h + 1) #These are bin edges
+            self.current_bin_edges_y = numpy.linspace(0,1,self.cr_template_n_bins_v + 1) #These are bin edges
+        elif main_param_key == 'cr_template_search':
+            #Impulsivity Plot Params:
+            self.current_bin_edges_x     = numpy.linspace(0,1,self.impulsivity_n_bins_h + 1) #These are bin edges
+            self.current_bin_edges_y     = numpy.linspace(0,1,self.impulsivity_n_bins_v + 1) #These are bin edges
+        elif main_param_key == 'std':
+            with h5py.File(self.analysis_filename, 'r') as file:
+                print('Calculating max_std')
+                max_std = numpy.max(file['std'][eventids,:])
+                file.close()
+            #std Plot Params:
+            #Bounds not 0 to 1, should be custom set here from data. 
+            print('Max std = ', max_std)
+
+            self.current_bin_edges_x     = numpy.linspace(0,max_std,self.std_n_bins_h + 1) #These are bin edges
+            self.current_bin_edges_y     = numpy.linspace(0,max_std,self.std_n_bins_v + 1) #These are bin edges
+        elif main_param_key == 'p2p': 
+            with h5py.File(self.analysis_filename, 'r') as file:
+                print('Calculating max_p2p')
+                max_p2p = numpy.max(file['p2p'][eventids,:])
+                file.close()
+            #p2p Plot Params:
+            #Bounds not 0 to 1, should be custom set here from data. 
+            print('Max P2P = ', max_p2p)
+
+            self.current_bin_edges_x     = numpy.linspace(0,max_p2p,self.p2p_n_bins_h + 1) #These are bin edges
+            self.current_bin_edges_y     = numpy.linspace(0,max_p2p,self.p2p_n_bins_v + 1) #These are bin edges
+        elif main_param_key == 'snr':
+            with h5py.File(self.analysis_filename, 'r') as file:
+                print('Calculating max_snr')
+                max_p2p = numpy.max(file['p2p'][eventids,:])
+                min_std = numpy.min((file['std'][eventids,:]))
+                max_snr = max_p2p/min_std
+                file.close()
+            #snr Plot Params:
+            #Bounds not 0 to 1, should be custom set here from data. 
+            print('Max SNR = ', max_snr)
+            self.current_bin_edges_x     = numpy.linspace(0,max_snr,self.snr_n_bins_h + 1) #These are bin edges
+            self.current_bin_edges_y     = numpy.linspace(0,max_snr,self.snr_n_bins_v + 1) #These are bin edges
+
+        self.current_bin_centers_mesh_h, self.current_bin_centers_mesh_v = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
+
+
     def plot2dHist(self, main_param_key, eventids, title=None,cmap='coolwarm'):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
         (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
         up as a contour on the plot.  
         '''
-
+        self.setCurrentPlotBins(main_param_key,eventids)
         #Should make eventids a self.eventids so I don't need to call this every time.
         counts = self.get2dHistCounts(main_param_key,eventids)
         
@@ -328,18 +459,25 @@ class dataSlicerSingleRun():
         else:
             plt.title('%s, Run = %i\nIncluded Triggers = %s'%(main_param_key,int(self.reader.run),str(self.trigger_types)))
 
+        _im = _ax.pcolormesh(self.current_bin_centers_mesh_h, self.current_bin_centers_mesh_v, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+
         if main_param_key == 'impulsivity_hv':
-            _im = _ax.pcolormesh(self.impulsivity_bin_centers_mesh_h, self.impulsivity_bin_centers_mesh_v, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
             plt.xlabel('HPol Impulsivity Values')
-            #plt.xlim(0,1)
             plt.ylabel('VPol Impulsivity Values')
-            #plt.ylim(0,1)
         elif main_param_key == 'cr_template_search':
-            _im = _ax.pcolormesh(self.cr_template_bin_centers_mesh_h, self.cr_template_bin_centers_mesh_v, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)
             plt.xlabel('HPol Correlation Values with CR Template')
             plt.xlim(0,1)
             plt.ylabel('VPol Correlation Values with CR Template')
             plt.ylim(0,1)
+        elif main_param_key == 'std':
+            plt.xlabel('Mean HPol std')
+            plt.ylabel('Mean HPol std')
+        elif main_param_key == 'p2p':
+            plt.xlabel('Mean HPol p2p')
+            plt.ylabel('Mean HPol p2p')
+        elif main_param_key == 'snr':
+            plt.xlabel('Mean HPol snr')
+            plt.ylabel('Mean HPol snr')
         else:
             print('Other parameters have not been accounted for yet.')
 
@@ -358,6 +496,7 @@ class dataSlicerSingleRun():
     def addContour(self, ax, main_param_key, contour_eventids, contour_color, n_contour=6):
         '''
         Given the plot made from plot2dHist, this will add contours to it for the events specified by contour_eventids.
+        This assumes that setCurrentPlotBins has already been called by plot2dHist. 
 
         Parameters
         ----------
@@ -389,13 +528,7 @@ class dataSlicerSingleRun():
         else:
             counts = self.get2dHistCounts(main_param_key, contour_eventids)
             levels = numpy.linspace(0,numpy.max(counts),n_contour)[1:n_contour+1] #Not plotting bottom contour because it is often background and clutters plot.
-
-            if main_param_key == 'impulsivity_hv':
-                cs = ax.contour(self.impulsivity_bin_centers_mesh_h, self.impulsivity_bin_centers_mesh_v, counts, colors=[contour_color],levels=levels)
-            elif main_param_key == 'cr_template_search':
-                cs = ax.contour(self.cr_template_bin_centers_mesh_h, self.cr_template_bin_centers_mesh_v, counts, colors=[contour_color],levels=levels)
-            else:
-                print('Other parameters have not been accounted for yet.') #This shouldn't araise because this is within an else that excludes it.
+            cs = ax.contour(self.current_bin_centers_mesh_h, self.current_bin_centers_mesh_v, counts, colors=[contour_color],levels=levels)
             return ax, cs
             
 
@@ -411,7 +544,7 @@ class dataSlicerSingleRun():
             print('Given key [%s] is not listed in known_param_keys:\n%s'%(main_param_key,str(self.known_param_keys)))
             return
         eventids = self.getEventidsFromTriggerType()
-        fig, ax = self.plot2dHist(main_param_key, eventids, title=None, cmap=cmap)
+        fig, ax = self.plot2dHist(main_param_key, eventids, title=None, cmap=cmap) #prepares binning, must be called early (before addContour)
 
         #these few lines below this should be used for adding contours to the map. 
         if include_roi:
@@ -727,13 +860,21 @@ if __name__ == '__main__':
     for run in runs:
         reader = Reader(datapath,run)
         impulsivity_dset_key = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_262144-align_0'
-        ds = dataSlicerSingleRun(reader, impulsivity_dset_key, curve_choice=0, trigger_types=[2],cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_hv_n_bins_y=200,include_test_roi=False)
-        #dataSlicerSingleRun.addROI()
+        print("Preparing dataSlicerSingleRun")
+        ds = dataSlicerSingleRun(reader, impulsivity_dset_key, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
+                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_hv_n_bins_y=200,\
+                        std_n_bins_h=200,std_hv_n_bins_y=200,p2p_n_bins_h=400,p2p_hv_n_bins_y=400,\
+                        snr_n_bins_h=200,snr_hv_n_bins_y=200,include_test_roi=False)
+
+        print('Adding ROI to dataSlicerSingleRun')
         ds.addROI('corr A',{'cr_template_search':[0.575,0.665,0.385,0.46]})
         ds.addROI('high v imp',{'impulsivity_hv':[0.479,0.585,0.633,0.7]})
         ds.addROI('small h.4 v.4 imp',{'impulsivity_hv':[0.34,0.45,0.42,0.5]})
+        
+        print('Generating plots:')
         for key in ds.known_param_keys:
-            ds.plotROI2dHist(key, cmap='coolwarm', include_roi=True)
+            print('Generating %s plot'%key)
+            ds.plotROI2dHist(key, cmap='coolwarm', include_roi=False)
     
     #main() #This is the analysis before it was turned into a class.
     

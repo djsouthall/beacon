@@ -443,7 +443,7 @@ def createFile(reader,redo_defaults=False):
                                 print('\n')
                             elif key == 'std':
                                 if ('std'  in list(file.keys())) == False:
-                                    file.create_dataset('std', (N,8), dtype=numpy.uint32, compression='gzip', compression_opts=9, shuffle=True)
+                                    file.create_dataset('std', (N,8), dtype='f', compression='gzip', compression_opts=9, shuffle=True)
                                 reader.setEntry(eventids[0])
                                 t = reader.t()/1e9
                                 print('Calculating std\n')
