@@ -144,7 +144,7 @@ if __name__ == '__main__':
     ts = []
     powers = []
 
-    runs = numpy.arange(3530,3555)
+    runs = numpy.arange(3530,3571)
 
     #determine_run_bin_edges:
     run_bin_edges = numpy.zeros((len(runs),2))

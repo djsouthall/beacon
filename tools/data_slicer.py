@@ -140,6 +140,7 @@ class dataSlicerSingleRun():
             self.impulsivity_n_bins_v = impulsivity_n_bins_v
 
             #std Plot Params:
+            self.min_std_val = 1.0 #To be rewritten, setting a reasonable lower bound for when max_std_val is given. 
             self.max_std_val = max_std_val
             self.std_n_bins_h = std_n_bins_h
             self.std_n_bins_v = std_n_bins_v

@@ -348,10 +348,16 @@ if __name__ == '__main__':
 
         ds.addROI('imp cluster',{'impulsivity_h':[0.35,0.46],'impulsivity_v':[0.45,0.50]})
 
+        known_param_pairs = [['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v']]
+
         print('Generating plots:')
-        for key_x, key_y in [['p2p_h','p2p_v'],['impulsivity_h','impulsivity_v'],['p2p_h','impulsivity_v']]:#ds.known_param_keys:
+        for key_x, key_y in known_param_pairs:
             print('Generating %s plot'%(key_x + ' vs ' + key_y))
             ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+
+        print('Add a feature to store the eventids of a particular cut (either in analysis file or not)')
+        print('I would say add a function that you can call like addROIToFile(param_key) or something')
+
     
     #main() #This is the analysis before it was turned into a class.
     
