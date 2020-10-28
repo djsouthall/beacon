@@ -315,22 +315,100 @@ class dataSlicerSingleRun():
             print('\nWARNING!!!\nOther parameters have not been accounted for yet.\n%s'%(param_key))
         return param
 
-    def getCutsFromROI(self,roi_key):
+    def getCutsFromROI(self,roi_key,load=False,save=False):
         '''
         This will determine the eventids that match the cuts listed in the dictionary corresponding to roi_key, and will
         return them.  
-        '''
-        if roi_key in list(self.roi.keys()):
-            eventids = self.eventids_matching_trig.copy()
-            for param_key in list(self.roi[roi_key].keys()):
-                param = self.getDataFromParam(eventids, param_key)
-                #Reduce eventids by box cut
-                eventids = eventids[numpy.logical_and(param >= self.roi[roi_key][param_key][0], param < self.roi[roi_key][param_key][1])]  #Should get smaller/faster with every param cut.
-        else:
-            print('WARNING!!!')
-            print('Requested ROI [%s] is not specified in self.roi list:\n%s'%(roi_key,str(list(self.roi.keys()))))
 
-        return eventids
+        Parameters
+        ----------
+        roi_key : str
+            The key of the ROI you want to calculate.
+        load : bool
+            If True then this will bypass calculation of the cut, and will instead attempt to load it from the file.  If
+            this is done succesfully then save is set to False if True, and the eventids are returned.  If a cut matching
+            the param is not present in the file then it will instead calculate the cut, and save if save == True.
+        save : bool
+            If True then the resulting ROI cut will be stored to the analysis file in the ROI group.  Note that any ROI
+            saved with the same name will be automatically overwritten.
+        '''
+        try:
+            if load == True:
+                with h5py.File(self.analysis_filename, 'r') as file:
+                    dsets = list(file.keys()) #Existing datasets
+                    if not numpy.isin('ROI',dsets):
+                        load_failed = True
+                    else:
+                        ROI_dsets = list(file['cr_template_search'].keys())
+                        if numpy.isin(roi_key,ROI_dsets):
+                            save = False
+                            eventids = numpy.where(file['ROI'][roi_key][...])[0] #List of eventids. 
+                            load_failed = False
+                        else:
+                            load_failed = True
+                    file.close()
+            else:
+                load_failed = True
+
+            if load_failed == True:
+                if roi_key in list(self.roi.keys()):
+                    eventids = self.eventids_matching_trig.copy()
+                    for param_key in list(self.roi[roi_key].keys()):
+                        param = self.getDataFromParam(eventids, param_key)
+                        #Reduce eventids by box cut
+                        eventids = eventids[numpy.logical_and(param >= self.roi[roi_key][param_key][0], param < self.roi[roi_key][param_key][1])]  #Should get smaller/faster with every param cut.
+                else:
+                    print('WARNING!!!')
+                    print('Requested ROI [%s] is not specified in self.roi list:\n%s'%(roi_key,str(list(self.roi.keys()))))
+
+            if save == True:
+                '''
+                Here I not only want to save bool data for events in the cut, but I also want to store the meta information
+                required to interpret the cut.  So make first check to make sure that a group is made for ROI.  Then a dataset
+                within this group for each ROI containing the bool data.  That dataset then also has associated attrs dictionary
+                containing information such as allowed trigger types, allowed antennas, and the ROI dictionary that defines
+                the n-d box cut. I have not done this specific thing before so hopefully it isn't terrible.  
+                '''
+                with h5py.File(self.analysis_filename, 'a') as file:
+                    try:
+                        dsets = list(file.keys()) #Existing datasets
+
+                        if not numpy.isin('ROI',dsets):
+                            file.create_group('ROI')
+
+                        ROI_dsets = list(file['ROI'].keys())
+                        
+                        if numpy.isin(roi_key,ROI_dsets):
+                            print('ROI["%s"] group already exists in file %s, it will be deleted and remade.'%(roi_key,self.analysis_filename))
+                            del file['ROI'][roi_key]
+                        
+                        file['ROI'].create_dataset(roi_key, (file.attrs['N'],), dtype=bool, compression='gzip', compression_opts=4, shuffle=True)
+                        
+                        #Store all required information needed to reproduce cut here as attributes.
+                        file['ROI'][roi_key].attrs['dict'] = str(self.roi[roi_key]) #Dict must be stored as a str.  To interpret it use ast.literal_eval(the_string)
+                        file['ROI'][roi_key].attrs['included_antennas'] = self.included_antennas
+                        file['ROI'][roi_key].attrs['cr_template_curve_choice'] = self.cr_template_curve_choice
+                        file['ROI'][roi_key].attrs['trigger_types'] = self.trigger_types
+
+                        #Store dataset.
+                        file['ROI'][roi_key][...] = numpy.isin(numpy.arange(file.attrs['N']),eventids) #True for events in the cut list.  
+                    except Exception as e:
+                        print('\nError in %s'%inspect.stack()[0][3])
+                        print(e)
+                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                        print(exc_type, fname, exc_tb.tb_lineno)
+                    file.close() #want file to close where exception met or not.  
+                print('Saving the cuts to the analysis file.')
+
+
+            return eventids
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
 
     def get2dHistCounts(self, main_param_key_x, main_param_key_y, eventids):

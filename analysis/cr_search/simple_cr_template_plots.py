@@ -6,11 +6,11 @@ The documention for each function needs to be updated to represent the new funct
 all be moved to the tools folder and just be called here.  
 
 '''
-
 import sys
 import os
 import inspect
 import h5py
+import ast
 
 import numpy
 import scipy
@@ -348,6 +348,28 @@ if __name__ == '__main__':
 
         ds.addROI('imp cluster',{'impulsivity_h':[0.35,0.46],'impulsivity_v':[0.45,0.50]})
 
+        print('Testing the ability to save a cut. ')
+        print('Trying normal operation')
+        cut_eventids_A = ds.getCutsFromROI('imp cluster',load=False,save=False)
+        print('Trying to save the eventids')
+        cut_eventids_B = ds.getCutsFromROI('imp cluster',load=False,save=True)
+
+        print('Trying to load the eventids')
+        cut_eventids_C = ds.getCutsFromROI(roi_key,load=True,save=False)
+
+        roi_key = 'imp cluster'
+        with h5py.File(ds.analysis_filename, 'r') as file:
+            cut_dict = ast.literal_eval(file['ROI'][roi_key].attrs['dict'])
+            print('cut_dict = ', cut_dict)
+            included_antennas = file['ROI'][roi_key].attrs['included_antennas']
+            print('included_antennas = ', included_antennas)
+            cr_template_curve_choice = file['ROI'][roi_key].attrs['cr_template_curve_choice']
+            print('cr_template_curve_choice = ', cr_template_curve_choice)
+            trigger_types = file['ROI'][roi_key].attrs['trigger_types']
+            print('trigger_types = ', trigger_types)
+            file.close()
+
+        '''
         known_param_pairs = [['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v']]
 
         print('Generating plots:')
@@ -357,7 +379,7 @@ if __name__ == '__main__':
 
         print('Add a feature to store the eventids of a particular cut (either in analysis file or not)')
         print('I would say add a function that you can call like addROIToFile(param_key) or something')
-
+        '''
     
     #main() #This is the analysis before it was turned into a class.
     
