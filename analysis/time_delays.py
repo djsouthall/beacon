@@ -19,7 +19,7 @@ sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret #Must be imported before matplotlib or else plots don't load.
 import tools.clock_correct as cc
 import tools.info as info
-from objects.fftmath import TimeDelayCalculator
+from tools.fftmath import TimeDelayCalculator
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm

@@ -12,7 +12,7 @@ from iminuit import Minuit
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
-import objects.station as bc
+import tools.station as bc
 import tools.info as info
 from tools.correlator import Correlator
 import tools.get_plane_tracks as pt

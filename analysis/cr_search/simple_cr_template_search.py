@@ -16,7 +16,7 @@ sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.info as info
 import tools.cosmic_ray_template as crt
 from tools.data_handler import createFile
-from objects.fftmath import TemplateCompareTool
+from tools.fftmath import TemplateCompareTool
 
 import matplotlib
 matplotlib.use('pdf')

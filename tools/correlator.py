@@ -18,7 +18,7 @@ import tools.interpret as interpret #Must be imported before matplotlib or else 
 import tools.info as info
 import analysis.phase_response as pr
 import tools.get_plane_tracks as pt
-from objects.fftmath import TimeDelayCalculator
+from tools.fftmath import TimeDelayCalculator
 import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt

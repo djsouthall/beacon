@@ -22,10 +22,10 @@ sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 from tools.data_handler import createFile, getTimes
-import objects.station as bc
+import tools.station as bc
 import tools.info as info
 import tools.get_plane_tracks as pt
-from objects.fftmath import TimeDelayCalculator
+from tools.fftmath import TimeDelayCalculator
 
 #Plotting Imports
 import matplotlib.pyplot as plt

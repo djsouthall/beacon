@@ -17,7 +17,7 @@ sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret #Must be imported before matplotlib or else plots don't load.
 import tools.clock_correct as cc
 import tools.info as info
-from objects.fftmath import TemplateCompareTool
+from tools.fftmath import TemplateCompareTool
 
 
 import matplotlib.pyplot as plt

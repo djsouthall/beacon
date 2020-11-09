@@ -28,7 +28,7 @@ import tools.interpret #Must be imported before matplotlib or else plots don't l
 import tools.clock_correct as cc
 import tools.info as info
 from tools.data_handler import createFile, getTimes
-from objects.fftmath import TimeDelayCalculator, TemplateCompareTool
+from tools.fftmath import TimeDelayCalculator, TemplateCompareTool
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable

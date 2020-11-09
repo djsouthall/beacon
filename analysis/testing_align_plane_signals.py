@@ -1,6 +1,6 @@
 '''
-This is useful for plotting event time delays that are already associated
-with a particular plane and stored in info.py.
+This is a copy of analyze plane candidate time delays that is specifically made to test different
+algorithms for aligning the waveforms.
 '''
 
 import numpy
@@ -51,6 +51,65 @@ known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
 ignorable_pulser_ids = info.loadIgnorableEventids()
 cm = plt.cm.get_cmap('plasma')
 rescm = plt.cm.get_cmap('viridis')
+
+
+# all_candidates = {\
+# '1651-49':{     'eventids':numpy.array([[1651,49],[1651,6817],[1651,12761]]),\
+#                 'known_flight':None},\
+# '1661-34206':{  'eventids':numpy.array([[1661,34206],[1661,35542],[1661,36609]]),\
+#                 'known_flight':None},\
+# '1662-58427':{  'eventids':numpy.array([[1662,58427],[1662,58647]]),\
+#                 'known_flight':None},\
+# '1718-25660':{  'eventids':numpy.array([[1718,25660],[1718,26777],[1718,27756],[1718,28605]]),\
+#                 'known_flight':None},\
+# '1728-62026':{  'eventids':numpy.array([[1728,62026],[1728,62182],[1728,62370],[1728,62382],[1728,62552],[1728,62577]]),\
+#                 'known_flight':'a44585'},\
+# '1773-14413':{  'eventids':numpy.array([[1773,14413],[1773,14540],[1773,14590]]),\
+#                 'known_flight':'aa8c39'},\
+# '1773-63659':{  'eventids':numpy.array([[1773,63659],[1773,63707],[1773,63727],[1773,63752],[1773,63757]]),\
+#                 'known_flight':'a28392'},\
+# '1774-88800':{  'eventids':numpy.array([[1774,88800],[1774,88810],[1774,88815],[1774,88895],[1774,88913],[1774,88921],[1774,88923],[1774,88925],[1774,88944],[1774,88955],[1774,88959],[1774,88988],[1774,88993],[1774,89029],[1774,89030],[1774,89032],[1774,89034],[1774,89041],[1774,89043],[1774,89052],[1774,89172],[1774,89175],[1774,89181],[1774,89203],[1774,89204],[1774,89213]]),\
+#                 'known_flight':'ab5f43'},\
+# '1783-28830':{  'eventids':numpy.array([[1783,28830],[1783,28832],[1783,28861]]),\
+#                 'known_flight':'a52e4f'},\
+# '1783-35725':{  'eventids':numpy.array([[1783,35725],[1783,34730],[1783,34738],[1783,34778],[1783,34793]]),\
+#                 'known_flight':None},\
+# '1784-7166':{   'eventids':numpy.array([[1784,7166],[1784,7176],[1784,7179],[1784,7195],[1784,7244],[1784,7255]]),\
+#                 'known_flight':'acf975'}\
+# }
+
+#Now all means only the ones that are planes! 
+all_candidates = {\
+'1728-62026':{  'eventids':numpy.array([[1728,62026],[1728,62182],[1728,62370],[1728,62382],[1728,62552],[1728,62577]]),\
+                'known_flight':'a44585',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]}},\
+'1773-14413':{  'eventids':numpy.array([[1773,14413],[1773,14540],[1773,14590]]),\
+                'known_flight':'aa8c39',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+'1773-63659':{  'eventids':numpy.array([[1773,63659],[1773,63707],[1773,63727],[1773,63752],[1773,63757]]),\
+                'known_flight':'a28392',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+'1774-88800':{  'eventids':numpy.array([[1774,88800],[1774,88810],[1774,88815],[1774,88895],[1774,88913],[1774,88921],[1774,88923],[1774,88925],[1774,88944],[1774,88955],[1774,88959],[1774,88988],[1774,88993],[1774,89029],[1774,89030],[1774,89032],[1774,89034],[1774,89041],[1774,89043],[1774,89052],[1774,89172],[1774,89175],[1774,89181],[1774,89203],[1774,89204],[1774,89213]]),\
+                'known_flight':'ab5f43',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+'1783-28830':{  'eventids':numpy.array([[1783,28830],[1783,28832],[1783,28861]]),\
+                'known_flight':'a52e4f',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}},\
+'1784-7166':{   'eventids':numpy.array([[1784,7166],[1784,7176],[1784,7179],[1784,7195],[1784,7244],[1784,7255]]),\
+                'known_flight':'acf975',\
+                'align_method':0,\
+                'baselines':{'hpol':[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],'vpol':[[1,2],[1,3],[2,3]]}}\
+}
+
+
+candidates = all_candidates
+# test_track = '1784-7166'#'1728-62026'
+# candidates = {test_track:all_candidates[test_track]}
 
 if __name__ == '__main__':
     #################################
@@ -109,12 +168,12 @@ if __name__ == '__main__':
     plot_multiple = False
     plot_averaged_waveforms = False
     plot_averaged_waveforms_aligned = False
-    plot_fft_signals = True
+    plot_fft_signals = False
     plot_planes = False
     plot_interps = False
-    plot_time_delays = True
-    plot_residuals = False
-    plot_freq_classification_colors = False #PLF,LF,HF,PHF,BB
+    plot_time_delays = False
+    plot_residuals = True
+    plot_freq_classification_colors = True #PLF,LF,HF,PHF,BB
     
     freq_classications = ['PLF','LF','HF','PHF','BB']
     freq_colors_cm = plt.cm.get_cmap('Set3', len(freq_classications))
@@ -216,8 +275,6 @@ if __name__ == '__main__':
 
         for key_index, key in enumerate(list(calibrated_trigtime.keys())):
             #Prepare tools and such
-            # if key != test_track:
-            #     continue
             run = int(key.split('-')[0])
             eventids = known_planes[key]['eventids'][:,1]
             reader = Reader(datapath,run)
@@ -263,156 +320,6 @@ if __name__ == '__main__':
                     geometric_time_delays = geometric_time_delay
                 else:
                     geometric_time_delays = numpy.vstack((geometric_time_delays,geometric_time_delay))
-
-            if plot_fft_signals == True:
-                #Get average waveforms per channel for this plane.
-                times, averaged_waveforms = tct.averageAlignedSignalsPerChannel(eventids, template_eventid=eventids[-1], align_method=0, plot=plot_averaged_waveforms_aligned)
-                times_ns = times/1e9
-                freqs_MHz = numpy.fft.rfftfreq(len(times_ns),d=numpy.diff(times_ns)[0])/1e6
-                #Plot averaged FFT per channel
-                fft_fig = plt.figure()
-                fft_fig.canvas.set_window_title('FFT %s , %s'%(key,mode))
-                plt.minorticks_on()
-                plt.grid(b=True, which='major', color='k', linestyle='-')
-                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                plt.ylabel('dBish')
-                plt.xlabel('MHz')
-                fft_ax = plt.gca()
-                for channel, averaged_waveform in enumerate(averaged_waveforms):
-                    if mode == 'hpol' and channel%2 == 1:
-                        continue
-                    elif mode == 'vpol' and channel%2 == 0:
-                        continue
-
-                    freqs, spec_dbish, spec = tct.rfftWrapper(times, averaged_waveform)
-                    fft_ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel)#Dividing by 2 to match monutau.  Idk why I have to do this though normally this function has worked well...
-                plt.xlim(10,110)
-                plt.ylim(-10,30)
-
-
-
-            if plot_planes == True:
-                plane_ax.plot(enu[0]/1000.0,enu[1]/1000.0,enu[2]/1000.0,label=key + ' : ' + known_planes[key]['known_flight'])
-                plane_ax.scatter(interpolated_plane_locations[key][:,0]/1000.0,interpolated_plane_locations[key][:,1]/1000.0,interpolated_plane_locations[key][:,2]/1000.0,label=key + ' : ' + known_planes[key]['known_flight'])
-
-
-            if plot_time_delays or plot_residuals:
-                min_timestamp = min(calibrated_trigtime[key])
-                max_timestamp = max(calibrated_trigtime[key])
-
-
-                flight_tracks_ENU, all_vals = pt.getENUTrackDict(min_timestamp,max_timestamp,100,hour_window = 0,flights_of_interest=[known_planes[key]['known_flight']])
-
-
-
-                track = flight_tracks_ENU[known_planes[key]['known_flight']]
-
-                if use_interpolated_tracks == True:
-                    track[:,0:3] = plane_polys[key].poly(track[:,3])#E N U t
-
-
-                if mode  == 'hpol':       
-                    tof, dof, dt = pt.getTimeDelaysFromTrack(track, adjusted_antennas_physical=None,adjusted_antennas_phase_hpol=loc_dict,adjusted_antennas_phase_vpol=None)
-                else:
-                    tof, dof, dt = pt.getTimeDelaysFromTrack(track, adjusted_antennas_physical=None,adjusted_antennas_phase_hpol=None,adjusted_antennas_phase_vpol=loc_dict)
-
-                distance = numpy.sqrt(numpy.sum(track[:,0:3]**2,axis=1))/1000 #km
-
-                plot_distance_cut_limit = None
-                if plot_distance_cut_limit is not None:
-                    plot_distance_cut = distance <= plot_distance_cut_limit
-                else:
-                    plot_distance_cut = numpy.ones_like(distance,dtype=bool)
-
-                x = track[plot_distance_cut,3]
-
-                time_delay_fig = plt.figure()
-                time_delay_fig.canvas.set_window_title('%s %s Delays'%(key, mode))
-                plt.minorticks_on()
-                plt.grid(b=True, which='major', color='k', linestyle='-')
-                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                #plt.title(mode + ' ' + key + ', ' + known_planes[key]['known_flight'] + '\nAdjusted Antenna Positions')
-                plt.ylabel('Time Delay (ns)')
-                plt.xlabel('Readout Time (s)')
-                python_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-                for pair_index, pair in enumerate(known_planes[key]['baselines'][mode]):
-
-                    if plot_residuals == True:
-                        #PLOTTING FIT/IDENTIFIED MEASURED FLIGHT TRACKS
-                        y = measured_plane_time_delays[key][pair_index] - geometric_time_delays[pair_index]
-                        plt.plot(calibrated_trigtime[key], y,c=python_colors[pair_index],linestyle = '--',alpha=0.8)
-                        plt.scatter(calibrated_trigtime[key], y,c=python_colors[pair_index],label='Residuals A%i and A%i'%(pair[0],pair[1]))
-                        text_color = plt.gca().lines[-1].get_color()
-
-                        #Attempt at avoiding overlapping text.
-                        text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
-                        plt.text(text_loc[0],text_loc[1], 'A%i and A%i'%(pair[0],pair[1]),color=text_color,withdash=True)
-
-                    else:
-
-                        #PLOTTING EXPECTED FLIGHT TRACKS FOR THE KNOWN CORRELATED FLIGHT
-                        y = dt['expected_time_differences_%s'%mode][(pair[0], pair[1])][plot_distance_cut]
-                        plt.plot(x,y,c=python_colors[pair_index],linestyle = '--',linewidth=4,alpha=0.7,label='Expected Airplane Time Delays: A%i and A%i'%(pair[0],pair[1]))
-                        #plt.scatter(x,y,facecolors='none', edgecolors=python_colors[pair_index],alpha=0.4)
-
-                        #PLOTTING FIT/IDENTIFIED MEASURED FLIGHT TRACKS
-                        y = measured_plane_time_delays[key][pair_index]
-                        #plt.plot(calibrated_trigtime[key], y,c=python_colors[pair_index],linestyle = '--',alpha=0.8)
-                        plt.scatter(calibrated_trigtime[key], y,s=200,c=python_colors[pair_index],label='Measured Time Delays: A%i and A%i'%(pair[0],pair[1]))
-
-                        text_color = plt.gca().lines[-1].get_color()
-                        #Attempt at avoiding overlapping text.
-                        #text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
-                        #plt.text(text_loc[0],text_loc[1], 'A%i and A%i'%(pair[0],pair[1]),color=text_color,withdash=True)
-                
-                #plt.legend(loc='lower left')
-                #plt.xlim([1.574181e9+500,1.574181e9+800])
-
-                
-
-                if plot_residuals:
-                    python_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-                    for pair_index, pair in enumerate(known_planes[key]['baselines'][mode]):
-                        if plot_freq_classification_colors == True:
-                            color = freq_color_dict[known_planes[key]['signal_classification']]['c']
-                            if freq_color_dict[known_planes[key]['signal_classification']]['labeled_yet'] == False:
-                                label = '%s all baselines'%known_planes[key]['signal_classification']
-                                freq_color_dict[known_planes[key]['signal_classification']]['labeled_yet'] = True
-                            else:
-                                label = None
-                        else:
-                            color = python_colors[pair_index]
-                            label = 'Residuals A%i and A%i'%(pair[0],pair[1])
-
-                        y = measured_plane_time_delays[key][pair_index] - geometric_time_delays[pair_index]
-                        #az_ax.plot(azimuths, y,c=python_colors[pair_index],linestyle = '--',alpha=0.8)
-                        az_ax.scatter(azimuths, y,c=color,label=label)
-                        zen_ax.scatter(zeniths, y,c=color,label=label)
-                        azen_ax.scatter(array_plane_zeniths, y,c=color,label=label)
-
-                        all_az = numpy.append(all_az, azimuths)
-                        all_zen = numpy.append(all_zen, 90.0-zeniths)
-                        all_azen = numpy.append(all_azen, 90.0-array_plane_zeniths)
-                        all_res = numpy.append(all_res, y)
-
-                    if plot_freq_classification_colors == True:
-                        az_ax.legend()
-                        zen_ax.legend()
-                        azen_ax.legend()
-                        # aziel_ax.legend()
-                        # aziael_ax.legend()
-
-                        
-        if plot_residuals:
-            scat = aziel_ax.scatter(all_az,all_zen, c=all_res,cmap=rescm,norm=plt.Normalize(-2,2))
-            ascat = aziael_ax.scatter(all_az,all_azen, c=all_res,cmap=rescm,norm=plt.Normalize(-2,2))
-            cbar = aziel_fig.colorbar(scat)
-            cbar.set_label('Residual (ns)')
-            acbar = aziael_fig.colorbar(ascat)
-            acbar.set_label('Residual (ns)')
-
 
     except Exception as e:
         print('Error in plotting.')

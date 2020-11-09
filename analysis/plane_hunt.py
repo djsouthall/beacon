@@ -19,10 +19,10 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret #Must be imported before matplotlib or else plots don't load.
 import tools.clock_correct as cc
-from objects.fftmath import TemplateCompareTool
+from tools.fftmath import TemplateCompareTool
 import tools.info as info
 from tools.data_handler import createFile
-from objects.fftmath import TimeDelayCalculator
+from tools.fftmath import TimeDelayCalculator
 import tools.get_plane_tracks as pt
 from tools.correlator import Correlator
 
