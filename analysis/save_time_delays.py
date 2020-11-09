@@ -152,6 +152,11 @@ if __name__=="__main__":
                 eventids = file['eventids'][...]
                 rf_cut = file['trigger_type'][...] == 2
 
+                print('Total Events: %i'%file.attrs['N'])
+                print('[1] Software Events: %i'%sum(file['trigger_type'][...] == 1))
+                print('[2] RF Events: %i'%sum(file['trigger_type'][...] == 2))
+                print('[3] GPS Events: %i'%sum(file['trigger_type'][...] == 3))
+
                 dsets = list(file.keys()) #Existing datasets
 
                 if not numpy.isin('time_delays',dsets):

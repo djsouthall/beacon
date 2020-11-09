@@ -457,7 +457,13 @@ class FFTPrepper:
 
                 
                 if apply_phase_response == True:
-                    filter_y[channel] = numpy.multiply(phase_response_filter,numpy.multiply(filter_y_low_pass,filter_y_high_pass))
+                    # print(filter_y.shape)
+                    # print(phase_response_filter[channel].shape)
+                    # print(numpy.multiply(filter_y_low_pass,filter_y_high_pass).shape)
+                    # version = ".".join(map(str, sys.version_info[:3]))
+                    # print(version)
+                    # import pdb; pdb.set_trace()
+                    filter_y[channel] = numpy.multiply(phase_response_filter[channel],numpy.multiply(filter_y_low_pass,filter_y_high_pass))
                 else:
                     filter_y[channel] = numpy.multiply(filter_y_low_pass,filter_y_high_pass)
                 

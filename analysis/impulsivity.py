@@ -74,7 +74,6 @@ if __name__=="__main__":
             print(reader.status())
         except Exception as e:
             print('Status Tree not present.  Returning Error.')
-            print('\nError in %s'%inspect.stack()[0][3])
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -99,7 +98,7 @@ if __name__=="__main__":
                     time_delays_dsets = list(file['time_delays'].keys())
                     impulsivity_dsets = list(file['impulsivity'].keys())
 
-                    for tdset in time_delays_dsets:
+                    for tdset in ["LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_8"]:#time_delays_dsets:
                         if not numpy.isin(tdset,impulsivity_dsets):
                             file['impulsivity'].create_group(tdset)
                         else:
@@ -134,18 +133,20 @@ if __name__=="__main__":
                             if eventid%500 == 0:
                                 sys.stdout.write('(%i/%i)\r'%(eventid,len(eventids)))
                                 sys.stdout.flush()
-                            delays = -all_time_delays[eventid] #Unsure why I need to invert this.
-                            file['impulsivity'][tdset]['hpol'][eventid], file['impulsivity'][tdset]['vpol'][eventid] = tdc.calculateImpulsivityFromTimeDelays(eventid, delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=750)
-
+                            try:
+                                delays = -all_time_delays[eventid] #Unsure why I need to invert this.
+                                file['impulsivity'][tdset]['hpol'][eventid], file['impulsivity'][tdset]['vpol'][eventid] = tdc.calculateImpulsivityFromTimeDelays(eventid, delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=750)
+                            except Exception as e:
+                                print(e)
+                                exc_type, exc_obj, exc_tb = sys.exc_info()
+                                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                print(exc_type, fname, exc_tb.tb_lineno)
                 file.close()
         else:
             print('filename is None, indicating empty tree.  Skipping run %i'%run)
     except Exception as e:
-        print('\nError in %s'%inspect.stack()[0][3])
         print(e)
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
-        sys.exit(1) 
-    sys.exit(0)
 
