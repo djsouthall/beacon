@@ -108,10 +108,14 @@ class dataSlicerSingleRun():
     include_test_roi :
         This will include test regions of interest that are more for testing the class itself. 
     '''
-    def __init__(self,  reader, impulsivity_dset_key, curve_choice=0, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7],\
-                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
-                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=None,p2p_n_bins_h=256,p2p_n_bins_v=256,max_p2p_val=128,\
-                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=None,include_test_roi=False):
+    def __init__(self,  reader, impulsivity_dset_key, time_delays_dset_key, \
+                        curve_choice=0, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                        impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                        time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-200,max_time_delays_val=200,\
+                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=None,\
+                        p2p_n_bins_h=256,p2p_n_bins_v=256,max_p2p_val=128,\
+                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=None):
         try:
             self.included_antennas = included_antennas#[0,1,2,3,4,5,6,7]
             self.included_hpol_antennas = numpy.array([0,2,4,6])[numpy.isin([0,2,4,6],self.included_antennas)]
@@ -119,8 +123,12 @@ class dataSlicerSingleRun():
 
             #I want to work on adding: 'std', 'p2p', and 'snr', where snr is p2p/std.  I think these could be interesting, and are already available by default per signal. 
             #self.known_param_keys = ['impulsivity_hv', 'cr_template_search', 'std', 'p2p', 'snr'] #If it is not listed in here then it cannot be used.
-            self.known_param_keys = ['impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v']
+            self.known_param_keys = [   'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
+                                        'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
+                                        'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v']
             self.updateReader(reader)
+
+
 
             #Parameters:
             #General Params:
@@ -138,6 +146,13 @@ class dataSlicerSingleRun():
             self.impulsivity_dset_key = impulsivity_dset_key
             self.impulsivity_n_bins_h = impulsivity_n_bins_h
             self.impulsivity_n_bins_v = impulsivity_n_bins_v
+
+            #Time Delay Plot Params:
+            self.time_delays_dset_key = time_delays_dset_key
+            self.time_delays_n_bins_h = time_delays_n_bins_h
+            self.time_delays_n_bins_v = time_delays_n_bins_v
+            self.min_time_delays_val = min_time_delays_val
+            self.max_time_delays_val = max_time_delays_val            
 
             #std Plot Params:
             self.min_std_val = 1.0 #To be rewritten, setting a reasonable lower bound for when max_std_val is given. 
@@ -165,9 +180,8 @@ class dataSlicerSingleRun():
             #these specific regions of interest.  x and y should be correlation values, and ordered.
             self.roi = {}
             if include_test_roi:
-                self.roi['test'] = {'impulsivity_hv':numpy.array([0.5,0.9,0.5,1.0]),
-                                    'cr_template_hv':numpy.array([0.5,0.9,0.5,1.0])}
-                #'map_az_elev_deg':numpy.array([-60,60.-40,0.0])
+                sample_ROI = self.printSampleROI(verbose=False)
+                self.roi['test'] = sample_ROI
 
             #self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, numpy.shape(roi)[0])]
         except Exception as e:
@@ -182,6 +196,32 @@ class dataSlicerSingleRun():
         This will return a list of the currently supported parameter keys for making 2d histogram plots.
         '''
         return print(self.known_param_keys)
+
+    def printDatasets(self):
+        '''
+        This will print the names of the first level datasets (not built to be recursive yet.)
+        '''
+        try:
+            with h5py.File(self.analysis_filename, 'r') as file:
+                print('Datasets in file:')
+                print(list(file.keys()))
+                print('Time Delay datasets in file:')
+                for d in list(file['time_delays'].keys()): 
+                    print('\t' + d)
+                    for dd in list(file['time_delays'][d].keys()):
+                        print('\t\t' + dd)
+                print('Impulsivity datasets in file:')
+                for d in list(file['impulsivity'].keys()): 
+                    print('\t' + d)
+
+                file.close()
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
     def updateReader(self, reader):
         '''
         This will let the user update the reader file if they are looping over multiple runs.
@@ -207,7 +247,7 @@ class dataSlicerSingleRun():
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def printSampleROI(self):
+    def printSampleROI(self,verbose=True):
         '''
         This will print and return an example ROI dictionary.  This is to provide examples of what a dictionary input
         to self.addROI might look like. 
@@ -215,8 +255,9 @@ class dataSlicerSingleRun():
         sample_ROI = {  'corr A':{'cr_template_search_h':[0.575,0.665],'cr_template_search_v':[0.385,0.46]},\
                         'high v imp':{'impulsivity_h':[0.479,0.585],'impulsivity_h':[0.633,0.7]},\
                         'small h.4 v.4 imp':{'impulsivity_h':[0.34,0.45],'impulsivity_h':[0.42,0.5]}}
-        print('Sample ROI dict:')
-        print(sample_ROI)
+        if verbose == True:
+            print('Sample ROI dict:')
+            print(sample_ROI)
         return sample_ROI
 
     def addROI(self, roi_key, roi_dict):
@@ -326,10 +367,15 @@ class dataSlicerSingleRun():
                     p2p = file['p2p'][...][eventids]
                     param_2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
                     param = numpy.divide(param_2, param_1)
+                elif 'time_delay_' in param_key:
+                    split_param_key = param_key.split('_')
+                    dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
+                    param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
                 file.close()
         else:
             print('\nWARNING!!!\nOther parameters have not been accounted for yet.\n%s'%(param_key))
         return param
+
 
     def getCutsFromROI(self,roi_key,load=False,save=False):
         '''
@@ -540,6 +586,7 @@ class dataSlicerSingleRun():
                 if self.max_snr_val is None:
                     self.max_snr_val = self.max_p2p_val/self.min_std_val
 
+                    
             if param_key not in self.known_param_keys:
                 print('WARNING!!!')
                 print('Given key [%s] is not listed in known_param_keys:\n%s'%(param_key,str(self.known_param_keys)))
@@ -597,6 +644,26 @@ class dataSlicerSingleRun():
                     x_n_bins = self.snr_n_bins_v
                     x_max_val = self.max_snr_val
                     x_min_val = 0
+                elif 'time_delay_' in param_key:
+                    split_param_key = param_key.split('_')
+                    label = '%spol Time Delay\n Ant %s - Ant %s'%(split_param_key[3].title(),split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1])
+                    if split_param_key[3] == 'h':
+                        x_n_bins = self.time_delays_n_bins_h
+                    else:
+                        x_n_bins = self.time_delays_n_bins_v
+                    
+                    if numpy.logical_or(self.min_time_delays_val is None, self.max_time_delays_val is None):
+                        time_delays = self.getDataFromParam(eventids, param_key)
+                    
+                    if self.min_time_delays_val is None:
+                        x_min_val = min(time_delays) - 1
+                    else:
+                        x_min_val = self.min_time_delays_val
+
+                    if self.max_time_delays_val is None:
+                        x_max_val = max(time_delays) + 1
+                    else:
+                        x_max_val = self.max_time_delays_val
 
             current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges
 
@@ -718,6 +785,56 @@ class dataSlicerSingleRun():
         return fig, ax
 
 
+    def plotTimeDelayHist(self,include_roi=True, load=False):
+        '''
+        This will plot 1d histograms for all time delays, plotted in a grid.  It will make a seperate plot
+        for both hpol and vpol (total of 12 subplots).
+        '''
+        if load == True:
+            print('Load feature not currently supported for plotTimeDelayHist')
+
+        eventids = self.getEventidsFromTriggerType()
+        
+        if include_roi:
+            roi_eventids = []
+            for roi_index, roi_key in enumerate(list(self.roi.keys())):
+                roi_eventids.append(self.getCutsFromROI(roi_key, load=load))
+
+        for mode in ['h','v']:
+            fig = plt.figure()
+            fig.canvas.set_window_title('%spol Time Delays'%(mode.title()))
+            for baseline_index, baseline in enumerate([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]):
+                param_key = 'time_delay_%isubtract%i_%s'%(baseline[0],baseline[1],mode)
+                
+                self.setCurrentPlotBins(param_key, param_key, eventids)
+                label = self.current_label_x
+                param = self.getDataFromParam(eventids, param_key)
+                ax = plt.subplot(3,2,baseline_index+1)
+                if include_roi:
+                    alpha = 0.5
+                else:
+                    alpha = 1.0
+
+                plt.hist(param, bins = self.current_bin_edges_x,label=label,alpha=alpha)
+                plt.minorticks_on()
+                plt.yscale('log', nonposy='clip')
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                if baseline_index in [4,5]:
+                    plt.xlabel('Time Delay (ns)')
+                if baseline_index in [0,2,4]:
+                    plt.ylabel('Counts')
+
+                if include_roi:
+                    for roi_index, roi_key in enumerate(list(self.roi.keys())):
+                        param = self.getDataFromParam(roi_eventids[roi_index], param_key)
+                        c = numpy.copy(self.roi_colors[roi_index])
+                        c[3] = 0.7 #setting alpha for fill but not for edge.
+                        plt.hist(param, bins = self.current_bin_edges_x,label = 'roi %i: %s'%(roi_index, roi_key), color = c, edgecolor='black', linewidth=1)
+                plt.legend(fontsize=10)
+
+
     def saveHistogramData(self, param_key):
         '''
         This will determine the bin locations for a given parameter choice and store that value and the necessary meta
@@ -798,8 +915,6 @@ class dataSlicerSingleRun():
 
 
 
-
-
 if __name__ == '__main__':
     plt.close('all')
     
@@ -808,8 +923,9 @@ if __name__ == '__main__':
     for run in runs:
         reader = Reader(datapath,run)
         impulsivity_dset_key = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_262144-align_0'
+        time_delays_dset_key = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'
         print("Preparing dataSlicerSingleRun")
-        ds = dataSlicerSingleRun(reader, impulsivity_dset_key, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
+        ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                         std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False)
@@ -832,7 +948,7 @@ if __name__ == '__main__':
 
         import timeit
         print('Generating plots:')
-        for key_x, key_y in [['p2p_h','p2p_v'],['impulsivity_h','impulsivity_v'],['p2p_h','impulsivity_v']]:#ds.known_param_keys:
+        for key_x, key_y in [['p2p_h','p2p_v'],['impulsivity_h','impulsivity_v'],['p2p_h','impulsivity_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h']]:#ds.known_param_keys:
             print('Generating %s plot'%(key_x + ' vs ' + key_y))
             print('Testing plot for calculating %s and %s'%(key_x,key_y))
             start_time = timeit.default_timer()
