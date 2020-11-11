@@ -21,6 +21,7 @@ sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 from tools.data_handler import createFile
+from tools.fftmath import TemplateCompareTool
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -114,7 +115,7 @@ class dataSlicerSingleRun():
                         impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                         time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-200,max_time_delays_val=200,\
                         std_n_bins_h=200,std_n_bins_v=200,max_std_val=None,\
-                        p2p_n_bins_h=256,p2p_n_bins_v=256,max_p2p_val=128,\
+                        p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=None):
         try:
             self.included_antennas = included_antennas#[0,1,2,3,4,5,6,7]
@@ -127,6 +128,7 @@ class dataSlicerSingleRun():
                                         'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
                                         'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v']
             self.updateReader(reader)
+            self.tct = None #This will be defined when necessary by functions below. 
 
 
 
@@ -213,6 +215,11 @@ class dataSlicerSingleRun():
                 print('Impulsivity datasets in file:')
                 for d in list(file['impulsivity'].keys()): 
                     print('\t' + d)
+
+                print('Map Direction datasets in file:')
+                for d in list(file['map_direction'].keys()): 
+                    print('\t' + d)
+
 
                 file.close()
         except Exception as e:
@@ -912,8 +919,96 @@ class dataSlicerSingleRun():
         '''
         return numpy.ma.masked_array(bin_indices,mask=numpy.logical_or(bin_indices == 0, bin_indices == len(bin_edges))) - 1 #Mask to ignore underflow/overflow bins.  Indices are base 1 here it seems.  
 
+    def plotROIWaveforms(self, roi_key=None, final_corr_length=2**13, crit_freq_low_pass_MHz=None, low_pass_filter_order=None, crit_freq_high_pass_MHz=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filter=False, apply_phase_response=False, save=False, plot_saved_templates=False):
+        '''
+        This will call the TemplateCompareTool and use it to plot averaged FFT and waveforms for events passing the
+        specificied ROI key.  If the ROI key is not given then ALL ROI plots will be produced.  If the template
+        compare tool has already been called then the parameters associated with it will be ignored and the interally
+        defined template compare tool will be used. 
+        '''
+        if self.tct is None:
+            self.tct = TemplateCompareTool(self.reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response)
 
 
+        if roi_key is None:
+            keys = list(self.roi.keys())
+        else:
+            keys = [roi_key]
+
+        for roi_key in keys:
+            eventids = self.getCutsFromROI(roi_key,load=False,save=False)
+            if len(eventids) == 0:
+                print('No eventids in ROI: ' + roi_key)
+                continue
+            times, averaged_waveforms = self.tct.averageAlignedSignalsPerChannel(eventids, template_eventid=eventids[-1], align_method=0, plot=False)
+            times_ns = times/1e9
+            freqs_MHz = numpy.fft.rfftfreq(len(times_ns),d=numpy.diff(times_ns)[0])/1e6
+            #Plot averaged FFT per channel
+            fft_fig = plt.figure()
+            fft_fig.canvas.set_window_title('FFT %s'%(roi_key))
+            for mode_index, mode in enumerate(['hpol','vpol']):
+                plt.subplot(2,1,1+mode_index)
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                plt.ylabel('%s dBish'%mode)
+                plt.xlabel('MHz')
+                fft_ax = plt.gca()
+                for channel, averaged_waveform in enumerate(averaged_waveforms):
+                    if mode == 'hpol' and channel%2 == 1:
+                        continue
+                    elif mode == 'vpol' and channel%2 == 0:
+                        continue
+
+                    freqs, spec_dbish, spec = self.tct.rfftWrapper(times, averaged_waveform)
+                    fft_ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel)#Dividing by 2 to match monutau.  Idk why I have to do this though normally this function has worked well...
+                plt.xlim(10,110)
+                plt.ylim(-20,30)
+
+
+            #Plot averaged Waveform per channel
+            wf_fig = plt.figure()
+            wf_fig.canvas.set_window_title('WF %s'%(roi_key))
+            for mode_index, mode in enumerate(['hpol','vpol']):
+                plt.subplot(2,1,1+mode_index)
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                plt.ylabel('%s (adu)'%mode)
+                plt.xlabel('Time (ns)')
+                wf_ax = plt.gca()
+                for channel, averaged_waveform in enumerate(averaged_waveforms):
+                    if mode == 'hpol' and channel%2 == 1:
+                        continue
+                    elif mode == 'vpol' and channel%2 == 0:
+                        continue
+
+                    wf_ax.plot(times,averaged_waveform,label='Ch %i'%channel)#Dividing by 2 to match monutau.  Idk why I have to do this though normally this function has worked well...
+                #plt.xlim(250,1000)
+
+            if save == True:
+                print('Saving waveform templates for ROI: %s'%roi_key)
+                resampled_averaged_waveforms = numpy.zeros((8,len(self.tct.waveform_times_corr)))
+                resampled_averaged_waveforms_original_length = numpy.zeros((8,len(self.reader.t())))
+                for channel in range(8):
+                    #Resampling averaged waveforms to be more compatible with cross correlation framework. 
+                    resampled_averaged_waveforms[channel] = scipy.interpolate.interp1d(times,averaged_waveforms[channel],kind='cubic',bounds_error=False,fill_value=0)(self.tct.waveform_times_corr)
+                    resampled_averaged_waveforms_original_length[channel] = scipy.interpolate.interp1d(times,averaged_waveforms[channel],kind='cubic',bounds_error=False,fill_value=0)(self.reader.t())
+
+                if plot_saved_templates:
+                    plt.figure()
+                    for channel, wf in enumerate(resampled_averaged_waveforms_original_length):
+                        plt.plot(self.reader.t(),wf,label='%i'%channel)
+                    plt.xlabel('t (ns)')
+                    plt.ylabel('adu (not digitized)')
+
+                template_dir = os.environ['BEACON_ANALYSIS_DIR'] + '/templates/roi/'
+                numpy.savetxt(template_dir + 'template_run%i_roi_%s.csv'%(self.reader.run,roi_key.replace(' ','_')),resampled_averaged_waveforms_original_length, delimiter=",")
+                meta_file = open(template_dir + 'template_run%i_roi_%s_meta_info.txt'%(self.reader.run,roi_key.replace(' ','_')), 'w')
+                meta_file.write(str(self.roi[roi_key]))
+                meta_file.close()
 
 if __name__ == '__main__':
     plt.close('all')

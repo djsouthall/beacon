@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''
-Using a tempalte created using the match_77MHz script, this will cross correlate the signals in
+Using a template created using the match_77MHz script, this will cross correlate the signals in
 a particular run with it and store the maximum correlation value.  This could be used to cut out
 signals with high correlation values.  
 '''

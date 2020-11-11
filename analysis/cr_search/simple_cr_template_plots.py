@@ -42,7 +42,7 @@ datapath = os.environ['BEACON_DATA']
 
 if __name__ == '__main__':
     
-    plot_param_pairs = [['time_delay_0subtract1_h','time_delay_0subtract2_h']]#[['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h']]
+    plot_param_pairs = [['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v']]
     
     #plt.close('all')
     #runs = [1642,1643,1644,1645,1646,1647]
@@ -67,13 +67,14 @@ if __name__ == '__main__':
     apply_phase_response = False
     hilbert = False
     
-    max_method = 0
-    
-
     for run in runs:
         reader = Reader(datapath,run)
         impulsivity_dset_key = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_262144-align_0'
         time_delays_dset_key = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'
+
+        plot_2d = False
+        plot_template = True
+        plot_time_delays = False
 
         print("Preparing dataSlicerSingleRun")
         # ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
@@ -87,11 +88,11 @@ if __name__ == '__main__':
                                     impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                                     time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
                                     std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
-                                    p2p_n_bins_h=256,p2p_n_bins_v=256,max_p2p_val=128,\
+                                    p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
                                     snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
 
         #cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
-        tct = TemplateCompareTool(reader, final_corr_length=upsample, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response)
+        #tct = TemplateCompareTool(reader, final_corr_length=upsample, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response)
 
 
         print('Adding ROI to dataSlicerSingleRun')
@@ -214,18 +215,55 @@ if __name__ == '__main__':
             ds.resetAllROI()
 
         if True:
-            #plt.close('all')
+            plt.close('all')
 
-            #Clusters based on multiple parameters
-            # ds.addROI('ROI 1650-1',{'cr_template_search_h':[0.61,0.71],'cr_template_search_v':[0.89,0.93],'impulsivity_h':[0.56,0.68],'impulsivity_v':[0.62,0.7],'std_h':[2.9,3.7],'std_v':[2.55,3.3],'p2p_h':[50,75],'p2p_v':[63.5,91],'snr_h':[16,21],'snr_v':[23.5,30]})
-            # eventids_1 = ds.getCutsFromROI('ROI 1650-1',load=False,save=False)
+            # #Clusters based on multiple parameters
+            ds.addROI('ROI 1650-0',{'cr_template_search_h':[0.61,0.71],'cr_template_search_v':[0.89,0.93],'impulsivity_h':[0.56,0.68],'impulsivity_v':[0.62,0.7],'std_h':[2.9,3.7],'std_v':[2.55,3.3],'p2p_h':[50,75],'p2p_v':[63.5,91],'snr_h':[16,21],'snr_v':[23.5,30]})
+            eventids_0 = ds.getCutsFromROI('ROI 1650-0',load=False,save=False)
             
-            ds.addROI('ROI 1650-2',{'cr_template_search_h':[0.50,0.63],'cr_template_search_v':[0.845,0.895],'impulsivity_h':[0.5,0.64],'impulsivity_v':[0.575,0.65],'std_h':[2.4,3.2],'std_v':[1.95,2.55],'p2p_h':[35,55],'p2p_v':[45,65],'snr_h':[13,17.5],'snr_v':[21,26.3]})
+            ds.addROI('ROI 1650-1',{'cr_template_search_h':[0.50,0.63],'cr_template_search_v':[0.845,0.895],'impulsivity_h':[0.5,0.64],'impulsivity_v':[0.575,0.65],'std_h':[2.4,3.2],'std_v':[1.95,2.55],'p2p_h':[35,55],'p2p_v':[45,65],'snr_h':[13,17.5],'snr_v':[21,26.3]})
+            eventids_1 = ds.getCutsFromROI('ROI 1650-1',load=False,save=False)
+            
+            ds.addROI('ROI 1650-2',{'cr_template_search_h':[0.53,0.75],'cr_template_search_v':[0.29,0.39],'impulsivity_h':[0.425,0.63],'impulsivity_v':[0.49,0.6],'snr_h':[14,22],'snr_v':[10,15]})
             eventids_2 = ds.getCutsFromROI('ROI 1650-2',load=False,save=False)
-            
-            # ds.addROI('ROI 1650-3',{'cr_template_search_h':[0.53,0.75],'cr_template_search_v':[0.29,0.39],'impulsivity_h':[0.425,0.63],'impulsivity_v':[0.49,0.6],'snr_h':[14,22],'snr_v':[10,15]})
-            # eventids_3 = ds.getCutsFromROI('ROI 1650-3',load=False,save=False)
 
+            if False:
+                #Just noise for trigger types 1 and 3
+                ds.addROI('ROI 1650-notrig-48MHz_A',{'std_h':[2.2,3.0],'std_v':[6.0,6.6]})
+                eventids_notrig_48MHz_A = ds.getCutsFromROI('ROI 1650-notrig-48MHz_A',load=False,save=False)
+
+                ds.addROI('ROI 1650-notrig-48MHz_B',{'std_h':[1.6,2.6],'std_v':[1.9,2.6]})
+                eventids_notrig_48MHz_B = ds.getCutsFromROI('ROI 1650-notrig-48MHz_B',load=False,save=False)
+
+                ds.addROI('ROI 1650-notrig-42MHz_A',{'std_h':[1.0,2.0],'std_v':[2.6,3.2]})
+                eventids_notrig_42MHz_A = ds.getCutsFromROI('ROI 1650-notrig-42MHz_A',load=False,save=False)
+
+                ds.addROI('ROI 1650-notrig-42MHz_B',{'std_h':[1.7,2.4],'std_v':[1.6,1.9]})
+                eventids_notrig_42MHz_B = ds.getCutsFromROI('ROI 1650-notrig-42MHz_B',load=False,save=False)
+
+                ds.addROI('ROI 1650-notrig-52MHz_A',{'std_h':[0.8,1.8],'std_v':[1.0,1.3]})
+                eventids_notrig_52MHz_A = ds.getCutsFromROI('ROI 1650-notrig-52MHz_A',load=False,save=False)
+
+                ds.addROI('ROI 1650-notrig-TV_A',{'snr_h':[6,11],'snr_v':[6.5,7.8]})
+                eventids_notrig_TV_A = ds.getCutsFromROI('ROI 1650-notrig-TV_A',load=False,save=False)
+
+                ds.addROI('ROI 1650-notrig-TV_B',{'snr_h':[6,11],'snr_v':[7.9,9.3]})
+                eventids_notrig_TV_B = ds.getCutsFromROI('ROI 1650-notrig-TV_B',load=False,save=False)
+
+                if False:
+                    if plot_2d == True:
+                        for key_x, key_y in plot_param_pairs:
+                            eventids = ds.getEventidsFromTriggerType()
+                            eventids = eventids[~numpy.isin(eventids, eventids_notrig_48MHz_A)]
+                            eventids = eventids[~numpy.isin(eventids, eventids_notrig_48MHz_B)]
+                            eventids = eventids[~numpy.isin(eventids, eventids_notrig_42MHz_A)]
+                            eventids = eventids[~numpy.isin(eventids, eventids_notrig_42MHz_B)]
+                            eventids = eventids[~numpy.isin(eventids, eventids_notrig_52MHz_A)]
+                            eventids = eventids[~numpy.isin(eventids, eventids_notrig_TV_A)]
+                            eventids = eventids[~numpy.isin(eventids, eventids_notrig_TV_B)]
+                            print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                            fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=False)
+                            ds.plot2dHist(key_x, key_y, eventids, title='Remaining Events not in Simple ROI Cuts', cmap='coolwarm')
 
             '''
             These 2 ROI are what I will develop further analysis procedure on.  What I want to know:
@@ -234,9 +272,6 @@ if __name__ == '__main__':
             I want to save the cuts to the analysis file.
             I want to load in those cuts to get eventids and generate sample waveform of each time, and maps.
             '''
-            plot_2d = False
-            plot_template = False
-            plot_time_delays = True
 
             #ds.printDatasets()
             if plot_time_delays:
@@ -245,35 +280,9 @@ if __name__ == '__main__':
             if plot_2d == True:
                 for key_x, key_y in plot_param_pairs:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
-                    fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+                    fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=False)
 
             if plot_template == True:
-                for roi_key in list(ds.roi.keys()):
-                    eventids = ds.getCutsFromROI(roi_key,load=False,save=False)
-
-                    times, averaged_waveforms = tct.averageAlignedSignalsPerChannel(eventids, template_eventid=eventids[-1], align_method=0, plot=False)
-                    times_ns = times/1e9
-                    freqs_MHz = numpy.fft.rfftfreq(len(times_ns),d=numpy.diff(times_ns)[0])/1e6
-                    #Plot averaged FFT per channel
-                    fft_fig = plt.figure()
-                    fft_fig.canvas.set_window_title('FFT %s'%(roi_key))
-                    for mode_index, mode in enumerate(['hpol','vpol']):
-                        plt.subplot(2,1,1+mode_index)
-                        plt.minorticks_on()
-                        plt.grid(b=True, which='major', color='k', linestyle='-')
-                        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                        plt.ylabel('%s dBish'%mode)
-                        plt.xlabel('MHz')
-                        fft_ax = plt.gca()
-                        for channel, averaged_waveform in enumerate(averaged_waveforms):
-                            if mode == 'hpol' and channel%2 == 1:
-                                continue
-                            elif mode == 'vpol' and channel%2 == 0:
-                                continue
-
-                            freqs, spec_dbish, spec = tct.rfftWrapper(times, averaged_waveform)
-                            fft_ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel)#Dividing by 2 to match monutau.  Idk why I have to do this though normally this function has worked well...
-                        plt.xlim(10,110)
-                        plt.ylim(-20,30)
-
+                save_template = False
+                ds.plotROIWaveforms(roi_key=None, final_corr_length=2**13, crit_freq_low_pass_MHz=None, low_pass_filter_order=None, crit_freq_high_pass_MHz=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filter=False, apply_phase_response=False, save=save_template, plot_saved_templates=save_template)
+                
