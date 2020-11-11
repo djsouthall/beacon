@@ -1,1 +1,0 @@
-{'cr_template_search_h': [0.61, 0.71], 'cr_template_search_v': [0.89, 0.93], 'impulsivity_h': [0.56, 0.68], 'impulsivity_v': [0.62, 0.7], 'std_h': [2.9, 3.7], 'std_v': [2.55, 3.3], 'p2p_h': [50, 75], 'p2p_v': [63.5, 91], 'snr_h': [16, 21], 'snr_v': [23.5, 30]}
