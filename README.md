@@ -34,7 +34,7 @@ Currently this is only contains working files that I (Dan Southall) have been wo
 
 3.0.0 [Analysis](#300-analysis)
 
-3.1.0 [Plotting](#300-plotting)
+3.1.0 [Plotting](#310-plotting)
 
 
 ---
