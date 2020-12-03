@@ -22,6 +22,20 @@ Currently this is only contains working files that I (Dan Southall) have been wo
 
 0.2.0 [Paths](#020-paths)
 
+1.0.0 [Calibration](#100-calibration)
+
+2.0.0 [Usage](#200-usage)
+
+2.1.0 [Farming File Creation](#210-farming-file-creation)
+
+2.2.0 [Existing Analysis Scripts](#220-existing-analysis-scripts)
+
+2.3.0 [Adding Analysis Scripts](#230-adding-analysis-scripts)
+
+3.0.0 [Analysis](#300-analysis)
+
+3.1.0 [Plotting](#310-plotting)
+
 
 ---
 
@@ -73,3 +87,44 @@ I am also moving towards using package-like import, which will require you to ad
 BEACON_ANALYSIS_DIR="/home/dsouthall/Projects/Beacon/beacon/"
 export BEACON_ANALYSIS_DIR
 export PYTHONPATH=$PYTHONPATH:/home/dsouthall/Projects/Beacon/
+
+## 1.0.0 Calibration
+
+Position calibration for BEACON antennas is done using some of the analysis scripts, with the resulting calibrated position values being stored in the tools/info.py script.  By setting the default_deploy_index you can ensure that the correct calibration is called when working in all other analysis scripts. 
+
+
+## 2.0.0 Usage
+
+The general use of this code depends on first creating hdf5 analysis files.  These files contain the calculated numbers produced by many of the analsysis scripts.  By precomputing these values and storing them in hdf5 files, the actual plotting and intrepretation side of analysis can occur much faster.  Analysis files are created and managed by the tools/data_handler.py scipt/class.  This class internally supports certain calculated quantities as "musts" that are defined by the class.  If the class is called to open a file and those parameters aren't present then it will calculate them.  Other parameters are added adhoc by various analysis scripts.  These analysis scripts are mentioned in more detail below.
+
+## 2.1.0 Farming File Creation
+
+Analysis files are created using the tools/data_handler.py script, with additional important analysis datasets being added by running other analysis files.  This is all typically done initially by preparing the tools/farm.py script to run the analysis/all_analysis.sh script for all run numbers you want analysis files for.  With the appropriate python version loaded, running the tools/farm.py will send the analysis/all_analysis.sh jobs to the cluster.  Each calling of analysis/all_analysis.sh will call the listed (in analysis/all_analysis.sh) analysis scripts, and add the resulting datasets to the analysis hdf5 file for later use.
+
+## 2.2.0 Existing Analysis Scripts
+
+Below is a list of the current set of analysis scripts that are in analysis/all_analysis.sh.  There are not currently descriptions of each file here. 
+
+tools/data_handler.py
+analysis/save_time_delays.py
+analysis/rf_bg_search.py
+analysis/similarity.py
+analysis/impulsivity.py
+analysis/correlate_with_background_templates.py
+analysis/cr_search/simple_cr_template_search.py
+analysis/time_averaged_spectrum.py
+
+## 2.3.0 Adding Analysis Scripts
+
+To add an additional analysis script it is recommended to look at the general structure of an existing analysis file and ensure it operates similarly.  Typically this means allowing the run number to be a script input parameter, and then adding it to the list of scripts in the analysis/all_analysis.sh script.
+
+## 3.0.0 Analysis
+
+Here analysis specifically means work done "after batch", i.e. working with the precomputed data, doing things like making maps, histograms, etc.
+
+## 3.1.0 Plotting
+
+The tools/data_slicer.py and internally defined class is currently the main way to do post analysis.  It provides many tools for interpreting the pre-computed data. 
+
+
+
