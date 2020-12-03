@@ -12,6 +12,11 @@ import os
 import sys
 import csv
 import inspect
+import ROOT
+ROOT.gSystem.Load(os.environ['LIB_ROOT_FFTW_WRAPPER_DIR'] + 'build/libRootFftwWrapper.so.3')
+ROOT.gInterpreter.ProcessLine('#include "%s"'%(os.environ['LIB_ROOT_FFTW_WRAPPER_DIR'] + 'include/FFTtools.h'))
+
+from ROOT import FFTtools
 
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
@@ -31,6 +36,7 @@ import itertools
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 plt.ion()
+
 
 
 class FFTPrepper:
@@ -78,7 +84,7 @@ class FFTPrepper:
     --------
     examples.beacon_data_reader.reader
     '''
-    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,tukey_alpha=0.1,tukey_default=True,apply_phase_response=False):
+    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,tukey_alpha=0.1,tukey_default=False,apply_phase_response=False):
         try:
             self.reader = reader
             self.buffer_length = reader.header().buffer_length
@@ -129,6 +135,10 @@ class FFTPrepper:
             self.tukey = scipy.signal.tukey(self.buffer_length, alpha=tukey_alpha, sym=True)
 
             self.prepForFFTs(plot=plot_filters,apply_phase_response=apply_phase_response)
+
+            self.sine_subtracts = []
+            self.plot_ss = []
+
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -263,7 +273,8 @@ class FFTPrepper:
 
     def rfftWrapper(self, waveform_times, *args, **kwargs):
         '''
-        This basically just does an rfft but also converts linear to dB like units. 
+        This basically just does an rfft but also converts linear to dB like units.  waveform_times should be given
+        in ns.
         '''
         try:
             numpy.seterr(divide = 'ignore') 
@@ -285,9 +296,37 @@ class FFTPrepper:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
+    def addSineSubtract(self, min_freq, max_freq, min_power_ratio, max_failed_iterations=3, verbose=False, plot=False):
+        '''
+        Each sine subtract object currently as a different range.  These are stored in a list.  Give the arguments,
+        this will append to the list of sine_subtracts a new filter object matching the desired frequencies.
+
+        Parameters
+        ----------
+        min_freq : float
+            The minium frequency to be considered part of the same known CW source.  This should be given in GHz.  
+        max_freq : float
+            The maximum frequency to be considered part of the same known CW source.  This should be given in GHz.  
+        min_power_ratio : float
+            This is the threshold for a prominence to be considered CW.  If the power in the band defined by min_freq and
+            max_freq contains more than min_power_ratio percent (where min_power_ratio <= 1.0) of the total signal power,
+            then it is considered a CW source, and will be removed. 
+        max_failed_iterations : int
+            This sets a limiter on the number of attempts to make when removing signals, before exiting.
+        '''
+        sine_subtract = FFTtools.SineSubtract(max_failed_iterations, min_power_ratio,plot)
+        if plot == True:
+            print('Showing plots from SineSubtract enabled')
+            self.plot_ss.append(True)
+        else: 
+            self.plot_ss.append(False)
+        sine_subtract.setVerbose(verbose) #Don't print a bunch to the screen
+        if numpy.logical_and(min_freq is not None,min_freq is not None):
+            sine_subtract.setFreqLimits(min_freq, max_freq)
+        self.sine_subtracts.append(sine_subtract)
 
 
-    def wf(self,channel,apply_filter=False,hilbert=False,tukey=None):
+    def wf(self,channel,apply_filter=False,hilbert=False,tukey=None,sine_subtract=False, return_sine_subtract_info=False):
         '''
         This loads a wf but only the section that is selected by the start and end indices specified.
 
@@ -297,6 +336,31 @@ class FFTPrepper:
         '''
         try:
             temp_wf = self.reader.wf(channel)[self.start_waveform_index:self.end_waveform_index+1]
+            temp_wf -= numpy.mean(temp_wf)
+            temp_wf = temp_wf.astype(numpy.double)
+            ss_freqs = []
+            n_fits = []
+            if numpy.logical_and(sine_subtract, len(self.sine_subtracts) > 0):
+                _temp_wf = numpy.zeros(len(temp_wf),dtype=numpy.double)#numpy.zeros_like(temp_wf)
+                for ss_index, ss in enumerate(self.sine_subtracts):
+                    #Do the sine subtraction
+                    print(temp_wf)
+                    print(_temp_wf)
+                    ss.subtractCW(len(temp_wf),temp_wf.data,self.dt_ns_original,_temp_wf)#*1e-9,_temp_wf)#self.dt_ns_original
+                    #import pdb; pdb.set_trace()
+                    print(temp_wf)
+                    print(_temp_wf)
+
+                    #Check how many solutions were found
+                    n_fit = ss.getNSines()
+                    n_fits.append(n_fit)
+                    #Save all frequencies in array
+                    ss_freqs.append(numpy.frombuffer(ss.getFreqs(),dtype=numpy.float64,count=n_fit))
+                    if self.plot_ss[ss_index] == True:
+                        plt.figure()
+                        plt.semilogy(numpy.array(ss.storedSpectra(0).GetX()), ss.storedSpectra(0).GetY())
+                temp_wf = _temp_wf
+                #if sum(n_fits) > 0:
             if tukey is None:
                 tukey = self.tukey_default
             if tukey == True:
@@ -309,7 +373,10 @@ class FFTPrepper:
             if hilbert == True:
                 wf = numpy.abs(scipy.signal.hilbert(wf))
 
-            return wf
+            if numpy.logical_and(sine_subtract, return_sine_subtract_info):
+                return wf, ss_freqs, n_fits
+            else:
+                return wf
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)

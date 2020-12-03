@@ -22,7 +22,7 @@ pylab.ion()
 
 # CALCULATION FUNCTIONS
 
-def readerFieldFox(csv_file,header=17):
+def readerFieldFox(csv_file,header=17,delimiter=','):
     '''
     Reads a csv file created by the FieldFox, removing the header and ignoring the last line.
 
@@ -38,7 +38,7 @@ def readerFieldFox(csv_file,header=17):
     y : numpy.ndarray of floats
         An array containing the 'y' values of the data (typically Log Magnitude/Linear/VSWR/Phase).
     '''
-    csv_reader = csv.reader(open(csv_file),delimiter=',')
+    csv_reader = csv.reader(open(csv_file),delimiter=delimiter)
     for n in range(header):
         next(csv_reader)
     x = []
