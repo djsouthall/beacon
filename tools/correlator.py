@@ -2045,8 +2045,10 @@ def testMain():
         all_cors.append(cor)
 
 if __name__=="__main__":
-    crit_freq_low_pass_MHz = None#60 #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = None#4
+    plt.close('all')
+
+    crit_freq_low_pass_MHz = 100#60 #This new pulser seems to peak in the region of 85 MHz or so
+    low_pass_filter_order = 8
 
     crit_freq_high_pass_MHz = None#30#None
     high_pass_filter_order = None#5#None
@@ -2189,7 +2191,7 @@ if __name__=="__main__":
                     all_axs.append(ax)
                 all_cors.append(cor)
 
-        if False:
+        if True:
             #Preparing for planes:
             known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks()
 
@@ -2246,11 +2248,17 @@ if __name__=="__main__":
                     _dir = 'S'
 
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
-                if False:
-                    cor.prep.addSineSubtract(0.03, 0.090, 0.05, max_failed_iterations=3, verbose=True, plot=False)#Test purposes
+                if True:
+                    cor.prep.addSineSubtract(0.03, 0.090, 0.05, max_failed_iterations=3, verbose=False, plot=False)#Test purposes
+                    cor.prep.addSineSubtract(0.09, 0.250, 0.001, max_failed_iterations=3, verbose=False, plot=False)#Test purposes
+                    #cor.prep.addSineSubtract(0.03, 0.090, 0.05, max_failed_iterations=3, verbose=True, plot=False)#Test purposes
                 #Load Values
                 #cor.animatedMap(eventids, 'hpol', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir=_dir,save=True,dpi=300)
-                map_values, fig, ax = cor.map(eventids[0], 'hpol',center_dir='W', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=None,mollweide=True,circle_zenith=plane_zenith[0],circle_az=plane_az[0])
+                hilbert = False
+                zenith_cut_array_plane = [0,110]
+                print(_dir)
+                map_values, fig, ax = cor.map(eventids[0], 'hpol',center_dir=_dir, plot_map=True, plot_corr=False, hilbert=hilbert, interactive=True, max_method=None,mollweide=True,circle_zenith=plane_zenith[0],circle_az=plane_az[0],zenith_cut_array_plane=zenith_cut_array_plane)
+                cor.prep.plotEvent(eventids[0], channels=[0,2,4,6], apply_filter=cor.apply_filter, hilbert=hilbert, sine_subtract=cor.apply_sine_subtract, apply_tukey=cor.apply_tukey)
                 '''
                 test_planes = cor.getTimeDelayCurves(td_dict, 'hpol')
 
@@ -2265,7 +2273,6 @@ if __name__=="__main__":
                 '''
 
                 zenith_cut_ENU = None#[0,170]
-                zenith_cut_array_plane = [0,100]
                 '''
                 #cor.calculateArrayNormalVector(plot_map=True,mollweide=True, pol='both')
                 all_baselines_matrix_minus_1_baseline = numpy.array([[1,2,3,4,5],[0,2,3,4,5],[0,1,3,4,5],[0,1,2,4,5],[0,1,2,3,5],[0,1,2,3,4]])
@@ -2382,19 +2389,36 @@ if __name__=="__main__":
 
             '''
 
-        if True:
+        if False:
             #Test CW Subtraction:
             run = 1650
             eventids = [499,45059,58875]
-            
-            plane_polys = {}
-            cors = []
-            interpolated_plane_locations = {}
+            mode = 'hpol'
+            # run = 1507
+            # eventids = [18453]
+            # mode = 'vpol'
+                        
+            hilbert = False
+
             reader = Reader(os.environ['BEACON_DATA'],run)
             cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
+
             if True:
-                cor.prep.addSineSubtract(0.03, 0.090, 0.05, max_failed_iterations=3, verbose=True, plot=False)#Test purposes
+                cor.prep.addSineSubtract(0.03, 0.090, 0.01, max_failed_iterations=3, verbose=False, plot=False)#Test purposes
+                cor.prep.addSineSubtract(0.09, 0.250, 0.001, max_failed_iterations=3, verbose=False, plot=False)#Test purposes
+                #cor.prep.addSineSubtract(0.10, 0.13, 0.05, max_failed_iterations=3, verbose=False, plot=False)#Test purposes
+                #cor.prep.addSineSubtract(0.117, 0.119, 0.001, max_failed_iterations=3, verbose=False, plot=False)#Test purposes
+                #for i in range(10):
+
             for eventid in eventids:
                 for ss in [False, True]:
                     cor.apply_sine_subtract = ss
-                    map_values, fig, ax = cor.map(eventid, 'hpol',center_dir='E', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=None,mollweide=True,circle_zenith=None,circle_az=None)
+                    map_values, fig, ax = cor.map(eventid, mode,center_dir='E', plot_map=True, plot_corr=False, hilbert=hilbert, interactive=True, max_method=None,mollweide=True,circle_zenith=None,circle_az=None)
+
+                    if mode == 'hpol':
+                        channels = [0,2,4,6]
+                    else:
+                        channels = [1,3,5,7]
+
+                    print(cor.apply_sine_subtract)
+                    cor.prep.plotEvent(eventid, channels=channels, apply_filter=cor.apply_filter, hilbert=hilbert, sine_subtract=cor.apply_sine_subtract, apply_tukey=cor.apply_tukey)

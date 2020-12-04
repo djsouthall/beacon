@@ -35,6 +35,7 @@ from pprint import pprint
 import itertools
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.filterwarnings("ignore")
 plt.ion()
 
 
@@ -372,7 +373,8 @@ class FFTPrepper:
                     if self.plot_ss[ss_index] == True:
                         plt.figure()
                         plt.semilogy(numpy.array(ss.storedSpectra(0).GetX()), ss.storedSpectra(0).GetY())
-                temp_wf = _temp_wf
+                    if n_fit > 0:
+                        temp_wf = _temp_wf
                 #if sum(n_fits) > 0:
             if tukey is None:
                 tukey = self.tukey_default
@@ -799,6 +801,53 @@ class FFTPrepper:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+    def plotEvent(self, eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None):
+        '''
+        This will plot all given channels in both time domain and frequency domain.
+        '''
+        fig = plt.figure()
+        fig.canvas.set_window_title('r%i-e%i Waveform and Spectrum'%(self.reader.run,eventid))
+        plt.title('Run %i, eventid %i'%(self.reader.run,eventid))
+        plt.subplot(2,1,1)
+        plt.ylabel('adu')
+        plt.xlabel('ns')
+        plt.minorticks_on()
+        plt.grid(b=True, which='major', color='k', linestyle='-')
+        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+        plt.subplot(2,1,2)
+        plt.ylabel('dBish')
+        plt.xlabel('freq')
+        plt.minorticks_on()
+        plt.grid(b=True, which='major', color='k', linestyle='-')
+        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                
+        self.setEntry(eventid)
+        t_ns = self.t()
+        print(eventid)
+        if apply_tukey is None:
+            apply_tukey = self.tukey_default
+        
+        for channel in channels:
+            channel=int(channel)
+            if sine_subtract == True:
+                wf, ss_freqs, n_fits = self.wf(channel,apply_filter=apply_filter,hilbert=hilbert,tukey=apply_tukey,sine_subtract=sine_subtract, return_sine_subtract_info=sine_subtract)
+                print(list(zip(n_fits, ss_freqs)))
+            else:
+                wf = self.wf(channel,apply_filter=apply_filter,hilbert=hilbert,tukey=apply_tukey,sine_subtract=sine_subtract, return_sine_subtract_info=sine_subtract)
+
+            freqs, spec_dbish, spec = self.rfftWrapper(t_ns, wf)
+
+
+            plt.subplot(2,1,1)
+            plt.plot(t_ns,wf)
+
+            plt.subplot(2,1,2)
+            plt.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel)
+            plt.legend(loc = 'upper right')
+            #plt.xlim(10,110)
+            plt.ylim(-10,30)
 
 
 class TimeDelayCalculator(FFTPrepper):

@@ -523,7 +523,7 @@ def loadCableDelays(deploy_index=default_deploy,return_raw=False):
 
     if deploy_index == 0:
         cable_delays =  {'hpol': numpy.array([0.0, 0.0, 0.0, 0.0]), \
-                         'vpol': 0.0([0.0, 0.0, 0.0, 0.0])}
+                         'vpol': numpy.array([0.0, 0.0, 0.0, 0.0])}
     elif deploy_index == 1:
         cable_delays =  {'hpol': numpy.array([423.37836156, 428.43979143, 415.47714969, 423.58803498]), \
                          'vpol': numpy.array([428.59277751, 430.16685915, 423.56765695, 423.50469285])}
