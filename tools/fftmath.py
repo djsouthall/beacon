@@ -71,7 +71,7 @@ class FFTPrepper:
         then the same filter will be applied to all channels.  If given as an array of 2 values, the first will be 
         applied to all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values then each
         channel will use a different filter.
-    waveform_index_range
+    waveform_index_range : tuple
         Tuple of values.  If the first is None then the signals will be loaded from the beginning of their default buffer,
         otherwise it will start at this index.  If the second is None then the window will go to the end of the default
         buffer, otherwise it will end in this.  
@@ -79,16 +79,27 @@ class FFTPrepper:
         Essentially waveforms will be loaded using wf = self.reader.wf(channel)[waveform_index_range[0]:waveform_index_range[1]]
 
         Bounds will be adjusted based on buffer length (in case of overflow. )
-    
+    plot_filters : bool
+        Enables plotting of the generated filters to be used.
+    tukey_alpha : int
+        Sets the degree of tukey filter to be applied.  Default is 0.1.
+    tukey_default : bool
+        If True to loaded wf will have tapered edges of the waveform on the 1% level to help
+        with edge effects.  This will be applied before hilbert if hilbert is true, and before
+        the filter.
+    apply_phase_response : bool
+        If True, then the phase response will be included with the filter for each channel.  This hopefully 
+        deconvolves the effects of the phase response in the signal. 
+
     See Also
     --------
     examples.beacon_data_reader.reader
     '''
-    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,tukey_alpha=0.1,tukey_default=False,apply_phase_response=False):
+    def __init__(self, reader, final_corr_length=2**15, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,tukey_alpha=0.1,tukey_default=False,apply_phase_response=False):
         try:
             self.reader = reader
+            self.reader.setEntry(0)
             self.buffer_length = reader.header().buffer_length
-            self.final_corr_length = final_corr_length #Should be a factor of 2 for fastest performance
 
             self.interpretFiltersPerChannel(crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, low_pass_filter_order, high_pass_filter_order)
             # self.crit_freq_low_pass_MHz = crit_freq_low_pass_MHz
@@ -103,7 +114,6 @@ class FFTPrepper:
             self.tukey_default = tukey_default #This sets the default in self.wf whether to use tukey or not. 
 
             self.persistent_object = [] #For any objects that need to be kept alive/referenced (i.e. interactive plots)
-
 
             #Allowing for a subset of the waveform to be isolated.  Helpful to speed this up if you know where signals are in long traces.
             waveform_index_range = list(waveform_index_range)
@@ -131,6 +141,12 @@ class FFTPrepper:
 
             #Resetting buffer length to account for new load in length. 
             self.buffer_length = self.end_waveform_index - self.start_waveform_index + 1 
+
+            if final_corr_length is None:
+                self.final_corr_length = self.buffer_length 
+            else:
+                self.final_corr_length = final_corr_length #Should be a factor of 2 for fastest performance
+
 
             self.tukey = scipy.signal.tukey(self.buffer_length, alpha=tukey_alpha, sym=True)
 
@@ -318,6 +334,7 @@ class FFTPrepper:
         if plot == True:
             print('Showing plots from SineSubtract enabled')
             self.plot_ss.append(True)
+            print('WARNING!  Enabling plot for sine subtraction will result in plotting for EVERY waveform that is processed with this object.')
         else: 
             self.plot_ss.append(False)
         sine_subtract.setVerbose(verbose) #Don't print a bunch to the screen
@@ -335,21 +352,17 @@ class FFTPrepper:
         the filter.
         '''
         try:
-            temp_wf = self.reader.wf(channel)[self.start_waveform_index:self.end_waveform_index+1]
+            temp_wf = self.reader.wf(int(channel))[self.start_waveform_index:self.end_waveform_index+1]
             temp_wf -= numpy.mean(temp_wf)
             temp_wf = temp_wf.astype(numpy.double)
             ss_freqs = []
             n_fits = []
             if numpy.logical_and(sine_subtract, len(self.sine_subtracts) > 0):
-                _temp_wf = numpy.zeros(len(temp_wf),dtype=numpy.double)#numpy.zeros_like(temp_wf)
                 for ss_index, ss in enumerate(self.sine_subtracts):
+                    #_temp_wf is the output array for the subtractCW function, and must be predefined.  
+                    _temp_wf = numpy.zeros(len(temp_wf),dtype=numpy.double)#numpy.zeros_like(temp_wf)
                     #Do the sine subtraction
-                    print(temp_wf)
-                    print(_temp_wf)
                     ss.subtractCW(len(temp_wf),temp_wf.data,self.dt_ns_original,_temp_wf)#*1e-9,_temp_wf)#self.dt_ns_original
-                    #import pdb; pdb.set_trace()
-                    print(temp_wf)
-                    print(_temp_wf)
 
                     #Check how many solutions were found
                     n_fit = ss.getNSines()
@@ -579,8 +592,6 @@ class FFTPrepper:
                     temp_raw_wf = self.wf(channel,hilbert=False,apply_filter=True) #apply hilbert after upsample
                 else:
                     temp_raw_wf = self.wf(channel,hilbert=hilbert,apply_filter=True)
-
-                temp_raw_wf = temp_raw_wf - numpy.mean(temp_raw_wf) #Subtracting dc offset so cross corrs behave well
 
                 if shorten_signals == True:
                     trigger_index = numpy.where(temp_raw_wf/max(temp_raw_wf) > shorten_thresh)[0][0]
@@ -1450,7 +1461,7 @@ class TemplateCompareTool(FFTPrepper):
     --------
     examples.beacon_data_reader.reader
     '''
-    def __init__(self, reader, final_corr_length=2**17, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False, initial_template_id=None,apply_phase_response=False):
+    def __init__(self, reader, final_corr_length=2**15, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False, initial_template_id=None,apply_phase_response=False):
         try:
             super().__init__(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range, plot_filters=plot_filters,apply_phase_response=apply_phase_response)
             self.corr_index_to_delay_index = -numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1) #Negative because with how it is programmed you would want to roll the template the normal amount, but I will be rolling the waveforms.

@@ -18,7 +18,7 @@ import tools.interpret as interpret #Must be imported before matplotlib or else 
 import tools.info as info
 import analysis.phase_response as pr
 import tools.get_plane_tracks as pt
-from tools.fftmath import TimeDelayCalculator
+from tools.fftmath import FFTPrepper, TimeDelayCalculator
 import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -71,14 +71,64 @@ class Correlator:
         The number of zenith angles to probe in the specified range.
     range_theta_deg : tuple of floats with len = 2  
         The specified range of zenith angles to probe.
+    crit_freq_low_pass_MHz : None, float, or numpy.array of length 2 or 8
+        Sets the critical frequency of the low pass filter to be applied to the data.  If given as a single float value
+        then the same filter will be applied to all channels.  If given as an array of 2 values, the first will be 
+        applied to all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values then each
+        channel will use a different filter. 
+    crit_freq_high_pass_MHz : None, float, or numpy.array of length 2 or 8
+        Sets the critical frequency of the high pass filter to be applied to the data.  If given as a single float value
+        then the same filter will be applied to all channels.  If given as an array of 2 values, the first will be 
+        applied to all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values then each
+        channel will use a different filter.
+    low_pass_filter_order : None, int, or numpy.array of length 2 or 8
+        Sets the order of the low pass filter to be applied to the data.  If given as a single float value
+        then the same filter will be applied to all channels.  If given as an array of 2 values, the first will be 
+        applied to all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values then each
+        channel will use a different filter.
+    high_pass_filter_order : None, int, or numpy.array of length 2 or 8
+        Sets the order of the high pass filter to be applied to the data.  If given as a single float value
+        then the same filter will be applied to all channels.  If given as an array of 2 values, the first will be 
+        applied to all Hpol channels, and the second to all Vpol channels.  If given as an array of 8 values then each
+        channel will use a different filter.
+    plot_filter : bool
+        Enables plotting of the generated filters to be used.
+    waveform_index_range : tuple
+        Tuple of values.  If the first is None then the signals will be loaded from the beginning of their default buffer,
+        otherwise it will start at this index.  If the second is None then the window will go to the end of the default
+        buffer, otherwise it will end in this.  
+        Essentially waveforms will be loaded using wf = self.reader.wf(channel)[waveform_index_range[0]:waveform_index_range[1]]
+        Bounds will be adjusted based on buffer length (in case of overflow. )
+    apply_phase_response : bool
+            If True, then the phase response will be included with the filter for each channel.  This hopefully 
+            deconvolves the effects of the phase response in the signal. 
+    tukey : bool
+        If True to loaded wf will have tapered edges of the waveform on the 1% level to help
+        with edge effects.  This will be applied before hilbert if hilbert is true, and before
+        the filter.
+    sine_subtract : bool
+        If True then any added sine_subtraction methods will be applied to any loaded waveform.  These must be added to
+        the prep object.  
+        Example: cor.prep.addSineSubtract(0.03, 0.090, 0.05, max_failed_iterations=3, verbose=True, plot=False)
     '''
-    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None),apply_phase_response=False):
+    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True):
         try:
             n = 1.0003 #Index of refraction of air  #Should use https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.453-11-201507-S!!PDF-E.pdf 
             self.c = 299792458.0/n #m/s
             self.min_elevation_linewidth = 0.5
             self.reader = reader
-            self.reader.setEntry(0)
+            self.upsample = upsample
+
+            self.apply_tukey = tukey
+            self.apply_sine_subtract = sine_subtract
+            '''
+            Note that the definition of final_corr_length in FFTPrepper and upsample in this are different (off by about 
+            a factor of 2).  final_corr_length is not actually being used in correlator, all signal upsampling happens
+            internally.  FFTPrepper is being used to apply filters to the loaded waveforms such that any changes to
+            filtering only need to happen in a single location/class.
+            '''
+            self.prep = FFTPrepper(self.reader, final_corr_length=2**10, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filter,tukey_alpha=0.1,tukey_default=False,apply_phase_response=apply_phase_response)
+            self.prepareTimes()
 
             self.figs = []
             self.axs = []
@@ -86,51 +136,6 @@ class Correlator:
 
             cable_delays = info.loadCableDelays()
             self.cable_delays = numpy.array([cable_delays['hpol'][0],cable_delays['vpol'][0],cable_delays['hpol'][1],cable_delays['vpol'][1],cable_delays['hpol'][2],cable_delays['vpol'][2],cable_delays['hpol'][3],cable_delays['vpol'][3]])
-
-            #Prepare waveform length handling
-            #Allowing for a subset of the waveform to be isolated.  Helpful to speed this up if you know where signals are in long traces.
-            self.buffer_length = reader.header().buffer_length
-            waveform_index_range = list(waveform_index_range)
-            if waveform_index_range[0] is None:
-                waveform_index_range[0] = 0
-            if waveform_index_range[1] is None:
-                waveform_index_range[1] = self.buffer_length - 1
-
-            if not(waveform_index_range[0] < waveform_index_range[1]):
-                print('Given window range invalid, minimum index greater than or equal to max')
-                print('Setting full range.')
-                self.start_waveform_index = 0
-                self.end_waveform_index = self.buffer_length - 1
-            else:
-                if waveform_index_range[0] < 0:
-                    print('Negative start index given, setting to 0.')
-                    self.start_waveform_index = 0
-                else:
-                    self.start_waveform_index = waveform_index_range[0]
-                if waveform_index_range[1] >= self.buffer_length:
-                    print('Greater than or equal to buffer length given for end index, setting to buffer_length - 1.')
-                    self.end_waveform_index = self.buffer_length - 1
-                else:
-                    self.end_waveform_index = waveform_index_range[1]
-
-            #Resetting buffer length to account for new load in length. 
-            self.buffer_length = self.end_waveform_index - self.start_waveform_index + 1 
-            if upsample is None:
-                self.upsample = self.buffer_length
-            else:
-                self.upsample = upsample
-            self.prepareTimes()
-
-            self.crit_freq_low_pass_MHz = crit_freq_low_pass_MHz
-            self.crit_freq_high_pass_MHz = crit_freq_high_pass_MHz
-            self.low_pass_filter_order = low_pass_filter_order
-            self.high_pass_filter_order = high_pass_filter_order
-
-            self.filter = self.makeFilter(plot_filter=plot_filter,apply_phase_response=apply_phase_response)
-            if numpy.all(self.filter == 1.0):
-                self.apply_filter = False
-            else:
-                self.apply_filter = True
 
             self.range_theta_deg = range_theta_deg
             self.n_theta = n_theta
@@ -166,47 +171,11 @@ class Correlator:
 
             self.generateTimeIndices()
             self.calculateArrayNormalVector()
-        except Exception as e:
-            print('\nError in %s'%inspect.stack()[0][3])
-            print(e)
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
 
-    def rfftWrapper(self, waveform_times, *args, **kwargs):
-        '''
-        This basically just does an rfft but also converts linear to dB like units. 
-        '''
-        try:
-            numpy.seterr(divide = 'ignore') 
-            spec = numpy.fft.rfft(*args, **kwargs)
-            real_power_multiplier = 2.0*numpy.ones_like(spec) #The factor of 2 because rfft lost half of the power except for dc and Nyquist bins (handled below).
-            if len(numpy.shape(spec)) != 1:
-                real_power_multiplier[:,[0,-1]] = 1.0
+            if numpy.all(self.prep.filter_original == 1.0):
+                self.apply_filter = False
             else:
-                real_power_multiplier[[0,-1]] = 1.0
-            spec_dbish = 10.0*numpy.log10( real_power_multiplier*spec * numpy.conj(spec) / len(waveform_times)) #10 because doing power in log.  Dividing by N to match monutau. 
-            freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
-            numpy.seterr(divide = 'warn')
-            return freqs, spec_dbish, spec
-        except Exception as e:
-            print('\nError in %s'%inspect.stack()[0][3])
-            print(e)
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
-
-    def prepareTimes(self):
-        '''
-        Uses the current upsample factor to prepare the upsampled times.  Should be called after
-        chaning self.upsample if that is changed.
-        '''
-        try:
-            self.times = self.t()
-            self.dt = numpy.diff(self.times)[0]
-
-            self.times_resampled = scipy.signal.resample(numpy.zeros(self.buffer_length),self.upsample,t=self.times)[1]
-            self.dt_resampled = numpy.diff(self.times_resampled)[0]
+                self.apply_filter = True
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -415,92 +384,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def prepPhaseFilter(self, goal_freqs, plot=False):
-        '''
-        This will load the phase responses for the second stage board and preamps (preamps meaned)
-        and create the additional portion of the filter that will be applied to signals.  This
-        ideally will make the signals more impulsive.
-        '''
-        try:
-            phase_response_2nd_stage = pr.loadInterpolatedPhaseResponse2ndStage(goal_freqs, plot=plot)[1]
-            phase_response_preamp = pr.loadInterpolatedPhaseResponseMeanPreamp(goal_freqs, plot=plot)[1]
-
-            return numpy.exp(-1j*(phase_response_2nd_stage + phase_response_preamp)) #One row per channel.
-        except Exception as e:
-            print('\nError in %s'%inspect.stack()[0][3])
-            print(e)
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
-
-    def makeFilter(self,plot_filter=False,apply_phase_response=False):
-        '''
-        This will make a frequency domain filter based on the given specifications. 
-        '''
-        try:
-            freqs = numpy.fft.rfftfreq(self.buffer_length,self.dt*1e-9)
-            filter_x = freqs
-            if numpy.logical_and(self.low_pass_filter_order is not None, self.crit_freq_low_pass_MHz is not None):
-                b, a = scipy.signal.butter(self.low_pass_filter_order, self.crit_freq_low_pass_MHz*1e6, 'low', analog=True)
-                filter_x_low_pass, filter_y_low_pass = scipy.signal.freqs(b, a,worN=freqs)
-            else:
-                filter_x_low_pass = filter_x
-                filter_y_low_pass = numpy.ones_like(filter_x)
-
-            if numpy.logical_and(self.high_pass_filter_order is not None, self.crit_freq_high_pass_MHz is not None):
-                d, c = scipy.signal.butter(self.high_pass_filter_order, self.crit_freq_high_pass_MHz*1e6, 'high', analog=True)
-                filter_x_high_pass, filter_y_high_pass = scipy.signal.freqs(d, c,worN=freqs)
-            else:
-                filter_x_high_pass = filter_x
-                filter_y_high_pass = numpy.ones_like(filter_x)
-
-            filter_y = numpy.multiply(filter_y_low_pass,filter_y_high_pass)
-
-            if plot_filter == True:
-                fig = plt.figure()
-                ax = fig.gca()
-                fig.canvas.set_window_title('Filter')
-                numpy.seterr(divide = 'ignore') 
-                plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y)),color='k',label='final filter')
-                plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_low_pass)),color='r',linestyle='--',label='low pass')
-                plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_high_pass)),color='orange',linestyle='--',label='high pass')
-                numpy.seterr(divide = 'warn') 
-                plt.title('Butterworth filter frequency response')
-                plt.xlabel('Frequency [MHz]')
-                plt.ylabel('Amplitude [dB]')
-                plt.margins(0, 0.1)
-                plt.grid(which='both', axis='both')
-                if self.crit_freq_low_pass_MHz is not None:
-                    plt.axvline(self.crit_freq_low_pass_MHz, color='magenta',label='LP Crit') # cutoff frequency
-                if self.crit_freq_high_pass_MHz is not None:
-                    plt.axvline(self.crit_freq_high_pass_MHz, color='cyan',label='HP Crit') # cutoff frequency
-                plt.xlim(0,200)
-                plt.ylim(-50,10)
-                plt.legend()
-
-                self.figs.append(fig)
-                self.axs.append(ax)
-            filter_y = numpy.tile(filter_y,(8,1))
-            if apply_phase_response == True:
-                phase_response_filter = self.prepPhaseFilter(filter_x)
-                if False:
-                    plt.figure()
-                    for channel in range(8):
-                        plt.subplot(3,1,1)
-                        plt.plot(filter_x,phase_response_filter[channel])
-                        plt.subplot(3,1,2)
-                        plt.plot(filter_x,numpy.log(phase_response_filter[channel])/(-1j))
-                    import pdb; pdb.set_trace()
-                filter_y = numpy.multiply(phase_response_filter,filter_y)
-            return filter_y
-        except Exception as e:
-            print('\nError in %s'%inspect.stack()[0][3])
-            print(e)
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
-
-    def wf(self, eventid, channels, div_std=False, hilbert=False, apply_filter=False):
+    def wf(self, eventid, channels, div_std=False, hilbert=False, apply_filter=False, tukey=False, sine_subtract=False):
         '''
         Calls reader.wf.  If multiple channels are given it will load them in sorted order into a 2d array with each
         row corresponding to the upsampled waveform (with dc offset removed).  The lowest channels corresponds
@@ -522,23 +406,18 @@ class Correlator:
         '''
         try:
             eventid = int(eventid)
-            self.reader.setEntry(eventid)
-            channels = numpy.sort(numpy.asarray(channels))
-            temp_waveforms = numpy.zeros((len(channels),self.buffer_length))
+            self.prep.reader.setEntry(eventid)
+            channels = numpy.sort(numpy.asarray(channels)).astype(int)
+            temp_waveforms = numpy.zeros((len(channels),self.prep.buffer_length))
             for channel_index, channel in enumerate(channels):
-                channel = int(channel)
-                temp_wf = numpy.asarray(self.reader.wf(channel))[self.start_waveform_index:self.end_waveform_index+1]
-                temp_wf = temp_wf - numpy.mean(temp_wf)
-                if apply_filter == True:
-                    temp_wf = numpy.fft.irfft(numpy.multiply(self.filter[channel],numpy.fft.rfft(temp_wf)),n=self.buffer_length) #Might need additional normalization
-                if hilbert == True:
-                    temp_wf = abs(scipy.signal.hilbert(temp_wf))
+                temp_wf = self.prep.wf(channel,apply_filter=apply_filter,hilbert=hilbert,tukey=tukey,sine_subtract=sine_subtract, return_sine_subtract_info=False)
+
                 if div_std:
                     temp_wf = temp_wf/numpy.std(temp_wf)
+
                 temp_waveforms[channel_index] = temp_wf
 
             waveforms = scipy.signal.resample(temp_waveforms,self.upsample,axis=1)
-
 
             if False:
                 plt.figure()
@@ -565,7 +444,25 @@ class Correlator:
         This will also roll the starting point to zero.  This will not change relative times between signals. 
         '''
         try:
-            return self.reader.t()[self.start_waveform_index:self.end_waveform_index+1] - self.reader.t()[self.start_waveform_index]
+            return self.prep.t()
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def prepareTimes(self):
+        '''
+        Uses the current upsample factor to prepare the upsampled times.  Should be called after
+        chaning self.upsample if that is changed.
+        '''
+        try:
+            self.times = self.t()
+            self.dt = numpy.diff(self.times)[0]
+
+            self.times_resampled = scipy.signal.resample(numpy.zeros(self.prep.buffer_length),self.upsample,t=self.times)[1]
+            self.dt_resampled = numpy.diff(self.times_resampled)[0]
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -880,13 +777,14 @@ class Correlator:
 
                 if pol == 'hpol':
                     channels = numpy.array([0,2,4,6])
-                    waveforms = self.wf(eventid, channels,div_std=False,hilbert=hilbert,apply_filter=self.apply_filter)
+
+                    waveforms = self.wf(eventid, channels, div_std=False, hilbert=hilbert, apply_filter=self.apply_filter, tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract)
                     t_best_0subtract1 = self.t_hpol_0subtract1[theta_index,phi_index]
                     t_best_0subtract2 = self.t_hpol_0subtract2[theta_index,phi_index]
                     t_best_0subtract3 = self.t_hpol_0subtract3[theta_index,phi_index]
                 elif pol == 'vpol':
                     channels = numpy.array([1,3,5,7])
-                    waveforms = self.wf(eventid, channels,div_std=False,hilbert=hilbert,apply_filter=self.apply_filter)
+                    waveforms = self.wf(eventid, channels, div_std=False, hilbert=hilbert, apply_filter=self.apply_filter, tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract)
                     t_best_0subtract1 = self.t_vpol_0subtract1[theta_index,phi_index]
                     t_best_0subtract2 = self.t_vpol_0subtract2[theta_index,phi_index]
                     t_best_0subtract3 = self.t_vpol_0subtract3[theta_index,phi_index]
@@ -1337,7 +1235,7 @@ class Correlator:
 
             elif pol == 'hpol':
                 if waveforms is None:
-                    waveforms = self.wf(eventid, numpy.array([0,2,4,6]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter) #Div by std and resampled waveforms normalizes the correlations
+                    waveforms = self.wf(eventid, numpy.array([0,2,4,6]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter,tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract) #Div by std and resampled waveforms normalizes the correlations
 
                 corr01 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[1])))/(len(self.times_resampled))
                 corr02 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[2])))/(len(self.times_resampled))
@@ -1363,7 +1261,7 @@ class Correlator:
 
             elif pol == 'vpol':
                 if waveforms is None:
-                    waveforms = self.wf(eventid, numpy.array([1,3,5,7]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter) #Div by std and resampled waveforms normalizes the correlations
+                    waveforms = self.wf(eventid, numpy.array([1,3,5,7]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter,tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract) #Div by std and resampled waveforms normalizes the correlations
 
                 corr01 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[1])))/(len(self.times_resampled))
                 corr02 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[2])))/(len(self.times_resampled))
@@ -2154,7 +2052,7 @@ if __name__=="__main__":
     high_pass_filter_order = None#5#None
     plot_filter=False
 
-    apply_phase_response=False
+    apply_phase_response=True
     n_phi = 360
     n_theta = 360
 
@@ -2291,7 +2189,7 @@ if __name__=="__main__":
                     all_axs.append(ax)
                 all_cors.append(cor)
 
-        if True:
+        if False:
             #Preparing for planes:
             known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks()
 
@@ -2347,8 +2245,9 @@ if __name__=="__main__":
                 elif numpy.logical_and(test_az >= 180 + 45, test_az < 270 + 45):
                     _dir = 'S'
 
-                cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
-
+                cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
+                if False:
+                    cor.prep.addSineSubtract(0.03, 0.090, 0.05, max_failed_iterations=3, verbose=True, plot=False)#Test purposes
                 #Load Values
                 #cor.animatedMap(eventids, 'hpol', key, plane_zenith=plane_zenith,plane_az=plane_az,hilbert=False, max_method=None,center_dir=_dir,save=True,dpi=300)
                 map_values, fig, ax = cor.map(eventids[0], 'hpol',center_dir='W', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=None,mollweide=True,circle_zenith=plane_zenith[0],circle_az=plane_az[0])
@@ -2482,3 +2381,20 @@ if __name__=="__main__":
                 cors.append(cor) #Need to keep references for animations to work. 
 
             '''
+
+        if True:
+            #Test CW Subtraction:
+            run = 1650
+            eventids = [499,45059,58875]
+            
+            plane_polys = {}
+            cors = []
+            interpolated_plane_locations = {}
+            reader = Reader(os.environ['BEACON_DATA'],run)
+            cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
+            if True:
+                cor.prep.addSineSubtract(0.03, 0.090, 0.05, max_failed_iterations=3, verbose=True, plot=False)#Test purposes
+            for eventid in eventids:
+                for ss in [False, True]:
+                    cor.apply_sine_subtract = ss
+                    map_values, fig, ax = cor.map(eventid, 'hpol',center_dir='E', plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=None,mollweide=True,circle_zenith=None,circle_az=None)

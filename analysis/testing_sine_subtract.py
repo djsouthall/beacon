@@ -1,7 +1,5 @@
 '''
-When calibrating the antenna positions I am seeing two peaks on correlation histograms for 
-antennas 0 and 4.  I am using this to explore an characteristic differences between signals
-in each peak. 
+This is a script that I am using to test the development and implementation of the sine_subtraction method.
 '''
 
 import numpy
