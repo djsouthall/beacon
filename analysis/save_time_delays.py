@@ -56,11 +56,18 @@ if __name__=="__main__":
 
     datapath = os.environ['BEACON_DATA']
     align_method_13_n = 2
-    crit_freq_low_pass_MHz = None #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = None
+
+    crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
+    low_pass_filter_order = 8
 
     crit_freq_high_pass_MHz = None
     high_pass_filter_order = None
+
+    sine_subtract = True
+    sine_subtract_min_freq_GHz = 0.03
+    sine_subtract_max_freq_GHz = 0.09
+    sine_subtract_percent = 0.03
+
 
     apply_phase_response = True
 
@@ -131,6 +138,8 @@ if __name__=="__main__":
     else:
         filter_string += 'shorten_length-%0.2f'%(shorten_length)
 
+    filter_string += 'sinesubtract_%i'%(int(sine_subtract))
+
 
     print(filter_string)
 
@@ -173,6 +182,32 @@ if __name__=="__main__":
 
                 time_delay_dsets = list(file['time_delays'][filter_string].keys()) #Existing datasets
 
+                file['time_delays'][filter_string].attrs['final_corr_length'] = final_corr_length
+
+                if crit_freq_low_pass_MHz is not None:
+                    file['time_delays'][filter_string].attrs['crit_freq_low_pass_MHz'] = crit_freq_low_pass_MHz 
+                else:
+                    file['time_delays'][filter_string].attrs['crit_freq_low_pass_MHz'] = 0
+
+                if low_pass_filter_order is not None:
+                    file['time_delays'][filter_string].attrs['low_pass_filter_order'] = low_pass_filter_order 
+                else:
+                    file['time_delays'][filter_string].attrs['low_pass_filter_order'] = 0
+
+                if crit_freq_high_pass_MHz is not None:
+                    file['time_delays'][filter_string].attrs['crit_freq_high_pass_MHz'] = crit_freq_high_pass_MHz 
+                else:
+                    file['time_delays'][filter_string].attrs['crit_freq_high_pass_MHz'] = 0
+
+                if high_pass_filter_order is not None:
+                    file['time_delays'][filter_string].attrs['high_pass_filter_order'] = high_pass_filter_order 
+                else:
+                    file['time_delays'][filter_string].attrs['high_pass_filter_order'] = 0
+
+                file['time_delays'][filter_string].attrs['sine_subtract_min_freq_GHz'] = sine_subtract_min_freq_GHz 
+                file['time_delays'][filter_string].attrs['sine_subtract_max_freq_GHz'] = sine_subtract_max_freq_GHz 
+                file['time_delays'][filter_string].attrs['sine_subtract_percent'] = sine_subtract_percent 
+
                 #eventids with rf trigger
                 if numpy.size(eventids) != 0:
                     print('run = ',run)
@@ -184,6 +219,7 @@ if __name__=="__main__":
                     time_delay_dimensions = (file.attrs['N'],file.attrs['align_method_13_n'])
                 else:
                     time_delay_dimensions = (file.attrs['N'],)
+
                 if not numpy.isin('hpol_t_0subtract1',time_delay_dsets):
                     file['time_delays'][filter_string].create_dataset('hpol_t_0subtract1', time_delay_dimensions, dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                 else:
@@ -342,7 +378,10 @@ if __name__=="__main__":
                 if sum(rf_cut) > 0:
                     #rf_cut = numpy.multiply(rf_cut ,numpy.cumsum(rf_cut) < 10) #limits it to the first 100 Trues for testing.
                     tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response)
-                    time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids[rf_cut],align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=None,vpol_cut=None,shorten_signals=shorten_signals,shorten_thresh=shorten_thresh,shorten_delay=shorten_delay,shorten_length=shorten_length)
+                    if sine_subtract:
+                        tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+                    time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids[rf_cut],align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=None,vpol_cut=None,shorten_signals=shorten_signals,shorten_thresh=shorten_thresh,shorten_delay=shorten_delay,shorten_length=shorten_length,sine_subtract=sine_subtract)
 
                     if align_method == 13:
                         rf_cut = numpy.where(rf_cut)[0]

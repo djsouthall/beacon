@@ -107,6 +107,12 @@ if __name__ == '__main__':
         crit_freq_high_pass_MHz = None#30#None#50
         high_pass_filter_order = None#8#None#8
 
+        sine_subtract = True
+        sine_subtract_min_freq_GHz = 0.03
+        sine_subtract_max_freq_GHz = 0.09
+        sine_subtract_percent = 0.03
+
+
         apply_phase_response = True
         use_filter = True
         
@@ -133,11 +139,11 @@ if __name__ == '__main__':
 
         #Set up tempalte compare tool used for making averaged waveforms for first pass alignment. 
         reader = Reader(datapath,run)
-        tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters,apply_phase_response=apply_phase_response)
+        tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filters,apply_phase_response=apply_phase_response,sine_subtract=sine_subtract)
 
         #First pass alignment to make templates.  
-        times, hpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['hpol'], align_method=0, template_eventid=eventids['hpol'][0], plot=False,event_type='hpol')
-        times, vpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['vpol'], align_method=0, template_eventid=eventids['vpol'][0], plot=False,event_type='vpol')
+        times, hpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['hpol'], align_method=0, template_eventid=eventids['hpol'][0], plot=False,event_type='hpol',sine_subtract=sine_subtract)
+        times, vpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['vpol'], align_method=0, template_eventid=eventids['vpol'][0], plot=False,event_type='vpol',sine_subtract=sine_subtract)
 
         averaged_waveforms = numpy.zeros_like(hpol_waveforms)
         resampled_averaged_waveforms = numpy.zeros((8,len(tct.waveform_times_corr)))
@@ -155,7 +161,9 @@ if __name__ == '__main__':
 
         #Set up time delay calculator used to determine time delays between averaged waveforms and later all waveforms internally.
         tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response)
-        indices, corr_time_shifts, max_corrs, pairs, corrs = tdc.calculateTimeDelays(averaged_waveforms_ffts, averaged_waveforms, return_full_corrs=True, align_method=0)
+        if sine_subtract:
+            tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+        indices, corr_time_shifts, max_corrs, pairs, corrs = tdc.calculateTimeDelays(averaged_waveforms_ffts, averaged_waveforms, return_full_corrs=True, align_method=0, sine_subtract=sine_subtract)
 
 
 
@@ -205,7 +213,7 @@ if __name__ == '__main__':
 
         if False:
             #Calculating group delays and plotting, then rolling waveforms by the group delays to see how this would work as a metric.
-            group_delay_freqs, group_delays, weighted_group_delays = tct.calculateGroupDelays(times, averaged_waveforms, plot=True,event_type=None,group_delay_band=(45e6,80e6))
+            group_delay_freqs, group_delays, weighted_group_delays = tct.calculateGroupDelays(times, averaged_waveforms, plot=True,event_type=None,group_delay_band=(45e6,80e6),sine_subtract=sine_subtract)
 
             fig = plt.figure()
             fig.canvas.set_window_title('Group Delay Rolled Hpol and Vpol Average Waveforms')

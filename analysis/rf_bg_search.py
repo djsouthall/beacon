@@ -79,11 +79,13 @@ if __name__=="__main__":
     datapath = os.environ['BEACON_DATA']
     plot_filter=False
 
-    crit_freq_low_pass_MHz = 70 #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = 4
+    crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
+    low_pass_filter_order = 8
 
     crit_freq_high_pass_MHz = None
     high_pass_filter_order = None
+
+    sine_subtract = True
 
     apply_phase_response = True
     hilbert=True
@@ -131,6 +133,8 @@ if __name__=="__main__":
         filter_string += 'maxmethod_%s'%('None')
     else:
         filter_string += 'maxmethod_%i'%(max_method)
+
+    filter_string += 'sinesubtract_%i'%(int(sine_subtract))
 
 
     print(filter_string)
@@ -281,7 +285,10 @@ if __name__=="__main__":
                         print('Values in vpol_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
 
-                    cor = Correlator(reader,  upsample=upsample, n_phi=360, n_theta=360, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter)
+                    cor = Correlator(reader,  upsample=upsample, n_phi=360, n_theta=360, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract)
+
+                    if sine_subtract:
+                        cor.prep.addSineSubtract(0.03, 0.090, 0.01, max_failed_iterations=3, verbose=False, plot=False)
 
                     for mode in ['hpol','vpol']:
                         print('Performing calculations for %s'%mode)

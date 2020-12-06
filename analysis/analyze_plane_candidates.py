@@ -263,6 +263,10 @@ if __name__ == '__main__':
     apply_phase_response = False
     hilbert = False
 
+    sine_subtract = True
+    sine_subtract_min_freq_GHz = 0.03
+    sine_subtract_max_freq_GHz = 0.09
+    sine_subtract_percent = 0.03
 
     plot_filter = False
     plot_multiple = False
@@ -306,10 +310,10 @@ if __name__ == '__main__':
                         print('\nProcessing Run %i'%run)
 
                         if numpy.any([plot_averaged_waveforms, get_averaged_waveforms, plot_averaged_waveforms_aligned]):
-                            tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response)
+                            tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response, sine_subtract=sine_subtract) #if sine_subtract is True a default sine_suibtract object is added and used for initial template.
 
                             #First pass alignment to make templates.  
-                            times, averaged_waveforms = tct.averageAlignedSignalsPerChannel(eventids, template_eventid=eventids[-1], align_method=0, plot=plot_averaged_waveforms_aligned)
+                            times, averaged_waveforms = tct.averageAlignedSignalsPerChannel(eventids, template_eventid=eventids[-1], align_method=0, plot=plot_averaged_waveforms_aligned, sine_subtract=sine_subtract)
 
                             if plot_averaged_waveforms:
                                 plt.figure()
@@ -329,7 +333,9 @@ if __name__ == '__main__':
 
                         if calculate_time_delays == True:
                             tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filter,apply_phase_response=apply_phase_response)
-                            time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids,align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=None,vpol_cut=None, colors=calibrated_trigtime,shorten_signals = shorten_signals,shorten_thresh = shorten_thresh,shorten_delay = shorten_delay,shorten_length = shorten_length)
+                            if sine_subtract:
+                                tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+                            time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids,align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=None,vpol_cut=None, colors=calibrated_trigtime,shorten_signals = shorten_signals,shorten_thresh = shorten_thresh,shorten_delay = shorten_delay,shorten_length = shorten_length, sine_subtract=sine_subtract)
                             hpol_delays = time_shifts[0:6,:].T
                             vpol_delays = time_shifts[6:12,:].T
                             hpol_corrs = corrs[0:6,:].T

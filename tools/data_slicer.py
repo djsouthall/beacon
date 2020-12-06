@@ -919,7 +919,7 @@ class dataSlicerSingleRun():
         '''
         return numpy.ma.masked_array(bin_indices,mask=numpy.logical_or(bin_indices == 0, bin_indices == len(bin_edges))) - 1 #Mask to ignore underflow/overflow bins.  Indices are base 1 here it seems.  
 
-    def plotROIWaveforms(self, roi_key=None, final_corr_length=2**13, crit_freq_low_pass_MHz=None, low_pass_filter_order=None, crit_freq_high_pass_MHz=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filter=False, apply_phase_response=False, save=False, plot_saved_templates=False):
+    def plotROIWaveforms(self, roi_key=None, final_corr_length=2**13, crit_freq_low_pass_MHz=None, low_pass_filter_order=None, crit_freq_high_pass_MHz=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filter=False, apply_phase_response=False, save=False, plot_saved_templates=False, sine_subtract=False):
         '''
         This will call the TemplateCompareTool and use it to plot averaged FFT and waveforms for events passing the
         specificied ROI key.  If the ROI key is not given then ALL ROI plots will be produced.  If the template
@@ -928,7 +928,8 @@ class dataSlicerSingleRun():
         '''
         if self.tct is None:
             self.tct = TemplateCompareTool(self.reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response)
-
+            if sine_subtract:
+                self.tct.addSineSubtract(0.03, 0.09, 0.03, max_failed_iterations=3, verbose=False, plot=False)
 
         if roi_key is None:
             keys = list(self.roi.keys())
@@ -940,7 +941,7 @@ class dataSlicerSingleRun():
             if len(eventids) == 0:
                 print('No eventids in ROI: ' + roi_key)
                 continue
-            times, averaged_waveforms = self.tct.averageAlignedSignalsPerChannel(eventids, template_eventid=eventids[-1], align_method=0, plot=False)
+            times, averaged_waveforms = self.tct.averageAlignedSignalsPerChannel(eventids, template_eventid=eventids[-1], align_method=0, plot=False, sine_subtract=sine_subtract)
             times_ns = times/1e9
             freqs_MHz = numpy.fft.rfftfreq(len(times_ns),d=numpy.diff(times_ns)[0])/1e6
             #Plot averaged FFT per channel

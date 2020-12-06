@@ -55,6 +55,11 @@ if __name__ == '__main__':
 
     crit_freq_high_pass_MHz = 30#None#50
     high_pass_filter_order = 5#None#8
+
+    sine_subtract = True
+    sine_subtract_min_freq_GHz = 0.03
+    sine_subtract_max_freq_GHz = 0.09
+    sine_subtract_percent = 0.03
     
     plot_filters = True
     plot_multiple = True
@@ -188,7 +193,9 @@ if __name__ == '__main__':
                 reader = Reader(datapath,run)
                 reader.setEntry(all_eventids[0])
                 tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filters,apply_phase_response=apply_phase_response)
-                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=hpol_eventids_cut,vpol_cut=vpol_eventids_cut)
+                if sine_subtract == True:
+                    tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=hpol_eventids_cut,vpol_cut=vpol_eventids_cut, sine_subtract=sine_subtract)
 
                 for pair_index, pair in enumerate(pairs):
                     if pair in hpol_pairs:

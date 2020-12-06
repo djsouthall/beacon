@@ -13,7 +13,6 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
 import tools.info as info
-from tools.fftmath import TemplateCompareTool, TimeDelayCalculator
 from tools.data_handler import createFile
 from tools.correlator import Correlator
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 '''
-This is meant to calculate the how many similar events within a run that each event has.
-It will also save these values as a percentage of the run for easier comparison accross runs.
+This is meant to be used for tracking galactic noise, by averaging spectrum and saving the outcome.
 '''
 import os
 import sys

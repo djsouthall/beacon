@@ -20,7 +20,7 @@ if __name__ == "__main__":
     #mem = '16G'
     partition = 'broadwl'
     # BEFORE ATTEMPTING TO RUN THE TWO BELOW, CHANGE THE TIME DELAYS SCRIPT TO NOT DECONVOLVE THE PHASE RESPONSE
-    runs = numpy.array([1650])#numpy.arange(1600,1700)#[1650]#numpy.arange(3571,3630)#numpy.arange(3555,3571)#numpy.arange(1700,2200)#numpy.append(numpy.arange(1500,1700),numpy.arange(3530,3571))#numpy.arange(3530,3555)#numpy.arange(1500,1648)#numpy.array([186,189,364,365,366,367])#numpy.arange(1725,1800)#numpy.array([186,189])#numpy.array([364,365,366,367])#numpy.arange(1675,1725)#[::-1]
+    runs = numpy.arange(1600,2200)#[1650]#numpy.arange(3571,3630)#numpy.arange(3555,3571)#numpy.arange(1700,2200)#numpy.append(numpy.arange(1500,1700),numpy.arange(3530,3571))#numpy.arange(3530,3555)#numpy.arange(1500,1648)#numpy.array([186,189,364,365,366,367])#numpy.arange(1725,1800)#numpy.array([186,189])#numpy.array([364,365,366,367])#numpy.arange(1675,1725)#[::-1]
     done_runs = numpy.array([])#numpy.array([1728,1773,1774,1783,1784])
     #runs = [1790]
     #runs = numpy.array([1665,1666,1667,1682,1685,1689,1690,1691,1698])
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
         batch = 'sbatch --partition=%s --job-name=%s '%(partition,jobname)
 
-        command = os.environ['BEACON_ANALYSIS_DIR'] + 'analysis/cr_search/simple_cr_template_search.py %i 1'%(run)#'analysis/all_analysis.sh %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'tools/data_handler.py %i redo'%(run)#'analysis/cr_search/simple_cr_template_search.py %i 1'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
+        command = os.environ['BEACON_ANALYSIS_DIR'] + 'analysis/all_analysis.sh %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'tools/data_handler.py %i redo'%(run)#'analysis/cr_search/simple_cr_template_search.py %i 1'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
 
         command_queue = batch + command
         print(command_queue)    

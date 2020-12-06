@@ -344,7 +344,7 @@ class FFTPrepper:
         self.sine_subtracts.append(sine_subtract)
 
 
-    def wf(self,channel,apply_filter=False,hilbert=False,tukey=None,sine_subtract=False, return_sine_subtract_info=False):
+    def wf(self, channel, apply_filter=False, hilbert=False, tukey=None, sine_subtract=False, return_sine_subtract_info=False):
         '''
         This loads a wf but only the section that is selected by the start and end indices specified.
 
@@ -578,7 +578,7 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def loadFilteredFFTs(self, eventid, hilbert=False, load_upsampled_waveforms=False, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0):
+    def loadFilteredFFTs(self, eventid, hilbert=False, load_upsampled_waveforms=False, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, sine_subtract=False):
         '''
         Loads the waveforms (with pre applied filters) and upsamples them for
         for the cross correlation. 
@@ -591,9 +591,9 @@ class FFTPrepper:
                 upsampled_waveforms = numpy.zeros((8,self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
             for channel in range(8):
                 if load_upsampled_waveforms:
-                    temp_raw_wf = self.wf(channel,hilbert=False,apply_filter=True) #apply hilbert after upsample
+                    temp_raw_wf = self.wf(channel,hilbert=False,apply_filter=True,sine_subtract=sine_subtract) #apply hilbert after upsample
                 else:
-                    temp_raw_wf = self.wf(channel,hilbert=hilbert,apply_filter=True)
+                    temp_raw_wf = self.wf(channel,hilbert=hilbert,apply_filter=True,sine_subtract=sine_subtract)
 
                 if shorten_signals == True:
                     trigger_index = numpy.where(temp_raw_wf/max(temp_raw_wf) > shorten_thresh)[0][0]
@@ -622,7 +622,7 @@ class FFTPrepper:
                 raw_wfs_corr_t = numpy.arange(numpy.shape(raw_wfs_corr)[1])*(self.t()[1] - self.t()[0])
                 for channel in range(8):
                     plt.subplot(4,2,channel+1)
-                    plt.plot(self.t(),self.wf(channel),alpha=0.7)
+                    plt.plot(self.t(),self.wf(channel,sine_subtract=sine_subtract),alpha=0.7)
                     plt.plot(raw_wfs_corr_t,raw_wfs_corr[channel])
                 plt.figure()
                 plt.title(str(eventid))
@@ -644,7 +644,7 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def loadFilteredWaveformsMultiple(self,eventids,hilbert=False):
+    def loadFilteredWaveformsMultiple(self,eventids,hilbert=False,sine_subtract=False):
         '''
         Hacky way to get multiple upsampled waveforms.  Helpful for initial passes at getting a template.
         '''
@@ -654,7 +654,7 @@ class FFTPrepper:
                 upsampled_waveforms['ch%i'%channel] = numpy.zeros((len(eventids),self.final_corr_length//2))
 
             for index, eventid in enumerate(eventids):
-                wfs = self.loadFilteredFFTs(eventid, hilbert=hilbert, load_upsampled_waveforms=True)[1]
+                wfs = self.loadFilteredFFTs(eventid, hilbert=hilbert, load_upsampled_waveforms=True,sine_subtract=sine_subtract)[1]
                 for channel in range(8):
                     upsampled_waveforms['ch%i'%channel][index] = wfs[channel]
 
@@ -777,7 +777,7 @@ class FFTPrepper:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def calculateGroupDelaysFromEvent(self, eventid, apply_filter=False, plot=False,event_type=None):
+    def calculateGroupDelaysFromEvent(self, eventid, apply_filter=False, plot=False,event_type=None,sine_subtract=False):
         '''
         This will calculate the group delay curve for a given event. 
         event_type specifies which channels to plot.  If 'hpol' the even channels are plotted,
@@ -791,7 +791,7 @@ class FFTPrepper:
             wfs = numpy.zeros((8,self.buffer_length))
             
             for channel in range(8):
-                temp_raw_wf = self.wf(channel,hilbert=False,apply_filter=apply_filter) 
+                temp_raw_wf = self.wf(channel,hilbert=False,apply_filter=apply_filter,sine_subtract=sine_subtract) 
                 wfs[channel] = temp_raw_wf - numpy.mean(temp_raw_wf) #Subtracting dc offset
 
             return self.calculateGroupDelays(self.t(), wfs, plot=plot,event_type=event_type)
@@ -1185,7 +1185,7 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateTimeDelaysFromEvent(self, eventid, return_full_corrs=False, align_method=0, hilbert=False, align_method_10_estimate=None, align_method_10_window_ns=8, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0):
+    def calculateTimeDelaysFromEvent(self, eventid, return_full_corrs=False, align_method=0, hilbert=False, align_method_10_estimate=None, align_method_10_window_ns=8, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0,sine_subtract=False):
         '''
         Align method can be one of a few:
         0: argmax of corrs (default)
@@ -1200,7 +1200,7 @@ class TimeDelayCalculator(FFTPrepper):
         'max_corrs' corresponds to the value of the selected methods peak.
         '''
         try:
-            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length)
+            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=sine_subtract)
             
 
             return self.calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=return_full_corrs, align_method=align_method, print_warning=False, align_method_10_estimate=align_method_10_estimate, align_method_10_window_ns=align_method_10_window_ns)
@@ -1211,7 +1211,7 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateMultipleTimeDelays(self,eventids, align_method=None,hilbert=False,plot=False,hpol_cut=None,vpol_cut=None,colors=None, align_method_10_estimates=None, align_method_10_window_ns=8, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0):
+    def calculateMultipleTimeDelays(self, eventids, align_method=None,hilbert=False,plot=False,hpol_cut=None,vpol_cut=None,colors=None, align_method_10_estimates=None, align_method_10_window_ns=8, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0,sine_subtract=False):
         '''
         If colors is some set of values that matches len(eventids) then they will be used to color the event curves.
         '''
@@ -1257,14 +1257,14 @@ class TimeDelayCalculator(FFTPrepper):
                 sys.stdout.flush()
                 if align_method is None:
                     if plot == True:
-                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length) #Using default of the other function
+                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=,sine_subtract) #Using default of the other function
                     else:
-                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length) #Using default of the other function
+                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=,sine_subtract) #Using default of the other function
                 else:
                     if plot == True:
-                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length)
+                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=,sine_subtract)
                     else:
-                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length)
+                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=,sine_subtract)
                 timeshifts.append(time_shift)
                 max_corrs.append(corr_value)
                 if plot == True:
@@ -1290,8 +1290,8 @@ class TimeDelayCalculator(FFTPrepper):
                                 plt.plot(self.corr_time_shifts,corrs[index])
                                 plt.axvline(time_mid,c='r',linestyle='--')
                                 plt.subplot(2,1,2)
-                                plt.plot(self.t(),self.wf(int(pair[0]),apply_filter=True,hilbert=False),label=str(int(pair[0])))
-                                plt.plot(self.t(),self.wf(int(pair[1]),apply_filter=True,hilbert=False),label=str(int(pair[1])))
+                                plt.plot(self.t(),self.wf(int(pair[0]),apply_filter=True,hilbert=False),label=str(int(pair[0]),sine_subtract=sine_subtract))
+                                plt.plot(self.t(),self.wf(int(pair[1]),apply_filter=True,hilbert=False),label=str(int(pair[1]),sine_subtract=sine_subtract))
                                 plt.legend()
                                 import pdb; pdb.set_trace()
                                 plt.close(fig)
@@ -1304,8 +1304,8 @@ class TimeDelayCalculator(FFTPrepper):
                                 plt.plot(self.corr_time_shifts,corrs[index])
                                 plt.axvline(time_mid,c='r',linestyle='--')
                                 plt.subplot(2,1,2)
-                                plt.plot(self.t(),self.wf(int(pair[0]),apply_filter=True,hilbert=False),label=str(int(pair[0])))
-                                plt.plot(self.t(),self.wf(int(pair[1]),apply_filter=True,hilbert=False),label=str(int(pair[1])))
+                                plt.plot(self.t(),self.wf(int(pair[0]),apply_filter=True,hilbert=False),label=str(int(pair[0]),sine_subtract=sine_subtract))
+                                plt.plot(self.t(),self.wf(int(pair[1]),apply_filter=True,hilbert=False),label=str(int(pair[1]),sine_subtract=sine_subtract))
                                 plt.legend()
                                 import pdb; pdb.set_trace()
                                 plt.close(fig)
@@ -1336,7 +1336,7 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateImpulsivityFromTimeDelays(self, eventid, time_delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=400):
+    def calculateImpulsivityFromTimeDelays(self, eventid, time_delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=400,sine_subtract=False):
         '''
         This will call calculateTimeDelaysFromEvent with the given settings, and use these to calculate impulsivity. 
 
@@ -1350,7 +1350,7 @@ class TimeDelayCalculator(FFTPrepper):
         '''
         try:
             if upsampled_waveforms is None:
-                ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert)
+                ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert,sine_subtract=sine_subtract)
                 #Else use the given waveforms, assumed to have sampling of self.dt_ns_upsampled
 
             rolls = (time_delays/self.dt_ns_upsampled).astype(int)
@@ -1452,7 +1452,7 @@ class TimeDelayCalculator(FFTPrepper):
 
 
 
-    def calculateImpulsivityFromEvent(self, eventid, return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=750):
+    def calculateImpulsivityFromEvent(self, eventid, return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=750,sine_subtract=False):
         '''
         This will call calculateTimeDelaysFromEvent with the given settings, and use these to calculate impulsivity. 
 
@@ -1463,7 +1463,7 @@ class TimeDelayCalculator(FFTPrepper):
         to sum the envelope for the metric.
         '''
         try:
-            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert)
+            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert,sine_subtract=sine_subtract)
             #self.dt_ns_upsampled
 
             if return_full_corrs == True:
@@ -1474,7 +1474,7 @@ class TimeDelayCalculator(FFTPrepper):
             time_delays = -corr_time_shifts
             print('From event')
             print(time_delays)
-            return self.calculateImpulsivityFromTimeDelays(eventid, time_delays, upsampled_waveforms=upsampled_waveforms,return_full_corrs=return_full_corrs, align_method=align_method, hilbert=hilbert,plot=plot,impulsivity_window=impulsivity_window)
+            return self.calculateImpulsivityFromTimeDelays(eventid, time_delays, upsampled_waveforms=upsampled_waveforms,return_full_corrs=return_full_corrs, align_method=align_method, hilbert=hilbert,plot=plot,impulsivity_window=impulsivity_window,sine_subtract=sine_subtract)
 
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -1510,11 +1510,11 @@ class TemplateCompareTool(FFTPrepper):
     --------
     examples.beacon_data_reader.reader
     '''
-    def __init__(self, reader, final_corr_length=2**15, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False, initial_template_id=None,apply_phase_response=False):
+    def __init__(self, reader, final_corr_length=2**15, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False, initial_template_id=None,apply_phase_response=False,sine_subtract=False):
         try:
             super().__init__(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range, plot_filters=plot_filters,apply_phase_response=apply_phase_response)
             self.corr_index_to_delay_index = -numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1) #Negative because with how it is programmed you would want to roll the template the normal amount, but I will be rolling the waveforms.
-            self.setTemplateToEvent(initial_template_id)
+            self.setTemplateToEvent(initial_template_id,sine_subtract=sine_subtract)
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -1522,7 +1522,7 @@ class TemplateCompareTool(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def setTemplateToEvent(self,eventid):
+    def setTemplateToEvent(self,eventid,sine_subtract=False):
         '''
         Sets the template to the waveforms from eventid.
         '''
@@ -1534,7 +1534,7 @@ class TemplateCompareTool(FFTPrepper):
                 print('None given as eventid, setting event 0 as template.')
                 eventid = 0
             self.template_eventid = eventid
-            self.template_ffts_filtered,self.template_waveform_upsampled_filtered = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True)
+            self.template_ffts_filtered,self.template_waveform_upsampled_filtered = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,sine_subtract=sine_subtract)
 
             #Scaled and conjugate template for one time prep of cross correlations.
             self.scaled_conj_template_ffts_filtered = (numpy.conj(self.template_ffts_filtered).T/numpy.std(numpy.conj(self.template_ffts_filtered),axis=1) ).T
@@ -1563,14 +1563,14 @@ class TemplateCompareTool(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def crossCorrelateWithTemplate(self, eventid, load_upsampled_waveforms=False):
+    def crossCorrelateWithTemplate(self, eventid, load_upsampled_waveforms=False,sine_subtract=False):
         '''
         Performs a cross correlation between the waveforms for eventid and the
         internally defined template.
         '''
         try:
             #Load events waveforms
-            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid, load_upsampled_waveforms=load_upsampled_waveforms)
+            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid, load_upsampled_waveforms=load_upsampled_waveforms,sine_subtract=sine_subtract)
 
             #Perform cross correlations with the template.
             corrs_fft = numpy.multiply((ffts.T/numpy.std(ffts,axis=1)).T,(self.scaled_conj_template_ffts_filtered)) / (len(self.waveform_times_corr)//2 + 1)
@@ -1588,7 +1588,7 @@ class TemplateCompareTool(FFTPrepper):
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def alignToTemplate(self, eventid, align_method=0):
+    def alignToTemplate(self, eventid, align_method=0,sine_subtract=False):
         '''
         Attempts to align the waveforms from eventid with the internally
         defined template.  This may use one of several methods of aligning
@@ -1598,7 +1598,7 @@ class TemplateCompareTool(FFTPrepper):
         but are not the double length ones that are used for the correlation.
         '''
         try:
-            corrs, corrs_fft, upsampled_waveforms = self.crossCorrelateWithTemplate(eventid,load_upsampled_waveforms=True)
+            corrs, corrs_fft, upsampled_waveforms = self.crossCorrelateWithTemplate(eventid,load_upsampled_waveforms=True,sine_subtract=sine_subtract)
 
             if align_method == 0:
                 #Align to maximum correlation value.
@@ -1651,7 +1651,7 @@ class TemplateCompareTool(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def averageAlignedSignalsPerChannel(self, eventids, align_method=0, template_eventid=None, plot=False,event_type=None):
+    def averageAlignedSignalsPerChannel(self, eventids, align_method=0, template_eventid=None, plot=False,event_type=None,sine_subtract=None):
         '''
         This will use alignToTemplate to align an events within a channel to the current set template.
         This means that you should set the template with either setTemplateToEvent or setTemplateToCustom
@@ -1662,7 +1662,7 @@ class TemplateCompareTool(FFTPrepper):
         '''
         try:
             if template_eventid is not None:
-                self.setTemplateToEvent(template_eventid)
+                self.setTemplateToEvent(template_eventid,sine_subtract=sine_subtract)
 
             averaged_waveforms = numpy.zeros((8,self.final_corr_length//2))
             times = numpy.arange(self.final_corr_length//2)*self.dt_ns_upsampled
@@ -1759,6 +1759,8 @@ if __name__ == '__main__':
         high_pass_filter_order = None#8
         crit_freq_high_pass_MHz = None#20
 
+        sine_subtract = False
+
         import tools.get_plane_tracks as pt
         known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks()
         use_filter = True
@@ -1791,7 +1793,7 @@ if __name__ == '__main__':
                     for event_index, eventid in enumerate(eventids):
                         # if event_index != 2:
                         #     continue
-                        ffts, upsampled_waveforms = tdc.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=False,shorten_signals=shorten_signals,shorten_thresh=shorten_thresh,shorten_delay=shorten_delay,shorten_length=shorten_length)
+                        ffts, upsampled_waveforms = tdc.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=False,shorten_signals=shorten_signals,shorten_thresh=shorten_thresh,shorten_delay=shorten_delay,shorten_length=shorten_length,sine_subtract=sine_subtract)
 
 
                         indices, corr_time_shifts, max_corrs, output_pairs, corrs = tdc.calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=True, align_method=0, print_warning=False)

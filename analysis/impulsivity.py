@@ -98,7 +98,7 @@ if __name__=="__main__":
                     time_delays_dsets = list(file['time_delays'].keys())
                     impulsivity_dsets = list(file['impulsivity'].keys())
 
-                    for tdset in ["LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_8"]:#time_delays_dsets:
+                    for tdset in time_delays_dsets:#["LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_8"]:#
                         if not numpy.isin(tdset,impulsivity_dsets):
                             file['impulsivity'].create_group(tdset)
                         else:
@@ -135,7 +135,7 @@ if __name__=="__main__":
                                 sys.stdout.flush()
                             try:
                                 delays = -all_time_delays[eventid] #Unsure why I need to invert this.
-                                file['impulsivity'][tdset]['hpol'][eventid], file['impulsivity'][tdset]['vpol'][eventid] = tdc.calculateImpulsivityFromTimeDelays(eventid, delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=750)
+                                file['impulsivity'][tdset]['hpol'][eventid], file['impulsivity'][tdset]['vpol'][eventid] = tdc.calculateImpulsivityFromTimeDelays(eventid, delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=750) #shouldn't use sine_subtract, I think I want impulsivity to show contaminated signals as contaminated?
                             except Exception as e:
                                 print(e)
                                 exc_type, exc_obj, exc_tb = sys.exc_info()

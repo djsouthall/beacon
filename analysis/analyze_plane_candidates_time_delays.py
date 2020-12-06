@@ -22,7 +22,7 @@ import tools.clock_correct as cc
 import tools.info as info
 from tools.correlator import Correlator
 from tools.data_handler import createFile, getTimes
-from tools.fftmath import TimeDelayCalculator, TemplateCompareTool
+from tools.fftmath import TemplateCompareTool
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -88,6 +88,11 @@ if __name__ == '__main__':
 
     crit_freq_high_pass_MHz = None#60
     high_pass_filter_order = None#6
+
+    sine_subtract = True
+    sine_subtract_min_freq_GHz = 0.03
+    sine_subtract_max_freq_GHz = 0.09
+    sine_subtract_percent = 0.03
 
     waveform_index_range = (None,None)#(150,400)
     plot_filter=False
@@ -222,7 +227,7 @@ if __name__ == '__main__':
             eventids = known_planes[key]['eventids'][:,1]
             reader = Reader(datapath,run)
             cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
-            tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response)
+            tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=False,apply_phase_response=apply_phase_response, sine_subtract=sine_subtract)
 
             pair_cut = numpy.array([pair in known_planes[key]['baselines'][mode] for pair in [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]] ]) #Checks which pairs are worth looping over.
             
@@ -266,7 +271,7 @@ if __name__ == '__main__':
 
             if plot_fft_signals == True:
                 #Get average waveforms per channel for this plane.
-                times, averaged_waveforms = tct.averageAlignedSignalsPerChannel(eventids, template_eventid=eventids[-1], align_method=0, plot=plot_averaged_waveforms_aligned)
+                times, averaged_waveforms = tct.averageAlignedSignalsPerChannel(eventids, template_eventid=eventids[-1], align_method=0, plot=plot_averaged_waveforms_aligned, sine_subtract=sine_subtract)
                 times_ns = times/1e9
                 freqs_MHz = numpy.fft.rfftfreq(len(times_ns),d=numpy.diff(times_ns)[0])/1e6
                 #Plot averaged FFT per channel

@@ -73,10 +73,28 @@ if __name__ == '__main__':
             prep.setEntry(eventid)
             t_ns = prep.t()
             print(eventid)
-            for channel in [0]:#[0,1,2,3,4,5,6,7]:
+            for channel in [0,1,2,3,4,5,6,7]:
                 channel=int(channel)
                 wf, ss_freqs, n_fits = prep.wf(channel,apply_filter=False,hilbert=False,tukey=None,sine_subtract=True, return_sine_subtract_info=True)
                 freqs, spec_dbish, spec = prep.rfftWrapper(t_ns, wf)
+                
+                #Without sine_subtract to plot what the old signal looked like.
+                raw_wf = prep.wf(channel,apply_filter=False,hilbert=False,tukey=None,sine_subtract=False, return_sine_subtract_info=True)
+                raw_freqs, raw_spec_dbish, raw_spec = prep.rfftWrapper(t_ns, raw_wf)
+
+                peak_freqs = numpy.array([])
+                peak_db = numpy.array([])
+
+                for ss_n in range(len(n_fits)):
+                    unique_peak_indices = numpy.unique(numpy.argmin(numpy.abs(numpy.tile(raw_freqs,(n_fits[ss_n],1)).T - 1e9*ss_freqs[0]),axis=0)) #Gets indices of freq of peaks in non-upsampled spectrum.
+                    unique_peak_freqs = raw_freqs[unique_peak_indices]
+                    unique_peak_linear = raw_spec[unique_peak_indices]
+                    unique_peak_db = raw_spec_dbish[unique_peak_indices].astype(numpy.double)
+
+
+                    peak_freqs = numpy.append(peak_freqs,unique_peak_freqs)
+                    peak_db = numpy.append(peak_db,unique_peak_db) #divided by 2 when plotting
+
                 print(n_fits)
                 print(ss_freqs)
 
@@ -86,6 +104,10 @@ if __name__ == '__main__':
 
                     plt.subplot(2,1,2)
                     plt.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel)
+                    # if len(peak_freqs) > 0:
+                    #     plt.plot(raw_freqs/1e6,raw_spec_dbish/2.0,alpha=0.5,linestyle='--',label='Ch %i'%channel)
+                    if len(peak_freqs) > 0:
+                        plt.scatter(peak_freqs/1e6,peak_db/2.0,label='Ch %i Removed Peak Max'%channel)
                     plt.legend(loc = 'upper right')
                     plt.xlim(10,110)
                     plt.ylim(-10,30)

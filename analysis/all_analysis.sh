@@ -11,18 +11,24 @@ python3 ${BEACON_ANALYSIS_DIR}analysis/save_time_delays.py $1 0 || exit
 echo 'Attempting to prepare current pointing directions by executing rf_bg_search.py' || exit
 python3 ${BEACON_ANALYSIS_DIR}analysis/rf_bg_search.py $1 || exit
 
+echo 'Attempting to identify cw by executing flag_cw.py' || exit
+python3 ${BEACON_ANALYSIS_DIR}analysis/flag_cw.py $1 || exit
+
 # These need to be run after time delays. 
+
+# Depends on time delays to similar timings
 echo 'Attempting to prepare counts for similarity between events by executing similarity.py' || exit
 python3 ${BEACON_ANALYSIS_DIR}analysis/similarity.py $1 || exit
 
+# Depends on time delays to align signals
 echo 'Attempting to prepare impulsivity metric by executing impulsivity.py' || exit
 python3 ${BEACON_ANALYSIS_DIR}analysis/impulsivity.py $1 || exit
 
-echo 'Attempting to prepare impulsivity metric by executing correlate_with_background_templates.py' || exit
-python3 ${BEACON_ANALYSIS_DIR}analysis/correlate_with_background_templates.py $1 || exit
+# echo 'Attempting to prepare impulsivity metric by executing correlate_with_background_templates.py' || exit
+# python3 ${BEACON_ANALYSIS_DIR}analysis/correlate_with_background_templates.py $1 || exit
 
-echo 'Attempting to prepare simple CR template search executing simple_cr_template_search.py' || exit
-python3 ${BEACON_ANALYSIS_DIR}analysis/cr_search/simple_cr_template_search.py $1 1 || exit
+# echo 'Attempting to prepare simple CR template search executing simple_cr_template_search.py' || exit
+# python3 ${BEACON_ANALYSIS_DIR}analysis/cr_search/simple_cr_template_search.py $1 1 || exit
 
-echo 'Attempting to prepare time averaged spectrum tracking executing time_averaged_spectrum.py' || exit
-python3 ${BEACON_ANALYSIS_DIR}analysis/time_averaged_spectrum.py $1 || exit
+# echo 'Attempting to prepare time averaged spectrum tracking executing time_averaged_spectrum.py' || exit
+# python3 ${BEACON_ANALYSIS_DIR}analysis/time_averaged_spectrum.py $1 || exit

@@ -79,6 +79,11 @@ if __name__ == '__main__':
         crit_freq_high_pass_MHz = None#60
         high_pass_filter_order = None#6
 
+        sine_subtract = True
+        sine_subtract_min_freq_GHz = 0.03
+        sine_subtract_max_freq_GHz = 0.09
+        sine_subtract_percent = 0.03
+
         waveform_index_range = (None,None)#(150,400)
 
         apply_phase_response = True
@@ -182,7 +187,7 @@ if __name__ == '__main__':
                 tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=False,apply_phase_response=apply_phase_response)
                 eventids = known_planes[key]['eventids'][:,1]
                 
-                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids,align_method=10,hilbert=hilbert, align_method_10_estimates=guess_time_delays, align_method_10_window_ns=8)
+                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids,align_method=10,hilbert=hilbert, align_method_10_estimates=guess_time_delays, align_method_10_window_ns=8, sine_subtract=sine_subtract)
 
                 if mode == 'hpol':
                     measured_plane_time_delays[key] = time_shifts[0:6,:][pair_cut]
@@ -197,7 +202,7 @@ if __name__ == '__main__':
                 reader = Reader(datapath,run)
                 tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=False,apply_phase_response=apply_phase_response)
                 eventids = known_planes[key]['eventids'][:,1]
-                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids,align_method=0,hilbert=hilbert)
+                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids,align_method=0,hilbert=hilbert, sine_subtract=sine_subtract)
 
                 if mode == 'hpol':
                     measured_plane_time_delays[key] = time_shifts[0:6,:][pair_cut]
