@@ -99,6 +99,11 @@ if __name__=="__main__":
                     impulsivity_dsets = list(file['impulsivity'].keys())
 
                     for tdset in time_delays_dsets:#["LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_8"]:#
+                        align_method = int(tdset.split('align_')[1].split('-')[0])
+                        if align_method == 13:
+                            print('Similarity currently not designed to work with align method 13, which results in multiple alignment times.')
+                            print('Skipping %s'%tdset)
+                            continue
                         if not numpy.isin(tdset,impulsivity_dsets):
                             file['impulsivity'].create_group(tdset)
                         else:

@@ -66,7 +66,7 @@ def countSimilar(delays,similarity_atol=2.5,verbose=True):
 
         for roll in numpy.arange(1,n_rows):
             if verbose == True:
-                if roll%100 == 0:
+                if roll%1000 == 0:
                     sys.stdout.write('(%i/%i)\t\t\t\r'%(roll,n_rows))
                     sys.stdout.flush()
             delays_rolled = numpy.roll(delays_rolled,1,axis=0) #Comparing each event to the next event.
@@ -97,6 +97,7 @@ if __name__=="__main__":
     try:
         run = int(run)
         save = True
+        recreate = True #Added to handle corrupted datasets.
         plot = False
         reader = Reader(datapath,run)
         try:
@@ -139,7 +140,12 @@ if __name__=="__main__":
                         if not numpy.isin(tdset,similarity_count_dsets):
                             file['similarity_count'].create_group(tdset)
                         else:
-                            print('similarity_count["%s"] group already exists in file %s'%(tdset,filename))
+                            if recreate:
+                                print('Recreate enabled, deleting %s'%("file['similarity_count']['%s']"%tdset))
+                                del file['similarity_count'][tdset]
+                                file['similarity_count'].create_group(tdset)   
+                            else:
+                                print('similarity_count["%s"] group already exists in file %s'%(tdset,filename))
 
                         tdsets = list(file['similarity_count'][tdset].keys())
 
@@ -149,19 +155,27 @@ if __name__=="__main__":
 
                         for pol in ['hpol','vpol']:
                             print(pol)
-                            print('')
                             if save == True:
                                 if not numpy.isin('%s_count'%(pol),tdsets):
                                     file['similarity_count'][tdset].create_dataset('%s_count'%(pol), (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                                 else:
-                                    print('Values in %s_count of %s will be overwritten by this analysis script.'%(pol,filename))
+                                    if recreate:
+                                        print('Recreate enabled, deleting %s'%("file['similarity_count']['%s']['%s_count']"%(tdset, pol)))
+                                        del file['similarity_count'][tdset]['%s_count'%(pol)]
+                                        file['similarity_count'][tdset].create_dataset('%s_count'%(pol), (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                                    else:
+                                        print('Values in %s_count of %s will be overwritten by this analysis script.'%(pol,filename))
 
                                 if not numpy.isin('%s_fraction'%(pol),tdsets):
                                     file['similarity_count'][tdset].create_dataset('%s_fraction'%(pol), (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                                 else:
-                                    print('Values in %s_fraction of %s will be overwritten by this analysis script.'%(pol,filename))
+                                    if recreate:
+                                        print('Recreate enabled, deleting %s'%("file['similarity_count']['%s']['%s_fraction']"%(tdset, pol)))
+                                        del file['similarity_count'][tdset]['%s_fraction'%(pol)]
+                                        file['similarity_count'][tdset].create_dataset('%s_fraction'%(pol), (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                                    else:
+                                        print('Values in %s_fraction of %s will be overwritten by this analysis script.'%(pol,filename))
 
-                            print(list(file['time_delays'][tdset].keys()))
                             try:
                                 delays = numpy.vstack((file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,0,1)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,0,2)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,0,3)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,1,2)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,1,3)][...],file['time_delays'][tdset]['%s_t_%isubtract%i'%(pol,2,3)][...])).T
                             except Exception as e:
@@ -172,8 +186,7 @@ if __name__=="__main__":
                                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                                 print(exc_type, fname, exc_tb.tb_lineno)
                                 sys.exit(1)
-                            #import pdb; pdb.set_trace()
-                            #continue
+
                             similarity_count = countSimilar(delays)
                             similarity_fraction = similarity_count/len(eventids)
                             if save == True:

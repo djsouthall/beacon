@@ -130,9 +130,9 @@ if __name__=="__main__":
         filter_string += 'upsample_%i-'%(upsample)
 
     if max_method is None:
-        filter_string += 'maxmethod_%s'%('None')
+        filter_string += 'maxmethod_%s-'%('None')
     else:
-        filter_string += 'maxmethod_%i'%(max_method)
+        filter_string += 'maxmethod_%i-'%(max_method)
 
     filter_string += 'sinesubtract_%i'%(int(sine_subtract))
 

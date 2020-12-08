@@ -11,7 +11,7 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
 import tools.info as info
-from save_time_delays.fftmath import TimeDelayCalculator
+from tools.fftmath import TimeDelayCalculator
 from tools.data_handler import createFile
 
 import matplotlib.pyplot as plt
@@ -134,9 +134,9 @@ if __name__=="__main__":
     else:
         filter_string += 'shorten_delay-%0.2f-'%(shorten_delay)
     if shorten_length is None:
-        filter_string += 'shorten_length-%s'%('None')
+        filter_string += 'shorten_length-%s-'%('None')
     else:
-        filter_string += 'shorten_length-%0.2f'%(shorten_length)
+        filter_string += 'shorten_length-%0.2f-'%(shorten_length)
 
     filter_string += 'sinesubtract_%i'%(int(sine_subtract))
 

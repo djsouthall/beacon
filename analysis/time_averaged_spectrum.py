@@ -51,6 +51,21 @@ if __name__=="__main__":
     datapath = os.environ['BEACON_DATA']
 
     try:
+
+        crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
+        low_pass_filter_order = 10
+
+        crit_freq_high_pass_MHz = None#60
+        high_pass_filter_order = None#6
+
+        apply_phase_response = False
+        hilbert = False
+
+        sine_subtract = True
+        sine_subtract_min_freq_GHz = 0.03
+        sine_subtract_max_freq_GHz = 0.09
+        sine_subtract_percent = 0.03
+
         run = int(run)
         time_window = 5*60 #seconds
         frequency_bin_edges_MHz = numpy.arange(0,150,5)
@@ -74,8 +89,9 @@ if __name__=="__main__":
 
         if filename is not None:
             with h5py.File(filename, 'a') as file:
-                tdc = TimeDelayCalculator(reader, final_corr_length=2**13)#, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response)
-
+                tdc = TimeDelayCalculator(reader, final_corr_length=2**13, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=(None,None), plot_filters=False, apply_phase_response=apply_phase_response)
+                if sine_subtract:
+                    tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
                 #eventids with rf trigger
                 eventids = file['eventids'][...]
                 trigger_type_cut = numpy.isin(file['trigger_type'][...], trigger_types_of_interest)
@@ -153,7 +169,7 @@ if __name__=="__main__":
                     average_factor = sum(cut)
 
                     for eventid in eventids[cut]:
-                        ffts = tdc.loadFilteredFFTs(eventid)
+                        ffts = tdc.loadFilteredFFTs(eventid, hilbert=hilbert, sine_subtract=sine_subtract)
                         for antenna_index, antenna in enumerate(antennas_of_interest):
                             for freq_bin_index in range(len(frequency_bin_edges_MHz) - 1):
                                 averaged_spectral_values[antenna_index][time_window_index][freq_bin_index] += numpy.mean(ffts[antenna_index][freq_bin_indices[freq_bin_index]])/average_factor #mean in that window then divided by number of events to be averaged in time window

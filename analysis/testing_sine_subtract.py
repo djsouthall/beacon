@@ -18,6 +18,7 @@ import tools.interpret #Must be imported before matplotlib or else plots don't l
 import tools.clock_correct as cc
 import tools.info as info
 from tools.fftmath import FFTPrepper
+from tools.correlator import Correlator
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -34,26 +35,44 @@ if __name__ == '__main__':
     plt.close('all')
     # If your data is elsewhere, pass it as an argument
     run = 1650
-    eventids = [499,45059,58875]
+    eventids = [45059]#[499,45059,58875]
     print('Run %i'%run)
-    final_corr_length = 2**12 #Should be a factor of 2 for fastest performance
-    crit_freq_low_pass_MHz = None#80 #This new pulser seems to peak in the region of 85 MHz or so
+    final_corr_length = 2**15 #Should be a factor of 2 for fastest performance
+    crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
+    low_pass_filter_order = 8
     crit_freq_high_pass_MHz = None#65
-    low_pass_filter_order = None#3
     high_pass_filter_order = None#6
     plot_filters = False
 
     enable_plots = True
+
+    apply_phase_response=True
+    n_phi = 720
+    n_theta = 720
+
+    max_method = 0
+    hilbert = False
     
     for val in [False,True]:
 
         reader = Reader(datapath,run)
+        cor = Correlator(reader,  upsample=final_corr_length, n_phi=n_phi, n_theta=n_theta, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filters,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
         prep = FFTPrepper(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=(None,None), plot_filters=plot_filters)
         if val:
+            cor.prep.addSineSubtract(0.03, 0.090, 0.05, max_failed_iterations=3, verbose=False, plot=False)#Test purposes
             prep.addSineSubtract(0.03, 0.090, 0.05, max_failed_iterations=3, verbose=False, plot=False)#Test purposes
         for event_index, eventid in enumerate(eventids):
+
+            prep.setEntry(eventid)
+            t_ns = prep.t()
+            print(eventid)
+            
+
+            map_values, _fig, ax = cor.map(eventid, 'hpol',center_dir='E', plot_map=True, plot_corr=False, hilbert=hilbert, interactive=True, max_method=max_method,mollweide=True,circle_zenith=None,circle_az=None)
+            
             if enable_plots:
-                plt.figure()
+                fig = plt.figure()
+                fig.canvas.set_window_title('wfs r%i-e%i'%(run,eventid))
                 plt.title('Run %i, eventid %i'%(run,eventid))
                 plt.subplot(2,1,1)
                 plt.ylabel('adu')
@@ -69,17 +88,13 @@ if __name__ == '__main__':
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
                 
-
-            prep.setEntry(eventid)
-            t_ns = prep.t()
-            print(eventid)
             for channel in [0,1,2,3,4,5,6,7]:
                 channel=int(channel)
-                wf, ss_freqs, n_fits = prep.wf(channel,apply_filter=False,hilbert=False,tukey=None,sine_subtract=True, return_sine_subtract_info=True)
+                wf, ss_freqs, n_fits = prep.wf(channel,apply_filter=True,hilbert=hilbert,tukey=None,sine_subtract=True, return_sine_subtract_info=True)
                 freqs, spec_dbish, spec = prep.rfftWrapper(t_ns, wf)
                 
                 #Without sine_subtract to plot what the old signal looked like.
-                raw_wf = prep.wf(channel,apply_filter=False,hilbert=False,tukey=None,sine_subtract=False, return_sine_subtract_info=True)
+                raw_wf = prep.wf(channel,apply_filter=True,hilbert=hilbert,tukey=None,sine_subtract=False, return_sine_subtract_info=False)
                 raw_freqs, raw_spec_dbish, raw_spec = prep.rfftWrapper(t_ns, raw_wf)
 
                 peak_freqs = numpy.array([])
@@ -108,7 +123,7 @@ if __name__ == '__main__':
                     #     plt.plot(raw_freqs/1e6,raw_spec_dbish/2.0,alpha=0.5,linestyle='--',label='Ch %i'%channel)
                     if len(peak_freqs) > 0:
                         plt.scatter(peak_freqs/1e6,peak_db/2.0,label='Ch %i Removed Peak Max'%channel)
-                    plt.legend(loc = 'upper right')
-                    plt.xlim(10,110)
+                    plt.legend(loc = 'upper right', fontsize=10)
+                    plt.xlim(10,150)
                     plt.ylim(-10,30)
                 
