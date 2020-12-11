@@ -23,6 +23,7 @@ import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from mpl_toolkits.mplot3d import Axes3D
 
 import scipy.signal
 import scipy.stats
@@ -680,28 +681,52 @@ class Correlator:
                 #Find a vector perpendicular to the norm by performing cross with some vector not exactly parallel to norm.  Any of the antenna position vectors
                 #will work assuming they are not parallel to norm.  Because this will be necessarily perpendicular to norm then it is in the plane.  Rotating 
                 #norm about it will put it at the appropriate zenith.
-                if sum(numpy.cross(norm,a0)) != 0:
-                    in_plane_vector = numpy.cross(norm,a0)/numpy.linalg.norm(numpy.cross(norm,a0))
-                elif sum(numpy.cross(norm,a1)) != 0:
-                    in_plane_vector = numpy.cross(norm,a1)/numpy.linalg.norm(numpy.cross(norm,a1))
-                elif sum(numpy.cross(norm,a2)) != 0:
-                    in_plane_vector = numpy.cross(norm,a2)/numpy.linalg.norm(numpy.cross(norm,a2))
-                elif sum(numpy.cross(norm,a3)) != 0:
-                    in_plane_vector = numpy.cross(norm,a3)/numpy.linalg.norm(numpy.cross(norm,a3))
+                if numpy.linalg.norm(numpy.cross(norm,[1,0,0])) != 0:
+                    in_plane_vector = numpy.cross(norm,[1,0,0])/numpy.linalg.norm(numpy.cross(norm,[1,0,0]))
+
+                elif numpy.linalg.norm(numpy.cross(norm,[0,1,0])) != 0:
+                    in_plane_vector = numpy.cross(norm,[0,1,0])/numpy.linalg.norm(numpy.cross(norm,[0,1,0]))
+
+                elif numpy.linalg.norm(numpy.cross(norm,[0,0,1])) != 0:
+                    in_plane_vector = numpy.cross(norm,[1,0,0])/numpy.linalg.norm(numpy.cross(norm,[1,0,0]))
+
                 else:
                     print('Somehow the norm vector is parallel to ALL unit vectors of the antennas??')
 
+                #Get some initial vector on the cone of the desired curve.
                 zenith_vector = self.rotateAaboutBbyTheta(norm,in_plane_vector,numpy.deg2rad(zenith_deg))
+                
+
+                debug = False
+                if debug:
+                    print('SHOULD BE 1 if PERP')
+                    print(numpy.cross(norm, in_plane_vector))
+                    print(numpy.linalg.norm(numpy.cross(norm, in_plane_vector)))
+                    print('zenith_vector')
+                    print(zenith_vector)
+
+                    fig = plt.figure()
+                    ax = fig.gca(projection='3d')
+                    ax.quiver(0, 0, 0, norm[0], norm[1], norm[2],color='k', normalize=True)
+                    ax.quiver(0, 0, 0, in_plane_vector[0], in_plane_vector[1], in_plane_vector[2],color='r', normalize=True)
+                    
+                    ax.quiver(0, 0, 0, zenith_vector[0], zenith_vector[1], zenith_vector[2], normalize=True,alpha=0.5)
 
                 output_az_degs = numpy.zeros(self.n_phi)
                 output_zenith_degs = numpy.zeros(self.n_phi)
                 for i in range(self.n_phi):
                     #parellel portion of vector is 0 because A2 is in plane and n is defined as perp to plane. 
                     zenith_vector = self.rotateAaboutBbyTheta(zenith_vector,norm,dtheta_rad)
-
+                    if debug:
+                        ax.quiver(0, 0, 0, zenith_vector[0], zenith_vector[1], zenith_vector[2], normalize=True,alpha=0.5)
                     output_az_degs[i] = numpy.rad2deg(numpy.arctan2(zenith_vector[1],zenith_vector[0]))
                     output_zenith_degs[i] = numpy.rad2deg(numpy.arccos(zenith_vector[2]/numpy.linalg.norm(zenith_vector)))
 
+                if debug:
+                    ax.set_xlim(-2,2)
+                    ax.set_ylim(-2,2)
+                    ax.set_zlim(-2,2)
+                    plt.figure()#Just to keep the above unmarred
                 output_az_degs -= azimuth_offset_deg
                 output_az_degs[output_az_degs < -180.0] += 360.0
                 output_az_degs[output_az_degs > 180.0] -= 360.0
@@ -1095,6 +1120,7 @@ class Correlator:
                     #in any perpendicular direction to get a vector that would result in the
                     #appropriate time delays.
                     theta_deg = numpy.rad2deg(numpy.arccos(dt/(numpy.linalg.norm(A_ji))))  #Forcing the vector v to be a unit vector pointing towards the source
+
                     plane_xy = self.getPlaneZenithCurves(A_ji, mode, theta_deg, azimuth_offset_deg=0)
                     output_dict[pair_key]['azimuth_deg'].append(plane_xy[0])
                     output_dict[pair_key]['zenith_deg'].append(plane_xy[1])
@@ -1159,6 +1185,7 @@ class Correlator:
                     #from the measured time delay. Theta is the amount I need to rotate A_ij
                     #in any perpendicular direction to get a vector that would result in the
                     #appropriate time delays.
+
                     theta_deg = numpy.rad2deg(numpy.arccos(dt/(numpy.linalg.norm(A_ji))))  #Forcing the vector v to be a unit vector pointing towards the source
                     plane_xy = self.getPlaneZenithCurves(A_ji, mode, theta_deg, azimuth_offset_deg=azimuth_offset_deg)
                     #Plot array plane 0 elevation curve.

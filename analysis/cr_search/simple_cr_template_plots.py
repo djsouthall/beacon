@@ -49,7 +49,7 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         runs = [int(sys.argv[1])]
     else:
-        runs = [1650]
+        runs = [1651]
 
     crit_freq_low_pass_MHz = None#60 #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = None#5
@@ -69,8 +69,10 @@ if __name__ == '__main__':
     
     for run in runs:
         reader = Reader(datapath,run)
-        impulsivity_dset_key = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_262144-align_0'
-        time_delays_dset_key = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'
+
+        #Wnat to turn shorten signals off probably. 
+        impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00-sinesubtract_1'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_262144-align_0'
+        time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00-sinesubtract_1'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'
 
         plot_2d = False
         plot_template = True

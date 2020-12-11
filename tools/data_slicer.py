@@ -259,13 +259,20 @@ class dataSlicerSingleRun():
         This will print and return an example ROI dictionary.  This is to provide examples of what a dictionary input
         to self.addROI might look like. 
         '''
-        sample_ROI = {  'corr A':{'cr_template_search_h':[0.575,0.665],'cr_template_search_v':[0.385,0.46]},\
-                        'high v imp':{'impulsivity_h':[0.479,0.585],'impulsivity_h':[0.633,0.7]},\
-                        'small h.4 v.4 imp':{'impulsivity_h':[0.34,0.45],'impulsivity_h':[0.42,0.5]}}
-        if verbose == True:
-            print('Sample ROI dict:')
-            print(sample_ROI)
-        return sample_ROI
+        try:
+            sample_ROI = {  'corr A':{'cr_template_search_h':[0.575,0.665],'cr_template_search_v':[0.385,0.46]},\
+                            'high v imp':{'impulsivity_h':[0.479,0.585],'impulsivity_h':[0.633,0.7]},\
+                            'small h.4 v.4 imp':{'impulsivity_h':[0.34,0.45],'impulsivity_h':[0.42,0.5]}}
+            if verbose == True:
+                print('Sample ROI dict:')
+                print(sample_ROI)
+            return sample_ROI
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def addROI(self, roi_key, roi_dict):
         '''
@@ -326,62 +333,77 @@ class dataSlicerSingleRun():
         '''
         This will get the eventids that match one of the specified trigger types in self.trigger_types
         '''
-        with h5py.File(self.analysis_filename, 'r') as file:
-            #Initial cut based on trigger type.
-            eventids = numpy.where(numpy.isin(file['trigger_type'][...],self.trigger_types))[0]
-            file.close()
-        return eventids
+        try:
+            with h5py.File(self.analysis_filename, 'r') as file:
+                #Initial cut based on trigger type.
+                eventids = numpy.where(numpy.isin(file['trigger_type'][...],self.trigger_types))[0]
+                file.close()
+            return eventids
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def getDataFromParam(self, eventids, param_key):
         '''
         Given eventids, this will load and return array for parameters associated with string param.
         '''
-        if param_key in self.known_param_keys:
-            with h5py.File(self.analysis_filename, 'r') as file:
-                if param_key == 'impulsivity_h':
-                    param = file['impulsivity'][self.impulsivity_dset_key]['hpol'][...][eventids]
-                elif param_key == 'impulsivity_v':
-                    param = file['impulsivity'][self.impulsivity_dset_key]['vpol'][...][eventids]
-                elif param_key == 'cr_template_search_h':
-                    this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
-                    output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
-                    param = numpy.max(output_correlation_values[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD 
-                elif param_key == 'cr_template_search_v':
-                    this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
-                    output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
-                    param = numpy.max(output_correlation_values[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                elif param_key == 'std_h':
-                    std = file['std'][...][eventids]
-                    param = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                elif param_key == 'std_v':
-                    std = file['std'][...][eventids]
-                    param = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                elif param_key == 'p2p_h': 
-                    p2p = file['p2p'][...][eventids]
-                    param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                elif param_key == 'p2p_v': 
-                    p2p = file['p2p'][...][eventids]
-                    param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                elif param_key == 'snr_h':
-                    std = file['std'][...][eventids]
-                    param_1 = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                    p2p = file['p2p'][...][eventids]
-                    param_2 = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                    param = numpy.divide(param_2, param_1)
-                elif param_key == 'snr_v':
-                    std = file['std'][...][eventids]
-                    param_1 = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                    p2p = file['p2p'][...][eventids]
-                    param_2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                    param = numpy.divide(param_2, param_1)
-                elif 'time_delay_' in param_key:
-                    split_param_key = param_key.split('_')
-                    dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
-                    param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
-                file.close()
-        else:
-            print('\nWARNING!!!\nOther parameters have not been accounted for yet.\n%s'%(param_key))
-        return param
+        try:
+            if param_key in self.known_param_keys:
+                with h5py.File(self.analysis_filename, 'r') as file:
+
+                    if param_key == 'impulsivity_h':
+                        param = file['impulsivity'][self.impulsivity_dset_key]['hpol'][...][eventids]
+                    elif param_key == 'impulsivity_v':
+                        param = file['impulsivity'][self.impulsivity_dset_key]['vpol'][...][eventids]
+                    elif param_key == 'cr_template_search_h':
+                        this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
+                        output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
+                        param = numpy.max(output_correlation_values[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD 
+                    elif param_key == 'cr_template_search_v':
+                        this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
+                        output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
+                        param = numpy.max(output_correlation_values[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                    elif param_key == 'std_h':
+                        std = file['std'][...][eventids]
+                        param = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                    elif param_key == 'std_v':
+                        std = file['std'][...][eventids]
+                        param = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                    elif param_key == 'p2p_h': 
+                        p2p = file['p2p'][...][eventids]
+                        param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                    elif param_key == 'p2p_v': 
+                        p2p = file['p2p'][...][eventids]
+                        param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                    elif param_key == 'snr_h':
+                        std = file['std'][...][eventids]
+                        param_1 = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                        p2p = file['p2p'][...][eventids]
+                        param_2 = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                        param = numpy.divide(param_2, param_1)
+                    elif param_key == 'snr_v':
+                        std = file['std'][...][eventids]
+                        param_1 = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                        p2p = file['p2p'][...][eventids]
+                        param_2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                        param = numpy.divide(param_2, param_1)
+                    elif 'time_delay_' in param_key:
+                        split_param_key = param_key.split('_')
+                        dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
+                        param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
+                    file.close()
+            else:
+                print('\nWARNING!!!\nOther parameters have not been accounted for yet.\n%s'%(param_key))
+            return param
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
 
     def getCutsFromROI(self,roi_key,load=False,save=False):
@@ -1018,8 +1040,9 @@ if __name__ == '__main__':
     runs = [1644]
     for run in runs:
         reader = Reader(datapath,run)
-        impulsivity_dset_key = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_262144-align_0'
-        time_delays_dset_key = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'
+        #.replace('-sinesubtract','sinesubtract') #catches one-off case misnaming dset
+        impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00-sinesubtract_1'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_262144-align_0'
+        time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00-sinesubtract_1'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'
         print("Preparing dataSlicerSingleRun")
         ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\

@@ -71,13 +71,13 @@ if __name__=="__main__":
 
     apply_phase_response = True
 
-    shorten_signals = True
+    shorten_signals = False
     shorten_thresh = 0.7
     shorten_delay = 10.0
     shorten_length = 90.0
 
     hilbert=False
-    final_corr_length = 2**15
+    final_corr_length = 2**16
 
     filter_string = ''
 
@@ -122,21 +122,21 @@ if __name__=="__main__":
         filter_string += 'align_%i-'%(align_method)
 
     if shorten_signals is None:
-        filter_string += 'shorten_signals-%s-'%('None')
+        filter_string += 'shortensignals-%s-'%('None')
     else:
-        filter_string += 'shorten_signals-%i-'%(shorten_signals)
+        filter_string += 'shortensignals-%i-'%(shorten_signals)
     if shorten_thresh is None:
-        filter_string += 'shorten_thresh-%s-'%('None')
+        filter_string += 'shortenthresh-%s-'%('None')
     else:
-        filter_string += 'shorten_thresh-%0.2f-'%(shorten_thresh)
+        filter_string += 'shortenthresh-%0.2f-'%(shorten_thresh)
     if shorten_delay is None:
-        filter_string += 'shorten_delay-%s-'%('None')
+        filter_string += 'shortendelay-%s-'%('None')
     else:
-        filter_string += 'shorten_delay-%0.2f-'%(shorten_delay)
+        filter_string += 'shortendelay-%0.2f-'%(shorten_delay)
     if shorten_length is None:
-        filter_string += 'shorten_length-%s-'%('None')
+        filter_string += 'shortenlength-%s-'%('None')
     else:
-        filter_string += 'shorten_length-%0.2f-'%(shorten_length)
+        filter_string += 'shortenlength-%0.2f-'%(shorten_length)
 
     filter_string += 'sinesubtract_%i'%(int(sine_subtract))
 

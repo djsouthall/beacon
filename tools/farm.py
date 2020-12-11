@@ -20,7 +20,8 @@ if __name__ == "__main__":
     #mem = '16G'
     partition = 'broadwl'
     # BEFORE ATTEMPTING TO RUN THE TWO BELOW, CHANGE THE TIME DELAYS SCRIPT TO NOT DECONVOLVE THE PHASE RESPONSE
-    runs = numpy.arange(1600,1800)#[1650]#numpy.arange(3571,3630)#numpy.arange(3555,3571)#numpy.arange(1700,2200)#numpy.append(numpy.arange(1500,1700),numpy.arange(3530,3571))#numpy.arange(3530,3555)#numpy.arange(1500,1648)#numpy.array([186,189,364,365,366,367])#numpy.arange(1725,1800)#numpy.array([186,189])#numpy.array([364,365,366,367])#numpy.arange(1675,1725)#[::-1]
+    #Doing later runs now, will submit the other runs after. 
+    runs = numpy.arange(1600,1700)#[1650]#numpy.arange(1600,1800)#[1650]#numpy.arange(3571,3630)#numpy.arange(3555,3571)#numpy.arange(1700,2200)#numpy.append(numpy.arange(1500,1700),numpy.arange(3530,3571))#numpy.arange(3530,3555)#numpy.arange(1500,1648)#numpy.array([186,189,364,365,366,367])#numpy.arange(1725,1800)#numpy.array([186,189])#numpy.array([364,365,366,367])#numpy.arange(1675,1725)#[::-1]
     done_runs = numpy.array([])#numpy.array([1728,1773,1774,1783,1784])
     #runs = [1790]
     #runs = numpy.array([1665,1666,1667,1682,1685,1689,1690,1691,1698])

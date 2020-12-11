@@ -47,6 +47,9 @@ if __name__=="__main__":
     else:
         run = 1701
 
+    #TODO
+    #Want this to save impulsivity data calculated with and without sine subtract.  Could be a good handle on whether the signal is contaminated or just purely CW.
+
     datapath = os.environ['BEACON_DATA']
     crit_freq_low_pass_MHz = None#60 #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = None#4
