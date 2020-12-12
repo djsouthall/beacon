@@ -11,8 +11,8 @@ python3 ${BEACON_ANALYSIS_DIR}analysis/save_time_delays.py $1 0 || exit
 # echo 'Attempting to prepare current pointing directions by executing rf_bg_search.py' || exit
 # python3 ${BEACON_ANALYSIS_DIR}analysis/rf_bg_search.py $1 || exit
 
-# echo 'Attempting to identify cw by executing flag_cw.py' || exit
-# python3 ${BEACON_ANALYSIS_DIR}analysis/flag_cw.py $1 || exit
+echo 'Attempting to identify cw by executing flag_cw.py' || exit
+python3 ${BEACON_ANALYSIS_DIR}analysis/flag_cw.py $1 || exit
 
 # These need to be run after time delays. 
 

@@ -269,6 +269,7 @@ class Correlator:
             self.n_physical = n_func(self.A0_physical, self.A2_physical, (self.A0_physical + self.A3_physical)/2.0)
             self.n_hpol     = n_func(self.A0_hpol,     self.A2_hpol,     (self.A0_hpol     + self.A3_hpol)/2.0)
             self.n_vpol     = n_func(self.A0_vpol,     self.A2_vpol,     (self.A0_vpol     + self.A3_vpol)/2.0)
+            self.n_all      = n_func((self.A0_hpol + self.A0_vpol),     (self.A2_hpol + self.A2_vpol),     ((self.A0_hpol + self.A0_vpol)     + (self.A3_hpol + self.A3_vpol))/2.0) #Might be janky to use.
 
             self.generateNormalDotValues()
 
@@ -677,6 +678,16 @@ class Correlator:
                     a1 = self.A1_vpol
                     a2 = self.A2_vpol
                     a3 = self.A3_vpol
+                elif mode == 'all':
+                    print('Using averaged hpol and vpol phase positions for all mode.')
+                    a0 = (self.A0_hpol + self.A0_vpol)/2
+                    a1 = (self.A1_hpol + self.A1_vpol)/2
+                    a2 = (self.A2_hpol + self.A2_vpol)/2
+                    a3 = (self.A3_hpol + self.A3_vpol)/2
+
+
+
+
 
                 #Find a vector perpendicular to the norm by performing cross with some vector not exactly parallel to norm.  Any of the antenna position vectors
                 #will work assuming they are not parallel to norm.  Because this will be necessarily perpendicular to norm then it is in the plane.  Rotating 
@@ -1201,14 +1212,17 @@ class Correlator:
     def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={}):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
-        plotting and does not modify the output array, which is ENU oriented. 
+        plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
 
         Parameters
         ----------
         eventid : int
             The entry number you wish to plot the correlation map for.
         pol : str
-            The polarization you wish to plot.  Options: 'hpol', 'vpol', 'both'
+            The polarization you wish to plot.  Options: 'hpol', 'vpol', 'both', or 'all'.
+            'both' will essentially run the function twice, creating seperate 'hpol' and 'vpol' map
+            values, while 'all' will create a single map using antennas from both polarizations.
+            Note that 'all' may disable plot_corr.
         plot_map : bool
             Whether to actually plot the results.  
         plot_corr : bool
@@ -1246,6 +1260,7 @@ class Correlator:
             will correspond to a list of floats with all of the time delays for that baseline you want plotted. 
         '''
         try:
+
             if hilbert == True:
                 if verbose == True:
                     print('WARNING! Enabling Hilbert envelopes throws off correlation normalization.')
@@ -1256,10 +1271,25 @@ class Correlator:
             if ~numpy.isin('vpol', list(time_delay_dict.keys())):
                 time_delay_dict['vpol'] = {}
             if pol == 'both':
-                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines)
-                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines)
+                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive)
+                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive)
                 return hpol_result, vpol_result
+            elif pol == 'all':
+                hpol_result = self.map(eventid,'hpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines)
+                vpol_result = self.map(eventid,'vpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines)
+                mean_corr_values = (hpol_result + vpol_result)/2
 
+                if plot_map == True:
+                    if max_method is not None:
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
+                    else:
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
+                if plot_corr == True:
+                    print('Disabling plot corr for all antenna map.')
+                    plot_corr = False
+                if interactive == True:
+                    print('Disabling interactive for all antenna map.')
+                    interactive = False
             elif pol == 'hpol':
                 if waveforms is None:
                     waveforms = self.wf(eventid, numpy.array([0,2,4,6]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter,tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract) #Div by std and resampled waveforms normalizes the correlations
@@ -1339,6 +1369,7 @@ class Correlator:
             else:
                 print('Invalid polarization option.  Returning nothing.')
                 return
+
 
             if plot_corr:
 
@@ -1431,25 +1462,38 @@ class Correlator:
                                 zenith_cut_array_plane[1] = 180
 
                 #Prepare center line and plot the map.  Prep cut lines as well.
+                
                 if pol == 'hpol':
                     selection_index = 1
+                    plane_xy = self.getPlaneZenithCurves(self.n_hpol.copy(), 'hpol', 90.0, azimuth_offset_deg=azimuth_offset_deg)
+                    if zenith_cut_array_plane is not None:
+                        upper_plane_xy = self.getPlaneZenithCurves(self.n_hpol.copy(), 'hpol', zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                        lower_plane_xy = self.getPlaneZenithCurves(self.n_hpol.copy(), 'hpol', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
                 elif pol == 'vpol':
-                    selection_index = 2 
-                
-                plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                    selection_index = 2
+                    plane_xy = self.getPlaneZenithCurves(self.n_vpol.copy(), 'vpol', 90.0, azimuth_offset_deg=azimuth_offset_deg)
+                    if zenith_cut_array_plane is not None:
+                        upper_plane_xy = self.getPlaneZenithCurves(self.n_vpol.copy(), 'vpol', zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                        lower_plane_xy = self.getPlaneZenithCurves(self.n_vpol.copy(), 'vpol', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                elif pol == 'all':
+                    selection_index = 3
+                    plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', 90.0, azimuth_offset_deg=azimuth_offset_deg) #This is janky
+                    if zenith_cut_array_plane is not None:
+                        upper_plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                        lower_plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+
                 #Plot array plane 0 elevation curve.
                 im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
 
                 if zenith_cut_array_plane is not None:
-                    upper_plane_xy = self.getArrayPlaneZenithCurves(zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
-                    lower_plane_xy = self.getArrayPlaneZenithCurves(zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
                     #Plot upper zenith array cut
                     im = self.addCurveToMap(im, upper_plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
                     #Plot lower zenith array cut
                     im = self.addCurveToMap(im, lower_plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
 
-                #Add curves for time delays if present.
-                im = self.addTimeDelayCurves(im, time_delay_dict, pol,  mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg, include_baselines=include_baselines)
+                if pol != 'all':
+                    #Add curves for time delays if present.
+                    im = self.addTimeDelayCurves(im, time_delay_dict, pol,  mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg, include_baselines=include_baselines)
 
 
                 #Added circles as specified.
@@ -1489,6 +1533,7 @@ class Correlator:
 
                 #Enable Interactive Portion
                 if interactive == True:
+                    print('Map should be interactive')
                     fig.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event,  mollweide=mollweide, center_dir=center_dir))
 
                 #ax.legend(loc='lower left')

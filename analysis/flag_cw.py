@@ -92,6 +92,7 @@ if __name__=="__main__":
                 #Add attributes for future replicability. 
 
                 file['cw'].attrs['final_corr_length'] = final_corr_length
+                file.attrs['t_ns'] = prep.t() #len of this is needed to get linear magnitude to dbish.
 
                 if crit_freq_low_pass_MHz is not None:
                     file['cw'].attrs['crit_freq_low_pass_MHz'] = crit_freq_low_pass_MHz 
@@ -131,6 +132,11 @@ if __name__=="__main__":
                     file['cw'].create_dataset('has_cw', (file.attrs['N'],), dtype=bool, compression='gzip', compression_opts=4, shuffle=True)
                 else:
                     print('Values in cw[\'has_cw\'] of %s will be overwritten by this analysis script.'%filename)
+
+                if not numpy.isin('dbish',cw_dsets):
+                    file['cw'].create_dataset('dbish', (file.attrs['N'],), dtype=float, compression='gzip', compression_opts=4, shuffle=True)
+                else:
+                    print('Values in cw[\'dbish\'] of %s will be overwritten by this analysis script.'%filename)
 
 
                 for eventid in eventids: 
