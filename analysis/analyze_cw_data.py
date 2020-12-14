@@ -18,6 +18,7 @@ sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret #Must be imported before matplotlib or else plots don't load.
 import tools.clock_correct as cc
 import tools.info as info
+from tools.data_slicer import dataSlicerSingleRun
 from tools.fftmath import FFTPrepper
 from tools.correlator import Correlator
 from tools.data_handler import createFile
@@ -44,6 +45,10 @@ if __name__=="__main__":
         run = 1650
 
     datapath = os.environ['BEACON_DATA']
+
+    impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+    time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+
     crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = 8
 
@@ -58,7 +63,7 @@ if __name__=="__main__":
     hilbert=False
     final_corr_length = 2**10
 
-    trigger_types = [2]#[1,2,3]
+    trigger_types = [1,2,3]
     db_subset_plot_ranges = [[0,30],[30,40],[40,50]] #Used as bin edges.  
     plot_maps = True
 
@@ -90,17 +95,21 @@ if __name__=="__main__":
 
                 dsets = list(file.keys()) #Existing datasets
 
+                print('Time delay keys')
+                print(list(file['time_delays'].keys()))
+
+                print('Impulsivity keys')
+                print(list(file['impulsivity'].keys()))
+
                 if not numpy.isin('cw',dsets):
                     print('cw dataset does not exist for this run.')
-                    file.create_group('cw')
                 else:
                     cw_dsets = list(file['cw'].keys())
                     print(list(file['cw'].attrs))
                     prep = FFTPrepper(reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
                     prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
-                    if plot_maps:
-                        cor = Correlator(reader,  upsample=2**16, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), plot_filter=False,apply_phase_response=True, tukey=False, sine_subtract=True)
-                        cor.prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
+        
+
                     #Add attributes for future replicability. 
                     
                     raw_freqs = prep.rfftWrapper(prep.t(), numpy.ones_like(prep.t()))[0]
@@ -114,56 +123,83 @@ if __name__=="__main__":
                         dbish = 10.0*numpy.log10( linear_magnitude[binary_cw_cut]**2 / len(prep.t()))
                     else:
                         dbish = file['cw']['dbish'][...][trigger_type_cut][binary_cw_cut]
+                    if plot_maps:
+                        cor = Correlator(reader,  upsample=2**16, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), plot_filter=False,apply_phase_response=True, tukey=False, sine_subtract=True)
+                        cor.prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
 
-                    fig = plt.figure()
-                    plt.suptitle('Run %i - Considering trigger types: %s'%(run, str(trigger_types)))
+                        file.close()
+            
+            
+            ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, \
+                    curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                    cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                    impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                    time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
+                    std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+                    p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                    snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
 
-                    ax1 = plt.subplot(3,1,1)
-                    plt.hist(freq_hz/1e6,bins=freq_bins)#400,range=[1000*float(file['cw'].attrs['sine_subtract_min_freq_GHz']),1000*float(file['cw'].attrs['sine_subtract_max_freq_GHz'])])
-                    plt.xlim(1000*float(file['cw'].attrs['sine_subtract_min_freq_GHz']),1000*float(file['cw'].attrs['sine_subtract_max_freq_GHz']))
-                    plt.yscale('log', nonposy='clip')
-                    plt.grid(which='both', axis='both')
-                    ax1.minorticks_on()
-                    ax1.grid(b=True, which='major', color='k', linestyle='-')
-                    ax1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.xlabel('Freq (MHz)')
+            ds.addROI('48 MHz',{'cw_freq_Mhz':[47,49]})
+            ds.addROI('42 MHz',{'cw_freq_Mhz':[41,43]})
+            ds.addROI('52 MHz',{'cw_freq_Mhz':[51,53]})
+            ds.addROI('88 MHz',{'cw_freq_Mhz':[88,90]})
 
-                    ax2 = plt.subplot(3,1,2)
-                    plt.hist(dbish,bins=50) #I think this factor of 2 makes it match monutau?
-                    plt.yscale('log', nonposy='clip')
-                    plt.grid(which='both', axis='both')
-                    ax2.minorticks_on()
-                    ax2.grid(b=True, which='major', color='k', linestyle='-')
-                    ax2.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.xlabel('Power (dBish)')
-                    plt.ylabel('Counts')
+            if True:
+                #'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish'
+                plot_param_pairs = [ ['std_h', 'std_v'], ['cw_freq_Mhz','cw_dbish'],['impulsivity_h','impulsivity_v']]#[['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v']]
+                for key_x, key_y in plot_param_pairs:
+                    print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                    fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
 
-                    ax3 = plt.subplot(3,1,3)
-                    plt.hist(binary_cw_cut.astype(int),bins=3,weights=numpy.ones(len(binary_cw_cut))/len(binary_cw_cut)) 
-                    plt.grid(which='both', axis='both')
-                    ax3.minorticks_on()
-                    ax3.grid(b=True, which='major', color='k', linestyle='-')
-                    ax3.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.xlabel('Without (0) --- With CW (1)')
-                    plt.ylabel('Percent of Counts')
+            if False:
+                fig = plt.figure()
+                plt.suptitle('Run %i - Considering trigger types: %s'%(run, str(trigger_types)))
 
-                    print('Max CW Eventid: %i'%numpy.where(trigger_type_cut)[0][numpy.where(binary_cw_cut)[0][numpy.argmax(dbish)]])
-                    print('Approximate power is %0.3f dBish, at %0.2f MHz'%(numpy.max(dbish), freq_hz[numpy.where(binary_cw_cut)[0][numpy.argmax(dbish)]]/1e6))
+                ax1 = plt.subplot(3,1,1)
+                plt.hist(freq_hz/1e6,bins=freq_bins)#400,range=[1000*float(file['cw'].attrs['sine_subtract_min_freq_GHz']),1000*float(file['cw'].attrs['sine_subtract_max_freq_GHz'])])
+                plt.xlim(1000*float(file['cw'].attrs['sine_subtract_min_freq_GHz']),1000*float(file['cw'].attrs['sine_subtract_max_freq_GHz']))
+                plt.yscale('log', nonposy='clip')
+                plt.grid(which='both', axis='both')
+                ax1.minorticks_on()
+                ax1.grid(b=True, which='major', color='k', linestyle='-')
+                ax1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.xlabel('Freq (MHz)')
 
-                    if len(db_subset_plot_ranges) > 0:
-                        for subset_index, subrange in enumerate(db_subset_plot_ranges):
-                            cut = numpy.logical_and(dbish > subrange[0], dbish <= subrange[1])
-                            eventid = numpy.random.choice(numpy.where(trigger_type_cut)[0][numpy.where(binary_cw_cut)[0][cut]])
-                            prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None)
-                            prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=True, hilbert=False, sine_subtract=True, apply_tukey=None)
+                ax2 = plt.subplot(3,1,2)
+                plt.hist(dbish,bins=50) #I think this factor of 2 makes it match monutau?
+                plt.yscale('log', nonposy='clip')
+                plt.grid(which='both', axis='both')
+                ax2.minorticks_on()
+                ax2.grid(b=True, which='major', color='k', linestyle='-')
+                ax2.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.xlabel('Power (dBish)')
+                plt.ylabel('Counts')
 
-                            ax1.axvline(freq_hz[numpy.where(eventids[trigger_type_cut] == eventid)[0][0] ]/1e6,color=subset_colors[subset_index],label='r%ie%i'%(run, eventid))
-                            ax1.legend(loc='upper left')
-                            ax2.axvline(dbish[numpy.where(eventids[trigger_type_cut][binary_cw_cut] == eventid)[0][0] ],color=subset_colors[subset_index],label='r%ie%i'%(run, eventid))
-                            ax2.legend(loc='upper left')
-                            if plot_maps:
-                                hpol_result, vpol_result = cor.map(eventid, 'both', center_dir='E', plot_map=True, plot_corr=False, hilbert=hilbert, interactive=True, max_method=0,mollweide=True,circle_zenith=None,circle_az=None)
-                file.close()
+                ax3 = plt.subplot(3,1,3)
+                plt.hist(binary_cw_cut.astype(int),bins=3,weights=numpy.ones(len(binary_cw_cut))/len(binary_cw_cut)) 
+                plt.grid(which='both', axis='both')
+                ax3.minorticks_on()
+                ax3.grid(b=True, which='major', color='k', linestyle='-')
+                ax3.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.xlabel('Without (0) --- With CW (1)')
+                plt.ylabel('Percent of Counts')
+
+                print('Max CW Eventid: %i'%numpy.where(trigger_type_cut)[0][numpy.where(binary_cw_cut)[0][numpy.argmax(dbish)]])
+                print('Approximate power is %0.3f dBish, at %0.2f MHz'%(numpy.max(dbish), freq_hz[numpy.where(binary_cw_cut)[0][numpy.argmax(dbish)]]/1e6))
+
+                if len(db_subset_plot_ranges) > 0:
+                    for subset_index, subrange in enumerate(db_subset_plot_ranges):
+                        cut = numpy.logical_and(dbish > subrange[0], dbish <= subrange[1])
+                        eventid = numpy.random.choice(numpy.where(trigger_type_cut)[0][numpy.where(binary_cw_cut)[0][cut]])
+                        prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None)
+                        prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=True, hilbert=False, sine_subtract=True, apply_tukey=None)
+
+                        ax1.axvline(freq_hz[numpy.where(eventids[trigger_type_cut] == eventid)[0][0] ]/1e6,color=subset_colors[subset_index],label='r%ie%i'%(run, eventid))
+                        ax1.legend(loc='upper left')
+                        ax2.axvline(dbish[numpy.where(eventids[trigger_type_cut][binary_cw_cut] == eventid)[0][0] ],color=subset_colors[subset_index],label='r%ie%i'%(run, eventid))
+                        ax2.legend(loc='upper left')
+                        if plot_maps:
+                            hpol_result, vpol_result = cor.map(eventid, 'both', center_dir='E', plot_map=True, plot_corr=False, hilbert=hilbert, interactive=True, max_method=0,mollweide=True,circle_zenith=None,circle_az=None)
         else:
             print('filename is None, indicating empty tree.  Skipping run %i'%run)
     except Exception as e:

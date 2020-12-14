@@ -22,6 +22,7 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 from tools.data_handler import createFile
 from tools.fftmath import TemplateCompareTool
+from tools.fftmath import FFTPrepper
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -126,7 +127,8 @@ class dataSlicerSingleRun():
             #self.known_param_keys = ['impulsivity_hv', 'cr_template_search', 'std', 'p2p', 'snr'] #If it is not listed in here then it cannot be used.
             self.known_param_keys = [   'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
                                         'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
-                                        'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v']
+                                        'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',
+                                        'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish']
             self.updateReader(reader)
             self.tct = None #This will be defined when necessary by functions below. 
 
@@ -394,6 +396,25 @@ class dataSlicerSingleRun():
                         split_param_key = param_key.split('_')
                         dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
                         param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
+                    elif 'cw_present' == param_key:
+                        param = file['cw']['has_cw'][...][eventids].astype(int)
+                    elif 'cw_freq_Mhz' == param_key:
+                        param = file['cw']['freq_hz'][...][eventids]/1e6 #MHz
+                    elif 'cw_linear_magnitude' == param_key:
+                        param = file['cw']['linear_magnitude'][...][eventids]
+                    elif 'cw_dbish' == param_key:
+                        cw_dsets = list(file['cw'].keys())
+                        if not numpy.isin('dbish',cw_dsets):
+                            print('No stored dbish data from cw dataset, attempting to calculate from linear magnitude.')
+                            if not hasattr(self, 'cw_prep'):
+                                self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
+                                self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
+                            linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
+                            param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
+                        else:
+                            param = file['cw']['dbish'][...][eventids]
+
+
                     file.close()
             else:
                 print('\nWARNING!!!\nOther parameters have not been accounted for yet.\n%s'%(param_key))
@@ -623,6 +644,8 @@ class dataSlicerSingleRun():
             else:
                 print('\tPreparing to get counts for %s'%param_key)
 
+                calculate_bins_from_min_max = True #By default will be calculated at bottom of conditional list, unless a specific condition overrides.
+
                 if param_key == 'impulsivity_h':
                     label = 'Impulsivity (hpol)'
                     x_n_bins = self.impulsivity_n_bins_h
@@ -693,8 +716,44 @@ class dataSlicerSingleRun():
                         x_max_val = max(time_delays) + 1
                     else:
                         x_max_val = self.max_time_delays_val
+                elif 'cw_present' == param_key:
+                    label = 'CW Detected Removed (1) or Not (0)'
+                    calculate_bins_from_min_max = False
+                    current_bin_edges = numpy.array([0.        , 0.33333333, 0.66666667, 1.        ])#
+                    # x_n_bins = 3
+                    # x_max_val = 1
+                    # x_min_val = 0
+                elif 'cw_freq_Mhz' == param_key:
+                    with h5py.File(self.analysis_filename, 'r') as file:
+                        x_max_val = 1000*float(file['cw'].attrs['sine_subtract_min_freq_GHz'])
+                        x_min_val = 1000*float(file['cw'].attrs['sine_subtract_max_freq_GHz'])
+                        cw_dsets = list(file['cw'].keys())
+                        if not numpy.isin('dbish',cw_dsets):
+                            print('Creating FFTPrepper class to prepare CW bins.')
+                            if not hasattr(self, 'cw_prep'):
+                                self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
+                                self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
+                    label = 'Identified CW Freq (MHz)'
+                    
+                    raw_freqs = self.cw_prep.rfftWrapper(self.cw_prep.t(), numpy.ones_like(self.cw_prep.t()))[0]
+                    df = raw_freqs[1] - raw_freqs[0]
+                    current_bin_edges = (numpy.append(raw_freqs,raw_freqs[-1]+df) - df/2)/1e6 #MHz
+                    current_bin_edges = current_bin_edges[current_bin_edges<120]
+                    x_n_bins = len(current_bin_edges)
+                    calculate_bins_from_min_max = False #override the default behaviour below.
+                elif 'cw_linear_magnitude' == param_key:
+                    label = 'abs(linear magnitude) of\nmaximum identified CW Peak'
+                    x_n_bins = 1000
+                    x_max_val = 10000 # A Guess, Try it out and adjust.
+                    x_min_val = 0
+                elif 'cw_dbish' == param_key:
+                    label = 'dBish Magnitude of\nmaximum identified CW Peak'
+                    x_n_bins = 120
+                    x_max_val = 60
+                    x_min_val = 0
 
-            current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges
+            if calculate_bins_from_min_max:
+                current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges
 
             return current_bin_edges, label
         except Exception as e:
@@ -787,14 +846,17 @@ class dataSlicerSingleRun():
             print(exc_type, fname, exc_tb.tb_lineno)
             
 
-    def plotROI2dHist(self, main_param_key_x, main_param_key_y, cmap='coolwarm', include_roi=True, load=False):
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids=None, cmap='coolwarm', include_roi=True, load=False):
         '''
         This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
         calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
         ROI has a box cut in self.roi for EACH parameter.  I.e. it expects the # of listed entries in each ROI to be
         the same, and it will add a contour for the eventids that pass ALL cuts for that specific roi. 
+
+        If eventids is given then then those events will be used to create the plot, and the trigger type cut will be ignored.
         '''
-        eventids = self.getEventidsFromTriggerType()
+        if eventids is None:
+            eventids = self.getEventidsFromTriggerType()
         fig, ax = self.plot2dHist(main_param_key_x, main_param_key_y, eventids, title=None, cmap=cmap) #prepares binning, must be called early (before addContour)
 
         #these few lines below this should be used for adding contours to the map. 
