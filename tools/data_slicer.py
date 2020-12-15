@@ -110,7 +110,7 @@ class dataSlicerSingleRun():
     include_test_roi :
         This will include test regions of interest that are more for testing the class itself. 
     '''
-    def __init__(self,  reader, impulsivity_dset_key, time_delays_dset_key, \
+    def __init__(self,  reader, impulsivity_dset_key, time_delays_dset_key, map_dset_key, \
                         curve_choice=0, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
                         impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
@@ -128,7 +128,7 @@ class dataSlicerSingleRun():
             self.known_param_keys = [   'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
                                         'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
                                         'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',
-                                        'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish']
+                                        'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','phi_best_h','phi_best_v']
             self.updateReader(reader)
             self.tct = None #This will be defined when necessary by functions below. 
 
@@ -173,6 +173,9 @@ class dataSlicerSingleRun():
             self.max_snr_val = max_snr_val
             self.snr_n_bins_h = snr_n_bins_h
             self.snr_n_bins_v = snr_n_bins_v
+
+            #Map Direction Params:
+            self.map_dset_key = map_dset_key
 
             self.trigger_types = trigger_types
 
@@ -413,6 +416,18 @@ class dataSlicerSingleRun():
                             param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
                         else:
                             param = file['cw']['dbish'][...][eventids]
+                    elif 'theta_best_h' == param_key:
+                        param = file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
+                    elif 'theta_best_v' == param_key:
+                        param = file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
+                    elif 'elevation_best_h' == param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
+                    elif 'elevation_best_v' == param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
+                    elif 'phi_best_h' == param_key:
+                        param = file['map_direction'][self.map_dset_key]['hpol_ENU_azimuth'][...][eventids]
+                    elif 'phi_best_v' == param_key:
+                        param = file['map_direction'][self.map_dset_key]['vpol_ENU_azimuth'][...][eventids]
 
 
                     file.close()
@@ -751,6 +766,36 @@ class dataSlicerSingleRun():
                     x_n_bins = 120
                     x_max_val = 60
                     x_min_val = 0
+                elif 'theta_best_h' == param_key:
+                    label = 'Best Reconstructed Zenith (Deg)\nHpol Antennas Only'
+                    x_n_bins = 360
+                    x_max_val = 180
+                    x_min_val = 0
+                elif 'theta_best_v' == param_key:
+                    label = 'Best Reconstructed Zenith (Deg)\nVpol Antennas Only'
+                    x_n_bins = 360
+                    x_max_val = 180
+                    x_min_val = 0
+                elif 'elevation_best_h' == param_key:
+                    label = 'Best Reconstructed Elevation (Deg)\nHpol Antennas Only'
+                    x_n_bins = 360
+                    x_max_val = 90
+                    x_min_val = -90
+                elif 'elevation_best_v' == param_key:
+                    label = 'Best Reconstructed Elevation (Deg)\nVpol Antennas Only'
+                    x_n_bins = 360
+                    x_max_val = 90
+                    x_min_val = -90
+                elif 'phi_best_h' == param_key:
+                    label = 'Best Reconstructed Azimuth (Deg)\nHpol Antennas Only'
+                    x_n_bins = 360
+                    x_max_val = 180
+                    x_min_val = -180
+                elif 'phi_best_v' == param_key:
+                    label = 'Best Reconstructed Azimuth (Deg)\nVpol Antennas Only'
+                    x_n_bins = 360
+                    x_max_val = 180
+                    x_min_val = -180
 
             if calculate_bins_from_min_max:
                 current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges
@@ -792,9 +837,19 @@ class dataSlicerSingleRun():
             plt.title('%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types)))
 
         _im = _ax.pcolormesh(self.current_bin_centers_mesh_h, self.current_bin_centers_mesh_v, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+        if 'theta_best_' in main_param_key_y:
+            _ax.invert_yaxis()
+        if True:
+            if numpy.logical_or(numpy.logical_and('phi_best_' in main_param_key_x,'phi_best_' in main_param_key_y),numpy.logical_or(numpy.logical_and('theta_best_' in main_param_key_x,'theta_best_' in main_param_key_y),numpy.logical_and('elevation_best_' in main_param_key_x,'elevation_best_' in main_param_key_y))):
+                plt.plot(self.current_bin_centers_mesh_v[:,0],self.current_bin_centers_mesh_v[:,0],linewidth=1,linestyle='--',color='tab:gray',alpha=0.5)
 
         plt.xlabel(self.current_label_x)
         plt.ylabel(self.current_label_y)
+        plt.grid(which='both', axis='both')
+        _ax.minorticks_on()
+        _ax.grid(b=True, which='major', color='k', linestyle='-')
+        _ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
 
         try:
             cbar = _fig.colorbar(_im)

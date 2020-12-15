@@ -48,6 +48,7 @@ if __name__=="__main__":
 
     impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+    map_direction_dset_key = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
 
     crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = 8
@@ -63,7 +64,7 @@ if __name__=="__main__":
     hilbert=False
     final_corr_length = 2**10
 
-    trigger_types = [1,2,3]
+    trigger_types = [2]#[1,2,3]
     db_subset_plot_ranges = [[0,30],[30,40],[40,50]] #Used as bin edges.  
     plot_maps = True
 
@@ -101,6 +102,9 @@ if __name__=="__main__":
                 print('Impulsivity keys')
                 print(list(file['impulsivity'].keys()))
 
+                print('Map keys')
+                print(list(file['map_direction'].keys()))
+
                 if not numpy.isin('cw',dsets):
                     print('cw dataset does not exist for this run.')
                 else:
@@ -130,7 +134,7 @@ if __name__=="__main__":
                         file.close()
             
             
-            ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, \
+            ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
                     curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
                     cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
                     impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
@@ -146,7 +150,8 @@ if __name__=="__main__":
 
             if True:
                 #'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish'
-                plot_param_pairs = [ ['std_h', 'std_v'], ['cw_freq_Mhz','cw_dbish'],['impulsivity_h','impulsivity_v']]#[['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v']]
+
+                plot_param_pairs = [['phi_best_h','phi_best_v'], ['elevation_best_h','elevation_best_v']]#[['phi_best_h','theta_best_h'], ['phi_best_v','theta_best_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v']]#,  ['std_h', 'std_v'], ['cw_freq_Mhz','cw_dbish'],['impulsivity_h','impulsivity_v']]#[['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v']]
                 for key_x, key_y in plot_param_pairs:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
                     fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
