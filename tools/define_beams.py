@@ -377,7 +377,7 @@ if __name__=="__main__":
         all_ax = []
 
         sample_delays = {}
-        for mode in ['vpol_no_ant01']:#['hpol','vpol','vpol_no_ant0','vpol_no_ant01']:
+        for mode in ['hpol']#['vpol_no_ant01']:#['hpol','vpol','vpol_no_ant0','vpol_no_ant01']:
             print('\nMode = %s\n'%mode)
             #beam_thetas_deg = numpy.linspace(5,110,4)
             if False:

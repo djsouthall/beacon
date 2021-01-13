@@ -808,13 +808,17 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def plotEvent(self, eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None):
+    def plotEvent(self, eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None, additional_title_text=None):
         '''
         This will plot all given channels in both time domain and frequency domain.
         '''
         fig = plt.figure()
-        fig.canvas.set_window_title('r%i-e%i Waveform and Spectrum'%(self.reader.run,eventid))
-        plt.title('Run %i, eventid %i'%(self.reader.run,eventid))
+        if additional_title_text is not None:
+            fig.canvas.set_window_title('%s: r%i-e%i Waveform and Spectrum'%(additional_title_text,self.reader.run,eventid))
+            plt.suptitle('%s\nRun %i, Eventid %i'%(additional_title_text,self.reader.run,eventid))
+        else:
+            fig.canvas.set_window_title('r%i-e%i Waveform and Spectrum'%(self.reader.run,eventid))
+            plt.suptitle('Run %i, eventid %i'%(self.reader.run,eventid))
         plt.subplot(2,1,1)
         plt.ylabel('adu')
         plt.xlabel('ns')
@@ -854,6 +858,8 @@ class FFTPrepper:
             plt.legend(loc = 'upper right')
             #plt.xlim(10,110)
             plt.ylim(-10,30)
+        ax = plt.gca()
+        return fig, ax
 
 
 class TimeDelayCalculator(FFTPrepper):

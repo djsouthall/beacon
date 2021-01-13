@@ -1432,7 +1432,11 @@ class Correlator:
                     ax = fig.add_subplot(1,1,1, projection='mollweide')
                 else:
                     ax = fig.add_subplot(1,1,1)
-                ax.set_title('%i-%i-%s-Hilbert=%s'%(self.reader.run,eventid,pol,str(hilbert))) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
+                if True:
+                    ax.set_title('%i-%i-%s-Hilbert=%s\nSine Subtract %s'%(self.reader.run,eventid,pol,str(hilbert), ['Disabled','Enabled'][int(self.apply_sine_subtract)])) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
+                else:
+                    ax.set_title('%i-%i-%s-Hilbert=%s'%(self.reader.run,eventid,pol,str(hilbert))) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
+                    
 
                 if mollweide == True:
                     #Automatically converts from rads to degs

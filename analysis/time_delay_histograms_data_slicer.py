@@ -1,5 +1,6 @@
 '''
-This is a script load waveforms using the sine subtraction method, and save any identified CW present in events.
+This is a script uses the dataSlicer class to determine if cutting on time delays is more reasonable (due to poor 
+calibration) than cutting on correlation maps.  
 '''
 
 import numpy
@@ -37,7 +38,6 @@ datapath = os.environ['BEACON_DATA']
 
 
 if __name__=="__main__":
-    #TODO: Add these parameters to the 2d data slicer.
     plt.close('all')
     if len(sys.argv) == 2:
         run = int(sys.argv[1])
@@ -150,89 +150,48 @@ if __name__=="__main__":
             # ds.addROI('42 MHz',{'cw_freq_Mhz':[41,43]})
             # ds.addROI('52 MHz',{'cw_freq_Mhz':[51,53]})
             # ds.addROI('88 MHz',{'cw_freq_Mhz':[88,90]})
-            # ds.addROI('Background Cluster',{'phi_best_h':[35,50],'elevation_best_h':[-45,-28]})
-            if False:
-                plot_param_pairs = [['impulsivity_h','impulsivity_v'],['phi_best_h','phi_best_v'], ['elevation_best_h','elevation_best_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v']]
+
+            if True:
+                #if trigger_types == [2]:
+                #This set of plots aims to compare high correlation with template events across a few plots.  
+                ds.addROI('Simple Template V > 0.7',{'cr_template_search_v':[0.7,1.0]})# Adding 2 ROI in different rows and appending as below allows for "OR" instead of "AND"
+                ds.addROI('Simple Template H > 0.7',{'cr_template_search_h':[0.7,1.0]})
+                _eventids = numpy.sort(numpy.unique(numpy.append(ds.getCutsFromROI('Simple Template H > 0.7',load=False,save=False),ds.getCutsFromROI('Simple Template V > 0.7',load=False,save=False))))
+
+                #Now that eventids are gotten from initial cuts, I want to clear out ROI such that they are not plotted
+                #on the below plots (all plotted events will be in these ROI so I don't need to print again.)
+                ds.resetAllROI()
+                
+                #Add actual ROI
+                #ds.addROI('Biggest Cluster',{'phi_best_h':[30,35],'elevation_best_h':[-27,-10.0]})
+                ds.addROI('Biggest Cluster TD',{'time_delay_0subtract3_h':[-180,-115],'time_delay_1subtract2_h':[22,30]})
+                ds.addROI('Lowest',{'phi_best_h':[44,50],'elevation_best_h':[-38,-29]})
+                ds.addROI('Middle',{'phi_best_h':[36,42.5],'elevation_best_h':[-38,-25]})
+                ds.addROI('Small Patch',{'phi_best_h':[-32,-26],'elevation_best_h':[-43,-38]})
+                ds.addROI('Array Plane Patch A',{'phi_best_h':[8,12],'elevation_best_h':[-21,-18]})
+                ds.addROI('Array Plane Patch B',{'phi_best_h':[-12,6],'elevation_best_h':[-20,-15]})
+                ds.addROI('Array Plane Patch C',{'phi_best_h':[-21,-13],'elevation_best_h':[-18,-14.5]})
+
+                plot_param_pairs = [['cr_template_search_h','cr_template_search_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h'],['time_delay_0subtract3_h','time_delay_1subtract2_h']]
                 for key_x, key_y in plot_param_pairs:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
-                    fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+                    if 'cr_template_search' in key_x:
+                        fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+                        fig, ax = ds.plotROI2dHist(key_x, key_y, eventids=_eventids, cmap='coolwarm', include_roi=True)
+                    else:
+                        fig, ax = ds.plotROI2dHist(key_x, key_y, eventids=_eventids, cmap='coolwarm', include_roi=True)
 
-            if True:
-                if trigger_types == [2]:
-                    #This set of plots aims to compare high impulsivity events across a few plots.  
-                    ds.addROI('Impulsivity V > 0.5',{'impulsivity_v':[0.5,1.0]})#,'impulsivity_v':[0.5,1.0]
-                    ds.addROI('Impulsivity H > 0.5',{'impulsivity_h':[0.5,1.0]})#,'impulsivity_v':[0.5,1.0]
-                    _eventids = numpy.unique(numpy.append(ds.getCutsFromROI('Impulsivity H > 0.5',load=False,save=False),ds.getCutsFromROI('Impulsivity V > 0.5',load=False,save=False)))
-                    plot_param_pairs = [['impulsivity_h','impulsivity_v'],['phi_best_h','phi_best_v'], ['elevation_best_h','elevation_best_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v']]#[['phi_best_h','phi_best_v'], ['elevation_best_h','elevation_best_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v']]#[['phi_best_h','theta_best_h'], ['phi_best_v','theta_best_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v']]#,  ['std_h', 'std_v'], ['cw_freq_Mhz','cw_dbish'],['impulsivity_h','impulsivity_v']]#[['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v']]
-                    for key_x, key_y in plot_param_pairs:
-                        print('Generating %s plot'%(key_x + ' vs ' + key_y))
-                        if 'impulsivity' in key_x:
-                            fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=False)
-                            fig, ax = ds.plotROI2dHist(key_x, key_y, eventids=_eventids, cmap='coolwarm', include_roi=False)
-                        else:
-                            fig, ax = ds.plotROI2dHist(key_x, key_y, eventids=_eventids, cmap='coolwarm', include_roi=False)
-                else:
-                    plot_param_pairs = [['impulsivity_h','impulsivity_v'],['phi_best_h','phi_best_v'], ['elevation_best_h','elevation_best_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v']]#[['phi_best_h','phi_best_v'], ['elevation_best_h','elevation_best_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v']]#[['phi_best_h','theta_best_h'], ['phi_best_v','theta_best_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v']]#,  ['std_h', 'std_v'], ['cw_freq_Mhz','cw_dbish'],['impulsivity_h','impulsivity_v']]#[['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v']]
-                    for key_x, key_y in plot_param_pairs:
-                        print('Generating %s plot'%(key_x + ' vs ' + key_y))
-                        fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=False)
+                for roi_key in list(ds.roi.keys()):
+                    roi_eventids = numpy.intersect1d(ds.getCutsFromROI(roi_key),_eventids)
+                    if len(roi_eventids) == 0:
+                        print('%s: No events in both ROI and predefined cuts.'%(roi_key))
+                    else:
+                        eventid = numpy.random.choice(roi_eventids)
+                        #fig, ax = prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None)
+                        #ax.set_title('%s: eventid = '%(roi_key,eventid))
+                        fig, ax = prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=True, hilbert=False, sine_subtract=True, apply_tukey=None,additional_title_text=roi_key)
 
 
-            if True:
-                fig = plt.figure()
-                plt.suptitle('Run %i - Considering trigger types: %s'%(run, str(trigger_types)))
-
-                ax1 = plt.subplot(3,1,1)
-                plt.hist(freq_hz/1e6,bins=freq_bins)
-                plt.xlim(sine_subtract_min_freq_MHz,sine_subtract_max_freq_MHz)
-                plt.yscale('log', nonposy='clip')
-                plt.grid(which='both', axis='both')
-                ax1.minorticks_on()
-                ax1.grid(b=True, which='major', color='k', linestyle='-')
-                ax1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                plt.xlabel('Freq (MHz)')
-
-                ax2 = plt.subplot(3,1,2)
-                plt.hist(dbish,bins=50) #I think this factor of 2 makes it match monutau?
-                plt.yscale('log', nonposy='clip')
-                plt.grid(which='both', axis='both')
-                ax2.minorticks_on()
-                ax2.grid(b=True, which='major', color='k', linestyle='-')
-                ax2.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                plt.xlabel('Power (dBish)')
-                plt.ylabel('Counts')
-
-                ax3 = plt.subplot(3,1,3)
-                plt.hist(binary_cw_cut.astype(int),bins=3,weights=numpy.ones(len(binary_cw_cut))/len(binary_cw_cut)) 
-                plt.grid(which='both', axis='both')
-                ax3.minorticks_on()
-                ax3.grid(b=True, which='major', color='k', linestyle='-')
-                ax3.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                plt.xlabel('Without (0) --- With CW (1)')
-                plt.ylabel('Percent of Counts')
-
-                print('Max CW Eventid: %i'%numpy.where(trigger_type_cut)[0][numpy.where(binary_cw_cut)[0][numpy.argmax(dbish)]])
-                print('Approximate power is %0.3f dBish, at %0.2f MHz'%(numpy.max(dbish), freq_hz[numpy.where(binary_cw_cut)[0][numpy.argmax(dbish)]]/1e6))
-
-                if len(db_subset_plot_ranges) > 0:
-                    for subset_index, subrange in enumerate(db_subset_plot_ranges):
-                        cut = numpy.logical_and(dbish > subrange[0], dbish <= subrange[1])
-                        if run  == 1650:
-                            eventid = [89436,21619,113479][subset_index]
-                        else:
-                            eventid = numpy.random.choice(numpy.where(trigger_type_cut)[0][numpy.where(binary_cw_cut)[0][cut]])
-
-                        prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None)
-                        prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=True, hilbert=False, sine_subtract=True, apply_tukey=None)
-
-                        ax1.axvline(freq_hz[numpy.where(eventids[trigger_type_cut] == eventid)[0][0] ]/1e6,color=subset_colors[subset_index],label='r%ie%i'%(run, eventid))
-                        ax1.legend(loc='upper left')
-                        ax2.axvline(dbish[numpy.where(eventids[trigger_type_cut][binary_cw_cut] == eventid)[0][0] ],color=subset_colors[subset_index],label='r%ie%i'%(run, eventid))
-                        ax2.legend(loc='upper left')
-                        if plot_maps:
-                            for ss in [False,True]:
-                                cor.apply_sine_subtract = ss
-                                result = cor.map(eventid, 'hpol', center_dir='E', plot_map=True, plot_corr=False, hilbert=hilbert, interactive=True, max_method=0,mollweide=True,circle_zenith=None,circle_az=None)
         else:
             print('filename is None, indicating empty tree.  Skipping run %i'%run)
     except Exception as e:

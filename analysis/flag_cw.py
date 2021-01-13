@@ -50,10 +50,10 @@ if __name__=="__main__":
     sine_subtract = True
     sine_subtract_min_freq_GHz = 0.03
     sine_subtract_max_freq_GHz = 0.09
-    sine_subtract_percent = 0.03
+    sine_subtract_percent = 0.05
 
     hilbert=False
-    final_corr_length = 2**10
+    final_corr_length = 2**11
 
 
 
