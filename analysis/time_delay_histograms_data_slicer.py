@@ -48,7 +48,7 @@ if __name__=="__main__":
 
     impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
-    map_direction_dset_key = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
+    map_direction_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'#'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
 
     crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = 8
@@ -157,22 +157,36 @@ if __name__=="__main__":
                 ds.addROI('Simple Template V > 0.7',{'cr_template_search_v':[0.7,1.0]})# Adding 2 ROI in different rows and appending as below allows for "OR" instead of "AND"
                 ds.addROI('Simple Template H > 0.7',{'cr_template_search_h':[0.7,1.0]})
                 _eventids = numpy.sort(numpy.unique(numpy.append(ds.getCutsFromROI('Simple Template H > 0.7',load=False,save=False),ds.getCutsFromROI('Simple Template V > 0.7',load=False,save=False))))
-
+                #_eventids = eventids = ds.getEventidsFromTriggerType()#numpy.arange(reader.N())
                 #Now that eventids are gotten from initial cuts, I want to clear out ROI such that they are not plotted
                 #on the below plots (all plotted events will be in these ROI so I don't need to print again.)
+                
+                # ds.addROI('High SNR',{'snr_h':[21,22.5]})
+                # _eventids = ds.getCutsFromROI('High SNR',load=False,save=False)#numpy.sort(numpy.unique(numpy.append(ds.getCutsFromROI('High SNR',load=False,save=False))))
+                
                 ds.resetAllROI()
                 
                 #Add actual ROI
                 #ds.addROI('Biggest Cluster',{'phi_best_h':[30,35],'elevation_best_h':[-27,-10.0]})
-                ds.addROI('Biggest Cluster TD',{'time_delay_0subtract3_h':[-180,-115],'time_delay_1subtract2_h':[22,30]})
-                ds.addROI('Lowest',{'phi_best_h':[44,50],'elevation_best_h':[-38,-29]})
-                ds.addROI('Middle',{'phi_best_h':[36,42.5],'elevation_best_h':[-38,-25]})
-                ds.addROI('Small Patch',{'phi_best_h':[-32,-26],'elevation_best_h':[-43,-38]})
-                ds.addROI('Array Plane Patch A',{'phi_best_h':[8,12],'elevation_best_h':[-21,-18]})
-                ds.addROI('Array Plane Patch B',{'phi_best_h':[-12,6],'elevation_best_h':[-20,-15]})
-                ds.addROI('Array Plane Patch C',{'phi_best_h':[-21,-13],'elevation_best_h':[-18,-14.5]})
+                # ds.addROI('Biggest Cluster TD',{'time_delay_0subtract3_h':[-180,-165],'time_delay_1subtract2_h':[22,30]})
+                # ds.addROI('Lowest',{'phi_best_h':[44,50],'elevation_best_h':[-38,-29]})
+                # ds.addROI('Middle',{'phi_best_h':[36,42.5],'elevation_best_h':[-38,-25]})
+                # ds.addROI('Small Patch',{'phi_best_h':[-32,-26],'elevation_best_h':[-43,-38]})
+                # ds.addROI('Array Plane Patch A',{'phi_best_h':[8,12],'elevation_best_h':[-21,-18]})
+                # ds.addROI('Array Plane Patch B',{'phi_best_h':[-12,6],'elevation_best_h':[-20,-15]})
+                # ds.addROI('Array Plane Patch C',{'phi_best_h':[-21,-13],'elevation_best_h':[-18,-14.5]})
 
-                plot_param_pairs = [['cr_template_search_h','cr_template_search_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h'],['time_delay_0subtract3_h','time_delay_1subtract2_h']]
+                ds.addROI('A',{'phi_best_h':[-20,-13],'time_delay_0subtract1_h':[-125,-120]})
+                ds.addROI('B',{'phi_best_h':[-11,-5],'time_delay_0subtract1_h':[-135,-132]})
+                ds.addROI('C',{'phi_best_h':[-5,1],'time_delay_0subtract1_h':[-143,-137]})
+                ds.addROI('D',{'phi_best_h':[6,12],'time_delay_0subtract1_h':[-143,-139]})
+                ds.addROI('E',{'phi_best_h':[18,23],'time_delay_0subtract1_h':[-141,-138]})
+                ds.addROI('F',{'phi_best_h':[30,36],'time_delay_0subtract1_h':[-135,-132]})
+                ds.addROI('G',{'phi_best_h':[36,42],'time_delay_0subtract1_h':[-132,-129]})
+                ds.addROI('H',{'phi_best_h':[44,48],'time_delay_0subtract1_h':[-128,-123]})
+
+
+                plot_param_pairs = [['cr_template_search_h','cr_template_search_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['phi_best_h','time_delay_0subtract1_h'],['time_delay_0subtract1_h','time_delay_0subtract2_h'],['time_delay_0subtract3_h','time_delay_1subtract2_h']]
                 for key_x, key_y in plot_param_pairs:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
                     if 'cr_template_search' in key_x:
@@ -181,6 +195,8 @@ if __name__=="__main__":
                     else:
                         fig, ax = ds.plotROI2dHist(key_x, key_y, eventids=_eventids, cmap='coolwarm', include_roi=True)
 
+                all_figs = []
+                all_axs = []
                 for roi_key in list(ds.roi.keys()):
                     roi_eventids = numpy.intersect1d(ds.getCutsFromROI(roi_key),_eventids)
                     if len(roi_eventids) == 0:
@@ -190,6 +206,16 @@ if __name__=="__main__":
                         #fig, ax = prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None)
                         #ax.set_title('%s: eventid = '%(roi_key,eventid))
                         fig, ax = prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=True, hilbert=False, sine_subtract=True, apply_tukey=None,additional_title_text=roi_key)
+
+                        if plot_maps:
+                            mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180], zenith_cut_array_plane=None, interactive=True)
+                            all_figs.append(fig)
+                            all_axs.append(ax)
+
+                            mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180], zenith_cut_array_plane=None, interactive=True)
+                            all_figs.append(fig)
+                            all_axs.append(ax)
+
 
 
         else:

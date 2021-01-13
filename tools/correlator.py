@@ -922,68 +922,80 @@ class Correlator:
 
 
         '''
-        theta_cut = numpy.ones_like(map_values,dtype=bool)
+        try:
+            theta_cut = numpy.ones_like(map_values,dtype=bool)
 
-        if zenith_cut_ENU is not None:
-            if len(zenith_cut_ENU) != 2:
-                print('zenith_cut_ENU must be a 2 valued list.')
-                return
-            else:
-                if zenith_cut_ENU[0] is None:
-                    zenith_cut_ENU[0] = 0
-                if zenith_cut_ENU[1] is None:
-                    zenith_cut_ENU[1] = 180
-
-                theta_cut_1d = numpy.logical_and(self.thetas_deg >= min(zenith_cut_ENU), self.thetas_deg <= max(zenith_cut_ENU))
-                theta_cut = numpy.multiply(theta_cut.T,theta_cut_1d).T
-        if pol is not None:
-            if zenith_cut_array_plane is not None:
-                if len(zenith_cut_array_plane) != 2:
-                    print('zenith_cut_array_plane must be a 2 valued list.')
+            if zenith_cut_ENU is not None:
+                if len(zenith_cut_ENU) != 2:
+                    print('zenith_cut_ENU must be a 2 valued list.')
                     return
                 else:
-                    if zenith_cut_array_plane[0] is None:
-                        zenith_cut_array_plane[0] = 0
-                    if zenith_cut_array_plane[1] is None:
-                        zenith_cut_array_plane[1] = 180
+                    if zenith_cut_ENU[0] is None:
+                        zenith_cut_ENU[0] = 0
+                    if zenith_cut_ENU[1] is None:
+                        zenith_cut_ENU[1] = 180
 
-                    if pol == 'hpol':
-                        theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.hpol_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.hpol_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
-                    if pol == 'vpol':
-                        theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.vpol_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.vpol_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
+                    theta_cut_1d = numpy.logical_and(self.thetas_deg >= min(zenith_cut_ENU), self.thetas_deg <= max(zenith_cut_ENU))
+                    theta_cut = numpy.multiply(theta_cut.T,theta_cut_1d).T
+            if pol is not None:
+                if zenith_cut_array_plane is not None:
+                    if len(zenith_cut_array_plane) != 2:
+                        print('zenith_cut_array_plane must be a 2 valued list.')
+                        return
+                    else:
+                        if zenith_cut_array_plane[0] is None:
+                            zenith_cut_array_plane[0] = 0
+                        if zenith_cut_array_plane[1] is None:
+                            zenith_cut_array_plane[1] = 180
 
-        masked_map_values = numpy.ma.array(map_values.copy(),mask=~theta_cut) #This way the values not in the range are not included in calculations but the dimensions of the map stay the same.
+                        if pol == 'hpol':
+                            theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.hpol_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.hpol_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
+                        elif pol == 'vpol':
+                            theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.vpol_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.vpol_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
+                        else:
+                            theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.physical_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.physical_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
 
-        if max_method == 0:
-            row_index, column_index = numpy.unravel_index(masked_map_values.argmax(),numpy.shape(masked_map_values))
 
-        elif max_method == 1:
-            #Calculates sum of each point plus surrounding four points to get max.
-            rounded_corr_values = (masked_map_values + numpy.roll(masked_map_values,1,axis=0) + numpy.roll(masked_map_values,-1,axis=0) + numpy.roll(masked_map_values,1,axis=1) + numpy.roll(masked_map_values,-1,axis=1))/5.0
-            row_index, column_index = numpy.unravel_index(rounded_corr_values.argmax(),numpy.shape(rounded_corr_values))
 
-        theta_best  = self.thetas_deg[row_index]
-        phi_best    = self.phis_deg[column_index]
+            masked_map_values = numpy.ma.array(map_values.copy(),mask=~theta_cut) #This way the values not in the range are not included in calculations but the dimensions of the map stay the same.
 
-        t_best_0subtract1 = self.t_hpol_0subtract1[row_index,column_index]
-        t_best_0subtract2 = self.t_hpol_0subtract2[row_index,column_index]
-        t_best_0subtract3 = self.t_hpol_0subtract3[row_index,column_index]
-        t_best_1subtract2 = self.t_hpol_1subtract2[row_index,column_index]
-        t_best_1subtract3 = self.t_hpol_1subtract3[row_index,column_index]
-        t_best_2subtract3 = self.t_hpol_2subtract3[row_index,column_index]
+            if max_method == 0:
+                row_index, column_index = numpy.unravel_index(masked_map_values.argmax(),numpy.shape(masked_map_values))
 
-        if verbose == True:
-            print("From the correlation plot:")
-            print("Best zenith angle:",theta_best)
-            print("Best azimuth angle:",phi_best)
-            print('Predicted time delays %run between A0 and A1:', t_best_0subtract1)
-            print('Predicted time delays between A0 and A2:', t_best_0subtract2)
-            print('Predicted time delays between A0 and A3:', t_best_0subtract3)
-            print('Predicted time delays between A1 and A2:', t_best_1subtract2)
-            print('Predicted time delays between A1 and A3:', t_best_1subtract3)
-            print('Predicted time delays between A2 and A3:', t_best_2subtract3)
+            elif max_method == 1:
+                #Calculates sum of each point plus surrounding four points to get max.
+                rounded_corr_values = (masked_map_values + numpy.roll(masked_map_values,1,axis=0) + numpy.roll(masked_map_values,-1,axis=0) + numpy.roll(masked_map_values,1,axis=1) + numpy.roll(masked_map_values,-1,axis=1))/5.0
+                row_index, column_index = numpy.unravel_index(rounded_corr_values.argmax(),numpy.shape(rounded_corr_values))
 
-        return row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3
+            theta_best  = self.thetas_deg[row_index]
+            phi_best    = self.phis_deg[column_index]
+
+            t_best_0subtract1 = self.t_hpol_0subtract1[row_index,column_index]
+            t_best_0subtract2 = self.t_hpol_0subtract2[row_index,column_index]
+            t_best_0subtract3 = self.t_hpol_0subtract3[row_index,column_index]
+            t_best_1subtract2 = self.t_hpol_1subtract2[row_index,column_index]
+            t_best_1subtract3 = self.t_hpol_1subtract3[row_index,column_index]
+            t_best_2subtract3 = self.t_hpol_2subtract3[row_index,column_index]
+
+            if verbose == True:
+                print("From the correlation plot:")
+                print("Best zenith angle:",theta_best)
+                print("Best azimuth angle:",phi_best)
+                print('Predicted time delays %run between A0 and A1:', t_best_0subtract1)
+                print('Predicted time delays between A0 and A2:', t_best_0subtract2)
+                print('Predicted time delays between A0 and A3:', t_best_0subtract3)
+                print('Predicted time delays between A1 and A2:', t_best_1subtract2)
+                print('Predicted time delays between A1 and A3:', t_best_1subtract3)
+                print('Predicted time delays between A2 and A3:', t_best_2subtract3)
+
+            return row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def altAzToRaDec(eventid, alt,az):
         '''
@@ -1030,6 +1042,7 @@ class Correlator:
                 plt.plot(plane_xy[0][right_cut], plane_xy[1][right_cut], *args, **kwargs)
             else:
                 if numpy.all([len(numpy.unique(plane_xy[0])) == 1,len(numpy.unique(plane_xy[1])) == 1]):
+                    #import pdb; pdb.set_trace()
                     plt.scatter(plane_xy[0][0], plane_xy[1][0], *args, **kwargs)
                 else:
                     plt.plot(plane_xy[0], plane_xy[1], *args, **kwargs)
@@ -1281,9 +1294,9 @@ class Correlator:
 
                 if plot_map == True:
                     if max_method is not None:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all')
                     else:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all')
                 if plot_corr == True:
                     print('Disabling plot corr for all antenna map.')
                     plot_corr = False
@@ -1362,9 +1375,9 @@ class Correlator:
                 
                 if plot_map == True:
                     if max_method is not None:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
                     else:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
+                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
 
             else:
                 print('Invalid polarization option.  Returning nothing.')
@@ -1468,23 +1481,21 @@ class Correlator:
                 #Prepare center line and plot the map.  Prep cut lines as well.
                 
                 if pol == 'hpol':
-                    selection_index = 1
                     plane_xy = self.getPlaneZenithCurves(self.n_hpol.copy(), 'hpol', 90.0, azimuth_offset_deg=azimuth_offset_deg)
                     if zenith_cut_array_plane is not None:
-                        upper_plane_xy = self.getPlaneZenithCurves(self.n_hpol.copy(), 'hpol', zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
-                        lower_plane_xy = self.getPlaneZenithCurves(self.n_hpol.copy(), 'hpol', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+
+                        upper_plane_xy = self.getPlaneZenithCurves(self.n_hpol.copy(), 'hpol', zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)
+                        lower_plane_xy = self.getPlaneZenithCurves(self.n_hpol.copy(), 'hpol', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)
                 elif pol == 'vpol':
-                    selection_index = 2
                     plane_xy = self.getPlaneZenithCurves(self.n_vpol.copy(), 'vpol', 90.0, azimuth_offset_deg=azimuth_offset_deg)
                     if zenith_cut_array_plane is not None:
-                        upper_plane_xy = self.getPlaneZenithCurves(self.n_vpol.copy(), 'vpol', zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
-                        lower_plane_xy = self.getPlaneZenithCurves(self.n_vpol.copy(), 'vpol', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                        upper_plane_xy = self.getPlaneZenithCurves(self.n_vpol.copy(), 'vpol', zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)
+                        lower_plane_xy = self.getPlaneZenithCurves(self.n_vpol.copy(), 'vpol', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)
                 elif pol == 'all':
-                    selection_index = 3
                     plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', 90.0, azimuth_offset_deg=azimuth_offset_deg) #This is janky
                     if zenith_cut_array_plane is not None:
-                        upper_plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
-                        lower_plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                        upper_plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)
+                        lower_plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)
 
                 #Plot array plane 0 elevation curve.
                 im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
@@ -1974,9 +1985,9 @@ class Correlator:
                 sys.stdout.flush()
                 m = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert)/len(eventids)
                 if max_method is not None:
-                    row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU)
+                    row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU, pol=pol)
                 else:
-                    row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU)        
+                    row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU, pol=pol)        
 
                 if use_weight == True:
                     hist[row_index,column_index] += m[row_index,column_index]
@@ -2069,14 +2080,16 @@ def testMain():
 
         reader = Reader(datapath,run)
 
-        crit_freq_low_pass_MHz = None#70 #This new pulser seems to peak in the region of 85 MHz or so
-        low_pass_filter_order = None#12
+        crit_freq_low_pass_MHz = 100#70 #This new pulser seems to peak in the region of 85 MHz or so
+        low_pass_filter_order = 8#12
 
-        crit_freq_high_pass_MHz = 30#None#55
-        high_pass_filter_order = 5#None#4
+        crit_freq_high_pass_MHz = None#55
+        high_pass_filter_order = None#4
+
         apply_phase_response = True
+        sine_subtract = True
+        plot_filter = True
 
-        plot_filter=True
 
         known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
         eventids = {}
@@ -2121,22 +2134,27 @@ def testMain():
         all_cors.append(cor)
 
 if __name__=="__main__":
-    plt.close('all')
+    #'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'
 
     crit_freq_low_pass_MHz = 100#60 #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = 8
 
     crit_freq_high_pass_MHz = None#30#None
     high_pass_filter_order = None#5#None
-    plot_filter=False
+    plot_filter=True
 
     apply_phase_response=True
-    n_phi = 360
-    n_theta = 360
+    sine_subtract = True
+    sine_subtract_min_freq_GHz = 0.03
+    sine_subtract_max_freq_GHz = 0.09
+    sine_subtract_percent = 0.05
 
+    n_phi = 720
+    n_theta = 720
     upsample = 2**15
-
     max_method = 0
+
+
     
     if len(sys.argv) == 3:
         run = int(sys.argv[1])
@@ -2160,14 +2178,34 @@ if __name__=="__main__":
         reader = Reader(datapath,run)
 
         cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
+        if sine_subtract:
+            cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+        #Azimuth Cuts
+        mean_corr_values, fig, ax = cor.map(eventid, 'vpol', plot_map=True, plot_corr=False, hilbert=True,include_baselines=numpy.array([1,4]), zenith_cut_ENU=None, zenith_cut_array_plane=[0,110], interactive=True)
 
         for mode in ['hpol','vpol']:
-            mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, interactive=True)
+            mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,110], interactive=True)
+            all_figs.append(fig)
+            all_axs.append(ax)
+            # mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, interactive=True)
+            # all_figs.append(fig)
+            # all_axs.append(ax)
+
+            #Azimuth Cuts
+            mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True,include_baselines=numpy.array([1,4]), zenith_cut_ENU=None, zenith_cut_array_plane=[0,110], interactive=True)
             all_figs.append(fig)
             all_axs.append(ax)
 
+            # #Zenith Cuts
+            mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True,include_baselines=numpy.array([0,2,3,5]), zenith_cut_ENU=None, zenith_cut_array_plane=[0,110], interactive=True)
+            all_figs.append(fig)
+            all_axs.append(ax)
+
+            
         all_cors.append(cor)
     else:
+        plt.close('all')
         datapath = os.environ['BEACON_DATA']
 
         all_figs = []
