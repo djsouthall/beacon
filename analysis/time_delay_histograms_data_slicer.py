@@ -184,7 +184,7 @@ if __name__=="__main__":
                 for roi_key in list(ds.roi.keys()):
                     roi_eventids = numpy.intersect1d(ds.getCutsFromROI(roi_key),_eventids)
                     if len(roi_eventids) == 0:
-                        print('%s: No events in both ROI and predefined cuts.'%(roi_key))
+                        print('%s:  No events in both ROI and predefined cuts.'%(roi_key))
                     else:
                         eventid = numpy.random.choice(roi_eventids)
                         #fig, ax = prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None)
