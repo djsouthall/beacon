@@ -73,7 +73,15 @@ class dataSlicerSingleRun():
         analysis h5py files.  This will be used whenever attempting to plot or cut on time delay values.
     map_dset_key : str
         This is a string that must correspond to a specific stored and precalculated map/alt-az dataset stored in the
-        analysis h5py files.  This will be used whenever attempting to plot or cut on map/alt-az values.
+        analysis h5py files.  This will be used whenever attempting to plot or cut on map/alt-az values.  Note that
+        this will attempt to use this key to map datasets for BOTH maps using hilbert envelopes AND ones not using
+        hilbert enevelopes.  It does so by changing the 0/1 in the name that refers to hilbert being enabled.
+        If it succeeds in mapping both (i.e. both exist), then 'theta_best_h','theta_best_v','elevation_best_h',
+        'elevation_best_v','phi_best_h','phi_best_v' will refer to the non-hilbert versions, and 'hilbert_theta_best_h',
+        'hilbert_theta_best_v','hilbert_elevation_best_h','hilbert_elevation_best_v','hilbert_phi_best_h',
+        'hilbert_phi_best_v' will all refer to the hilbert envelope versions.  If only the given dataset exists
+        REGARDLESS OF WHETHER IT IS HILBERT OR NOT, it will just use the default keys, though titles will appropriately
+        reflect if it is hilbert or not.  
     curve_choice : int
         Which curve/cr template you wish to use when loading the template search results from the cr template search.
         Currently the only option is 0, which corresponds to a simple bi-polar delta function convolved with the known
@@ -136,6 +144,9 @@ class dataSlicerSingleRun():
                                         'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
                                         'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',
                                         'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','phi_best_h','phi_best_v']
+
+
+
             self.updateReader(reader)
             self.tct = None #This will be defined when necessary by functions below. 
 
@@ -183,6 +194,7 @@ class dataSlicerSingleRun():
 
             #Map Direction Params:
             self.map_dset_key = map_dset_key
+            self.checkForBothMapDatasets()
 
             self.trigger_types = trigger_types
 
@@ -210,6 +222,48 @@ class dataSlicerSingleRun():
         This will return a list of the currently supported parameter keys for making 2d histogram plots.
         '''
         return print(self.known_param_keys)
+
+    def checkForBothMapDatasets(self):
+        '''
+        This will use the given dset key for map data, and determine whether it is using hilbert envelopes or not.
+        It will then check for the presence of the counterpart dataset, and make the appropriate preperations.  
+        '''
+        # 'hilbert_theta_best_h','hilbert_theta_best_v','hilbert_elevation_best_h','hilbert_elevation_best_v','hilbert_phi_best_h','hilbert_phi_best_v'
+        #'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1'
+        self.hilbert_map = bool(self.map_dset_key.lower().split('hilb')[1][1]) #split by hilbert, choosing string to right, the first digit after the underscore should be the bool
+        self.normal_map = not self.hilbert_map #Default before checking if both dsets exist is that only the one given exists. 
+        self.map_dset_key_hilbert = self.map_dset_key  #Fallback
+        try:
+            with h5py.File(self.analysis_filename, 'r') as file:
+                if numpy.logical_and(self.map_dset_key in list(file['map_direction'].keys()),self.map_dset_key.replace('Hilb_%i'%(self.hilbert_map),'Hilb_%i'%(not self.hilbert_map)) in list(file['map_direction'].keys())):
+                    if self.hilbert_map == True:
+                        self.map_dset_key_hilbert = self.map_dset_key
+                        self.map_dset_key = self.map_dset_key.replace('Hilb_%i'%(self.hilbert_map),'Hilb_%i'%(not self.hilbert_map))
+                    else:
+                        self.map_dset_key_hilbert = self.map_dset_key.replace('Hilb_%i'%(self.hilbert_map),'Hilb_%i'%(not self.hilbert_map))
+                    self.hilbert_map = True #Since both datasets exist, both maps are enabled.                    
+                    self.normal_map = True #Since both datasets exist, both maps are enabled.
+
+                    added_keys = ['hilbert_theta_best_h','hilbert_theta_best_v','hilbert_elevation_best_h','hilbert_elevation_best_v','hilbert_phi_best_h','hilbert_phi_best_v']
+                    for k in added_keys:
+                        self.known_param_keys.append(k)
+
+                    print('NOTE: Both version of map data (normal v.s. Hilbert) are available in this run for the given map dataset key.')
+                    print('Use the same map keys prepended with "hilbert_" to use them.  For instance "hilbert_elevation_best_h"')
+
+
+                print('Map Direction datasets in file:')
+                for d in list(file['map_direction'].keys()): 
+                    print('\t' + d)
+
+
+                file.close()
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def printDatasets(self):
         '''
@@ -435,6 +489,19 @@ class dataSlicerSingleRun():
                         param = file['map_direction'][self.map_dset_key]['hpol_ENU_azimuth'][...][eventids]
                     elif 'phi_best_v' == param_key:
                         param = file['map_direction'][self.map_dset_key]['vpol_ENU_azimuth'][...][eventids]
+
+                    elif 'hilbert_theta_best_h' == param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert_theta_best_v' == param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert_elevation_best_h' == param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert_elevation_best_v' == param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert_phi_best_h' == param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_azimuth'][...][eventids]
+                    elif 'hilbert_phi_best_v' == param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_azimuth'][...][eventids]
 
 
                     file.close()
@@ -800,6 +867,37 @@ class dataSlicerSingleRun():
                     x_min_val = -180
                 elif 'phi_best_v' == param_key:
                     label = 'Best Reconstructed Azimuth (Deg)\nVpol Antennas Only'
+                    x_n_bins = 360
+                    x_max_val = 180
+                    x_min_val = -180
+
+                elif 'hilbert_theta_best_h' == param_key:
+                    label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only'
+                    x_n_bins = 360
+                    x_max_val = 180
+                    x_min_val = 0
+                elif 'hilbert_theta_best_v' == param_key:
+                    label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only'
+                    x_n_bins = 360
+                    x_max_val = 180
+                    x_min_val = 0
+                elif 'hilbert_elevation_best_h' == param_key:
+                    label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only'
+                    x_n_bins = 360
+                    x_max_val = 90
+                    x_min_val = -90
+                elif 'hilbert_elevation_best_v' == param_key:
+                    label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only'
+                    x_n_bins = 360
+                    x_max_val = 90
+                    x_min_val = -90
+                elif 'hilbert_phi_best_h' == param_key:
+                    label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only'
+                    x_n_bins = 360
+                    x_max_val = 180
+                    x_min_val = -180
+                elif 'hilbert_phi_best_v' == param_key:
+                    label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only'
                     x_n_bins = 360
                     x_max_val = 180
                     x_min_val = -180

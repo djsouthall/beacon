@@ -300,11 +300,41 @@ if __name__=="__main__":
                         file['map_times'].attrs['sine_subtract_max_freq_GHz'] = sine_subtract_max_freq_GHz 
                         file['map_times'].attrs['sine_subtract_percent'] = sine_subtract_percent
 
-                        file['map_direction'].attrs['zenith_cut_ENU'] = zenith_cut_ENU 
-                        file['map_times'].attrs['zenith_cut_ENU'] = zenith_cut_ENU 
+                        if zenith_cut_ENU is None:
+                            file['map_direction'].attrs['zenith_cut_ENU'] = 'None' 
+                            file['map_times'].attrs['zenith_cut_ENU'] = 'None' 
+                        else:
+                            _zenith_cut_ENU = []
+                            if zenith_cut_ENU[0] is None:
+                                _zenith_cut_ENU.append('None')
+                            else:
+                                _zenith_cut_ENU.append(zenith_cut_ENU[0])
+                            if zenith_cut_ENU[1] is None:
+                                _zenith_cut_ENU.append('None')
+                            else:
+                                _zenith_cut_ENU.append(zenith_cut_ENU[1])
 
-                        file['map_direction'].attrs['zenith_cut_array_plane'] = zenith_cut_array_plane
-                        file['map_times'].attrs['zenith_cut_array_plane'] = zenith_cut_array_plane 
+                            file['map_direction'].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
+                            file['map_times'].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
+
+                        if zenith_cut_array_plane is None:
+                            file['map_direction'].attrs['zenith_cut_array_plane'] = 'None'
+                            file['map_times'].attrs['zenith_cut_array_plane'] = 'None' 
+                        else:
+                            _zenith_cut_array_plane = []
+                            if zenith_cut_array_plane[0] is None:
+                                _zenith_cut_array_plane.append('None')
+                            else:
+                                _zenith_cut_array_plane.append(zenith_cut_array_plane[0])
+                            if zenith_cut_array_plane[1] is None:
+                                _zenith_cut_array_plane.append('None')
+                            else:
+                                _zenith_cut_array_plane.append(zenith_cut_array_plane[1])
+
+
+                            file['map_direction'].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane
+                            file['map_times'].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane 
+
 
                         cor = Correlator(reader,  upsample=upsample, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract)
 
@@ -317,7 +347,7 @@ if __name__=="__main__":
                                 if (event_index + 1) % 1000 == 0:
                                     sys.stdout.write('(%i/%i)\t\t\t\n'%(event_index+1,len(eventids)))
                                     sys.stdout.flush()
-                                m = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert,verbose=False)
+                                m = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert)
                                 if max_method is not None:
                                     row_index, column_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3 = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode)
                                 else:

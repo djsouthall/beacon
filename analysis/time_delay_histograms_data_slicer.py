@@ -50,6 +50,10 @@ if __name__=="__main__":
     time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     map_direction_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'#'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
 
+    # 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1'
+    # 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
+    # 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'
+
     crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = 8
 
@@ -66,7 +70,7 @@ if __name__=="__main__":
 
     trigger_types = [2]#[2]
     db_subset_plot_ranges = [[0,30],[30,40],[40,50]] #Used as bin edges.  
-    plot_maps = True
+    plot_maps = False
 
     subset_cm = plt.cm.get_cmap('autumn', 10)
     subset_colors = subset_cm(numpy.linspace(0, 1, len(db_subset_plot_ranges)))[0:len(db_subset_plot_ranges)]
@@ -176,17 +180,27 @@ if __name__=="__main__":
                 # ds.addROI('Array Plane Patch B',{'phi_best_h':[-12,6],'elevation_best_h':[-20,-15]})
                 # ds.addROI('Array Plane Patch C',{'phi_best_h':[-21,-13],'elevation_best_h':[-18,-14.5]})
 
-                ds.addROI('A',{'phi_best_h':[-20,-13],'time_delay_0subtract1_h':[-125,-120]})
-                ds.addROI('B',{'phi_best_h':[-11,-5],'time_delay_0subtract1_h':[-135,-132]})
-                ds.addROI('C',{'phi_best_h':[-5,1],'time_delay_0subtract1_h':[-143,-137]})
-                ds.addROI('D',{'phi_best_h':[6,12],'time_delay_0subtract1_h':[-143,-139]})
-                ds.addROI('E',{'phi_best_h':[18,23],'time_delay_0subtract1_h':[-141,-138]})
-                ds.addROI('F',{'phi_best_h':[30,36],'time_delay_0subtract1_h':[-135,-132]})
-                ds.addROI('G',{'phi_best_h':[36,42],'time_delay_0subtract1_h':[-132,-129]})
-                ds.addROI('H',{'phi_best_h':[44,48],'time_delay_0subtract1_h':[-128,-123]})
+                try:
+                    ds.addROI('A',{'hilbert_phi_best_h':[-20,-13],'time_delay_0subtract1_h':[-125,-120]})
+                    ds.addROI('B',{'hilbert_phi_best_h':[-11,-5],'time_delay_0subtract1_h':[-135,-132]})
+                    ds.addROI('C',{'hilbert_phi_best_h':[-5,1],'time_delay_0subtract1_h':[-143,-137]})
+                    ds.addROI('D',{'hilbert_phi_best_h':[6,12],'time_delay_0subtract1_h':[-143,-139]})
+                    ds.addROI('E',{'hilbert_phi_best_h':[18,23],'time_delay_0subtract1_h':[-141,-138]})
+                    ds.addROI('F',{'hilbert_phi_best_h':[30,36],'time_delay_0subtract1_h':[-135,-132]})
+                    ds.addROI('G',{'hilbert_phi_best_h':[36,42],'time_delay_0subtract1_h':[-132,-129]})
+                    ds.addROI('H',{'hilbert_phi_best_h':[44,48],'time_delay_0subtract1_h':[-128,-123]})
+                except:
+                    print('Using hilbert ROI failed, using normal map ROI')
+                    ds.addROI('A',{'hilbert_phi_best_h':[-20,-13],'time_delay_0subtract1_h':[-125,-120]})
+                    ds.addROI('B',{'hilbert_phi_best_h':[-11,-5],'time_delay_0subtract1_h':[-135,-132]})
+                    ds.addROI('C',{'hilbert_phi_best_h':[-5,1],'time_delay_0subtract1_h':[-143,-137]})
+                    ds.addROI('D',{'hilbert_phi_best_h':[6,12],'time_delay_0subtract1_h':[-143,-139]})
+                    ds.addROI('E',{'hilbert_phi_best_h':[18,23],'time_delay_0subtract1_h':[-141,-138]})
+                    ds.addROI('F',{'hilbert_phi_best_h':[30,36],'time_delay_0subtract1_h':[-135,-132]})
+                    ds.addROI('G',{'hilbert_phi_best_h':[36,42],'time_delay_0subtract1_h':[-132,-129]})
+                    ds.addROI('H',{'hilbert_phi_best_h':[44,48],'time_delay_0subtract1_h':[-128,-123]})
 
-
-                plot_param_pairs = [['cr_template_search_h','cr_template_search_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['phi_best_h','time_delay_0subtract1_h'],['time_delay_0subtract1_h','time_delay_0subtract2_h'],['time_delay_0subtract3_h','time_delay_1subtract2_h']]
+                plot_param_pairs = [['cr_template_search_h','cr_template_search_v'],['hilbert_phi_best_h','hilbert_elevation_best_h'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['phi_best_h','time_delay_0subtract1_h'],['time_delay_0subtract1_h','time_delay_0subtract2_h'],['time_delay_0subtract3_h','time_delay_1subtract2_h']]
                 for key_x, key_y in plot_param_pairs:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
                     if 'cr_template_search' in key_x:
