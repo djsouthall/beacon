@@ -194,7 +194,7 @@ class dataSlicerSingleRun():
 
             #Map Direction Params:
             self.map_dset_key = map_dset_key
-            self.checkForBothMapDatasets()
+            self.checkForBothMapDatasets() #Will append to known param key and prepare for if hilber used or not.
 
             self.trigger_types = trigger_types
 
@@ -841,32 +841,51 @@ class dataSlicerSingleRun():
                     x_max_val = 60
                     x_min_val = 0
                 elif 'theta_best_h' == param_key:
-                    label = 'Best Reconstructed Zenith (Deg)\nHpol Antennas Only'
+                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
+                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only'
+                    else:
+                        label = 'Best Reconstructed Zenith (Deg)\nHpol Antennas Only'
+
                     x_n_bins = 360
                     x_max_val = 180
                     x_min_val = 0
                 elif 'theta_best_v' == param_key:
-                    label = 'Best Reconstructed Zenith (Deg)\nVpol Antennas Only'
+                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
+                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only'
+                    else:
+                        label = 'Best Reconstructed Zenith (Deg)\nVpol Antennas Only'
                     x_n_bins = 360
                     x_max_val = 180
                     x_min_val = 0
                 elif 'elevation_best_h' == param_key:
-                    label = 'Best Reconstructed Elevation (Deg)\nHpol Antennas Only'
+                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
+                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only'
+                    else:
+                        label = 'Best Reconstructed Elevation (Deg)\nHpol Antennas Only'
                     x_n_bins = 360
                     x_max_val = 90
                     x_min_val = -90
                 elif 'elevation_best_v' == param_key:
-                    label = 'Best Reconstructed Elevation (Deg)\nVpol Antennas Only'
+                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
+                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only'
+                    else:
+                        label = 'Best Reconstructed Elevation (Deg)\nVpol Antennas Only'
                     x_n_bins = 360
                     x_max_val = 90
                     x_min_val = -90
                 elif 'phi_best_h' == param_key:
-                    label = 'Best Reconstructed Azimuth (Deg)\nHpol Antennas Only'
+                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
+                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only'
+                    else:
+                        label = 'Best Reconstructed Azimuth (Deg)\nHpol Antennas Only'
                     x_n_bins = 360
                     x_max_val = 180
                     x_min_val = -180
                 elif 'phi_best_v' == param_key:
-                    label = 'Best Reconstructed Azimuth (Deg)\nVpol Antennas Only'
+                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
+                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only'
+                    else:
+                        label = 'Best Reconstructed Azimuth (Deg)\nVpol Antennas Only'
                     x_n_bins = 360
                     x_max_val = 180
                     x_min_val = -180
