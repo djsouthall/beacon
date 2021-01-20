@@ -443,6 +443,70 @@ def loadAntennaZeroLocation(deploy_index=default_deploy):
         A0Location = (37.589310, -118.237621, 3875.53)#latitude,longtidue,elevation #ELEVATION FROM GOOGLE EARTH given in m  
     return A0Location
 
+def loadValleySourcesENU(deploy_index=default_deploy):
+    '''
+    This returns a list of potential RFI sources in the valley.  These were identified using run 1650 as potential sources
+    for the clusters of background events visible in that run.  Some clusters identified had ambigious origin and thus
+    are beholden to multiple entries in the below dictionary.
+    '''
+
+    source_dict = { 'Solar Plant'               :(38.238904, -117.363661, 4922 * 0.3048),\
+                    'Quarry Substation'         :(38.323974, -117.335893, 5365 * 0.3048),\
+                    'Tonopah KTPH'              :(38.051701, -117.226212, 7104 * 0.3048),\
+                    'Dyer Cell Tower'           :(37.665613, -118.065012, 4879 * 0.3048),\
+                    'Beatty Airport Vortac'     :(36.800590, -116.747633, 3928 * 0.3048),\
+                    'Palmetto Cell Tower'       :(37.462089, -117.573584, 5943 * 0.3048),\
+                    'Cedar Peak'                :(37.706014, -116.335117, 8419 * 0.3048),\
+                    'Goldfield Hill Tower'      :(37.726953, -117.225670, 6092 * 0.3048),\
+                    'Goldield Town Tower'       :(37.710925, -117.233411, 5670 * 0.3048),\
+                    'Goldfield KGFN-FM'         :(37.708384, -117.235265, 5696 * 0.3048),\
+                    'Silver Peak Town Antenna'  :(37.752345, -117.630208, 4296 * 0.3048),\
+                    'Silver Peak Lithium Mine'  :(37.766835, -117.591208, 4272 * 0.3048),\
+                    'Past SP Substation'        :(37.824025, -117.337428, 5034 * 0.3048),\
+                    'Silver Peak Substation'    :(37.754281, -117.632355, 4274 * 0.3048)}
+
+
+    #Below are the cuts that were used in the data slicer class to isolate the above clusters.
+    data_slicer_cut_dict = {    'Solar Plant'               :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                'Quarry Substation'         :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                'Beatty Airport Vortac'     :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+                                'Palmetto Cell Tower'       :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
+                                'Cedar Peak'                :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                'Goldfield Hill Tower'      :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                'Goldield Town Tower'       :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                'Goldfield KGFN-FM'         :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                'Silver Peak Town Antenna'  :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                'Silver Peak Lithium Mine'  :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                'Past SP Substation'        :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                'Silver Peak Substation'    :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]}}
+    #Note the above ROI assumes you have already cut out events that are below a certain correlation with a template.
+    # impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+    # time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+    # map_direction_dset_key = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
+    # ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
+    #                 curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+    #                 cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+    #                 impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+    #                 time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
+    #                 std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+    #                 p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+    #                 snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+    # ds.addROI('Simple Template V > 0.7',{'cr_template_search_v':[0.7,1.0]})# Adding 2 ROI in different rows and appending as below allows for "OR" instead of "AND"
+    # ds.addROI('Simple Template H > 0.7',{'cr_template_search_h':[0.7,1.0]})
+    # #Done for OR condition
+    # _eventids = numpy.sort(numpy.unique(numpy.append(ds.getCutsFromROI('Simple Template H > 0.7',load=False,save=False),ds.getCutsFromROI('Simple Template V > 0.7',load=False,save=False))))
+    # roi_eventids = numpy.intersect1d(ds.getCutsFromROI(roi_key),_eventids)
+    source_ENU = {}
+
+    origin = loadAntennaZeroLocation(deploy_index = deploy_index)
+    
+    for key, location in source_dict.items():
+        source_ENU[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+    return source_ENU, data_slicer_cut_dict
+
+
 def loadAntennaLocationsENU(deploy_index=default_deploy):
     '''
     Loads the antenna locations and phase locations as best they are known.

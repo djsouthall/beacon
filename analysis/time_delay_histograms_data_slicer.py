@@ -70,7 +70,7 @@ if __name__=="__main__":
 
     trigger_types = [2]#[2]
     db_subset_plot_ranges = [[0,30],[30,40],[40,50]] #Used as bin edges.  
-    plot_maps = False
+    plot_maps = True
 
     subset_cm = plt.cm.get_cmap('autumn', 10)
     subset_colors = subset_cm(numpy.linspace(0, 1, len(db_subset_plot_ranges)))[0:len(db_subset_plot_ranges)]
@@ -160,6 +160,7 @@ if __name__=="__main__":
                 #This set of plots aims to compare high correlation with template events across a few plots.  
                 ds.addROI('Simple Template V > 0.7',{'cr_template_search_v':[0.7,1.0]})# Adding 2 ROI in different rows and appending as below allows for "OR" instead of "AND"
                 ds.addROI('Simple Template H > 0.7',{'cr_template_search_h':[0.7,1.0]})
+                #Done for OR condition
                 _eventids = numpy.sort(numpy.unique(numpy.append(ds.getCutsFromROI('Simple Template H > 0.7',load=False,save=False),ds.getCutsFromROI('Simple Template V > 0.7',load=False,save=False))))
                 #_eventids = eventids = ds.getEventidsFromTriggerType()#numpy.arange(reader.N())
                 #Now that eventids are gotten from initial cuts, I want to clear out ROI such that they are not plotted
@@ -180,25 +181,42 @@ if __name__=="__main__":
                 # ds.addROI('Array Plane Patch B',{'phi_best_h':[-12,6],'elevation_best_h':[-20,-15]})
                 # ds.addROI('Array Plane Patch C',{'phi_best_h':[-21,-13],'elevation_best_h':[-18,-14.5]})
 
-                try:
-                    ds.addROI('A',{'hilbert_phi_best_h':[-20,-13],'time_delay_0subtract1_h':[-125,-120]})
-                    ds.addROI('B',{'hilbert_phi_best_h':[-11,-5],'time_delay_0subtract1_h':[-135,-132]})
-                    ds.addROI('C',{'hilbert_phi_best_h':[-5,1],'time_delay_0subtract1_h':[-143,-137]})
-                    ds.addROI('D',{'hilbert_phi_best_h':[6,12],'time_delay_0subtract1_h':[-143,-139]})
-                    ds.addROI('E',{'hilbert_phi_best_h':[18,23],'time_delay_0subtract1_h':[-141,-138]})
-                    ds.addROI('F',{'hilbert_phi_best_h':[30,36],'time_delay_0subtract1_h':[-135,-132]})
-                    ds.addROI('G',{'hilbert_phi_best_h':[36,42],'time_delay_0subtract1_h':[-132,-129]})
-                    ds.addROI('H',{'hilbert_phi_best_h':[44,48],'time_delay_0subtract1_h':[-128,-123]})
-                except:
-                    print('Using hilbert ROI failed, using normal map ROI')
-                    ds.addROI('A',{'hilbert_phi_best_h':[-20,-13],'time_delay_0subtract1_h':[-125,-120]})
-                    ds.addROI('B',{'hilbert_phi_best_h':[-11,-5],'time_delay_0subtract1_h':[-135,-132]})
-                    ds.addROI('C',{'hilbert_phi_best_h':[-5,1],'time_delay_0subtract1_h':[-143,-137]})
-                    ds.addROI('D',{'hilbert_phi_best_h':[6,12],'time_delay_0subtract1_h':[-143,-139]})
-                    ds.addROI('E',{'hilbert_phi_best_h':[18,23],'time_delay_0subtract1_h':[-141,-138]})
-                    ds.addROI('F',{'hilbert_phi_best_h':[30,36],'time_delay_0subtract1_h':[-135,-132]})
-                    ds.addROI('G',{'hilbert_phi_best_h':[36,42],'time_delay_0subtract1_h':[-132,-129]})
-                    ds.addROI('H',{'hilbert_phi_best_h':[44,48],'time_delay_0subtract1_h':[-128,-123]})
+                #expected_el_az = {}
+
+                # ds.addROI('Solar Plant Substation',{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]})
+                # #expected_el_az['Solar Plant Substation'] = []
+                # ds.addROI('Dyer or Tonopah',{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]}) #I think tonopah
+                # #expected_el_az['Dyer or Tonopah'] = 
+                # ds.addROI('Beatty Airport VORTAC',{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]})
+                # #expected_el_az['Beatty Airport VORTAC'] = 
+                # ds.addROI('Silver Peak or Distant Substation',{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]})
+                # #expected_el_az['Silver Peak or Distant Substation'] = 
+                ds.addROI('Palmetto Tower',{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]})
+                # #expected_el_az['Palmetto Tower'] = 
+                ds.addROI('Goldfield Radio',{'hilbert_phi_best_h':[6,12],'time_delay_0subtract1_h':[-143,-139]})
+                #ds.addROI('Goldfield Radio',{'phi_best_h':[8.4,11.7],'elevation_best_h':[-65,-63]})
+                # #expected_el_az['Goldfield Radio'] = 
+                ds.addROI('Cedar Peak',{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]})
+                if False:
+                    try:
+                        ds.addROI('A',{'hilbert_phi_best_h':[-20,-13],'time_delay_0subtract1_h':[-125,-120]})
+                        ds.addROI('B',{'hilbert_phi_best_h':[-11,-5],'time_delay_0subtract1_h':[-135,-132]})
+                        ds.addROI('C',{'hilbert_phi_best_h':[-5,1],'time_delay_0subtract1_h':[-143,-137]})
+                        ds.addROI('D',{'hilbert_phi_best_h':[6,12],'time_delay_0subtract1_h':[-143,-139]})
+                        ds.addROI('E',{'hilbert_phi_best_h':[18,23],'time_delay_0subtract1_h':[-141,-138]})
+                        ds.addROI('F',{'hilbert_phi_best_h':[30,36],'time_delay_0subtract1_h':[-135,-132]})
+                        ds.addROI('G',{'hilbert_phi_best_h':[36,42],'time_delay_0subtract1_h':[-132,-129]})
+                        ds.addROI('H',{'hilbert_phi_best_h':[44,48],'time_delay_0subtract1_h':[-128,-123]})
+                    except:
+                        print('Using hilbert ROI failed, using normal map ROI')
+                        ds.addROI('A',{'hilbert_phi_best_h':[-20,-13],'time_delay_0subtract1_h':[-125,-120]})
+                        ds.addROI('B',{'hilbert_phi_best_h':[-11,-5],'time_delay_0subtract1_h':[-135,-132]})
+                        ds.addROI('C',{'hilbert_phi_best_h':[-5,1],'time_delay_0subtract1_h':[-143,-137]})
+                        ds.addROI('D',{'hilbert_phi_best_h':[6,12],'time_delay_0subtract1_h':[-143,-139]})
+                        ds.addROI('E',{'hilbert_phi_best_h':[18,23],'time_delay_0subtract1_h':[-141,-138]})
+                        ds.addROI('F',{'hilbert_phi_best_h':[30,36],'time_delay_0subtract1_h':[-135,-132]})
+                        ds.addROI('G',{'hilbert_phi_best_h':[36,42],'time_delay_0subtract1_h':[-132,-129]})
+                        ds.addROI('H',{'hilbert_phi_best_h':[44,48],'time_delay_0subtract1_h':[-128,-123]})
 
                 plot_param_pairs = [['cr_template_search_h','cr_template_search_v'],['hilbert_phi_best_h','hilbert_elevation_best_h'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['phi_best_h','time_delay_0subtract1_h'],['time_delay_0subtract1_h','time_delay_0subtract2_h'],['time_delay_0subtract3_h','time_delay_1subtract2_h']]
                 for key_x, key_y in plot_param_pairs:
@@ -213,20 +231,23 @@ if __name__=="__main__":
                 all_axs = []
                 for roi_key in list(ds.roi.keys()):
                     roi_eventids = numpy.intersect1d(ds.getCutsFromROI(roi_key),_eventids)
+                    roi_impulsivity = ds.getDataFromParam(roi_eventids,'impulsivity_h')
+                    roi_impulsivity_sort = numpy.argsort(roi_impulsivity)
                     if len(roi_eventids) == 0:
                         print('%s:  No events in both ROI and predefined cuts.'%(roi_key))
                     else:
-                        eventid = numpy.random.choice(roi_eventids)
+                        #eventid = numpy.random.choice(roi_eventids)
+                        eventid = roi_eventids[roi_impulsivity_sort[-1]] #plot highest impulsivity in cut
                         #fig, ax = prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None)
                         #ax.set_title('%s: eventid = '%(roi_key,eventid))
                         fig, ax = prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=True, hilbert=False, sine_subtract=True, apply_tukey=None,additional_title_text=roi_key)
 
                         if plot_maps:
-                            mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180], zenith_cut_array_plane=None, interactive=True)
+                            mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=True, zenith_cut_array_plane=None, interactive=True)#, zenith_cut_ENU=[90,180]
                             all_figs.append(fig)
                             all_axs.append(ax)
 
-                            mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180], zenith_cut_array_plane=None, interactive=True)
+                            mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True)#, zenith_cut_ENU=[90,180]
                             all_figs.append(fig)
                             all_axs.append(ax)
 

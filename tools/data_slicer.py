@@ -1103,7 +1103,7 @@ class dataSlicerSingleRun():
                     legend_properties.append(cs.legend_elements()[0][0])
                     legend_labels.append('roi %i: %s'%(roi_index, roi_key))
 
-                plt.legend(legend_properties,legend_labels)
+                plt.legend(legend_properties,legend_labels,loc='upper left')
 
             return fig, ax
         except Exception as e:
