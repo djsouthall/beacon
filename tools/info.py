@@ -30,7 +30,7 @@ import pymap3d as pm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
-default_deploy = 2 #The deployment time to use as the default.
+default_deploy = 4#2 #The deployment time to use as the default.
 
 
 def loadKnownPlaneDict(ignore_planes=[]):
@@ -575,6 +575,24 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
 
             antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-31.334960, -12.928318, 15.911683], 2 : [-10.717905, -46.442935, 0.488731], 3 : [-31.672917, -42.311738, 15.209071]}
             antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.022266, 0.010907, 0.128100], 2 : [0.024116, 0.014593, 0.176512], 3 : [0.026911, 0.013143, 0.139782]}
+        elif deploy_index == 4:
+            #hpol calibration based solely off of matching Solar Plant calibration
+            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-34.482512, -16.819514, 13.000502], 2 : [-6.612918, -45.580198, 11.070150], 3 : [-30.208161, -42.804228, 13.270912]}
+            antennas_phase_hpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [3.715818, 3.611556, 4.597339], 2 : [5.816696, 5.086424, 5.437195], 3 : [4.455286, 4.555449, 3.064820]}
+
+            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-34.224499, -16.170499, 12.999983], 2 : [-9.338844, -45.953347, 0.917863], 3 : [-31.007327, -42.196964, 12.929773]}
+            antennas_phase_vpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.129504, 0.136716, 4.293571], 2 : [2.441008, 4.373686, 3.341286], 3 : [2.412784, 2.502000, 3.880752]}
+        elif deploy_index == 5:
+            #Hpol uses the following sources
+            #use_sources = ['Quarry Substation','Palmetto Cell Tower','Goldfield KGFN-FM','Silver Peak Substation']
+            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.482512, -13.819514, 16.000502], 2 : [-7.382560, -44.541828, 14.070150], 3 : [-33.208161, -39.804228, 16.270912]}
+            antennas_phase_hpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.003555, 0.170239, 0.097863], 2 : [0.108990, 0.235702, 0.799819], 3 : [0.004331, 0.041649, 0.105451]}
+            #Vpol uses the following sources
+            #
+
+
+
+
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
 
@@ -606,7 +624,9 @@ def loadCableDelays(deploy_index=default_deploy,return_raw=False):
 
         # pulser_locations_ENU['hpol'] = {'run1507':[259.417378, -353.989882, -88.125921], 'run1509':[1129.874543, -528.948053, -160.527267], 'run1511':[189.018118, 338.618832, -44.960478]}
         # pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[0.010000, 0.010000, 0.010000], 'run1509':[0.010000, 0.010000, 0.010000], 'run1511':[0.010000, 0.010000, 0.010000]}
-
+    else:
+        cable_delays =  {'hpol': numpy.array([423.37836156, 428.43979143, 415.47714969, 423.58803498]), \
+                         'vpol': numpy.array([428.59277751, 430.16685915, 423.56765695, 423.50469285])}
 
     if return_raw == False:
         min_delay = min((min(cable_delays['hpol']),min(cable_delays['vpol'])))

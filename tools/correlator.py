@@ -781,7 +781,10 @@ class Correlator:
                 event_ax = event.inaxes
                 pol = event_ax.get_title().split('-')[2]
                 eventid = int(event_ax.get_title().split('-')[1])
-                hilbert = literal_eval(event_ax.get_title().split('-')[3].split('=')[1])
+                if 'True' in event_ax.get_title().split('Hilbert')[1]:
+                    hilbert = True
+                else:
+                    hilbert = False
 
                 if center_dir.upper() == 'E':
                     azimuth_offset_rad = 0 #Normally this is subtracted for plotting, but needs to be added here to get back to original orientation for finding the correct time delays.

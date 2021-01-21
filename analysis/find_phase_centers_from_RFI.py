@@ -27,6 +27,7 @@ import tools.info as info
 import tools.get_plane_tracks as pt
 from tools.fftmath import TimeDelayCalculator
 from tools.data_slicer import dataSlicerSingleRun
+from tools.correlator import Correlator
 
 #Plotting Imports
 import matplotlib.pyplot as plt
@@ -47,7 +48,7 @@ c = 299792458/n #m/s
 
 if __name__ == '__main__':
     try:
-        #plt.close('all')
+        plt.close('all')
         if len(sys.argv) == 2:
             if str(sys.argv[1]) in ['vpol', 'hpol']:
                 mode = str(sys.argv[1])
@@ -58,9 +59,10 @@ if __name__ == '__main__':
             print('No mode given.  Defaulting to hpol')
             mode = 'hpol'
 
-
+        #palmetto is a reflection?
+        #Need to label which ones work for vpol and hpol
         #use_sources = ['Solar Plant','Quarry Substation','Tonopah KTPH','Dyer Cell Tower','Beatty Airport Vortac','Palmetto Cell Tower','Cedar Peak','Goldfield Hill Tower','Goldield Town Tower','Goldfield KGFN-FM','Silver Peak Town Antenna','Silver Peak Lithium Mine','Past SP Substation','Silver Peak Substation']
-        use_sources = ['Quarry Substation','Beatty Airport Vortac','Palmetto Cell Tower','Silver Peak Substation']#['Quarry Substation','Beatty Airport Vortac','Palmetto Cell Tower','Silver Peak Substation']
+        use_sources = ['Quarry Substation','Tonopah KTPH','Silver Peak Substation','Palmetto Cell Tower','Beatty Airport Vortac']#['Quarry Substation','Palmetto Cell Tower','Silver Peak Substation']#['Solar Plant']#['Quarry Substation']#,'Beatty Airport Vortac','Palmetto Cell Tower','Silver Peak Substation']#['Quarry Substation','Beatty Airport Vortac','Palmetto Cell Tower','Silver Peak Substation']
 
         impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
         time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
@@ -69,7 +71,7 @@ if __name__ == '__main__':
         plot_residuals = False
         #plot_time_delays = False
 
-        final_corr_length = 2**13
+        final_corr_length = 2**16
 
         crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
         low_pass_filter_order = 8
@@ -164,7 +166,7 @@ if __name__ == '__main__':
             ds.addROI(source_key,cut_dict)
             roi_eventids = numpy.intersect1d(ds.getCutsFromROI(source_key),_eventids)
             roi_impulsivity = ds.getDataFromParam(roi_eventids,'impulsivity_h')
-            roi_impulsivity_sort = numpy.argsort(roi_impulsivity)
+            roi_impulsivity_sort = numpy.argsort(roi_impulsivity)[::-1] #Reverse sorting so high numbers are first.
             limit_events = 10
             if len(roi_eventids) > limit_events:
                 print('LIMITING TIME DELAY CALCULATION TO %i MOST IMPULSIVE EVENTS'%limit_events)
@@ -246,7 +248,12 @@ if __name__ == '__main__':
         chi2_ax.set_xlabel('East (m)',linespacing=10)
         chi2_ax.set_ylabel('North (m)',linespacing=10)
         chi2_ax.set_zlabel('Up (m)',linespacing=10)
-        chi2_ax.dist = 10
+        
+        if False:
+            for key, enu in sources_ENU.items():
+                chi2_ax.scatter(enu[0], enu[1], enu[2],alpha=0.5,label=key)
+        else:
+            chi2_ax.dist = 10
         plt.legend()
 
 
@@ -297,7 +304,7 @@ if __name__ == '__main__':
                 print(exc_type, fname, exc_tb.tb_lineno)
 
 
-        initial_step = 0.5 #m
+        initial_step = 0.1 #m
         #-12 ft on pulser locations relative to antennas to account for additional mast elevation.
         
         
@@ -430,70 +437,34 @@ if __name__ == '__main__':
         chi2_ax.dist = 10
         plt.legend()
 
+        cor = Correlator(reader,  upsample=2**16, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=True, tukey=False, sine_subtract=True)
+        cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+        adjusted_cor = Correlator(reader,  upsample=2**16, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=True, tukey=False, sine_subtract=True)
+        adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
         
-        plot_time_delays = True
-        plot_az_res = True
+        ant0_ENU = numpy.array([ant0_phase_x, ant0_phase_y, ant0_phase_z])
+        ant1_ENU = numpy.array([ant1_phase_x, ant1_phase_y, ant1_phase_z])
+        ant2_ENU = numpy.array([ant2_phase_x, ant2_phase_y, ant2_phase_z])
+        ant3_ENU = numpy.array([ant3_phase_x, ant3_phase_y, ant3_phase_z])
 
-        if plot_time_delays == True:
-            if plot_az_res:
-                az_fig = plt.figure()
-                az_fig.canvas.set_window_title('%s Res v.s. Az'%(mode))
-                az_ax = plt.gca()
-                plt.minorticks_on()
-                plt.grid(b=True, which='major', color='k', linestyle='-')
-                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                plt.ylabel('Time Delay Residuals (ns)')
-                plt.xlabel('Azimuth Angle (Deg)')
 
-            use_new_phase_centers = True #SHOULD ALWAYS BE TRUE UNLESS SPECIFICALLY TESTING SOMETHING
+        if mode == 'hpol':
+            adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,adjusted_cor.A0_vpol,adjusted_cor.A1_vpol,adjusted_cor.A2_vpol,adjusted_cor.A3_vpol,verbose=False)
+        else:
+            adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
+
+
+        for source_key, cut_dict in data_slicer_cut_dict.items():
+            ds.addROI(source_key,cut_dict)
+            roi_eventids = numpy.intersect1d(ds.getCutsFromROI(source_key),_eventids)
+            roi_impulsivity = ds.getDataFromParam(roi_eventids,'impulsivity_h')
+            roi_impulsivity_sort = numpy.argsort(roi_impulsivity) #NOT REVERSED
+            eventid = roi_eventids[roi_impulsivity_sort[-1]]
             
-            if use_new_phase_centers == True:
-                loc_dict = {0:[m.values['ant0_x'],m.values['ant0_y'],m.values['ant0_z']],1:[m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z']],2:[m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z']],3:[m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']]}
-            else:
-                loc_dict = {0:[antennas_phase_start[0][0],antennas_phase_start[0][1],antennas_phase_start[0][2]],1:[antennas_phase_start[1][0],antennas_phase_start[1][1],antennas_phase_start[1][2]],2:[antennas_phase_start[2][0],antennas_phase_start[2][1],antennas_phase_start[2][2]],3:[antennas_phase_start[3][0],antennas_phase_start[3][1],antennas_phase_start[3][2]]}
-            
-            all_az = [[],[],[],[],[],[]]
-            all_el = [[],[],[],[],[],[]]
-            all_res = [[],[],[],[],[],[]]
-
-            for source_index, source_key in enumerate(list(sources_ENU.keys())):
-
-                if use_new_phase_centers == True:
-                    fit_cable_delays = info.loadCableDelays(return_raw=True).copy()
-                    fit_cable_delays[mode] = numpy.array([m.values['cable_delay0'],m.values['cable_delay1'],m.values['cable_delay2'],m.values['cable_delay3']])
-                    d0 = (numpy.sqrt((sources_ENU[source_key][0] - m.values['ant0_x'])**2 + (sources_ENU[source_key][1] - m.values['ant0_y'])**2 + (sources_ENU[source_key][2] - m.values['ant0_z'])**2 )/c)*1.0e9 #ns
-                    d1 = (numpy.sqrt((sources_ENU[source_key][0] - m.values['ant1_x'])**2 + (sources_ENU[source_key][1] - m.values['ant1_y'])**2 + (sources_ENU[source_key][2] - m.values['ant1_z'])**2 )/c)*1.0e9 #ns
-                    d2 = (numpy.sqrt((sources_ENU[source_key][0] - m.values['ant2_x'])**2 + (sources_ENU[source_key][1] - m.values['ant2_y'])**2 + (sources_ENU[source_key][2] - m.values['ant2_z'])**2 )/c)*1.0e9 #ns
-                    d3 = (numpy.sqrt((sources_ENU[source_key][0] - m.values['ant3_x'])**2 + (sources_ENU[source_key][1] - m.values['ant3_y'])**2 + (sources_ENU[source_key][2] - m.values['ant3_z'])**2 )/c)*1.0e9 #ns
-
-                else:
-                    print('\n\n\nWARNING CALCULATING RESIDUALS USING INPUT POSITIONS NOT REFINED OUTPUT POSITIONS!!!!!!!!!!!!!!!!!\n\n\n')
-                    fit_cable_delays = info.loadCableDelays(return_raw=True).copy()
-                    d0 = (numpy.sqrt((sources_ENU[source_key][0] - antennas_phase_start[0][0])**2 + (sources_ENU[source_key][1] - antennas_phase_start[0][1])**2 + (sources_ENU[source_key][2] - antennas_phase_start[0][2])**2 )/c)*1.0e9 #ns
-                    d1 = (numpy.sqrt((sources_ENU[source_key][0] - antennas_phase_start[1][0])**2 + (sources_ENU[source_key][1] - antennas_phase_start[1][1])**2 + (sources_ENU[source_key][2] - antennas_phase_start[1][2])**2 )/c)*1.0e9 #ns
-                    d2 = (numpy.sqrt((sources_ENU[source_key][0] - antennas_phase_start[2][0])**2 + (sources_ENU[source_key][1] - antennas_phase_start[2][1])**2 + (sources_ENU[source_key][2] - antennas_phase_start[2][2])**2 )/c)*1.0e9 #ns
-                    d3 = (numpy.sqrt((sources_ENU[source_key][0] - antennas_phase_start[3][0])**2 + (sources_ENU[source_key][1] - antennas_phase_start[3][1])**2 + (sources_ENU[source_key][2] - antennas_phase_start[3][2])**2 )/c)*1.0e9 #ns
-
-
-
-                d = [d0,d1,d2,d3]
-                if plot_az_res == True:
-                    #SHOULD MAKE THIS V.S. ELEVATION AND ARRAY ELEVATION
-                    mag = numpy.sqrt(sources_ENU[source_key][0]**2 + sources_ENU[source_key][1]**2 + sources_ENU[source_key][2]**2)
-                    elevations = 90.0 - numpy.rad2deg(numpy.arccos(sources_ENU[source_key][2]/mag))
-                    azimuth = numpy.rad2deg(numpy.arctan2(sources_ENU[source_key][1],sources_ENU[source_key][0]))
-                    if azimuth < 0:
-                        azimuth = azimuth%360
-                pairs = numpy.array(list(itertools.combinations((0,1,2,3), 2)))
-                for pair_index, pair in enumerate(pairs):
-                    geometric_time_delay = (d[pair[0]] + fit_cable_delays[mode][pair[0]]) - (d[pair[1]] + fit_cable_delays[mode][pair[1]])
-                    #Right now these seem reversed from what I would expect based on the plot?  In time I mean. 
-                    if pair_index == 0:
-                        geometric_time_delays = geometric_time_delay
-                    else:
-                        geometric_time_delays = numpy.vstack((geometric_time_delays,geometric_time_delay))   
-
-          
+            #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True)
+            adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=[70,91], interactive=True)
+        
         print('Copy-Paste Prints:\n------------')
         print('')
         print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, m.values['ant0_x'],m.values['ant0_y'],m.values['ant0_z'] ,  m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z'],  m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z'],  m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']))

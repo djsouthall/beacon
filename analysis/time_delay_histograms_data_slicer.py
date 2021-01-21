@@ -182,21 +182,20 @@ if __name__=="__main__":
                 # ds.addROI('Array Plane Patch C',{'phi_best_h':[-21,-13],'elevation_best_h':[-18,-14.5]})
 
                 #expected_el_az = {}
-
-                # ds.addROI('Solar Plant Substation',{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]})
+                ds.addROI('Solar Plant Substation',{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]})
                 # #expected_el_az['Solar Plant Substation'] = []
-                # ds.addROI('Dyer or Tonopah',{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]}) #I think tonopah
+                ds.addROI('Dyer or Tonopah',{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]}) #I think tonopah
                 # #expected_el_az['Dyer or Tonopah'] = 
                 # ds.addROI('Beatty Airport VORTAC',{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]})
                 # #expected_el_az['Beatty Airport VORTAC'] = 
-                # ds.addROI('Silver Peak or Distant Substation',{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]})
+                #ds.addROI('Silver Peak or Distant Substation',{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]})
                 # #expected_el_az['Silver Peak or Distant Substation'] = 
-                ds.addROI('Palmetto Tower',{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]})
+                #ds.addROI('Palmetto Tower',{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]})
                 # #expected_el_az['Palmetto Tower'] = 
-                ds.addROI('Goldfield Radio',{'hilbert_phi_best_h':[6,12],'time_delay_0subtract1_h':[-143,-139]})
+                #ds.addROI('Goldfield Radio',{'hilbert_phi_best_h':[6,12],'time_delay_0subtract1_h':[-143,-139]})
                 #ds.addROI('Goldfield Radio',{'phi_best_h':[8.4,11.7],'elevation_best_h':[-65,-63]})
                 # #expected_el_az['Goldfield Radio'] = 
-                ds.addROI('Cedar Peak',{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]})
+                #ds.addROI('Cedar Peak',{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]})
                 if False:
                     try:
                         ds.addROI('A',{'hilbert_phi_best_h':[-20,-13],'time_delay_0subtract1_h':[-125,-120]})
@@ -243,9 +242,9 @@ if __name__=="__main__":
                         fig, ax = prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=True, hilbert=False, sine_subtract=True, apply_tukey=None,additional_title_text=roi_key)
 
                         if plot_maps:
-                            mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=True, zenith_cut_array_plane=None, interactive=True)#, zenith_cut_ENU=[90,180]
-                            all_figs.append(fig)
-                            all_axs.append(ax)
+                            # mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=True, zenith_cut_array_plane=None, interactive=True)#, zenith_cut_ENU=[90,180]
+                            # all_figs.append(fig)
+                            # all_axs.append(ax)
 
                             mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True)#, zenith_cut_ENU=[90,180]
                             all_figs.append(fig)
