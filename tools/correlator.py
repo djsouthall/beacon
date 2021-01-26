@@ -1225,7 +1225,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={}):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -1287,12 +1287,12 @@ class Correlator:
             if ~numpy.isin('vpol', list(time_delay_dict.keys())):
                 time_delay_dict['vpol'] = {}
             if pol == 'both':
-                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive)
-                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive)
+                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive,window_title=window_title)
+                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive,window_title=window_title)
                 return hpol_result, vpol_result
             elif pol == 'all':
-                hpol_result = self.map(eventid,'hpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines)
-                vpol_result = self.map(eventid,'vpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines)
+                hpol_result = self.map(eventid,'hpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,window_title=window_title)
+                vpol_result = self.map(eventid,'vpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,window_title=window_title)
                 mean_corr_values = (hpol_result + vpol_result)/2
 
                 if plot_map == True:
@@ -1443,7 +1443,10 @@ class Correlator:
                 elevation_best_deg = 90.0 - theta_best
 
                 fig = plt.figure()
-                fig.canvas.set_window_title('r%i-e%i-%s Correlation Map'%(self.reader.run,eventid,pol.title()))
+                if window_title is None:
+                    fig.canvas.set_window_title('r%i-e%i-%s Correlation Map'%(self.reader.run,eventid,pol.title()))
+                else:
+                    fig.canvas.set_window_title(window_title)
                 if mollweide == True:
                     ax = fig.add_subplot(1,1,1, projection='mollweide')
                 else:

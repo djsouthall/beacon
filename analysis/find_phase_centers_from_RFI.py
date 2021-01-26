@@ -62,16 +62,116 @@ if __name__ == '__main__':
         #palmetto is a reflection?
         #Need to label which ones work for vpol and hpol
         #use_sources = ['Solar Plant','Quarry Substation','Tonopah KTPH','Dyer Cell Tower','Beatty Airport Vortac','Palmetto Cell Tower','Cedar Peak','Goldfield Hill Tower','Goldield Town Tower','Goldfield KGFN-FM','Silver Peak Town Antenna','Silver Peak Lithium Mine','Past SP Substation','Silver Peak Substation']
-        use_sources = ['Quarry Substation','Tonopah KTPH','Silver Peak Substation','Palmetto Cell Tower','Beatty Airport Vortac']#['Quarry Substation','Palmetto Cell Tower','Silver Peak Substation']#['Solar Plant']#['Quarry Substation']#,'Beatty Airport Vortac','Palmetto Cell Tower','Silver Peak Substation']#['Quarry Substation','Beatty Airport Vortac','Palmetto Cell Tower','Silver Peak Substation']
+        
+        # 'Solar Plant Substation'
+        # Some crosspol. definitely mostly hpol
 
+        # 'Dyer or Tonopah'
+        # Very crosspol, good for both calibrations
+
+        # 'Beatty Airport VORTAC'
+        # Should work for vpol
+
+        # 'Silver Peak or Distant Substation'
+        # Basically no vpol
+
+        # 'Palmetto Tower'
+        # Cross pol, not the most impulsive
+
+        # 'Goldfield Radio'
+        # Impulsive cross pol, better for hpol though
+        plot_time_delay_calculations = False
+        plot_time_delays_on_maps = True
+        plot_expected_direction = True
+        limit_events = 5 #Number of events use for time delay calculation
+
+        if False:
+            # Southern Calibration
+            if mode == 'hpol':
+                use_sources = ['East Dyer Substation','Goldfield KGFN-FM','Silver Peak Substation']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
+            elif mode == 'vpol':
+                use_sources = ['East Dyer Substation','Goldfield KGFN-FM']
+        elif False:
+            if mode == 'hpol':
+                # Northern Calibration
+                use_sources = ['Tonopah KTPH','Solar Plant','Silver Peak Substation']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
+            elif mode == 'vpol':
+                use_sources = ['Tonopah KTPH','Solar Plant']
+        
+        else:
+            if mode == 'hpol':
+                #,'Black Mountain'
+                #use_sources = ['Tonopah KTPH','Solar Plant','Silver Peak Substation'] #Northern Calibration, Works well for the 3 sources in this calibration
+                #use_sources = ['Cedar Peak']
+                #use_sources = ['East Dyer Substation','Cedar Peak']
+                #['Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Silver Peak Substation']
+                #use_sources = ['Dyer Cell Tower']#['Quarry Substation','Silver Peak Substation']#['Dyer Cell Tower','Solar Plant','Palmetto Cell Tower','Silver Peak Substation']#['Tonopah KTPH']#['Quarry Substation','Palmetto Cell Tower','Beatty Airport Vortac','Silver Peak Substation']#['Quarry Substation','Tonopah KTPH','Palmetto Cell Tower','Beatty Airport Vortac']#['Quarry Substation','Palmetto Cell Tower','Silver Peak Substation']#['Solar Plant']#['Quarry Substation']#,'Beatty Airport Vortac','Palmetto Cell Tower','Silver Peak Substation']#['Quarry Substation','Beatty Airport Vortac','Palmetto Cell Tower','Silver Peak Substation']
+                use_sources = ['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
+            elif mode == 'vpol':
+                use_sources = ['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant']
+                #use_sources = ['Dyer Cell Tower','Solar Plant','Silver Peak Substation']#['Quarry Substation','Tonopah KTPH','Palmetto Cell Tower','Beatty Airport Vortac']
+
+        only_plot   = [ 'Solar Plant',\
+                        'Tonopah KTPH',\
+                        'Dyer Cell Tower',\
+                        'West Dyer Substation',\
+                        'East Dyer Substation',\
+                        'Beatty Airport Vortac',\
+                        'Beatty Substation',\
+                        'Palmetto Cell Tower',\
+                        'Black Mountain',\
+                        'Cedar Peak',\
+                        'Goldfield Hill Tower',\
+                        'Goldield Town Tower',\
+                        'Goldfield KGFN-FM',\
+                        'Silver Peak Town Antenna',\
+                        'Silver Peak Lithium Mine',\
+                        'Past SP Substation',\
+                        'Silver Peak Substation']
+        only_plot = use_sources
+        
+        #only_plot.append('Beatty Mountain Cell Tower')
+        # only_plot.append('Goldfield Hill Tower')
+        # only_plot.append('Goldield Town Tower')
+        # only_plot.append('Goldfield KGFN-FM')
+        # only_plot.append('Beatty Airport Vortac')
+        # only_plot.append('Beatty Airport Antenna')
+        # only_plot.append('Beatty Substation')
+
+        # Azimuths
+        # Northern Cell Tower : 49.393
+        # Quarry Substation : 46.095
+        # Solar Plant : 43.441
+        # Tonopah KTPH : 30.265
+        # Dyer Cell Tower : 29.118
+        # Tonopah Vortac : 25.165
+        # Silver Peak Lithium Mine : 19.259
+        # Silver Peak Substation : 19.112
+        # Silver Peak Town Antenna : 18.844
+        # Past SP Substation : 18.444
+        # Goldfield Hill Tower : 10.018
+        # Goldield Town Tower : 8.967
+        # Goldfield KGFN-FM : 8.803
+        # Cedar Peak : 4.992
+        # West Dyer Substation : 3.050
+        # Black Mountain : -13.073
+        # Palmetto Cell Tower : -13.323
+        # East Dyer Substation : -17.366
+        # Beatty Substation : -29.850
+        # Beatty Airport Antenna : -31.380
+        # Beatty Airport Vortac : -33.040
+
+
+
+        #only_plot = ['East Dyer Substation','West Dyer Substation','Northern Cell Tower','Solar Plant','Quarry Substation','Tonopah KTPH','Dyer Cell Tower','Tonopah Vortac','Beatty Airport Vortac','Palmetto Cell Tower','Cedar Peak','Goldfield Hill Tower','Goldield Town Tower','Goldfield KGFN-FM','Silver Peak Town Antenna','Silver Peak Lithium Mine','Past SP Substation','Silver Peak Substation']#['Solar Plant','Tonopah KTPH','Beatty Airport Vortac','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation']
         impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
         time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
         map_direction_dset_key = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
 
         plot_residuals = False
-        #plot_time_delays = False
+        #plot_time_delays_on_maps = False
 
-        final_corr_length = 2**16
+        final_corr_length = 2**17
 
         crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
         low_pass_filter_order = 8
@@ -86,12 +186,14 @@ if __name__ == '__main__':
 
         waveform_index_range = (None,None)#(150,400)
 
-        apply_phase_response = True
+        apply_phase_response = False#True
         hilbert = False
 
         #Limits 
         cable_delay_guess_range = None #ns
-        antenna_position_guess_range = 3 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_x = 5 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = antenna_position_guess_range_x
+        antenna_position_guess_range_z = antenna_position_guess_range_x#antenna_position_guess_range_x#None #Limit to how far from input phase locations to limit the parameter space to
         fix_ant0_x = True
         fix_ant0_y = True
         fix_ant0_z = True
@@ -114,13 +216,18 @@ if __name__ == '__main__':
         print('Potential RFI Source Locations.')
         sources_ENU, data_slicer_cut_dict = info.loadValleySourcesENU()
 
-        for key in list(sources_ENU.keys()):
-            if key in use_sources:
-                print('Using key %s'%key)
-                continue
-            else:
-                del sources_ENU[key]
-                del data_slicer_cut_dict[key]
+        print('Source Directions based on ENU, sorted North to South are:')
+
+        keys = list(sources_ENU.keys())
+        azimuths = []
+
+        for source_key in keys:
+            azimuths.append(numpy.rad2deg(numpy.arctan2(sources_ENU[source_key][1],sources_ENU[source_key][0])))
+
+        sort_cut = numpy.argsort(azimuths)[::-1]
+        for index in sort_cut:
+            print('%s : %0.3f'%(keys[index], azimuths[index]))
+        
 
         #Note the above ROI assumes you have already cut out events that are below a certain correlation with a template.
         # ds.addROI('Simple Template V > 0.7',{'cr_template_search_v':[0.7,1.0]})# Adding 2 ROI in different rows and appending as below allows for "OR" instead of "AND"
@@ -163,17 +270,25 @@ if __name__ == '__main__':
 
         time_delay_dict = {}
         for source_key, cut_dict in data_slicer_cut_dict.items():
+            if plot_time_delays_on_maps == False:
+                #Only need some time delays
+                if not(source_key in use_sources):
+                    continue #Skipping calculating that one.
+            else:
+                if numpy.logical_or(not(source_key in use_sources),not(source_key in only_plot)):
+                    continue #Skipping calculating that one.
+
             ds.addROI(source_key,cut_dict)
             roi_eventids = numpy.intersect1d(ds.getCutsFromROI(source_key),_eventids)
             roi_impulsivity = ds.getDataFromParam(roi_eventids,'impulsivity_h')
             roi_impulsivity_sort = numpy.argsort(roi_impulsivity)[::-1] #Reverse sorting so high numbers are first.
-            limit_events = 10
+            
             if len(roi_eventids) > limit_events:
                 print('LIMITING TIME DELAY CALCULATION TO %i MOST IMPULSIVE EVENTS'%limit_events)
                 roi_eventids = numpy.sort(roi_eventids[roi_impulsivity_sort[0:limit_events]])
         
             print('Calculating time delays for %s'%source_key)
-            time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(roi_eventids,align_method=0,hilbert=hilbert,plot=False, sine_subtract=sine_subtract)
+            time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(roi_eventids,align_method=0,hilbert=hilbert,plot=numpy.logical_and(source_key in use_sources,plot_time_delay_calculations), sine_subtract=sine_subtract)
 
             if mode == 'hpol':
                 # for event_index, eventid in enumerate(roi_eventids):
@@ -183,7 +298,13 @@ if __name__ == '__main__':
             else:
                 time_delay_dict[source_key] = numpy.mean(time_shifts[6:12,:],axis=1)
             
-
+        for key in list(sources_ENU.keys()):
+            if key in use_sources:
+                print('Using key %s'%key)
+                continue
+            else:
+                del sources_ENU[key]
+                del data_slicer_cut_dict[key]
 
         if cable_delay_guess_range is not None:
 
@@ -197,40 +318,38 @@ if __name__ == '__main__':
             limit_cable_delay2 = None#(cable_delays[2] , None)
             limit_cable_delay3 = None#(cable_delays[3] , None)
 
-        if antenna_position_guess_range is not None:
-
-            ant0_physical_limits_x = (antennas_phase_start[0][0] - antenna_position_guess_range ,antennas_phase_start[0][0] + antenna_position_guess_range)
-            ant0_physical_limits_y = (antennas_phase_start[0][1] - antenna_position_guess_range ,antennas_phase_start[0][1] + antenna_position_guess_range)
-            ant0_physical_limits_z = (antennas_phase_start[0][2] - antenna_position_guess_range ,antennas_phase_start[0][2] + antenna_position_guess_range)
-
-            ant1_physical_limits_x = (antennas_phase_start[1][0] - antenna_position_guess_range ,antennas_phase_start[1][0] + antenna_position_guess_range)
-            ant1_physical_limits_y = (antennas_phase_start[1][1] - antenna_position_guess_range ,antennas_phase_start[1][1] + antenna_position_guess_range)
-            ant1_physical_limits_z = (antennas_phase_start[1][2] - antenna_position_guess_range ,antennas_phase_start[1][2] + antenna_position_guess_range)
-
-            ant2_physical_limits_x = (antennas_phase_start[2][0] - antenna_position_guess_range ,antennas_phase_start[2][0] + antenna_position_guess_range)
-            ant2_physical_limits_y = (antennas_phase_start[2][1] - antenna_position_guess_range ,antennas_phase_start[2][1] + antenna_position_guess_range)
-            ant2_physical_limits_z = (antennas_phase_start[2][2] - antenna_position_guess_range ,antennas_phase_start[2][2] + antenna_position_guess_range)
-
-            ant3_physical_limits_x = (antennas_phase_start[3][0] - antenna_position_guess_range ,antennas_phase_start[3][0] + antenna_position_guess_range)
-            ant3_physical_limits_y = (antennas_phase_start[3][1] - antenna_position_guess_range ,antennas_phase_start[3][1] + antenna_position_guess_range)
-            ant3_physical_limits_z = (antennas_phase_start[3][2] - antenna_position_guess_range ,antennas_phase_start[3][2] + antenna_position_guess_range)
-
+        if antenna_position_guess_range_x is not None:
+            ant0_physical_limits_x = (antennas_phase_start[0][0] - antenna_position_guess_range_x ,antennas_phase_start[0][0] + antenna_position_guess_range_x)
+            ant1_physical_limits_x = (antennas_phase_start[1][0] - antenna_position_guess_range_x ,antennas_phase_start[1][0] + antenna_position_guess_range_x)
+            ant2_physical_limits_x = (antennas_phase_start[2][0] - antenna_position_guess_range_x ,antennas_phase_start[2][0] + antenna_position_guess_range_x)
+            ant3_physical_limits_x = (antennas_phase_start[3][0] - antenna_position_guess_range_x ,antennas_phase_start[3][0] + antenna_position_guess_range_x)
         else:
             ant0_physical_limits_x = None#None 
-            ant0_physical_limits_y = None#None
-            ant0_physical_limits_z = None#None
-
             ant1_physical_limits_x = None#(None,0.0) #Forced west of 0
-            ant1_physical_limits_y = None#None
-            ant1_physical_limits_z = None#(10.0,None) #Forced above 0
-
             ant2_physical_limits_x = None#None
-            ant2_physical_limits_y = None#(None,0.0) #Forced south of 0 
-            ant2_physical_limits_z = (antennas_phase_start[2][2] - 2.5 ,antennas_phase_start[2][2] + 2.5)#None#None
-
             ant3_physical_limits_x = None#(None,0.0) #Forced West of 0
-            ant3_physical_limits_y = None#(None,0.0) #Forced South of 0
-            ant3_physical_limits_z = None#(10.0,None) #Forced above 0
+
+        if antenna_position_guess_range_y is not None:
+            ant0_physical_limits_y = (antennas_phase_start[0][1] - antenna_position_guess_range_y ,antennas_phase_start[0][1] + antenna_position_guess_range_y)
+            ant1_physical_limits_y = (antennas_phase_start[1][1] - antenna_position_guess_range_y ,antennas_phase_start[1][1] + antenna_position_guess_range_y)
+            ant2_physical_limits_y = (antennas_phase_start[2][1] - antenna_position_guess_range_y ,antennas_phase_start[2][1] + antenna_position_guess_range_y)
+            ant3_physical_limits_y = (antennas_phase_start[3][1] - antenna_position_guess_range_y ,antennas_phase_start[3][1] + antenna_position_guess_range_y)
+        else:
+            ant0_physical_limits_y = None#None 
+            ant1_physical_limits_y = None#(None,0.0) #Forced west of 0
+            ant2_physical_limits_y = None#None
+            ant3_physical_limits_y = None#(None,0.0) #Forced West of 0
+
+        if antenna_position_guess_range_z is not None:
+            ant0_physical_limits_z = (antennas_phase_start[0][2] - antenna_position_guess_range_z ,antennas_phase_start[0][2] + antenna_position_guess_range_z)
+            ant1_physical_limits_z = (antennas_phase_start[1][2] - antenna_position_guess_range_z ,antennas_phase_start[1][2] + antenna_position_guess_range_z)
+            ant2_physical_limits_z = (antennas_phase_start[2][2] - antenna_position_guess_range_z ,antennas_phase_start[2][2] + antenna_position_guess_range_z)
+            ant3_physical_limits_z = (antennas_phase_start[3][2] - antenna_position_guess_range_z ,antennas_phase_start[3][2] + antenna_position_guess_range_z)
+        else:
+            ant0_physical_limits_z = None#None 
+            ant1_physical_limits_z = None#(None,0.0) #Forced west of 0
+            ant2_physical_limits_z = None#None  $(antennas_phase_start[2][2] - 2.5 ,antennas_phase_start[2][2] + 2.5)#None#None
+            ant3_physical_limits_z = None#(None,0.0) #Forced West of 0
 
 
         ##########
@@ -291,8 +410,8 @@ if __name__ == '__main__':
                         _cable_delays = [cable_delay0,cable_delay1,cable_delay2,cable_delay3]
 
                         for pair_index, pair in enumerate(pairs):
-                            geometric_time_delay = (d[pair[0]] + _cable_delays[0]) - (d[pair[1]] + _cable_delays[1])
-                            
+                            geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
+
                             vals = ((geometric_time_delay - time_delay_dict[key][pair_index])**2) #Assumes time delays are accurate
                             chi_2 += numpy.sum(vals)
                 return chi_2
@@ -304,7 +423,7 @@ if __name__ == '__main__':
                 print(exc_type, fname, exc_tb.tb_lineno)
 
 
-        initial_step = 0.1 #m
+        initial_step = 0.05 #m
         #-12 ft on pulser locations relative to antennas to account for additional mast elevation.
         
         
@@ -437,7 +556,7 @@ if __name__ == '__main__':
         chi2_ax.dist = 10
         plt.legend()
 
-        cor = Correlator(reader,  upsample=2**16, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=True, tukey=False, sine_subtract=True)
+        cor = Correlator(reader,  upsample=2**17, n_phi=1080, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=True, tukey=False, sine_subtract=True)
         cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
         adjusted_cor = Correlator(reader,  upsample=2**16, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=True, tukey=False, sine_subtract=True)
@@ -454,22 +573,39 @@ if __name__ == '__main__':
         else:
             adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
 
-
+        sources_ENU, data_slicer_cut_dict = info.loadValleySourcesENU() #Plot all potential sources
+        
         for source_key, cut_dict in data_slicer_cut_dict.items():
-            ds.addROI(source_key,cut_dict)
-            roi_eventids = numpy.intersect1d(ds.getCutsFromROI(source_key),_eventids)
-            roi_impulsivity = ds.getDataFromParam(roi_eventids,'impulsivity_h')
-            roi_impulsivity_sort = numpy.argsort(roi_impulsivity) #NOT REVERSED
-            eventid = roi_eventids[roi_impulsivity_sort[-1]]
-            
-            #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True)
-            adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=[70,91], interactive=True)
+            if source_key in only_plot:
+                if plot_expected_direction:
+                    #Calculate the predicted az el
+                    distance_m = numpy.linalg.norm(sources_ENU[source_key])
+                    zenith_deg = numpy.rad2deg(numpy.arccos(sources_ENU[source_key][2]/distance_m))
+                    elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(sources_ENU[source_key][2]/distance_m))
+                    azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU[source_key][1],sources_ENU[source_key][0]))
+                else:
+                    zenith_deg = None
+                    azimuth_deg = None
+                if plot_time_delays_on_maps:
+                    td_dict = {mode:{'[0, 1]' :  [time_delay_dict[source_key][0]], '[0, 2]' : [time_delay_dict[source_key][1]], '[0, 3]' : [time_delay_dict[source_key][2]], '[1, 2]' : [time_delay_dict[source_key][3]], '[1, 3]' : [time_delay_dict[source_key][4]], '[2, 3]' : [time_delay_dict[source_key][5]]}}
+                else:
+                    td_dict = {}
+
+                ds.addROI(source_key,cut_dict)
+                roi_eventids = numpy.intersect1d(ds.getCutsFromROI(source_key),_eventids)
+                roi_impulsivity = ds.getDataFromParam(roi_eventids,'impulsivity_h')
+                roi_impulsivity_sort = numpy.argsort(roi_impulsivity) #NOT REVERSED
+                eventid = roi_eventids[roi_impulsivity_sort[-1]]
+                
+                #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
+                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,91], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
+        
+
         
         print('Copy-Paste Prints:\n------------')
         print('')
         print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, m.values['ant0_x'],m.values['ant0_y'],m.values['ant0_z'] ,  m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z'],  m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z'],  m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']))
         print('antennas_phase_%s_hesse = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, m.errors['ant0_x'],m.errors['ant0_y'],m.errors['ant0_z'] ,  m.errors['ant1_x'],m.errors['ant1_y'],m.errors['ant1_z'],  m.errors['ant2_x'],m.errors['ant2_y'],m.errors['ant2_z'],  m.errors['ant3_x'],m.errors['ant3_y'],m.errors['ant3_z']))
-
 
     except Exception as e:
         print('Error in main loop.')

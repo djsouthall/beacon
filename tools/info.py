@@ -30,7 +30,7 @@ import pymap3d as pm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
-default_deploy = 4#2 #The deployment time to use as the default.
+default_deploy = 8#2#4#2 #The deployment time to use as the default.
 
 
 def loadKnownPlaneDict(ignore_planes=[]):
@@ -450,12 +450,20 @@ def loadValleySourcesENU(deploy_index=default_deploy):
     are beholden to multiple entries in the below dictionary.
     '''
 
-    source_dict = { 'Solar Plant'               :(38.238904, -117.363661, 4922 * 0.3048),\
+    source_dict = { 'Northern Cell Tower'       :(38.017045, -117.773122, 5525 * 0.3048),\
+                    'Solar Plant'               :(38.238904, -117.363661, 4922 * 0.3048),\
                     'Quarry Substation'         :(38.323974, -117.335893, 5365 * 0.3048),\
                     'Tonopah KTPH'              :(38.051701, -117.226212, 7104 * 0.3048),\
+                    'Tonopah Vortac'            :(38.030653, -117.033528, 5350 * 0.3048),\
                     'Dyer Cell Tower'           :(37.665613, -118.065012, 4879 * 0.3048),\
+                    'West Dyer Substation'      :(37.599110, -118.000846, 4942 * 0.3048),\
+                    'East Dyer Substation'      :(37.494710, -117.860383, 5144 * 0.3048),\
+                    'Beatty Mountain Cell Tower':(36.935220, -116.850985, 5782 * 0.3048),\
                     'Beatty Airport Vortac'     :(36.800590, -116.747633, 3928 * 0.3048),\
+                    'Beatty Substation'         :(36.902775, -116.767806, 3378 * 0.3048),\
+                    'Beatty Airport Antenna'    :(36.868032, -116.784008, 3166 * 0.3048),\
                     'Palmetto Cell Tower'       :(37.462089, -117.573584, 5943 * 0.3048),\
+                    'Black Mountain'            :(37.283284, -116.646110, 7232 * 0.3048),\
                     'Cedar Peak'                :(37.706014, -116.335117, 8419 * 0.3048),\
                     'Goldfield Hill Tower'      :(37.726953, -117.225670, 6092 * 0.3048),\
                     'Goldield Town Tower'       :(37.710925, -117.233411, 5670 * 0.3048),\
@@ -467,12 +475,20 @@ def loadValleySourcesENU(deploy_index=default_deploy):
 
 
     #Below are the cuts that were used in the data slicer class to isolate the above clusters.
-    data_slicer_cut_dict = {    'Solar Plant'               :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+    data_slicer_cut_dict = {    'Northern Cell Tower'       :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                'Solar Plant'               :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
                                 'Quarry Substation'         :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
                                 'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                'Tonopah Vortac'            :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                'West Dyer Substation'      :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                'East Dyer Substation'      :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
+                                'Beatty Mountain Cell Tower':{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
                                 'Beatty Airport Vortac'     :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+                                'Beatty Substation'         :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+                                'Beatty Airport Antenna'    :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
                                 'Palmetto Cell Tower'       :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
+                                'Black Mountain'            :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
                                 'Cedar Peak'                :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
                                 'Goldfield Hill Tower'      :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
                                 'Goldield Town Tower'       :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
@@ -589,9 +605,30 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
             antennas_phase_hpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.003555, 0.170239, 0.097863], 2 : [0.108990, 0.235702, 0.799819], 3 : [0.004331, 0.041649, 0.105451]}
             #Vpol uses the following sources
             #
+        elif deploy_index == 6:
+            #Southern hpol calibration using ['East Dyer Substation','Goldfield KGFN-FM','Silver Peak Substation']
+            antennas_phase_hpol = {0 : [5.000000, -5.000000, 0.000000], 1 : [-34.908104, -10.002345, 16.649818], 2 : [-10.030078, -45.396969, 6.003367], 3 : [-34.535026, -36.743273, 20.241286]}
+            antennas_phase_hpol_hesse = {0 : [0.011569, 0.048381, 0.050000], 1 : [0.011566, 0.394467, 0.268665], 2 : [0.112954, 0.401714, 0.596043], 3 : [0.110909, 0.048557, 0.549806]}
+            #Southern vpol ['East Dyer Substation','Goldfield KGFN-FM']
+            antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-35.307267, -9.499658, 16.411193], 2 : [-9.729938, -42.427576, 4.534545], 3 : [-34.426753, -37.069610, 19.812659]}
+            antennas_phase_vpol_hesse = {0 : [0.017758, 0.035716, 0.050000], 1 : [0.017726, 0.549810, 0.388825], 2 : [1.513986, 2.623749, 9.713300], 3 : [0.134422, 0.035845, 0.402331]}
 
+        elif deploy_index == 7:
+            #Northern hpol calibration using ['Tonopah KTPH','Solar Plant','Silver Peak Substation']
+            antennas_phase_hpol = {0 : [5.000000, -5.000000, 0.000000], 1 : [-33.689692, -15.002345, 21.649818], 2 : [-11.494760, -46.163473, 1.003367], 3 : [-33.922477, -41.471350, 15.241288]}
+            antennas_phase_hpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.144083, 0.098881, 7.940934], 2 : [0.338200, 0.531446, 2.016936], 3 : [0.339069, 0.524670, 9.907052]}
+            #Northern vpol ['Tonopah KTPH','Solar Plant']
+            antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-34.603054, -14.499658, 21.411172], 2 : [-13.467258, -43.818630, 8.089366], 3 : [-35.052678, -40.378028, 22.496440]}
+            antennas_phase_vpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.186809, 0.170799, 6.939977], 2 : [0.761651, 2.035546, 7.680443], 3 : [0.754464, 1.907757, 5.935745]}
+        elif deploy_index == 8:
+            #This uses the sources used for both the southern and northern calibrations above
+            # hpol : ['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']
+            # vpol : ['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant']
+            antennas_phase_hpol = {0 : [5.000000, -5.000000, 0.000000], 1 : [-35.499550, -12.062215, 21.649776], 2 : [-10.363603, -46.707683, 11.003365], 3 : [-34.919269, -38.689617, 25.241286]}
+            antennas_phase_hpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.128056, 0.264925, 8.677112], 2 : [0.128084, 0.264799, 1.257417], 3 : [0.128088, 0.264868, 0.600729]}
 
-
+            antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-36.058825, -12.207762, 21.411190], 2 : [-10.579375, -46.727175, 9.534532], 3 : [-35.094910, -39.333878, 24.812656]}
+            antennas_phase_vpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.137129, 0.265938, 1.316943], 2 : [0.137083, 0.265485, 1.881641], 3 : [0.137130, 0.265949, 0.504853]}
 
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol

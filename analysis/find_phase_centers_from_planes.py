@@ -185,6 +185,9 @@ if __name__ == '__main__':
                 run = int(key.split('-')[0])
                 reader = Reader(datapath,run)
                 tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=False,apply_phase_response=apply_phase_response)
+                if sine_subtract:
+                    tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
                 eventids = known_planes[key]['eventids'][:,1]
                 
                 time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(eventids,align_method=10,hilbert=hilbert, align_method_10_estimates=guess_time_delays, align_method_10_window_ns=8, sine_subtract=sine_subtract)
@@ -337,7 +340,7 @@ if __name__ == '__main__':
                         _cable_delays = [cable_delay0,cable_delay1,cable_delay2,cable_delay3]
 
                         for pair_index, pair in enumerate(known_planes[key]['baselines'][mode]):
-                            geometric_time_delay = (d[pair[0]] + _cable_delays[0]) - (d[pair[1]] + _cable_delays[1])
+                            geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]]) #IS THIS WRONG??? I THINK SO!  _cable_delays[i] should be _cable_delays[pair[i]]
                             
                             #vals = ((geometric_time_delay - measured_plane_time_delays[key][pair_index])**2)/(1.0001-measured_plane_time_delays_weights[key][pair_index])**2 #1-max(corr) makes the optimizer see larger variations when accurate time delays aren't well matched.  i.e the smaller max(corr) the smaller (1-max(corr))**2 is, and the larger that chi^2 is.  
                             vals = ((geometric_time_delay - measured_plane_time_delays[key][pair_index])**2) #Assumes time delays are accurate, which is should do because I did them by eye?  So hopefully I overrode the accuracy of corr.
