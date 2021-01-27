@@ -2147,7 +2147,7 @@ if __name__=="__main__":
 
     crit_freq_high_pass_MHz = None#30#None
     high_pass_filter_order = None#5#None
-    plot_filter=True
+    plot_filter=False
 
     apply_phase_response=True
     sine_subtract = True
@@ -2156,8 +2156,8 @@ if __name__=="__main__":
     sine_subtract_percent = 0.05
 
     n_phi = 720
-    n_theta = 720
-    upsample = 2**15
+    n_theta = 1080
+    upsample = 2**16
     max_method = 0
 
 
@@ -2218,7 +2218,7 @@ if __name__=="__main__":
         all_axs = []
         all_cors = []
 
-        if False:
+        if True:
 
             for run in [1507,1509,1511]:
 
@@ -2311,14 +2311,14 @@ if __name__=="__main__":
                     all_axs.append(ax)
                 all_cors.append(cor)
 
-        if True:
+        if False:
             #Preparing for planes:
             known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks()
 
             plane_polys = {}
             cors = []
             interpolated_plane_locations = {}
-            origin = info.loadAntennaZeroLocation(deploy_index = 1)
+            origin = info.loadAntennaZeroLocation()
             plot_baseline_removal_hists = False
             plot_compare_trajectory = False
             plot_individual_maps = False

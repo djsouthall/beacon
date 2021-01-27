@@ -71,10 +71,10 @@ if __name__ == '__main__':
         use_interpolated_tracks = True
         plot_az_res = True
 
-        final_corr_length = 2**18
+        final_corr_length = 2**17
 
-        crit_freq_low_pass_MHz = None#60 #This new pulser seems to peak in the region of 85 MHz or so
-        low_pass_filter_order = None#5
+        crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
+        low_pass_filter_order = 8
 
         crit_freq_high_pass_MHz = None#60
         high_pass_filter_order = None#6
@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
         #Limits 
         cable_delay_guess_range = None #ns
-        antenna_position_guess_range = None #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range = 6 #Limit to how far from input phase locations to limit the parameter space to
         fix_ant0_x = True
         fix_ant0_y = True
         fix_ant0_z = True
@@ -107,17 +107,17 @@ if __name__ == '__main__':
         fix_ant3_x = False
         fix_ant3_y = False
         fix_ant3_z = False
-        fix_cable_delay0 = False
-        fix_cable_delay1 = False
-        fix_cable_delay2 = False
-        fix_cable_delay3 = False
+        fix_cable_delay0 = True
+        fix_cable_delay1 = True
+        fix_cable_delay2 = True
+        fix_cable_delay3 = True
 
         #I think adding an absolute time offset for each antenna and letting that vary could be interesting.  It could be used to adjust the cable delays.
 
 
         print('Loading known plane locations.')
         known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks(ignore_planes=[]) # ['1728-62026','1773-14413','1773-63659','1774-88800','1783-28830','1784-7166']#'1774-88800','1728-62026'
-        origin = info.loadAntennaZeroLocation(deploy_index = 1)
+        origin = info.loadAntennaZeroLocation()
         antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
         if mode == 'hpol':
             antennas_phase_start = antennas_phase_hpol
@@ -265,7 +265,7 @@ if __name__ == '__main__':
 
             ant2_physical_limits_x = None#None
             ant2_physical_limits_y = None#(None,0.0) #Forced south of 0 
-            ant2_physical_limits_z = (antennas_phase_start[2][2] - 2.5 ,antennas_phase_start[2][2] + 2.5)#None#None
+            ant2_physical_limits_z = None#(antennas_phase_start[2][2] - 2.5 ,antennas_phase_start[2][2] + 2.5)#None#None
 
             ant3_physical_limits_x = None#(None,0.0) #Forced West of 0
             ant3_physical_limits_y = None#(None,0.0) #Forced South of 0
@@ -357,7 +357,7 @@ if __name__ == '__main__':
                 print(exc_type, fname, exc_tb.tb_lineno)
 
 
-        initial_step = 5.0 #m
+        initial_step = 0.1 #m
         #-12 ft on pulser locations relative to antennas to account for additional mast elevation.
         
         
@@ -632,7 +632,7 @@ if __name__ == '__main__':
 
                         #Attempt at avoiding overlapping text.
                         text_loc = numpy.array([numpy.mean(x)-5,numpy.mean(y)])
-                        td_ax.text(text_loc[0],text_loc[1], 'A%i and A%i'%(pair[0],pair[1]),color=text_color,withdash=True)
+                        #td_ax.text(text_loc[0],text_loc[1], 'A%i and A%i'%(pair[0],pair[1]),color=text_color,withdash=True)
                     
                     if plot_az_res == True:
                         python_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']

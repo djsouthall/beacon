@@ -629,7 +629,14 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
 
             antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-36.058825, -12.207762, 21.411190], 2 : [-10.579375, -46.727175, 9.534532], 3 : [-35.094910, -39.333878, 24.812656]}
             antennas_phase_vpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.137129, 0.265938, 1.316943], 2 : [0.137083, 0.265485, 1.881641], 3 : [0.137130, 0.265949, 0.504853]}
-
+        elif deploy_index == 9:
+            #This uses the airplane data ignoring sources in the East.  
+            #Western Hpol calibration
+            antennas_phase_hpol = {0 : [5.000000, -5.000000, 0.000000], 1 : [-29.499550, -18.062215, 15.649776], 2 : [-5.412771, -50.968447, 11.312891], 3 : [-28.919269, -44.689617, 19.241286]}
+            antennas_phase_hpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.000994, 0.001836, 0.000453], 2 : [0.052628, 0.117427, 0.041269], 3 : [0.000234, 0.000440, 0.000199]}
+            #Western Vpol calibration
+            antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-30.058825, -18.207762, 15.411190], 2 : [-7.416143, -51.399893, 9.940570], 3 : [-29.094910, -45.333878, 18.812656]}
+            antennas_phase_vpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.002770, 0.007155, 0.002050], 2 : [0.093939, 0.138281, 0.121274], 3 : [0.000847, 0.001238, 0.001117]}
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
 
@@ -1211,33 +1218,82 @@ if __name__ == '__main__':
 
         print('\n\n\n\n')
 
-        for deploy_index in [1,2,3]:
-            pulser_locations_ENU = loadPulserLocationsENU(deploy_index=deploy_index)
-            print('deploy_index = %i'%deploy_index)
+        if False:
+            for deploy_index in [1,2,3]:
+                pulser_locations_ENU = loadPulserLocationsENU(deploy_index=deploy_index)
+                print('deploy_index = %i'%deploy_index)
 
-            #Pulser Location 1
-            p1_enu = pulser_locations_ENU['run1507']        
-            p1_phi = numpy.arctan2(p1_enu[1],p1_enu[0])
-            if p1_phi < 0:
-                print('Pulser location 1 phi is: %0.2f degrees South of East'%abs(numpy.rad2deg(p1_phi)))
-            else:
-                print('Pulser location 1 phi is: %0.2f degrees North of East'%abs(numpy.rad2deg(p1_phi)))
+                #Pulser Location 1
+                p1_enu = pulser_locations_ENU['run1507']        
+                p1_phi = numpy.arctan2(p1_enu[1],p1_enu[0])
+                if p1_phi < 0:
+                    print('Pulser location 1 phi is: %0.2f degrees South of East'%abs(numpy.rad2deg(p1_phi)))
+                else:
+                    print('Pulser location 1 phi is: %0.2f degrees North of East'%abs(numpy.rad2deg(p1_phi)))
 
-            #Pulser Location 2
-            p2_enu = pulser_locations_ENU['run1509']        
-            p2_phi = numpy.arctan2(p2_enu[1],p2_enu[0])
-            if p2_phi < 0:
-                print('Pulser location 2 phi is: %0.2f degrees South of East'%abs(numpy.rad2deg(p2_phi)))
-            else:
-                print('Pulser location 2 phi is: %0.2f degrees North of East'%abs(numpy.rad2deg(p2_phi)))
+                #Pulser Location 2
+                p2_enu = pulser_locations_ENU['run1509']        
+                p2_phi = numpy.arctan2(p2_enu[1],p2_enu[0])
+                if p2_phi < 0:
+                    print('Pulser location 2 phi is: %0.2f degrees South of East'%abs(numpy.rad2deg(p2_phi)))
+                else:
+                    print('Pulser location 2 phi is: %0.2f degrees North of East'%abs(numpy.rad2deg(p2_phi)))
 
-            #Pulser Location 3
-            p3_enu = pulser_locations_ENU['run1511']        
-            p3_phi = numpy.arctan2(p3_enu[1],p3_enu[0])
-            if p3_phi < 0:
-                print('Pulser location 3 phi is: %0.2f degrees South of East'%abs(numpy.rad2deg(p3_phi)))
-            else:
-                print('Pulser location 3 phi is: %0.2f degrees North of East'%abs(numpy.rad2deg(p3_phi)))
+                #Pulser Location 3
+                p3_enu = pulser_locations_ENU['run1511']        
+                p3_phi = numpy.arctan2(p3_enu[1],p3_enu[0])
+                if p3_phi < 0:
+                    print('Pulser location 3 phi is: %0.2f degrees South of East'%abs(numpy.rad2deg(p3_phi)))
+                else:
+                    print('Pulser location 3 phi is: %0.2f degrees North of East'%abs(numpy.rad2deg(p3_phi)))
+
+        if True:
+            fig = plt.figure()
+            fig.canvas.set_window_title('Antenna Positions In Various Calibrations')
+            ax = fig.add_subplot(111, projection='3d')
+
+            ant0 = []
+            ant1 = []
+            ant2 = []
+            ant3 = []
+
+
+            for deploy_index in [6,7,9]:
+                antennas_physical, antennas_phase_hpol, antennas_phase_vpol = loadAntennaLocationsENU(deploy_index=deploy_index)
+                ant0.append(antennas_phase_hpol[0])
+                ant1.append(antennas_phase_hpol[1])
+                ant2.append(antennas_phase_hpol[2])
+                ant3.append(antennas_phase_hpol[3])
+
+            ax.scatter(numpy.array(ant0)[:,0], numpy.array(ant0)[:,1], numpy.array(ant0)[:,2],c='r',alpha=0.5,label='Initial Ant0')
+            ax.scatter(numpy.array(ant1)[:,0], numpy.array(ant1)[:,1], numpy.array(ant1)[:,2],c='g',alpha=0.5,label='Initial Ant1')
+            ax.scatter(numpy.array(ant2)[:,0], numpy.array(ant2)[:,1], numpy.array(ant2)[:,2],c='b',alpha=0.5,label='Initial Ant2')
+            ax.scatter(numpy.array(ant3)[:,0], numpy.array(ant3)[:,1], numpy.array(ant3)[:,2],c='m',alpha=0.5,label='Initial Ant3')
+
+            ax.set_xlabel('East (m)',linespacing=10)
+            ax.set_ylabel('North (m)',linespacing=10)
+            ax.set_zlabel('Up (m)',linespacing=10)
+
+
+            fig = plt.figure()
+            fig.canvas.set_window_title('Antenna Positions In Various Calibrations')
+            ax = fig.add_subplot(111, projection='3d')
+
+            labels = {6:'Southern',7:'Northern',8:'Eastern',9:'Western'}
+
+            for deploy_index in [8,7,9,6]:
+                antennas_physical, antennas_phase_hpol, antennas_phase_vpol = loadAntennaLocationsENU(deploy_index=deploy_index)
+                x = [antennas_phase_hpol[0][0],antennas_phase_hpol[1][0],antennas_phase_hpol[2][0],antennas_phase_hpol[3][0]]
+                y = [antennas_phase_hpol[0][1],antennas_phase_hpol[1][1],antennas_phase_hpol[2][1],antennas_phase_hpol[3][1]]
+                z = [antennas_phase_hpol[0][2],antennas_phase_hpol[1][2],antennas_phase_hpol[2][2],antennas_phase_hpol[3][2]]
+                ax.scatter(x, y, z,alpha=0.5,label=labels[deploy_index])
+
+            plt.legend()
+            ax.set_xlabel('East (m)',linespacing=10)
+            ax.set_ylabel('North (m)',linespacing=10)
+            ax.set_zlabel('Up (m)',linespacing=10)
+
+
     except Exception as e:
         print('Error in main loop.')
         print(e)

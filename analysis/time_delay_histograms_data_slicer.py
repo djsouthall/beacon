@@ -257,19 +257,29 @@ if __name__=="__main__":
                         fig, ax = prep.plotEvent(eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=True, hilbert=False, sine_subtract=True, apply_tukey=None,additional_title_text=roi_key)
 
                         if plot_maps:
-                            # mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=True, zenith_cut_array_plane=None, interactive=True)#, zenith_cut_ENU=[90,180]
-                            # all_figs.append(fig)
-                            # all_axs.append(ax)
+                            try:
+                                #Calculate the predicted az el
+                                distance_m = numpy.linalg.norm(sources_ENU[roi_key])
+                                zenith_deg = numpy.rad2deg(numpy.arccos(sources_ENU[roi_key][2]/distance_m))
+                                elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(sources_ENU[roi_key][2]/distance_m))
+                                azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU[roi_key][1],sources_ENU[roi_key][0]))
 
-                            #Calculate the predicted az el
-                            distance_m = numpy.linalg.norm(sources_ENU[roi_key])
-                            zenith_deg = numpy.rad2deg(numpy.arccos(sources_ENU[roi_key][2]/distance_m))
-                            elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(sources_ENU[roi_key][2]/distance_m))
-                            azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU[roi_key][1],sources_ENU[roi_key][0]))
 
-                            mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg,)#, zenith_cut_ENU=[90,180]
-                            all_figs.append(fig)
-                            all_axs.append(ax)
+                                mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=True, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg)#, zenith_cut_ENU=[90,180]
+                                all_figs.append(fig)
+                                all_axs.append(ax)
+
+                                mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg)#, zenith_cut_ENU=[90,180]
+                                all_figs.append(fig)
+                                all_axs.append(ax)
+                            except:
+                                mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=True, zenith_cut_array_plane=None, interactive=True)#, zenith_cut_ENU=[90,180]
+                                all_figs.append(fig)
+                                all_axs.append(ax)
+
+                                mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True)#, zenith_cut_ENU=[90,180]
+                                all_figs.append(fig)
+                                all_axs.append(ax)
 
 
 
