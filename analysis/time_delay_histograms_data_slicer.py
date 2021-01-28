@@ -39,8 +39,11 @@ datapath = os.environ['BEACON_DATA']
 
 if __name__=="__main__":
     plt.close('all')
-    if len(sys.argv) == 2:
+    trigger_types = [2]#[2]
+    if len(sys.argv) > 2:
         run = int(sys.argv[1])
+        if len(sys.argv) == 3:
+            trigger_types = [int(sys.argv[1])]
     else:
         run = 1650
 
@@ -68,7 +71,6 @@ if __name__=="__main__":
     hilbert=False
     final_corr_length = 2**10
 
-    trigger_types = [2]#[2]
     db_subset_plot_ranges = [[0,30],[30,40],[40,50]] #Used as bin edges.  
     plot_maps = True
 

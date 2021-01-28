@@ -151,7 +151,7 @@ class Correlator:
             self.mesh_azimuth_deg, self.mesh_elevation_deg = numpy.meshgrid(numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi+1), 90.0 - numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta+1))
             self.mesh_zenith_deg = 90.0 - self.mesh_elevation_deg
 
-            self.A0_latlonel = info.loadAntennaZeroLocation() #Used for conversion to RA and Dec coordinates.
+            #self.A0_latlonel = info.loadAntennaZeroLocation() #Used for conversion to RA and Dec coordinates.
 
             antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
 
@@ -2252,7 +2252,7 @@ if __name__=="__main__":
                                                        'vpol':{'[0, 1]' : [-38.04924843261725], '[0, 2]': [101.73562399320996], '[0, 3]': [36.36094981687252], '[1, 2]': [139.78487242582722], '[1, 3]': [74.50399261703114], '[2, 3]': [-65.34340938715698]}}
                         site2_measured_time_delays =  {'hpol':{'[0, 1]' : [-75.67357058767381], '[0, 2]': [40.63430060469886], '[0, 3]': [-44.603959202234826], '[1, 2]': [116.27661403806135], '[1, 3]': [31.225897156995508], '[2, 3]': [-85.14448834399977]},\
                                                        'vpol':{'[0, 1]' : [-79.95580072832284], '[0, 2]': [36.75841347009681], '[0, 3]': [-38.38378549428477], '[1, 2]': [116.62044273548572], '[1, 3]': [41.665786696971985], '[2, 3]': [-75.11094181007027]}}
-                        site3_measured_time_delays =  {'hpol':{'[0, 1]' : [-88.02014654064], '[0, 2]': [-143.62662406045482], '[0, 3]': [-177.19680779079835], '[1, 2]': [-55.51270605688091], '[1, 3]': [-88.89534686135659], '[2, 3]': [-33.32012649585307]},\
+                        site3_measured_time_delays =  {'hpol':{'[0, 1]' : [-88.02014654064],    '[0, 2]': [-143.62662406045482], '[0, 3]': [-177.19680779079835], '[1, 2]': [-55.51270605688091], '[1, 3]': [-88.89534686135659], '[2, 3]': [-33.32012649585307]},\
                                                        'vpol':{'[0, 1]' : [-92.05231944679858], '[0, 2]': [-147.1274253433212], '[0, 3]': [-172.476977489791], '[1, 2]': [-55.10636305083391], '[1, 3]': [-80.36214373436982], '[2, 3]': [-25.34955214646983]}}
                         
                         if run == 1507:

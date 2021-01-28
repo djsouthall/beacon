@@ -50,19 +50,20 @@ if __name__ == '__main__':
     #Filter settings
     final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
     apply_phase_response = True
-    crit_freq_low_pass_MHz = None#70 #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = None#8
-
-    crit_freq_high_pass_MHz = 30#None#50
-    high_pass_filter_order = 5#None#8
+    
+    crit_freq_low_pass_MHz = [100,75,75,75,75,75,75,75]
+    low_pass_filter_order = [8,12,14,14,14,14,14,14]
+    
+    crit_freq_high_pass_MHz = None#30#None#50
+    high_pass_filter_order = None#5#None#8
 
     sine_subtract = True
     sine_subtract_min_freq_GHz = 0.03
     sine_subtract_max_freq_GHz = 0.09
     sine_subtract_percent = 0.03
     
-    plot_filters = True
-    plot_multiple = True
+    plot_filters = False
+    plot_multiple = False
 
     hilbert = False #Apply hilbert envelope to wf before correlating
     align_method = 0
@@ -132,7 +133,7 @@ if __name__ == '__main__':
         antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=1)
         pulser_location = info.loadPulserLocationsENU()['run1511'] #ENU
 
-    if True:
+    if False:
         fig = plt.figure()
         fig.canvas.set_window_title('Antenna Locations')
         ax = fig.add_subplot(111, projection='3d')
@@ -230,13 +231,14 @@ if __name__ == '__main__':
             vpol_corrs = numpy.array([value for key,value in all_vpol_corrs.items()])            
             
             for pair_index in range(6):
-                bins_pm_ns = 20.0
+                bins_pm_ns = 50.0
 
-                bin_bounds = [numpy.min((numpy.mean(hpol_delays[pair_index]),numpy.mean(vpol_delays[pair_index]))) - bins_pm_ns, numpy.max((numpy.mean(hpol_delays[pair_index]),numpy.mean(vpol_delays[pair_index]))) + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_vpol)*50))
+                if numpy.all([pair_index == 5, hilbert == False, site == 3]):
+                    print('TEMPORARY HARD CODE')
+                    bin_bounds = [-40,-20]
+                else:
+                    bin_bounds = [numpy.min(hpol_delays[pair_index]) - bins_pm_ns, numpy.max(hpol_delays[pair_index]) + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_vpol)*50))
                 time_bins = numpy.arange(bin_bounds[0],bin_bounds[1],tdc.dt_ns_upsampled)
-
-
-
 
                 fig = plt.figure()
 
@@ -251,10 +253,6 @@ if __name__ == '__main__':
                 expected_time_difference_hpol = numpy.array(expected_time_differences_hpol)[[i in x[0] and j in x[0] for x in expected_time_differences_hpol]][0][1]
                 max_time_difference = numpy.array(max_time_differences_physical)[[i in x[0] and j in x[0] for x in max_time_differences_physical]][0][1]
                 
-                #bin_bounds = [expected_time_difference_hpol - bins_pm_ns,expected_time_difference_hpol + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_hpol)*50))
-                bin_bounds = [numpy.mean(hpol_delays[pair_index]) - bins_pm_ns,numpy.mean(hpol_delays[pair_index]) + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_hpol)*50))
-                time_bins = numpy.arange(bin_bounds[0],bin_bounds[1],tdc.dt_ns_upsampled)
-
                 plt.suptitle('t(Ant%i) - t(Ant%i)'%(i,j))
                 ax = plt.subplot(2,1,1)
                 n, bins, patches = plt.hist(hpol_delays[pair_index],label=('Channel %i and %i'%(2*i,2*j)),bins=time_bins)
@@ -308,9 +306,6 @@ if __name__ == '__main__':
                 expected_time_difference_vpol = numpy.array(expected_time_differences_vpol)[[i in x[0] and j in x[0] for x in expected_time_differences_vpol]][0][1]
                 max_time_difference = numpy.array(max_time_differences_physical)[[i in x[0] and j in x[0] for x in max_time_differences_physical]][0][1]
                 
-                bin_bounds = [numpy.mean(vpol_delays[pair_index]) - bins_pm_ns,numpy.mean(vpol_delays[pair_index]) + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_vpol)*50))
-                time_bins = numpy.arange(bin_bounds[0],bin_bounds[1],tdc.dt_ns_upsampled)
-
                 #bin_bounds = [expected_time_difference_vpol - bins_pm_ns,expected_time_difference_vpol + bins_pm_ns ]#numpy.sort((0, numpy.sign(expected_time_difference_vpol)*50))
 
                 plt.subplot(2,1,2)

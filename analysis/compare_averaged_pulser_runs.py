@@ -20,7 +20,7 @@ sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret #Must be imported before matplotlib or else plots don't load.
 import tools.clock_correct as cc
 import tools.info as info
-from tools.fftmath import TemplateCompareTool,TimeDelayCalculator
+from tools.fftmath import TemplateCompareTool
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -32,7 +32,7 @@ plt.ion()
 
 if __name__ == '__main__':
     try:
-         #plt.close('all')
+        plt.close('all')
         # If your data is elsewhere, pass it as an argument
         datapath = os.environ['BEACON_DATA']
 
@@ -61,14 +61,20 @@ if __name__ == '__main__':
             #Filter settings
             final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
             
-            crit_freq_low_pass_MHz = [75,75,80,80,85,85,90,90] #This new pulser seems to peak in the region of 85 MHz or so
-            low_pass_filter_order = [12,12,11,11,10,10,9,9]
+            crit_freq_low_pass_MHz = [100,75,75,75,75,75,75,75]#[75,75,80,80,85,85,90,90] #This new pulser seems to peak in the region of 85 MHz or so
+            low_pass_filter_order = [8,12,14,14,14,14,14,14]#[12,12,11,11,10,10,9,9]
             
-            crit_freq_high_pass_MHz = [35,35,30,30,25,25,20,20]
-            high_pass_filter_order = [5,5,4,4,3,3,2,2]
+            crit_freq_high_pass_MHz = None#[35,35,30,30,25,25,20,20]
+            high_pass_filter_order = None#[5,5,4,4,3,3,2,2]
             
             use_filter = True
             plot_filters= True
+    
+            sine_subtract = True
+            sine_subtract_min_freq_GHz = 0.03
+            sine_subtract_max_freq_GHz = 0.09
+            sine_subtract_percent = 0.03
+
 
             known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
 
@@ -86,6 +92,10 @@ if __name__ == '__main__':
             #Set up tempalte compare tool used for making averaged waveforms for first pass alignment. 
             reader = Reader(datapath,run)
             tct = TemplateCompareTool(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=site==1)
+
+            if sine_subtract:
+                tct.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
 
             #First pass alignment to make templates.  
             times, _hpol_waveforms = tct.averageAlignedSignalsPerChannel(eventids['hpol'], align_method=0, template_eventid=eventids['hpol'][0], plot=False,event_type='hpol')
