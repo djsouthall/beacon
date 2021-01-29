@@ -168,7 +168,7 @@ if __name__ == '__main__':
                 use_sources = ['Tonopah KTPH','Solar Plant']
                 included_pulsers = ['run1507','run1509']#['run1511'] #Only included if include_pulsers == True
         
-        elif True:
+        elif False:
             if mode == 'hpol':
                 use_sources = ['Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
                 included_pulsers = []#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
@@ -684,10 +684,15 @@ if __name__ == '__main__':
         # These plotting functions don't work
 
         # m.draw_mncontour('ant1_x','ant1_y')
-        for key in list(m.values.keys()):
-            if 'ant' in key:
-                plt.figure()
+
+        for antenna in range(4):
+            fig = plt.figure()
+            fig.canvas.set_window_title('Ant %i chi^2'%antenna)
+            for index, key in enumerate(['ant%i_x'%antenna,'ant%i_y'%antenna,'ant%i_z'%antenna]):
+                plt.subplot(1,3,index + 1)
                 m.draw_profile(key)
+
+
 
         #12 variables
         ant0_phase_x = m.values['ant0_x']
@@ -761,13 +766,14 @@ if __name__ == '__main__':
         
         for source_key, cut_dict in data_slicer_cut_dict.items():
             if source_key in only_plot:
-                if plot_expected_direction:
-                    #Calculate the predicted az el
-                    distance_m = numpy.linalg.norm(sources_ENU[source_key])
-                    zenith_deg = numpy.rad2deg(numpy.arccos(sources_ENU[source_key][2]/distance_m))
-                    elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(sources_ENU[source_key][2]/distance_m))
-                    azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU[source_key][1],sources_ENU[source_key][0]))
-                else:
+                distance_m = numpy.linalg.norm(sources_ENU[source_key])
+                zenith_deg = numpy.rad2deg(numpy.arccos(sources_ENU[source_key][2]/distance_m))
+                elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(sources_ENU[source_key][2]/distance_m))
+                azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU[source_key][1],sources_ENU[source_key][0]))
+                cor.overwriteSourceDistance(distance_m)
+                adjusted_cor.overwriteSourceDistance(distance_m)
+
+                if plot_expected_direction == False:
                     zenith_deg = None
                     azimuth_deg = None
                 if plot_time_delays_on_maps:
@@ -812,14 +818,15 @@ if __name__ == '__main__':
                 adjusted_cor.reader = reader
                 adjusted_cor.prep.reader = reader
 
-                if plot_expected_direction:
-                    #Calculate the predicted az el
-                    #NOTE THAT THESE CALCULATIONS ARE FOR ANGLES RELATIVE TO ENU 0, IF ANT0 MOVES THESE MAY BE MISLEADING.
-                    distance_m = numpy.linalg.norm(pulser_locations_ENU[key])
-                    zenith_deg = numpy.rad2deg(numpy.arccos(pulser_locations_ENU[key][2]/distance_m))
-                    elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(pulser_locations_ENU[key][2]/distance_m))
-                    azimuth_deg = numpy.rad2deg(numpy.arctan2(pulser_locations_ENU[key][1],pulser_locations_ENU[key][0]))
-                else:
+                distance_m = numpy.linalg.norm(pulser_locations_ENU[key])
+                zenith_deg = numpy.rad2deg(numpy.arccos(pulser_locations_ENU[key][2]/distance_m))
+                elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(pulser_locations_ENU[key][2]/distance_m))
+                azimuth_deg = numpy.rad2deg(numpy.arctan2(pulser_locations_ENU[key][1],pulser_locations_ENU[key][0]))
+                
+                cor.overwriteSourceDistance(distance_m)
+                adjusted_cor.overwriteSourceDistance(distance_m)
+
+                if plot_expected_direction == False:
                     zenith_deg = None
                     azimuth_deg = None
                 if plot_time_delays_on_maps:

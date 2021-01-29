@@ -111,8 +111,15 @@ class Correlator:
         If True then any added sine_subtraction methods will be applied to any loaded waveform.  These must be added to
         the prep object.  
         Example: cor.prep.addSineSubtract(0.03, 0.090, 0.05, max_failed_iterations=3, verbose=True, plot=False)
+    map_source_distance_m : float
+        The line of sight distance to the imagined source of a signal for which maps will be produced.  By default this
+        is 10^6 m (>600miles), which essentially makes the arrival angles at each antenna identical for each percieved source
+        direction.  This is the far-field limit and is the default.  This can be set to a smaller value, allowing for 
+        predicted arrival time delays to be more accurate for sources such as pusers (which are only a few hundred
+        meters away).  To change the distance call the overwriteSourceDistance() function, which will implement the
+        necessary adjustments for the new source distance.
     '''
-    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True):
+    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6):
         try:
             n = 1.0003 #Index of refraction of air  #Should use https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.453-11-201507-S!!PDF-E.pdf 
             self.c = 299792458.0/n #m/s
@@ -129,7 +136,7 @@ class Correlator:
             filtering only need to happen in a single location/class.
             '''
             self.prep = FFTPrepper(self.reader, final_corr_length=2**10, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filter,tukey_alpha=0.1,tukey_default=False,apply_phase_response=apply_phase_response)
-            self.prepareTimes()
+            self.prepareTimes() 
 
             self.figs = []
             self.axs = []
@@ -170,7 +177,8 @@ class Correlator:
             self.A2_vpol = numpy.asarray(antennas_phase_vpol[2])
             self.A3_vpol = numpy.asarray(antennas_phase_vpol[3])
 
-            self.generateTimeIndices()
+            self.map_source_distance_m = map_source_distance_m
+            self.generateTimeIndices() #Must be called again if map_source_distance_m is reset
             self.calculateArrayNormalVector()
 
             if numpy.all(self.prep.filter_original == 1.0):
@@ -386,6 +394,26 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def overwriteSourceDistance(self, map_source_distance_m):
+        '''
+        Allows user to reset the source distance use when generating maps.
+        
+        Parameters
+        ----------
+        map_source_distance_m : float
+            The new source distance, given in meters.
+        '''
+        try:
+            self.map_source_distance_m = map_source_distance_m
+            print('Rerunning time delay prep with new source distance.')
+            self.generateTimeIndices() #Must be called again if map_source_distance_m is reset
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
     def wf(self, eventid, channels, div_std=False, hilbert=False, apply_filter=False, tukey=False, sine_subtract=False):
         '''
         Calls reader.wf.  If multiple channels are given it will load them in sorted order into a 2d array with each
@@ -474,14 +502,92 @@ class Correlator:
 
     def generateTimeIndices(self):
         '''
-        This is meant to calculate all of the time delays corresponding to each source direction in advance.
+        This is meant to calculate all of the time delays corresponding to each source direction in advance.  Should be
+        called again if self.map_source_distance_m changes.
+
+        Note that the phi and theta coordinates used to place distant objects are centered at antenna 0 of that
+        polarizations respective phase center.
         '''
         try:
             #Prepare grids of thetas and phis
             thetas  = numpy.tile(self.thetas_rad,(self.n_phi,1)).T  #Each row is a different theta (zenith)
             phis    = numpy.tile(self.phis_rad,(self.n_theta,1))    #Each column is a different phi (azimuth)
 
-            #Source direction is the direction FROM BEACON you look to see the source.
+            #Source direction is the direction FROM BEACON ANTENNA 0 you look to see the source.
+            #Position is a vector to a distant source
+            signal_source_position_hpol        = numpy.zeros((self.n_theta, self.n_phi, 3))
+            signal_source_position_hpol[:,:,0] = self.map_source_distance_m * numpy.multiply( numpy.cos(phis) , numpy.sin(thetas) ) + self.A0_hpol[0] #Shifting points to be centered around antenna 0
+            signal_source_position_hpol[:,:,1] = self.map_source_distance_m * numpy.multiply( numpy.sin(phis) , numpy.sin(thetas) ) + self.A0_hpol[1] #Shifting points to be centered around antenna 0
+            signal_source_position_hpol[:,:,2] = self.map_source_distance_m * numpy.cos(thetas) + self.A0_hpol[2] #Shifting points to be centered around antenna 0
+
+            signal_source_position_vpol        = numpy.zeros((self.n_theta, self.n_phi, 3))
+            signal_source_position_vpol[:,:,0] = self.map_source_distance_m * numpy.multiply( numpy.cos(phis) , numpy.sin(thetas) ) + self.A0_vpol[0] #Shifting points to be centered around antenna 0
+            signal_source_position_vpol[:,:,1] = self.map_source_distance_m * numpy.multiply( numpy.sin(phis) , numpy.sin(thetas) ) + self.A0_vpol[1] #Shifting points to be centered around antenna 0
+            signal_source_position_vpol[:,:,2] = self.map_source_distance_m * numpy.cos(thetas) + self.A0_vpol[2] #Shifting points to be centered around antenna 0
+
+            #Calculate the expected readout time for each antenna (including cable delays)
+            hpol_arrival_time_ns_0 = self.cable_delays[0] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A0_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A0_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A0_hpol[2])**2 )/self.c)*1.0e9 #ns
+            hpol_arrival_time_ns_1 = self.cable_delays[1] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A1_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A1_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A1_hpol[2])**2 )/self.c)*1.0e9 #ns
+            hpol_arrival_time_ns_2 = self.cable_delays[2] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A2_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A2_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A2_hpol[2])**2 )/self.c)*1.0e9 #ns
+            hpol_arrival_time_ns_3 = self.cable_delays[3] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A3_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A3_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A3_hpol[2])**2 )/self.c)*1.0e9 #ns
+
+            vpol_arrival_time_ns_0 = self.cable_delays[0] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A0_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A0_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A0_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_arrival_time_ns_1 = self.cable_delays[1] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A1_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A1_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A1_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_arrival_time_ns_2 = self.cable_delays[2] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A2_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A2_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A2_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_arrival_time_ns_3 = self.cable_delays[3] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A3_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A3_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A3_vpol[2])**2 )/self.c)*1.0e9 #ns
+
+            self.t_hpol_0subtract1 = hpol_arrival_time_ns_0 - hpol_arrival_time_ns_1
+            self.t_hpol_0subtract2 = hpol_arrival_time_ns_0 - hpol_arrival_time_ns_2
+            self.t_hpol_0subtract3 = hpol_arrival_time_ns_0 - hpol_arrival_time_ns_3
+            self.t_hpol_1subtract2 = hpol_arrival_time_ns_1 - hpol_arrival_time_ns_2
+            self.t_hpol_1subtract3 = hpol_arrival_time_ns_1 - hpol_arrival_time_ns_3
+            self.t_hpol_2subtract3 = hpol_arrival_time_ns_2 - hpol_arrival_time_ns_3
+
+            self.t_vpol_0subtract1 = vpol_arrival_time_ns_0 - vpol_arrival_time_ns_1
+            self.t_vpol_0subtract2 = vpol_arrival_time_ns_0 - vpol_arrival_time_ns_2
+            self.t_vpol_0subtract3 = vpol_arrival_time_ns_0 - vpol_arrival_time_ns_3
+            self.t_vpol_1subtract2 = vpol_arrival_time_ns_1 - vpol_arrival_time_ns_2
+            self.t_vpol_1subtract3 = vpol_arrival_time_ns_1 - vpol_arrival_time_ns_3
+            self.t_vpol_2subtract3 = vpol_arrival_time_ns_2 - vpol_arrival_time_ns_3
+
+            #Should double check when using these via rolling signals.
+            #Calculate indices in corr for each direction.
+            center = len(self.times_resampled)
+
+            self.delay_indices_hpol_0subtract1 = numpy.rint((self.t_hpol_0subtract1/self.dt_resampled + center)).astype(int)
+            self.delay_indices_hpol_0subtract2 = numpy.rint((self.t_hpol_0subtract2/self.dt_resampled + center)).astype(int)
+            self.delay_indices_hpol_0subtract3 = numpy.rint((self.t_hpol_0subtract3/self.dt_resampled + center)).astype(int)
+            self.delay_indices_hpol_1subtract2 = numpy.rint((self.t_hpol_1subtract2/self.dt_resampled + center)).astype(int)
+            self.delay_indices_hpol_1subtract3 = numpy.rint((self.t_hpol_1subtract3/self.dt_resampled + center)).astype(int)
+            self.delay_indices_hpol_2subtract3 = numpy.rint((self.t_hpol_2subtract3/self.dt_resampled + center)).astype(int)
+
+            self.delay_indices_vpol_0subtract1 = numpy.rint((self.t_vpol_0subtract1/self.dt_resampled + center)).astype(int)
+            self.delay_indices_vpol_0subtract2 = numpy.rint((self.t_vpol_0subtract2/self.dt_resampled + center)).astype(int)
+            self.delay_indices_vpol_0subtract3 = numpy.rint((self.t_vpol_0subtract3/self.dt_resampled + center)).astype(int)
+            self.delay_indices_vpol_1subtract2 = numpy.rint((self.t_vpol_1subtract2/self.dt_resampled + center)).astype(int)
+            self.delay_indices_vpol_1subtract3 = numpy.rint((self.t_vpol_1subtract3/self.dt_resampled + center)).astype(int)
+            self.delay_indices_vpol_2subtract3 = numpy.rint((self.t_vpol_2subtract3/self.dt_resampled + center)).astype(int)
+
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def generateTimeIndicesPlaneWave(self):
+        '''
+        This is a deprecated function that assumes the source is sufficiently distant that a plane wave solution applies.
+        '''
+        try:
+            print('WARNING generateTimeIndicesPlaneWave IS DEPRECATED')
+            #Prepare grids of thetas and phis
+            thetas  = numpy.tile(self.thetas_rad,(self.n_phi,1)).T  #Each row is a different theta (zenith)
+            phis    = numpy.tile(self.phis_rad,(self.n_theta,1))    #Each column is a different phi (azimuth)
+
+            #Source direction is the direction FROM BEACON ANTENNA 0 you look to see the source.
+            #Direction is the unit vector from antenna 0 pointing to that source. 
             signal_source_direction        = numpy.zeros((self.n_theta, self.n_phi, 3))
             signal_source_direction[:,:,0] = numpy.multiply( numpy.cos(phis) , numpy.sin(thetas) )
             signal_source_direction[:,:,1] = numpy.multiply( numpy.sin(phis) , numpy.sin(thetas) )
@@ -549,7 +655,8 @@ class Correlator:
     def generateNormalDotValues(self):
         '''
         For each of the specified directions this will determine the dot product of that vector with the norm
-        of the array.  
+        of the array.  These may be slightly sketchy for near field things due to source direction not being
+        a single number across the array. 
         '''
         try:
             #Prepare grids of thetas and phis
@@ -1102,13 +1209,19 @@ class Correlator:
         else:
             return ax, circle, (h, v)
 
-    def getTimeDelayCurves(self, time_delay_dict, mode):
+    def addTimeDelayCurves(self, im, time_delay_dict, mode, include_baselines=numpy.array([0,1,2,3,4,5]), mollweide=False, azimuth_offset_deg=0, *args, **kwargs):
         '''
-        This will determine the time delay curves for a particular baseline.  Use addTimeDelayCurves if you just want to plot these
-        on an image.  That will call this function and plot them.  These will be returned in ENU degrees azimuth and zenith.
+        This will plot the curves to a map (ax.pcolormesh instance passed as im).
+        
+        time_delays should be a dict as spcified by map.
 
-        These will be formatted simila rto time_delay_dict where each pair key will have a list containing the plane corresponding
-        to each of the given time delays.
+        These expected time delays should come from raw measured time delays from signals.  
+        The cable delays will be accounted for internally and should not have been accounted 
+        for already.
+
+        Mode specifies the polarization.
+
+        The args and kwargs should be plotting things such as color and linestyle.  
         '''
         try:
             if mode == 'hpol':
@@ -1121,37 +1234,68 @@ class Correlator:
                 time_delays = time_delay_dict['vpol']
 
             pairs = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
+            baseline_cm = plt.cm.get_cmap('tab10', 10)
+            baseline_colors = baseline_cm(numpy.linspace(0, 1, 10))[0:6] #only want the first 6 colours in this list of 10 colors.
             baseline_index = -1
-            output_dict = {}
+
+
+            thetas  = numpy.tile(self.thetas_rad,(self.n_phi,1)).T  #Each row is a different theta (zenith)
+            phis    = numpy.tile(self.phis_rad,(self.n_theta,1))    #Each column is a different phi (azimuth)
+
             for pair_key, pair_time_delay in time_delays.items():
                 baseline_index += 1
-                output_dict[pair_key] = {}
-                output_dict[pair_key]['zenith_deg'] = []
-                output_dict[pair_key]['azimuth_deg'] = []
+                if numpy.isin(baseline_index ,include_baselines ):
+                    linestyle = '-'
+                else:
+                    linestyle = '--'
+
                 pair = numpy.array(pair_key.replace('[','').replace(']','').split(','),dtype=int)
                 pair_index = numpy.where(numpy.sum(pair == pairs,axis=1) == 2)[0][0] #Used for consistent coloring.
                 i = pair[0]
                 j = pair[1]
-                A_ji = (all_antennas[j] - all_antennas[i])*(1e9/self.c) #Want these to be time vectors, not distance.  They are currently expressed in ns.
-                #Using time delays defined as i - j, to get the result of positive cos(theta) values between source direction and vector between antennas
-                #I need to have a negitive somewhere if definine the vector as A_ij.  By using A_ji the cos(theta_source) results in the appropriate sign
-                #of dt on the lhs of the equation.   
+
                 for time_delay in pair_time_delay:
-                    #Calculate geometric dt by removing cable delays from measured dt:
-                    dt = time_delay - (cable_delays[i] - cable_delays[j])
+                    #Attempting to use precalculate expected time delays per direction to derive theta here.
+                    if mode == 'hpol':
+                        if baseline_index == 0:
+                            flattened_min_index = numpy.argmin(numpy.abs(self.t_hpol_0subtract1 - time_delay))
+                        elif baseline_index == 1:
+                            flattened_min_index = numpy.argmin(numpy.abs(self.t_hpol_0subtract2 - time_delay))
+                        elif baseline_index == 2:
+                            flattened_min_index = numpy.argmin(numpy.abs(self.t_hpol_0subtract3 - time_delay))
+                        elif baseline_index == 3:
+                            flattened_min_index = numpy.argmin(numpy.abs(self.t_hpol_1subtract2 - time_delay))
+                        elif baseline_index == 4:
+                            flattened_min_index = numpy.argmin(numpy.abs(self.t_hpol_1subtract3 - time_delay))
+                        else baseline_index == 5:
+                            flattened_min_index = numpy.argmin(numpy.abs(self.t_hpol_2subtract3 - time_delay))
+                    else:
+                        if baseline_index == 0:
+                            flattened_min_index = numpy.argmin(numpy.abs(self.t_vpol_0subtract1 - time_delay))
+                        elif baseline_index == 1:
+                            flattened_min_index = numpy.argmin(numpy.abs(self.t_vpol_0subtract2 - time_delay))
+                        elif baseline_index == 2:
+                            flattened_min_index = numpy.argmin(numpy.abs(self.t_vpol_0subtract3 - time_delay))
+                        elif baseline_index == 3:
+                            flattened_min_index = numpy.argmin(numpy.abs(self.t_vpol_1subtract2 - time_delay))
+                        elif baseline_index == 4:
+                            flattened_min_index = numpy.argmin(numpy.abs(self.t_vpol_1subtract3 - time_delay))
+                        else baseline_index == 5:
+                            flattened_min_index = numpy.argmin(numpy.abs(self.t_vpol_2subtract3 - time_delay))
 
-                    #Forcing the vector v to be a unit vector pointing towards the source
-                    #below solvers for theta such that dt = |v||A_ij|cos(theta) where dt
-                    #is the geometric time delay after the cable delays have been removed
-                    #from the measured time delay. Theta is the amount I need to rotate A_ij
-                    #in any perpendicular direction to get a vector that would result in the
-                    #appropriate time delays.
-                    theta_deg = numpy.rad2deg(numpy.arccos(dt/(numpy.linalg.norm(A_ji))))  #Forcing the vector v to be a unit vector pointing towards the source
+                    theta_best  = thetas.flat[flattened_min_index] #radians
+                    phi_best    = phis.flat[flattened_min_index] #radians
+                    #These angles should be from antenna 0 in the given polarization.  
+                    source_vector = self.map_source_distance_m * numpy.array([numpy.sin(theta_best)*numpy.cos(phi_best), numpy.sin(theta_best)*numpy.sin(phi_best), numpy.cos(theta_best)]) #vector from ant 0 to the "source"
 
-                    plane_xy = self.getPlaneZenithCurves(A_ji, mode, theta_deg, azimuth_offset_deg=0)
-                    output_dict[pair_key]['azimuth_deg'].append(plane_xy[0])
-                    output_dict[pair_key]['zenith_deg'].append(plane_xy[1])
-            return output_dict
+                    v1 = -all_antennas[j]
+                    v2 = source_vector - all_antennas[j]
+                    cone_angle_rad = numpy.arccos(numpy.dot(v1,v2) / (numpy.linalg.norm(v1) * numpy.linalg.norm(v2)))
+
+                    plane_xy = self.getPlaneZenithCurves((all_antennas[i] - all_antennas[j])/numpy.lingalg.norm((all_antennas[i] - all_antennas[j])), mode, numpy.rad2deg(cone_angle_rad), azimuth_offset_deg=azimuth_offset_deg)
+                    #Plot array plane 0 elevation curve.
+                    im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = 4.0*self.min_elevation_linewidth, color=baseline_colors[pair_index], alpha=0.5, label=pair_key, linestyle=linestyle)
+            return im
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -1159,8 +1303,10 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def addTimeDelayCurves(self, im, time_delay_dict, mode, include_baselines=numpy.array([0,1,2,3,4,5]), mollweide=False, azimuth_offset_deg=0, *args, **kwargs):
+    def addTimeDelayCurvesPlaneWave(self, im, time_delay_dict, mode, include_baselines=numpy.array([0,1,2,3,4,5]), mollweide=False, azimuth_offset_deg=0, *args, **kwargs):
         '''
+        THIS IS DEPRECATED.  WILL PLOT TIME DELAY CURVES GENERATED ASSUMING SAME ARRIVAL ANGLE AT EACH ANTENNA.
+
         This will plot the curves to a map (ax.pcolormesh instance passed as im).
         
         time_delays should be a dict as spcified by map.
@@ -1452,9 +1598,9 @@ class Correlator:
                 else:
                     ax = fig.add_subplot(1,1,1)
                 if True:
-                    ax.set_title('%i-%i-%s-Hilbert=%s\nSine Subtract %s'%(self.reader.run,eventid,pol,str(hilbert), ['Disabled','Enabled'][int(self.apply_sine_subtract)])) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
+                    ax.set_title('%i-%i-%s-Hilbert=%s\nSine Subtract %s\nSource Distance = %0.2f m'%(self.reader.run,eventid,pol,str(hilbert), ['Disabled','Enabled'][int(self.apply_sine_subtract)], self.map_source_distance_m)) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
                 else:
-                    ax.set_title('%i-%i-%s-Hilbert=%s'%(self.reader.run,eventid,pol,str(hilbert))) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
+                    ax.set_title('%i-%i-%s-Hilbert=%s\nSource Distance = %0.2f m'%(self.reader.run,eventid,pol,str(hilbert), self.map_source_distance_m)) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
                     
 
                 if mollweide == True:
@@ -1848,7 +1994,7 @@ class Correlator:
             ax = fig.add_subplot(1,1,1, projection='mollweide')
             
             fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
-            ax.set_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
+            ax.set_title('r%i %s Correlation Map Eventid = %i\nSource Distance = %0.2f m'%(self.reader.run,pol.title(),eventids[0],self.map_source_distance_m))
 
             # fig.canvas.set_window_title('Correlation Map Airplane Event %i'%(0))
             # ax.set_title('Correlation Map Airplane Event %i'%(0))
@@ -1910,7 +2056,7 @@ class Correlator:
                 # fig.canvas.set_window_title('Correlation Map Airplane Event %i'%(_frame))
                 # ax.set_title('Correlation Map Airplane Event %i'%(_frame))
                 fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[_frame]))
-                ax.set_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[_frame]))
+                ax.set_title('r%i %s Correlation Map Eventid = %i\nSource Distance = %0.2f m'%(self.reader.run,pol.title(),eventids[_frame],self.map_source_distance_m))
                 im.set_array(all_maps[_frame].ravel())
 
                 if hilbert == True:
