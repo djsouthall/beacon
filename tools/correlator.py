@@ -1267,7 +1267,7 @@ class Correlator:
                             flattened_min_index = numpy.argmin(numpy.abs(self.t_hpol_1subtract2 - time_delay))
                         elif baseline_index == 4:
                             flattened_min_index = numpy.argmin(numpy.abs(self.t_hpol_1subtract3 - time_delay))
-                        else baseline_index == 5:
+                        elif baseline_index == 5:
                             flattened_min_index = numpy.argmin(numpy.abs(self.t_hpol_2subtract3 - time_delay))
                     else:
                         if baseline_index == 0:
@@ -1280,7 +1280,7 @@ class Correlator:
                             flattened_min_index = numpy.argmin(numpy.abs(self.t_vpol_1subtract2 - time_delay))
                         elif baseline_index == 4:
                             flattened_min_index = numpy.argmin(numpy.abs(self.t_vpol_1subtract3 - time_delay))
-                        else baseline_index == 5:
+                        elif baseline_index == 5:
                             flattened_min_index = numpy.argmin(numpy.abs(self.t_vpol_2subtract3 - time_delay))
 
                     theta_best  = thetas.flat[flattened_min_index] #radians
@@ -1292,7 +1292,7 @@ class Correlator:
                     v2 = source_vector - all_antennas[j]
                     cone_angle_rad = numpy.arccos(numpy.dot(v1,v2) / (numpy.linalg.norm(v1) * numpy.linalg.norm(v2)))
 
-                    plane_xy = self.getPlaneZenithCurves((all_antennas[i] - all_antennas[j])/numpy.lingalg.norm((all_antennas[i] - all_antennas[j])), mode, numpy.rad2deg(cone_angle_rad), azimuth_offset_deg=azimuth_offset_deg)
+                    plane_xy = self.getPlaneZenithCurves((all_antennas[i] - all_antennas[j])/numpy.linalg.norm((all_antennas[i] - all_antennas[j])), mode, numpy.rad2deg(cone_angle_rad), azimuth_offset_deg=azimuth_offset_deg)
                     #Plot array plane 0 elevation curve.
                     im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = 4.0*self.min_elevation_linewidth, color=baseline_colors[pair_index], alpha=0.5, label=pair_key, linestyle=linestyle)
             return im

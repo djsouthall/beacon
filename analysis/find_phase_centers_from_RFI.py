@@ -168,7 +168,7 @@ if __name__ == '__main__':
                 use_sources = ['Tonopah KTPH','Solar Plant']
                 included_pulsers = ['run1507','run1509']#['run1511'] #Only included if include_pulsers == True
         
-        elif False:
+        elif True:
             if mode == 'hpol':
                 use_sources = ['Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
                 included_pulsers = []#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
@@ -818,6 +818,7 @@ if __name__ == '__main__':
                 adjusted_cor.reader = reader
                 adjusted_cor.prep.reader = reader
 
+                #Should make sure this is calculated from antenna 0 (DEFAULT ENU MAY NOT BE, USE NEWLY CALCULATED ANTENNA 0 POSITION)
                 distance_m = numpy.linalg.norm(pulser_locations_ENU[key])
                 zenith_deg = numpy.rad2deg(numpy.arccos(pulser_locations_ENU[key][2]/distance_m))
                 elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(pulser_locations_ENU[key][2]/distance_m))
