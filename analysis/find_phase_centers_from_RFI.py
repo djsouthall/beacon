@@ -149,8 +149,15 @@ if __name__ == '__main__':
         plot_time_delays_on_maps = True
         plot_expected_direction = True
         limit_events = 10 #Number of events use for time delay calculation
-
         if False:
+            # Southern Calibration
+            if mode == 'hpol':
+                use_sources = ['Solar Plant']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
+                included_pulsers = ['run1507','run1509'] #Only included if include_pulsers == True
+            elif mode == 'vpol':
+                use_sources = ['East Dyer Substation','Goldfield KGFN-FM']
+                included_pulsers = ['run1507','run1509'] #Only included if include_pulsers == True
+        elif False:
             # Southern Calibration
             if mode == 'hpol':
                 use_sources = ['East Dyer Substation','Goldfield KGFN-FM','Silver Peak Substation']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
@@ -168,13 +175,13 @@ if __name__ == '__main__':
                 use_sources = ['Tonopah KTPH','Solar Plant']
                 included_pulsers = ['run1507','run1509']#['run1511'] #Only included if include_pulsers == True
         
-        elif True:
+        elif False:
             if mode == 'hpol':
-                use_sources = ['Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
-                included_pulsers = []#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                use_sources = ['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
+                included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
             elif mode == 'vpol':
-                use_sources = ['Goldfield KGFN-FM','Tonopah KTPH','Solar Plant']#'East Dyer Substation',
-                included_pulsers = []#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                use_sources = ['Tonopah KTPH','Solar Plant']#'East Dyer Substation',
+                included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
         else:
             use_sources = [] #iterating through potential sources until something makes sense
             included_pulsers = ['run1507','run1509','run1511'] #Only included if include_pulsers == True
@@ -197,7 +204,7 @@ if __name__ == '__main__':
                         'Silver Peak Lithium Mine',\
                         'Past SP Substation',\
                         'Silver Peak Substation']
-        only_plot = use_sources
+        #only_plot = use_sources
         
         #only_plot.append('Beatty Mountain Cell Tower')
         # only_plot.append('Goldfield Hill Tower')
@@ -242,11 +249,11 @@ if __name__ == '__main__':
 
         final_corr_length = 2**17
 
-        crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
-        low_pass_filter_order = 8
+        crit_freq_low_pass_MHz = [100,75,75,75,75,75,75,75]
+        low_pass_filter_order = [8,12,14,14,14,14,14,14]
 
-        crit_freq_high_pass_MHz = None
-        high_pass_filter_order = None
+        crit_freq_high_pass_MHz = None#60
+        high_pass_filter_order = None#8
 
         sine_subtract = True
         sine_subtract_min_freq_GHz = 0.03
@@ -256,20 +263,20 @@ if __name__ == '__main__':
         waveform_index_range = (None,None)
 
         apply_phase_response = True
-        hilbert = True
+        hilbert = False
 
         include_pulsers = True 
         include_baseline_measurements = True
 
         #Limits 
-        initial_step = 0.5 #m
-        cable_delay_guess_range = None #ns
-        antenna_position_guess_range_x = 5 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_y = antenna_position_guess_range_x
-        antenna_position_guess_range_z = antenna_position_guess_range_x#antenna_position_guess_range_x#antenna_position_guess_range_x#None #Limit to how far from input phase locations to limit the parameter space to
+        initial_step = 1 #m
+        cable_delay_guess_range = 4 #ns
+        antenna_position_guess_range_x = 3#3 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = 3#antenna_position_guess_range_x
+        antenna_position_guess_range_z = 3#6#antenna_position_guess_range_x#antenna_position_guess_range_x#None #Limit to how far from input phase locations to limit the parameter space to
         fix_ant0_x = True
         fix_ant0_y = True
-        fix_ant0_z = True
+        fix_ant0_z = False
         fix_ant1_x = False
         fix_ant1_y = False
         fix_ant1_z = False
@@ -279,10 +286,10 @@ if __name__ == '__main__':
         fix_ant3_x = False
         fix_ant3_y = False
         fix_ant3_z = False
-        fix_cable_delay0 = True
-        fix_cable_delay1 = True
-        fix_cable_delay2 = True
-        fix_cable_delay3 = True
+        fix_cable_delay0 = False
+        fix_cable_delay1 = False
+        fix_cable_delay2 = False
+        fix_cable_delay3 = False
 
         #I think adding an absolute time offset for each antenna and letting that vary could be interesting.  It could be used to adjust the cable delays.
         cable_delays = info.loadCableDelays()[mode]
@@ -396,7 +403,7 @@ if __name__ == '__main__':
                 if not(source_key in use_sources):
                     continue #Skipping calculating that one.
             else:
-                if numpy.logical_or(not(source_key in use_sources),not(source_key in only_plot)):
+                if numpy.logical_and(not(source_key in use_sources),not(source_key in only_plot)):
                     continue #Skipping calculating that one.
 
             ds.addROI(source_key,cut_dict)
@@ -516,6 +523,7 @@ if __name__ == '__main__':
                                   '12':151*0.3048,
                                   '13':102*0.3048,
                                   '23':85 *0.3048}
+
         def rawChi2(ant0_x, ant0_y, ant0_z,ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, cable_delay0, cable_delay1, cable_delay2, cable_delay3):
             '''
             This is a chi^2 that loops over locations from potential RFI, calculating expected time delays for those locations.  Then
@@ -692,6 +700,13 @@ if __name__ == '__main__':
                 plt.subplot(1,3,index + 1)
                 m.draw_profile(key)
 
+        if cable_delay_guess_range is not None:
+            fig = plt.figure()
+            fig.canvas.set_window_title('Cable Delays')
+            for antenna in range(4):
+                plt.subplot(2,2,antenna + 1)
+                m.draw_profile('cable_delay%i'%antenna)
+
 
 
         #12 variables
@@ -745,10 +760,10 @@ if __name__ == '__main__':
         chi2_ax.dist = 10
         plt.legend()
 
-        cor = Correlator(reader,  upsample=2**17, n_phi=1080, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
+        cor = Correlator(reader,  upsample=2**17, n_phi=360*5, n_theta=180*5, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
         cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-        adjusted_cor = Correlator(reader,  upsample=2**17, n_phi=1080, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
+        adjusted_cor = Correlator(reader,  upsample=2**17, n_phi=360*5, n_theta=180*5, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
         adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
         
         ant0_ENU = numpy.array([ant0_phase_x, ant0_phase_y, ant0_phase_z])
@@ -756,20 +771,24 @@ if __name__ == '__main__':
         ant2_ENU = numpy.array([ant2_phase_x, ant2_phase_y, ant2_phase_z])
         ant3_ENU = numpy.array([ant3_phase_x, ant3_phase_y, ant3_phase_z])
 
-
         if mode == 'hpol':
             adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,adjusted_cor.A0_vpol,adjusted_cor.A1_vpol,adjusted_cor.A2_vpol,adjusted_cor.A3_vpol,verbose=False)
+            adjusted_cor.overwriteCableDelays(m.values['cable_delay0'], adjusted_cor.cable_delays[1], m.values['cable_delay1'], adjusted_cor.cable_delays[3], m.values['cable_delay2'], adjusted_cor.cable_delays[5], m.values['cable_delay3'], adjusted_cor.cable_delays[7])
         else:
             adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
+            adjusted_cor.overwriteCableDelays(adjusted_cor.cable_delays[0], m.values['cable_delay0'], adjusted_cor.cable_delays[2], m.values['cable_delay1'], adjusted_cor.cable_delays[4], m.values['cable_delay2'], adjusted_cor.cable_delays[6], m.values['cable_delay3'])
 
         sources_ENU, data_slicer_cut_dict = info.loadValleySourcesENU() #Plot all potential sources
         
         for source_key, cut_dict in data_slicer_cut_dict.items():
             if source_key in only_plot:
-                distance_m = numpy.linalg.norm(sources_ENU[source_key])
-                zenith_deg = numpy.rad2deg(numpy.arccos(sources_ENU[source_key][2]/distance_m))
-                elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(sources_ENU[source_key][2]/distance_m))
-                azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU[source_key][1],sources_ENU[source_key][0]))
+                #Accounting for potentially shifted antenna 0.  Centering ENU to that for calculations.
+                sources_ENU_new = numpy.array([sources_ENU[source_key][0] - ant0_ENU[0] , sources_ENU[source_key][1] - ant0_ENU[1] , sources_ENU[source_key][2] - ant0_ENU[2]])
+
+                distance_m = numpy.linalg.norm(sources_ENU_new)
+                zenith_deg = numpy.rad2deg(numpy.arccos(sources_ENU_new[2]/distance_m))
+                elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(sources_ENU_new[2]/distance_m))
+                azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU_new[1],sources_ENU_new[0]))
                 cor.overwriteSourceDistance(distance_m)
                 adjusted_cor.overwriteSourceDistance(distance_m)
 
@@ -788,18 +807,27 @@ if __name__ == '__main__':
                 eventid = roi_eventids[roi_impulsivity_sort[-1]]
                 
                 #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
-                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,91], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
-                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,91], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
+                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,100], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
+                #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,100], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
         
 
         if include_pulsers:
             known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
             for key in included_pulsers:
+                pulser_ENU_new = numpy.array([pulser_locations_ENU[key][0] - ant0_ENU[0] , pulser_locations_ENU[key][1] - ant0_ENU[1] , pulser_locations_ENU[key][2] - ant0_ENU[2]])
+
+                distance_m = numpy.linalg.norm(pulser_ENU_new)
+                zenith_deg = numpy.rad2deg(numpy.arccos(pulser_ENU_new[2]/distance_m))
+                elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(pulser_ENU_new[2]/distance_m))
+                # cor.overwriteSourceDistance(distance_m)
+                # adjusted_cor.overwriteSourceDistance(distance_m)
+
+                azimuth_deg = numpy.rad2deg(numpy.arctan2(pulser_ENU_new[1],pulser_ENU_new[0]))
                 reader = Reader(datapath,int(key.replace('run','')))
-                cor = Correlator(reader,  upsample=2**17, n_phi=1080, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
+                cor = Correlator(reader,  upsample=2**17, n_phi=360*5, n_theta=180*5, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                 cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-                adjusted_cor = Correlator(reader,  upsample=2**17, n_phi=1080, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
+                adjusted_cor = Correlator(reader,  upsample=2**17, n_phi=360*5, n_theta=180*5, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                 adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
                 
                 ant0_ENU = numpy.array([ant0_phase_x, ant0_phase_y, ant0_phase_z])
@@ -810,8 +838,10 @@ if __name__ == '__main__':
 
                 if mode == 'hpol':
                     adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,adjusted_cor.A0_vpol,adjusted_cor.A1_vpol,adjusted_cor.A2_vpol,adjusted_cor.A3_vpol,verbose=False)
+                    adjusted_cor.overwriteCableDelays(m.values['cable_delay0'], adjusted_cor.cable_delays[1], m.values['cable_delay1'], adjusted_cor.cable_delays[3], m.values['cable_delay2'], adjusted_cor.cable_delays[5], m.values['cable_delay3'], adjusted_cor.cable_delays[7])
                 else:
                     adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
+                    adjusted_cor.overwriteCableDelays(adjusted_cor.cable_delays[0], m.values['cable_delay0'], adjusted_cor.cable_delays[2], m.values['cable_delay1'], adjusted_cor.cable_delays[4], m.values['cable_delay2'], adjusted_cor.cable_delays[6], m.values['cable_delay3'])
 
                 cor.reader = reader
                 cor.prep.reader = reader
@@ -819,13 +849,8 @@ if __name__ == '__main__':
                 adjusted_cor.prep.reader = reader
 
                 #Should make sure this is calculated from antenna 0 (DEFAULT ENU MAY NOT BE, USE NEWLY CALCULATED ANTENNA 0 POSITION)
-                distance_m = numpy.linalg.norm(pulser_locations_ENU[key])
-                zenith_deg = numpy.rad2deg(numpy.arccos(pulser_locations_ENU[key][2]/distance_m))
-                elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(pulser_locations_ENU[key][2]/distance_m))
-                azimuth_deg = numpy.rad2deg(numpy.arctan2(pulser_locations_ENU[key][1],pulser_locations_ENU[key][0]))
+                #Accounting for potentially shifted antenna 0.  Centering ENU to that for calculations.
                 
-                cor.overwriteSourceDistance(distance_m)
-                adjusted_cor.overwriteSourceDistance(distance_m)
 
                 if plot_expected_direction == False:
                     zenith_deg = None
@@ -838,8 +863,8 @@ if __name__ == '__main__':
                 eventid = numpy.random.choice(known_pulser_ids[key][mode])
                 
                 #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
-                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,91], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
-                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,91], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
+                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,100], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
+                #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,100], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
 
 
 

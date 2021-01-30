@@ -154,10 +154,10 @@ class Correlator:
             self.thetas_rad = numpy.deg2rad(self.thetas_deg)
             self.phis_rad = numpy.deg2rad(self.phis_deg)
 
-            self.mesh_azimuth_rad, self.mesh_elevation_rad = numpy.meshgrid(numpy.deg2rad(numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi+1)), numpy.pi/2.0 - numpy.deg2rad(numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta+1)))
-            self.mesh_azimuth_deg, self.mesh_elevation_deg = numpy.meshgrid(numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi+1), 90.0 - numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta+1))
+            self.mesh_azimuth_rad, self.mesh_elevation_rad = numpy.meshgrid(numpy.deg2rad(numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi)), numpy.pi/2.0 - numpy.deg2rad(numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta)))
+            self.mesh_azimuth_deg, self.mesh_elevation_deg = numpy.meshgrid(numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi), 90.0 - numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta))
             self.mesh_zenith_deg = 90.0 - self.mesh_elevation_deg
-
+            self.mesh_zenith_rad = numpy.deg2rad(self.mesh_zenith_deg)
             #self.A0_latlonel = info.loadAntennaZeroLocation() #Used for conversion to RA and Dec coordinates.
 
             antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
@@ -509,32 +509,32 @@ class Correlator:
         polarizations respective phase center.
         '''
         try:
-            #Prepare grids of thetas and phis
-            thetas  = numpy.tile(self.thetas_rad,(self.n_phi,1)).T  #Each row is a different theta (zenith)
-            phis    = numpy.tile(self.phis_rad,(self.n_theta,1))    #Each column is a different phi (azimuth)
+            # self.mesh_azimuth_rad
+            # self.mesh_elevation_rad
+            # self.mesh_zenith_rad
 
             #Source direction is the direction FROM BEACON ANTENNA 0 you look to see the source.
             #Position is a vector to a distant source
-            signal_source_position_hpol        = numpy.zeros((self.n_theta, self.n_phi, 3))
-            signal_source_position_hpol[:,:,0] = self.map_source_distance_m * numpy.multiply( numpy.cos(phis) , numpy.sin(thetas) ) + self.A0_hpol[0] #Shifting points to be centered around antenna 0
-            signal_source_position_hpol[:,:,1] = self.map_source_distance_m * numpy.multiply( numpy.sin(phis) , numpy.sin(thetas) ) + self.A0_hpol[1] #Shifting points to be centered around antenna 0
-            signal_source_position_hpol[:,:,2] = self.map_source_distance_m * numpy.cos(thetas) + self.A0_hpol[2] #Shifting points to be centered around antenna 0
+            signal_source_position_hpol        = numpy.zeros((self.mesh_azimuth_rad.shape[0], self.mesh_azimuth_rad.shape[1], 3))
+            signal_source_position_hpol[:,:,0] = self.map_source_distance_m * numpy.multiply( numpy.cos(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) ) + self.A0_hpol[0] #Shifting points to be centered around antenna 0
+            signal_source_position_hpol[:,:,1] = self.map_source_distance_m * numpy.multiply( numpy.sin(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) ) + self.A0_hpol[1] #Shifting points to be centered around antenna 0
+            signal_source_position_hpol[:,:,2] = self.map_source_distance_m * numpy.cos(self.mesh_zenith_rad) + self.A0_hpol[2] #Shifting points to be centered around antenna 0
 
-            signal_source_position_vpol        = numpy.zeros((self.n_theta, self.n_phi, 3))
-            signal_source_position_vpol[:,:,0] = self.map_source_distance_m * numpy.multiply( numpy.cos(phis) , numpy.sin(thetas) ) + self.A0_vpol[0] #Shifting points to be centered around antenna 0
-            signal_source_position_vpol[:,:,1] = self.map_source_distance_m * numpy.multiply( numpy.sin(phis) , numpy.sin(thetas) ) + self.A0_vpol[1] #Shifting points to be centered around antenna 0
-            signal_source_position_vpol[:,:,2] = self.map_source_distance_m * numpy.cos(thetas) + self.A0_vpol[2] #Shifting points to be centered around antenna 0
+            signal_source_position_vpol        = numpy.zeros((self.mesh_azimuth_rad.shape[0], self.mesh_azimuth_rad.shape[1], 3))
+            signal_source_position_vpol[:,:,0] = self.map_source_distance_m * numpy.multiply( numpy.cos(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) ) + self.A0_vpol[0] #Shifting points to be centered around antenna 0
+            signal_source_position_vpol[:,:,1] = self.map_source_distance_m * numpy.multiply( numpy.sin(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) ) + self.A0_vpol[1] #Shifting points to be centered around antenna 0
+            signal_source_position_vpol[:,:,2] = self.map_source_distance_m * numpy.cos(self.mesh_zenith_rad) + self.A0_vpol[2] #Shifting points to be centered around antenna 0
 
             #Calculate the expected readout time for each antenna (including cable delays)
             hpol_arrival_time_ns_0 = self.cable_delays[0] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A0_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A0_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A0_hpol[2])**2 )/self.c)*1.0e9 #ns
-            hpol_arrival_time_ns_1 = self.cable_delays[1] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A1_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A1_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A1_hpol[2])**2 )/self.c)*1.0e9 #ns
-            hpol_arrival_time_ns_2 = self.cable_delays[2] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A2_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A2_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A2_hpol[2])**2 )/self.c)*1.0e9 #ns
-            hpol_arrival_time_ns_3 = self.cable_delays[3] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A3_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A3_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A3_hpol[2])**2 )/self.c)*1.0e9 #ns
+            hpol_arrival_time_ns_1 = self.cable_delays[2] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A1_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A1_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A1_hpol[2])**2 )/self.c)*1.0e9 #ns
+            hpol_arrival_time_ns_2 = self.cable_delays[4] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A2_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A2_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A2_hpol[2])**2 )/self.c)*1.0e9 #ns
+            hpol_arrival_time_ns_3 = self.cable_delays[6] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A3_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A3_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A3_hpol[2])**2 )/self.c)*1.0e9 #ns
 
-            vpol_arrival_time_ns_0 = self.cable_delays[0] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A0_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A0_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A0_vpol[2])**2 )/self.c)*1.0e9 #ns
-            vpol_arrival_time_ns_1 = self.cable_delays[1] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A1_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A1_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A1_vpol[2])**2 )/self.c)*1.0e9 #ns
-            vpol_arrival_time_ns_2 = self.cable_delays[2] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A2_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A2_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A2_vpol[2])**2 )/self.c)*1.0e9 #ns
-            vpol_arrival_time_ns_3 = self.cable_delays[3] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A3_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A3_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A3_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_arrival_time_ns_0 = self.cable_delays[1] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A0_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A0_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A0_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_arrival_time_ns_1 = self.cable_delays[3] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A1_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A1_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A1_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_arrival_time_ns_2 = self.cable_delays[5] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A2_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A2_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A2_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_arrival_time_ns_3 = self.cable_delays[7] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A3_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A3_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A3_vpol[2])**2 )/self.c)*1.0e9 #ns
 
             self.t_hpol_0subtract1 = hpol_arrival_time_ns_0 - hpol_arrival_time_ns_1
             self.t_hpol_0subtract2 = hpol_arrival_time_ns_0 - hpol_arrival_time_ns_2
@@ -583,8 +583,10 @@ class Correlator:
         try:
             print('WARNING generateTimeIndicesPlaneWave IS DEPRECATED')
             #Prepare grids of thetas and phis
+
+            #THESE ARE BUGGED!! :(
             thetas  = numpy.tile(self.thetas_rad,(self.n_phi,1)).T  #Each row is a different theta (zenith)
-            phis    = numpy.tile(self.phis_rad,(self.n_theta,1))    #Each column is a different phi (azimuth)
+            phis    = numpy.tile(self.thetas_rad,(self.n_phi,1))    #Each column is a different phi (azimuth)
 
             #Source direction is the direction FROM BEACON ANTENNA 0 you look to see the source.
             #Direction is the unit vector from antenna 0 pointing to that source. 
@@ -659,15 +661,18 @@ class Correlator:
         a single number across the array. 
         '''
         try:
-            #Prepare grids of thetas and phis
-            thetas  = numpy.tile(self.thetas_rad,(self.n_phi,1)).T  #Each row is a different theta (zenith)
-            phis    = numpy.tile(self.phis_rad,(self.n_theta,1))    #Each column is a different phi (azimuth)
+            # self.mesh_azimuth_rad
+            # self.mesh_elevation_rad
+            # self.mesh_zenith_rad
+
+            #Source direction is the direction FROM BEACON ANTENNA 0 you look to see the source.
+            #Position is a vector to a distant source
 
             #Source direction is the direction FROM BEACON you look to see the source.
-            signal_source_direction        = numpy.zeros((self.n_theta, self.n_phi, 3))
-            signal_source_direction[:,:,0] = numpy.multiply( numpy.cos(phis) , numpy.sin(thetas) )
-            signal_source_direction[:,:,1] = numpy.multiply( numpy.sin(phis) , numpy.sin(thetas) )
-            signal_source_direction[:,:,2] = numpy.cos(thetas)
+            signal_source_direction        = numpy.zeros((self.mesh_azimuth_rad.shape[0], self.mesh_azimuth_rad.shape[1], 3))
+            signal_source_direction[:,:,0] = numpy.multiply( numpy.cos(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) )
+            signal_source_direction[:,:,1] = numpy.multiply( numpy.sin(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) )
+            signal_source_direction[:,:,2] = numpy.cos(self.mesh_zenith_rad)
             #Propogate direction is the direction FROM THE SOURCE that the ray travels towards BEACON.  
             signal_propogate_direction = - signal_source_direction
 
@@ -791,10 +796,6 @@ class Correlator:
                     a1 = (self.A1_hpol + self.A1_vpol)/2
                     a2 = (self.A2_hpol + self.A2_vpol)/2
                     a3 = (self.A3_hpol + self.A3_vpol)/2
-
-
-
-
 
                 #Find a vector perpendicular to the norm by performing cross with some vector not exactly parallel to norm.  Any of the antenna position vectors
                 #will work assuming they are not parallel to norm.  Because this will be necessarily perpendicular to norm then it is in the plane.  Rotating 
@@ -1009,26 +1010,24 @@ class Correlator:
 
         Returns
         -------
-        row_index : int
-            The selected row.
-        col_index : int
-            The selected column.
+        linear_max_index : int
+            This index in the flattened directional mesh.
         theta_best : float 
-            The corresponding values for this parameters for row_index and col_index.
+            The corresponding values for this parameters for linear_max_index.
         phi_best : float   
-            The corresponding values for this parameters for row_index and col_index.
+            The corresponding values for this parameters for linear_max_index.
         t_best_0subtract1 : float
-            The corresponding values for this parameters for row_index and col_index.
+            The corresponding values for this parameters for linear_max_index.
         t_best_0subtract2 : float
-            The corresponding values for this parameters for row_index and col_index.
+            The corresponding values for this parameters for linear_max_index.
         t_best_0subtract3 : float
-            The corresponding values for this parameters for row_index and col_index.
+            The corresponding values for this parameters for linear_max_index.
         t_best_1subtract2 : float
-            The corresponding values for this parameters for row_index and col_index.
+            The corresponding values for this parameters for linear_max_index.
         t_best_1subtract3 : float
-            The corresponding values for this parameters for row_index and col_index.
+            The corresponding values for this parameters for linear_max_index.
         t_best_2subtract3 : float
-            The corresponding values for this parameters for row_index and col_index.
+            The corresponding values for this parameters for linear_max_index.
 
 
         '''
@@ -1069,36 +1068,40 @@ class Correlator:
 
             masked_map_values = numpy.ma.array(map_values.copy(),mask=~theta_cut) #This way the values not in the range are not included in calculations but the dimensions of the map stay the same.
 
-            if max_method == 0:
-                row_index, column_index = numpy.unravel_index(masked_map_values.argmax(),numpy.shape(masked_map_values))
+            # if max_method == 0:
+            #     row_index, column_index = numpy.unravel_index(masked_map_values.argmax(),numpy.shape(masked_map_values))
 
-            elif max_method == 1:
-                #Calculates sum of each point plus surrounding four points to get max.
-                rounded_corr_values = (masked_map_values + numpy.roll(masked_map_values,1,axis=0) + numpy.roll(masked_map_values,-1,axis=0) + numpy.roll(masked_map_values,1,axis=1) + numpy.roll(masked_map_values,-1,axis=1))/5.0
-                row_index, column_index = numpy.unravel_index(rounded_corr_values.argmax(),numpy.shape(rounded_corr_values))
+            # elif max_method == 1:
+            #     #Calculates sum of each point plus surrounding four points to get max.
+            #     rounded_corr_values = (masked_map_values + numpy.roll(masked_map_values,1,axis=0) + numpy.roll(masked_map_values,-1,axis=0) + numpy.roll(masked_map_values,1,axis=1) + numpy.roll(masked_map_values,-1,axis=1))/5.0
+            #     row_index, column_index = numpy.unravel_index(rounded_corr_values.argmax(),numpy.shape(rounded_corr_values))
 
-            theta_best  = self.thetas_deg[row_index]
-            phi_best    = self.phis_deg[column_index]
+            linear_max_index = masked_map_values.argmax()
+            
+            
 
-            t_best_0subtract1 = self.t_hpol_0subtract1[row_index,column_index]
-            t_best_0subtract2 = self.t_hpol_0subtract2[row_index,column_index]
-            t_best_0subtract3 = self.t_hpol_0subtract3[row_index,column_index]
-            t_best_1subtract2 = self.t_hpol_1subtract2[row_index,column_index]
-            t_best_1subtract3 = self.t_hpol_1subtract3[row_index,column_index]
-            t_best_2subtract3 = self.t_hpol_2subtract3[row_index,column_index]
+            theta_best  = self.mesh_zenith_deg.flat[linear_max_index]
+            phi_best    = self.mesh_azimuth_deg.flat[linear_max_index]
+
+            t_best_0subtract1 = self.t_hpol_0subtract1.flat[linear_max_index]
+            t_best_0subtract2 = self.t_hpol_0subtract2.flat[linear_max_index]
+            t_best_0subtract3 = self.t_hpol_0subtract3.flat[linear_max_index]
+            t_best_1subtract2 = self.t_hpol_1subtract2.flat[linear_max_index]
+            t_best_1subtract3 = self.t_hpol_1subtract3.flat[linear_max_index]
+            t_best_2subtract3 = self.t_hpol_2subtract3.flat[linear_max_index]
 
             if verbose == True:
                 print("From the correlation plot:")
                 print("Best zenith angle:",theta_best)
                 print("Best azimuth angle:",phi_best)
-                print('Predicted time delays %run between A0 and A1:', t_best_0subtract1)
+                print('Predicted time delays between A0 and A1:', t_best_0subtract1)
                 print('Predicted time delays between A0 and A2:', t_best_0subtract2)
                 print('Predicted time delays between A0 and A3:', t_best_0subtract3)
                 print('Predicted time delays between A1 and A2:', t_best_1subtract2)
                 print('Predicted time delays between A1 and A3:', t_best_1subtract3)
                 print('Predicted time delays between A2 and A3:', t_best_2subtract3)
 
-            return row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3
+            return linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3
 
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -1209,7 +1212,88 @@ class Correlator:
         else:
             return ax, circle, (h, v)
 
-    def addTimeDelayCurves(self, im, time_delay_dict, mode, include_baselines=numpy.array([0,1,2,3,4,5]), mollweide=False, azimuth_offset_deg=0, *args, **kwargs):
+    def addTimeDelayCurves(self, im, time_delay_dict, mode, ax, include_baselines=numpy.array([0,1,2,3,4,5]), mollweide=False, azimuth_offset_deg=0, *args, **kwargs):
+        '''
+        This solution attempts to determine the time delay curve using a contour on precalculated time delay values
+        rather than doing clever vector math.  
+
+        This will plot the curves to a map (ax.pcolormesh instance passed as im).
+        
+        time_delays should be a dict as spcified by map.
+
+        These expected time delays should come from raw measured time delays from signals.  
+        The cable delays will be accounted for internally and should not have been accounted 
+        for already.
+
+        Mode specifies the polarization.
+
+        The args and kwargs should be plotting things such as color and linestyle.  
+        '''
+        try:
+            if mode == 'hpol':
+                all_antennas = numpy.vstack((self.A0_hpol,self.A1_hpol,self.A2_hpol,self.A3_hpol))
+                time_delays = time_delay_dict['hpol']
+            elif mode == 'vpol':
+                all_antennas = numpy.vstack((self.A0_vpol,self.A1_vpol,self.A2_vpol,self.A3_vpol))
+                time_delays = time_delay_dict['vpol']
+
+            pairs = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
+            baseline_cm = plt.cm.get_cmap('tab10', 10)
+            baseline_colors = baseline_cm(numpy.linspace(0, 1, 10))[0:6] #only want the first 6 colours in this list of 10 colors.
+
+            baseline_index = -1
+            for pair_key, pair_time_delay in time_delays.items():
+                baseline_index += 1
+                if numpy.isin(baseline_index ,include_baselines ):
+                    linestyle = '-'
+                else:
+                    linestyle = '--'
+
+                pair = numpy.array(pair_key.replace('[','').replace(']','').split(','),dtype=int)
+                pair_index = numpy.where(numpy.sum(pair == pairs,axis=1) == 2)[0][0] #Used for consistent coloring.
+                i = pair[0]
+                j = pair[1]
+
+                for time_delay in pair_time_delay:
+                    #Attempting to use precalculate expected time delays per direction to derive theta here.
+                    if mode == 'hpol':
+                        if baseline_index == 0:
+                            contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_0subtract1, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                        elif baseline_index == 1:
+                            contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_0subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                        elif baseline_index == 2:
+                            contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_0subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                        elif baseline_index == 3:
+                            contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_1subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                        elif baseline_index == 4:
+                            contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_1subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                        elif baseline_index == 5:
+                            contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_2subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                    else:
+                        if baseline_index == 0:
+                            contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_0subtract1, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                        elif baseline_index == 1:
+                            contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_0subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                        elif baseline_index == 2:
+                            contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_0subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                        elif baseline_index == 3:
+                            contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_1subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                        elif baseline_index == 4:
+                            contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_1subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                        elif baseline_index == 5:
+                            contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_2subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+
+                    #ax.clabel(contours, contours.levels, inline=True, fontsize=10, fmt=['%s: %0.2f'%(pair_index,time_delay)])
+            return im, ax
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
+    def addTimeDelayCurvesAttemptedVectorSolution(self, im, time_delay_dict, mode, include_baselines=numpy.array([0,1,2,3,4,5]), mollweide=False, azimuth_offset_deg=0, *args, **kwargs):
         '''
         This will plot the curves to a map (ax.pcolormesh instance passed as im).
         
@@ -1225,23 +1309,21 @@ class Correlator:
         '''
         try:
             if mode == 'hpol':
-                cable_delays = self.cable_delays[0:8:2]
                 all_antennas = numpy.vstack((self.A0_hpol,self.A1_hpol,self.A2_hpol,self.A3_hpol))
                 time_delays = time_delay_dict['hpol']
             elif mode == 'vpol':
-                cable_delays = self.cable_delays[1:8:2]
                 all_antennas = numpy.vstack((self.A0_vpol,self.A1_vpol,self.A2_vpol,self.A3_vpol))
                 time_delays = time_delay_dict['vpol']
 
             pairs = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
             baseline_cm = plt.cm.get_cmap('tab10', 10)
             baseline_colors = baseline_cm(numpy.linspace(0, 1, 10))[0:6] #only want the first 6 colours in this list of 10 colors.
-            baseline_index = -1
 
 
             thetas  = numpy.tile(self.thetas_rad,(self.n_phi,1)).T  #Each row is a different theta (zenith)
             phis    = numpy.tile(self.phis_rad,(self.n_theta,1))    #Each column is a different phi (azimuth)
 
+            baseline_index = -1
             for pair_key, pair_time_delay in time_delays.items():
                 baseline_index += 1
                 if numpy.isin(baseline_index ,include_baselines ):
@@ -1288,11 +1370,15 @@ class Correlator:
                     #These angles should be from antenna 0 in the given polarization.  
                     source_vector = self.map_source_distance_m * numpy.array([numpy.sin(theta_best)*numpy.cos(phi_best), numpy.sin(theta_best)*numpy.sin(phi_best), numpy.cos(theta_best)]) #vector from ant 0 to the "source"
 
-                    v1 = -all_antennas[j]
+                    v1 = all_antennas[i] - all_antennas[j]
+                    v1_normalized = v1/numpy.linalg.norm(v1)
                     v2 = source_vector - all_antennas[j]
                     cone_angle_rad = numpy.arccos(numpy.dot(v1,v2) / (numpy.linalg.norm(v1) * numpy.linalg.norm(v2)))
 
-                    plane_xy = self.getPlaneZenithCurves((all_antennas[i] - all_antennas[j])/numpy.linalg.norm((all_antennas[i] - all_antennas[j])), mode, numpy.rad2deg(cone_angle_rad), azimuth_offset_deg=azimuth_offset_deg)
+
+                    #NEED TO THINK FURTHER ABOUT WHAT VECTOR I SHOULD BE ROTATING AROUND.  SURELY IT HASE TO BE DEFINED FROM THE ORIGIN FOR THE OUTPUT THETA AND PHI TO MAKE SENSE?
+
+                    plane_xy = self.getPlaneZenithCurves(v1_normalized, mode, numpy.rad2deg(cone_angle_rad), azimuth_offset_deg=azimuth_offset_deg)
                     #Plot array plane 0 elevation curve.
                     im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = 4.0*self.min_elevation_linewidth, color=baseline_colors[pair_index], alpha=0.5, label=pair_key, linestyle=linestyle)
             return im
@@ -1443,9 +1529,9 @@ class Correlator:
 
                 if plot_map == True:
                     if max_method is not None:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all')
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all')
                     else:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all')
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all')
                 if plot_corr == True:
                     print('Disabling plot corr for all antenna map.')
                     plot_corr = False
@@ -1474,9 +1560,9 @@ class Correlator:
                 mean_corr_values = numpy.mean(stacked_corr_values[include_baselines],axis=0)
                 if plot_map == True:
                     if max_method is not None:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
                     else:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
 
             elif pol == 'vpol':
                 if waveforms is None:
@@ -1524,9 +1610,9 @@ class Correlator:
                 
                 if plot_map == True:
                     if max_method is not None:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
                     else:
-                        row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
 
             else:
                 print('Invalid polarization option.  Returning nothing.')
@@ -1635,7 +1721,6 @@ class Correlator:
                 if pol == 'hpol':
                     plane_xy = self.getPlaneZenithCurves(self.n_hpol.copy(), 'hpol', 90.0, azimuth_offset_deg=azimuth_offset_deg)
                     if zenith_cut_array_plane is not None:
-
                         upper_plane_xy = self.getPlaneZenithCurves(self.n_hpol.copy(), 'hpol', zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)
                         lower_plane_xy = self.getPlaneZenithCurves(self.n_hpol.copy(), 'hpol', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)
                 elif pol == 'vpol':
@@ -1660,7 +1745,7 @@ class Correlator:
 
                 if pol != 'all':
                     #Add curves for time delays if present.
-                    im = self.addTimeDelayCurves(im, time_delay_dict, pol,  mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg, include_baselines=include_baselines)
+                    im, ax = self.addTimeDelayCurves(im, time_delay_dict, pol, ax, mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg, include_baselines=include_baselines)
 
 
                 #Added circles as specified.
@@ -1801,26 +1886,26 @@ class Correlator:
             rolled_values = numpy.roll(total_mean_corr_values,roll,axis=1)
 
             if max_method is not None:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,pol=pol)
+                linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,pol=pol)
             else:
-                row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,pol=pol)        
+                linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,pol=pol)        
 
             elevation_best_deg = 90.0 - theta_best
 
             if pol == 'hpol':
-                t_best_0subtract1  = self.t_hpol_0subtract1[row_index,column_index]
-                t_best_0subtract2  = self.t_hpol_0subtract2[row_index,column_index]
-                t_best_0subtract3  = self.t_hpol_0subtract3[row_index,column_index]
-                t_best_1subtract2  = self.t_hpol_1subtract2[row_index,column_index]
-                t_best_1subtract3  = self.t_hpol_1subtract3[row_index,column_index]
-                t_best_2subtract3  = self.t_hpol_2subtract3[row_index,column_index]
+                t_best_0subtract1  = self.t_hpol_0subtract1.flat[linear_max_index]
+                t_best_0subtract2  = self.t_hpol_0subtract2.flat[linear_max_index]
+                t_best_0subtract3  = self.t_hpol_0subtract3.flat[linear_max_index]
+                t_best_1subtract2  = self.t_hpol_1subtract2.flat[linear_max_index]
+                t_best_1subtract3  = self.t_hpol_1subtract3.flat[linear_max_index]
+                t_best_2subtract3  = self.t_hpol_2subtract3.flat[linear_max_index]
             elif pol == 'vpol':
-                t_best_0subtract1  = self.t_vpol_0subtract1[row_index,column_index]
-                t_best_0subtract2  = self.t_vpol_0subtract2[row_index,column_index]
-                t_best_0subtract3  = self.t_vpol_0subtract3[row_index,column_index]
-                t_best_1subtract2  = self.t_vpol_1subtract2[row_index,column_index]
-                t_best_1subtract3  = self.t_vpol_1subtract3[row_index,column_index]
-                t_best_2subtract3  = self.t_vpol_2subtract3[row_index,column_index]
+                t_best_0subtract1  = self.t_vpol_0subtract1.flat[linear_max_index]
+                t_best_0subtract2  = self.t_vpol_0subtract2.flat[linear_max_index]
+                t_best_0subtract3  = self.t_vpol_0subtract3.flat[linear_max_index]
+                t_best_1subtract2  = self.t_vpol_1subtract2.flat[linear_max_index]
+                t_best_1subtract3  = self.t_vpol_1subtract3.flat[linear_max_index]
+                t_best_2subtract3  = self.t_vpol_2subtract3.flat[linear_max_index]
             else:
                 print('Invalid polarization option.  Returning nothing.')
                 return
@@ -1880,7 +1965,7 @@ class Correlator:
 
 
             #Add curves for time delays if present.
-            im = self.addTimeDelayCurves(im, time_delay_dict, pol,  mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg)
+            im = self.addTimeDelayCurves(im, time_delay_dict, pol, ax, mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg)
 
             #Added circles as specified.
             ax, peak_circle = self.addCircleToMap(ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
@@ -2137,14 +2222,14 @@ class Correlator:
                 sys.stdout.flush()
                 m = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert)/len(eventids)
                 if max_method is not None:
-                    row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU, pol=pol)
+                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU, pol=pol)
                 else:
-                    row_index, column_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU, pol=pol)        
+                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU, pol=pol)        
 
                 if use_weight == True:
-                    hist[row_index,column_index] += m[row_index,column_index]
+                    hist.flat[linear_max_index] += m.flat[linear_max_index]
                 else:
-                    hist[row_index,column_index] += 1
+                    hist.flat[linear_max_index] += 1
 
             if plot_map:
                 fig = plt.figure()

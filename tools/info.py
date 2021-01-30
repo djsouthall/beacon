@@ -30,7 +30,7 @@ import pymap3d as pm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
-default_deploy = 8#2#4#2 #The deployment time to use as the default.
+default_deploy = 1#2#4#2 #The deployment time to use as the default.
 
 
 def loadKnownPlaneDict(ignore_planes=[]):

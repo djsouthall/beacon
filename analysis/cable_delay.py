@@ -30,7 +30,7 @@ plt.ion()
 
 if __name__ == '__main__':
     try:
-        plt.close('all')
+        #plt.close('all')
         datapath = os.environ['BEACON_ANALYSIS_DIR'] + 'data/calibration/'
         infiles = glob.glob(datapath + '/300FT*.csv')
 
@@ -69,32 +69,6 @@ if __name__ == '__main__':
 
             if plot == True:
 
-                plt.plot(group_delay_freqs/1e6, group_delay,label=root.split('/')[-1].replace('_.csv','').replace('_',' '))
-                plt.ylabel('Group Delay (ns)')
-                plt.legend()
-                plt.minorticks_on()
-                plt.grid(b=True, which='major', color='k', linestyle='-')
-                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                # #plt.suptitle(root.split('/')[-1].replace('_.csv','').replace('_',' '))
-                # plt.subplot(4,1,1)
-                # plt.plot(freqs/1e6, lm,label=root.split('/')[-1].replace('_.csv','').replace('_',' '))
-                # plt.ylabel('dB')
-                # plt.legend()
-                # plt.minorticks_on()
-                # plt.grid(b=True, which='major', color='k', linestyle='-')
-                # plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                # plt.subplot(4,1,2)
-                # plt.plot(freqs/1e6, numpy.unwrap(phase),label=root.split('/')[-1].replace('_.csv','').replace('_',' '))
-                # plt.ylabel('Phase')
-                # plt.legend()
-                # plt.minorticks_on()
-                # plt.grid(b=True, which='major', color='k', linestyle='-')
-                # plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-
-                # plt.subplot(4,1,3)
                 # plt.plot(group_delay_freqs/1e6, group_delay,label=root.split('/')[-1].replace('_.csv','').replace('_',' '))
                 # plt.ylabel('Group Delay (ns)')
                 # plt.legend()
@@ -102,14 +76,40 @@ if __name__ == '__main__':
                 # plt.grid(b=True, which='major', color='k', linestyle='-')
                 # plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
+                #plt.suptitle(root.split('/')[-1].replace('_.csv','').replace('_',' '))
+                plt.subplot(4,1,1)
+                plt.plot(freqs/1e6, lm,label=root.split('/')[-1].replace('_.csv','').replace('_',' '))
+                plt.ylabel('dB')
+                plt.legend()
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-                # plt.subplot(4,1,4)
-                # plt.plot(group_delay_freqs/1e6, group_delay*0.84*constants.speed_light,label=root.split('/')[-1].replace('_.csv','').replace('_',' '))
-                # plt.ylabel('Cable Length (m)')
-                # plt.legend()
-                # plt.minorticks_on()
-                # plt.grid(b=True, which='major', color='k', linestyle='-')
-                # plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.subplot(4,1,2)
+                plt.plot(freqs/1e6, numpy.unwrap(phase),label=root.split('/')[-1].replace('_.csv','').replace('_',' '))
+                plt.ylabel('Phase')
+                plt.legend()
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+                plt.subplot(4,1,3)
+                plt.plot(group_delay_freqs/1e6, group_delay,label=root.split('/')[-1].replace('_.csv','').replace('_',' '))
+                plt.ylabel('Group Delay (ns)')
+                plt.legend()
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+                plt.subplot(4,1,4)
+                plt.plot(group_delay_freqs/1e6, group_delay*0.84*constants.speed_light,label=root.split('/')[-1].replace('_.csv','').replace('_',' '))
+                plt.ylabel('Cable Length (m)')
+                plt.legend()
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
 
 

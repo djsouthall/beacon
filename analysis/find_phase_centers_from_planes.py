@@ -93,7 +93,7 @@ if __name__ == '__main__':
         try_to_use_precalculated_time_delays_but_just_as_guess_for_real_time_delays_why_is_this_so_long = False
 
         #Limits 
-        cable_delay_guess_range = None #ns
+        cable_delay_guess_range = 5 #ns
         antenna_position_guess_range = 6 #Limit to how far from input phase locations to limit the parameter space to
         fix_ant0_x = True
         fix_ant0_y = True
@@ -107,10 +107,10 @@ if __name__ == '__main__':
         fix_ant3_x = False
         fix_ant3_y = False
         fix_ant3_z = False
-        fix_cable_delay0 = True
-        fix_cable_delay1 = True
-        fix_cable_delay2 = True
-        fix_cable_delay3 = True
+        fix_cable_delay0 = False
+        fix_cable_delay1 = False
+        fix_cable_delay2 = False
+        fix_cable_delay3 = False
 
         #I think adding an absolute time offset for each antenna and letting that vary could be interesting.  It could be used to adjust the cable delays.
 
