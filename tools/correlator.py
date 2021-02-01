@@ -581,12 +581,10 @@ class Correlator:
         This is a deprecated function that assumes the source is sufficiently distant that a plane wave solution applies.
         '''
         try:
-            print('WARNING generateTimeIndicesPlaneWave IS DEPRECATED')
             #Prepare grids of thetas and phis
 
-            #THESE ARE BUGGED!! :(
             thetas  = numpy.tile(self.thetas_rad,(self.n_phi,1)).T  #Each row is a different theta (zenith)
-            phis    = numpy.tile(self.thetas_rad,(self.n_phi,1))    #Each column is a different phi (azimuth)
+            phis    = numpy.tile(self.phis_rad,(self.n_theta,1))    #Each column is a different phi (azimuth)
 
             #Source direction is the direction FROM BEACON ANTENNA 0 you look to see the source.
             #Direction is the unit vector from antenna 0 pointing to that source. 
@@ -756,7 +754,7 @@ class Correlator:
         try:
             norm = norm/numpy.linalg.norm(norm)
             if zenith_deg == 0.0:
-                thetas      = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(norm[2]/numpy.linalg.norm(norm)))
+                thetas      = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(norm[2]/numpy.linalg.norm(norm))) #n_phi here is just to set an arbitrary numbers of points on the curve, and has no geometric significance
                 phis        = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(norm[1],norm[0]))
                 phis -= azimuth_offset_deg
                 phis[phis < -180.0] += 360.0
