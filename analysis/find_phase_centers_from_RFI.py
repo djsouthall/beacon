@@ -153,10 +153,10 @@ if __name__ == '__main__':
             # Southern Calibration
             if mode == 'hpol':
                 use_sources = ['Solar Plant']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
-                included_pulsers = ['run1507','run1509'] #Only included if include_pulsers == True
+                included_pulsers = ['run1507','run1509','run1511'] #Only included if include_pulsers == True
             elif mode == 'vpol':
                 use_sources = ['East Dyer Substation','Goldfield KGFN-FM']
-                included_pulsers = ['run1507','run1509'] #Only included if include_pulsers == True
+                included_pulsers = ['run1507','run1509','run1511'] #Only included if include_pulsers == True
         elif False:
             # Southern Calibration
             if mode == 'hpol':
@@ -177,33 +177,45 @@ if __name__ == '__main__':
         
         elif False:
             if mode == 'hpol':
-                use_sources = ['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
-                included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                use_sources = ['Solar Plant']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
+                included_pulsers = []#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
             elif mode == 'vpol':
                 use_sources = ['Tonopah KTPH','Solar Plant']#'East Dyer Substation',
-                included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                included_pulsers = []#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
         else:
             use_sources = [] #iterating through potential sources until something makes sense
-            included_pulsers = ['run1507','run1509','run1511'] #Only included if include_pulsers == True
+            included_pulsers = ['run1507','run1509','run1511']#,'run1511' #Only included if include_pulsers == True
 
+        only_plot = use_sources
+        # only_plot   = [ 'Solar Plant',\
+        #                 'Tonopah KTPH',\
+        #                 'Dyer Cell Tower',\
+        #                 'West Dyer Substation',\
+        #                 'East Dyer Substation',\
+        #                 'Beatty Substation',\
+        #                 'Palmetto Cell Tower',\
+        #                 'Black Mountain',\
+        #                 'Cedar Peak',\
+        #                 'Goldfield Hill Tower',\
+        #                 'Silver Peak Substation']
 
-        only_plot   = [ 'Solar Plant',\
-                        'Tonopah KTPH',\
-                        'Dyer Cell Tower',\
-                        'West Dyer Substation',\
-                        'East Dyer Substation',\
-                        'Beatty Airport Vortac',\
-                        'Beatty Substation',\
-                        'Palmetto Cell Tower',\
-                        'Black Mountain',\
-                        'Cedar Peak',\
-                        'Goldfield Hill Tower',\
-                        'Goldield Town Tower',\
-                        'Goldfield KGFN-FM',\
-                        'Silver Peak Town Antenna',\
-                        'Silver Peak Lithium Mine',\
-                        'Past SP Substation',\
-                        'Silver Peak Substation']
+        # only_plot   = [ 'Solar Plant',\
+        #                 'Tonopah KTPH',\
+        #                 'Dyer Cell Tower',\
+        #                 'West Dyer Substation',\
+        #                 'East Dyer Substation',\
+        #                 'Beatty Airport Vortac',\
+        #                 'Beatty Substation',\
+        #                 'Palmetto Cell Tower',\
+        #                 'Black Mountain',\
+        #                 'Cedar Peak',\
+        #                 'Goldfield Hill Tower',\
+        #                 'Goldield Town Tower',\
+        #                 'Goldfield KGFN-FM',\
+        #                 'Silver Peak Town Antenna',\
+        #                 'Silver Peak Lithium Mine',\
+        #                 'Past SP Substation',\
+        #                 'Silver Peak Substation']
         #only_plot = use_sources
         
         #only_plot.append('Beatty Mountain Cell Tower')
@@ -249,8 +261,8 @@ if __name__ == '__main__':
 
         final_corr_length = 2**17
 
-        crit_freq_low_pass_MHz = [100,75,75,75,75,75,75,75]
-        low_pass_filter_order = [8,12,14,14,14,14,14,14]
+        crit_freq_low_pass_MHz = 90#[100,75,75,75,75,75,75,75]
+        low_pass_filter_order = 8#[8,12,14,14,14,14,14,14]
 
         crit_freq_high_pass_MHz = None#60
         high_pass_filter_order = None#8
@@ -266,30 +278,33 @@ if __name__ == '__main__':
         hilbert = False
 
         include_pulsers = True 
-        include_baseline_measurements = True
+        include_baseline_measurements = False
+        pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+        include_sanity = False
+
 
         #Limits 
-        initial_step = 1 #m
-        cable_delay_guess_range = 4 #ns
-        antenna_position_guess_range_x = 3#3 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_y = 3#antenna_position_guess_range_x
-        antenna_position_guess_range_z = 3#6#antenna_position_guess_range_x#antenna_position_guess_range_x#None #Limit to how far from input phase locations to limit the parameter space to
+        initial_step = .1 #m
+        cable_delay_guess_range = 10 #ns
+        antenna_position_guess_range_x = 5#None#3#3 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = 5#None#10#antenna_position_guess_range_x
+        antenna_position_guess_range_z = 2#10#6#antenna_position_guess_range_x#antenna_position_guess_range_x#None #Limit to how far from input phase locations to limit the parameter space to
         fix_ant0_x = True
         fix_ant0_y = True
-        fix_ant0_z = False
-        fix_ant1_x = False
-        fix_ant1_y = False
+        fix_ant0_z = True
+        fix_ant1_x = True
+        fix_ant1_y = True
         fix_ant1_z = False
-        fix_ant2_x = False
-        fix_ant2_y = False
+        fix_ant2_x = True
+        fix_ant2_y = True
         fix_ant2_z = False#mode == 'vpol' #Most vpols don't have antenna 0, so the array would float in optimization otherwise.
-        fix_ant3_x = False
-        fix_ant3_y = False
+        fix_ant3_x = True
+        fix_ant3_y = True
         fix_ant3_z = False
-        fix_cable_delay0 = False
-        fix_cable_delay1 = False
-        fix_cable_delay2 = False
-        fix_cable_delay3 = False
+        fix_cable_delay0 = True
+        fix_cable_delay1 = True
+        fix_cable_delay2 = True
+        fix_cable_delay3 = True
 
         #I think adding an absolute time offset for each antenna and letting that vary could be interesting.  It could be used to adjust the cable delays.
         cable_delays = info.loadCableDelays()[mode]
@@ -555,7 +570,6 @@ if __name__ == '__main__':
                             chi_2 += numpy.sum(vals)
 
                 if include_pulsers:
-                    pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
                     for key in included_pulsers:
                         d0 = (numpy.sqrt((pulser_locations_ENU[key][0] - ant0_x)**2 + (pulser_locations_ENU[key][1] - ant0_y)**2 + (pulser_locations_ENU[key][2] - ant0_z)**2 )/c)*1.0e9 #ns
                         d1 = (numpy.sqrt((pulser_locations_ENU[key][0] - ant1_x)**2 + (pulser_locations_ENU[key][1] - ant1_y)**2 + (pulser_locations_ENU[key][2] - ant1_z)**2 )/c)*1.0e9 #ns
@@ -597,7 +611,9 @@ if __name__ == '__main__':
                              ((current_baselines['12'] - measured_baselines['12'])**2)/baseline_weights['12'] + \
                              ((current_baselines['13'] - measured_baselines['13'])**2)/baseline_weights['13'] + \
                              ((current_baselines['23'] - measured_baselines['23'])**2)/baseline_weights['23']
-
+                if include_sanity:
+                    if ant1_z - ant2_z < 5:
+                        chi_2 = chi_2*2
                 return chi_2
             except Exception as e:
                 print('Error in rawChi2')
@@ -807,8 +823,8 @@ if __name__ == '__main__':
                 eventid = roi_eventids[roi_impulsivity_sort[-1]]
                 
                 #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
-                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,100], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
-                #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,100], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
+                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,110], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
+                #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,110], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
         
 
         if include_pulsers:
@@ -843,10 +859,10 @@ if __name__ == '__main__':
                     adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
                     adjusted_cor.overwriteCableDelays(adjusted_cor.cable_delays[0], m.values['cable_delay0'], adjusted_cor.cable_delays[2], m.values['cable_delay1'], adjusted_cor.cable_delays[4], m.values['cable_delay2'], adjusted_cor.cable_delays[6], m.values['cable_delay3'])
 
-                cor.reader = reader
-                cor.prep.reader = reader
-                adjusted_cor.reader = reader
-                adjusted_cor.prep.reader = reader
+                # cor.reader = reader
+                # cor.prep.reader = reader
+                # adjusted_cor.reader = reader
+                # adjusted_cor.prep.reader = reader
 
                 #Should make sure this is calculated from antenna 0 (DEFAULT ENU MAY NOT BE, USE NEWLY CALCULATED ANTENNA 0 POSITION)
                 #Accounting for potentially shifted antenna 0.  Centering ENU to that for calculations.
@@ -856,6 +872,10 @@ if __name__ == '__main__':
                     zenith_deg = None
                     azimuth_deg = None
                 if plot_time_delays_on_maps:
+                    # if key == 'run1509':
+                    #     td_dict = {mode:{'[0, 1]' :  [pulser_time_delay_dict[key][0][1]], '[0, 2]' : [pulser_time_delay_dict[key][1][1]], '[0, 3]' : [pulser_time_delay_dict[key][2][1]], '[1, 2]' : [pulser_time_delay_dict[key][3][1]], '[1, 3]' : [pulser_time_delay_dict[key][4][1]], '[2, 3]' : [-99.04]}}
+                    #     print(td_dict)
+                    # else:
                     td_dict = {mode:{'[0, 1]' :  [pulser_time_delay_dict[key][0][1]], '[0, 2]' : [pulser_time_delay_dict[key][1][1]], '[0, 3]' : [pulser_time_delay_dict[key][2][1]], '[1, 2]' : [pulser_time_delay_dict[key][3][1]], '[1, 3]' : [pulser_time_delay_dict[key][4][1]], '[2, 3]' : [pulser_time_delay_dict[key][5][1]]}}
                 else:
                     td_dict = {}
@@ -863,8 +883,8 @@ if __name__ == '__main__':
                 eventid = numpy.random.choice(known_pulser_ids[key][mode])
                 
                 #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
-                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,100], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
-                #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,100], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
+                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,110], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
+                #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,110], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
 
 
 
@@ -876,7 +896,9 @@ if __name__ == '__main__':
         print('')
         print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, m.values['ant0_x'],m.values['ant0_y'],m.values['ant0_z'] ,  m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z'],  m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z'],  m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']))
         print('antennas_phase_%s_hesse = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, m.errors['ant0_x'],m.errors['ant0_y'],m.errors['ant0_z'] ,  m.errors['ant1_x'],m.errors['ant1_y'],m.errors['ant1_z'],  m.errors['ant2_x'],m.errors['ant2_y'],m.errors['ant2_z'],  m.errors['ant3_x'],m.errors['ant3_y'],m.errors['ant3_z']))
-
+        print('')
+        print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%(mode,m.values['cable_delay0'],m.values['cable_delay1'],m.values['cable_delay2'],m.values['cable_delay3']))
+        print('cable_delays_%s_hesse = numpy.array([%f,%f,%f,%f])'%(mode,m.errors['cable_delay0'],m.errors['cable_delay1'],m.errors['cable_delay2'],m.errors['cable_delay3']))
     except Exception as e:
         print('Error in main loop.')
         print(e)

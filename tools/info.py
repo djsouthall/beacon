@@ -30,7 +30,7 @@ import pymap3d as pm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
-default_deploy = 1#2#4#2 #The deployment time to use as the default.
+default_deploy = 11#2#4#2 #The deployment time to use as the default.
 
 
 def loadKnownPlaneDict(ignore_planes=[]):
@@ -439,15 +439,24 @@ def loadAntennaZeroLocation(deploy_index=default_deploy):
     '''
     if deploy_index == 0:
         A0Location = (37.5893,-118.2381,3894.12)#latitude,longtidue,elevation  #ELEVATION GIVEN FROM GOOGLE EARTH given in m
-    elif deploy_index > 0:
+    elif deploy_index > 0 and deploy_index <= 9:
         A0Location = (37.589310, -118.237621, 3875.53)#latitude,longtidue,elevation #ELEVATION FROM GOOGLE EARTH given in m  
+    elif deploy_index > 9:
+        #For these deploy indices I am attempting to be more sure of which elevation metric is being used, and ensuring it is properly handled.
+        #These coordinates are coming from a picture taken near the base of antenna 0 on a OnePlus 6T, which uses MSL elevation.
+        #The offset between MSL and WGS84 onsite according to pulsing data averages to MSL = WGS84 + 26.356m, so I am subtracting the offset such that datum is WGS84
+        A0Location = (37.0 + 35.0/60.0 + 21.6528/3600, -(118. + 14.0/60.0 + 15.4715/3600.0),   3850.333 - 26.356) #6ft below antennas, ~3ft to the side (north east ish)
+        # A1Location = (37.5892, -118.2380,                                                    3862.776 - 26.356) #No good photos for elevation.  Could be off on this one, this is from a picture taken at approximately the same height?  GPS come from pictures and google maps.  Likely too high.
+        # A2Location = (37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 - 26.356) #6ft below antennas, ~3ft to the side (north east ish)
+        # A3Location = (37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 - 26.356) #Slightly downhill south, closer to antenna
+
     return A0Location
 
 def loadValleySourcesENU(deploy_index=default_deploy):
     '''
     This returns a list of potential RFI sources in the valley.  These were identified using run 1650 as potential sources
     for the clusters of background events visible in that run.  Some clusters identified had ambigious origin and thus
-    are beholden to multiple entries in the below dictionary.
+    are beholden to multiple entries in the below dictionary.  These all use Google Earth elevations ( WGS84 ).
     '''
 
     source_dict = { 'Northern Cell Tower'       :(38.017045, -117.773122, 5525 * 0.3048),\
@@ -539,9 +548,9 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
         #These were determined in first attempt with day 5 and day 6 data with no bounds on phase positons.
         antennas_phase_hpol = {0:( -1.05036701,  -2.83990607,   5.7301439) , 1:(-5.04455409,   1.80238432,  -3.37157069), 2:(-0.70469931,  -9.35762227,  -1.46880603),  3:( 0.62819922, -18.85449124,  14.09627911)}#ADJUSTED HPOL
         antennas_phase_vpol = {0:( -1.97517555,  -4.78830899,  10.53874329), 1:( -5.26414199,   0.06191184,  -1.6073464), 2:( -1.17891238,  -8.69156208,   0.24012179), 3:(  4.23558404, -11.0023696 ,  -4.13418962)}#ADJUSTED VPOL
-    if deploy_index > 0:
+    elif deploy_index > 0 and deploy_index <= 9:
 
-        origin = loadAntennaZeroLocation(deploy_index = 1)
+        origin = loadAntennaZeroLocation(deploy_index = deploy_index)
         antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3890.77),2:(37.588909, -118.237719, 3881.02),3:(37.5889210, -118.2379850, 3887.42)} #ORIGINAL
         antennas_physical = {}
         for key, location in antennas_physical_latlon.items():
@@ -637,6 +646,35 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
             #Western Vpol calibration
             antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-30.058825, -18.207762, 15.411190], 2 : [-7.416143, -51.399893, 9.940570], 3 : [-29.094910, -45.333878, 18.812656]}
             antennas_phase_vpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.002770, 0.007155, 0.002050], 2 : [0.093939, 0.138281, 0.121274], 3 : [0.000847, 0.001238, 0.001117]}
+    elif deploy_index > 9:
+        #For these deploy indices I am attempting to be more sure of which elevation metric is being used, and ensuring it is properly handled.
+        #The origin of coordinates are coming from a picture taken near the base of antenna 0 on a OnePlus 6T, which uses MSL elevation (then adjusted below to be WGS84)
+        origin = loadAntennaZeroLocation(deploy_index = deploy_index)
+        #The offset between MSL and WGS84 onsite according to pulsing data averages to MSL = WGS84 + 26.356m, so I am subtracting the offset such that datum is WGS84
+        # A0Location = (37.0 + 35.0/60.0 + 21.6528/3600, -(118. + 14.0/60.0 + 15.4715/3600.0), 3850.333 - 26.356) #6ft below antennas, ~3ft to the side (north east ish)
+        # A1Location = (37.5892, -118.2380, 3862.776 - 26.356) #No good photos for elevation.  Could be off on this one, this is from a picture taken at approximately the same height?  GPS come from pictures and google maps.  Likely too high.
+        # A2Location = (37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 - 26.356) #6ft below antennas, ~3ft to the side (north east ish)
+        # A3Location = (37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 - 26.356) #Slightly downhill south, closer to antenna
+
+        #plotting these makes me think that antenna 2 is not low enough?  Hopefully that fixes in a calibration?  
+        antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3862.776 - 26.356),2:(37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 - 26.356),3:(37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 - 26.356)} #MSL mostly derived from pictures taken with a OnePlus 6t phone, then converted to WGS84 by subtracting measured offset from pulsing site gps
+        antennas_physical = {}
+        for key, location in antennas_physical_latlon.items():
+            antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+
+        if deploy_index == 10:
+            #Errors not currently used.
+            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.307267, -12.610417, 11.411196], 2 : [-10.464510, -46.217141, -0.229276], 3 : [-31.172820, -42.069610, 14.812669]}
+            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.042770, 0.047592, 0.232313], 2 : [0.069353, 0.034351, 0.297275], 3 : [0.065285, 0.047254, 0.249236]}
+            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-29.908104, -12.713682, 11.649818], 2 : [-9.956527, -46.119743, 1.003367], 3 : [-31.175775, -41.743273, 15.241286]}
+            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.057717, 0.065283, 0.261789], 2 : [0.080427, 0.046084, 0.282382], 3 : [0.084447, 0.065313, 0.276901]}
+        elif deploy_index == 11:
+            #Using only pulsers based on deploy_index 10.  Has large error in z.
+            antennas_phase_hpol = {0 : [0.000000, 0.000000, -4.999851], 1 : [-33.368096, -13.390900, 16.719218], 2 : [-7.939456, -48.869670, 12.249774], 3 : [-31.401009, -43.024315, 13.745746]}
+            antennas_phase_hpol_hesse = {0 : [1.000000, 1.000000, 7.550356], 1 : [0.899323, 0.590841, 5.101403], 2 : [0.194723, 0.190567, 1.998298], 3 : [0.166002, 0.195414, 6.334229]}
+            antennas_phase_vpol = {0 : [0.000000, 0.000000, 4.999999], 1 : [-32.828532, -13.166628, 9.409578], 2 : [-7.902534, -48.485135, 2.249786], 3 : [-28.853200, -43.872502, 13.687206]}
+            antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 7.807538], 1 : [0.854570, 0.469628, 8.731584], 2 : [0.248426, 0.184186, 7.639721], 3 : [0.779508, 0.313825, 5.027621]}
+
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
 
@@ -668,6 +706,14 @@ def loadCableDelays(deploy_index=default_deploy,return_raw=False):
 
         # pulser_locations_ENU['hpol'] = {'run1507':[259.417378, -353.989882, -88.125921], 'run1509':[1129.874543, -528.948053, -160.527267], 'run1511':[189.018118, 338.618832, -44.960478]}
         # pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[0.010000, 0.010000, 0.010000], 'run1509':[0.010000, 0.010000, 0.010000], 'run1511':[0.010000, 0.010000, 0.010000]}
+    elif deploy_index == 11:
+        cable_delays =  {'hpol' : numpy.array([7.901212,12.248939,10.000000,18.110885]) + 415.47714969, \
+                         'vpol' : numpy.array([13.115628,8.986282,12.530756,12.041758]) + 423.56765695}
+
+        #cable_delays_vpol_hesse = numpy.array([0.500000,3.390690,0.407566,2.505386])
+        #cable_delays_hpol_hesse = numpy.array([0.500000,5.916741,0.885048,1.197699])
+
+
     else:
         cable_delays =  {'hpol': numpy.array([423.37836156, 428.43979143, 415.47714969, 423.58803498]), \
                          'vpol': numpy.array([428.59277751, 430.16685915, 423.56765695, 423.50469285])}
@@ -751,13 +797,15 @@ def loadPulserPolarizations():
     
     return pulser_pol   
 
-def loadPulserLocations():
+def loadPulserLocations(deploy_index=default_deploy):
     '''
     Loads the latitude,longtidue,elevation locations of the antennas.
     See loadPulserLocationsENU for these locations converted to
     be relative to antenna 0.
 
     These are repeated if that pulser is used for multiply runs. 
+
+    Note that deploy index here mostly just chooses in newer runs which GPS elevation to use.
     '''
     pulser_locations = {}
 
@@ -807,25 +855,47 @@ def loadPulserLocations():
     pulser_locations['run792'] = (37.5861,-118.2332,3779.52)
     pulser_locations['run793'] = (37.5861,-118.2332,3779.52)
 
+    if deploy_index <= 9:
+        print('Pulser location elevations from Google Earth (approximate WGS84)')
+        #Trip 2
+        #Site 1  37.5859361 N 118.233918056 W  (37.5859361, -118.233918056)
+        #Alt: 3762.9m (GPS)  3789.32 m (MSL) Google Earth: Alt: 3796.284
+        pulser_locations['run1504'] = (37.5859361, -118.233918056,3796.284)
 
-    #Trip 2
-    #Site 1  37.5859361 N 118.233918056 W  (37.5859361, -118.233918056)
-    #Alt: 3762.9m (GPS)  3789.32 m (MSL) Google Earth: Alt: 3796.284
-    pulser_locations['run1504'] = (37.5859361, -118.233918056,3796.284)
+        #Site 1a 37.58595472° N 118.233841 W 
+        #Alt: 3763.1m (GPS)  3789.53 m (MSL) Google Earth: 3794.76
+        pulser_locations['run1506'] = (37.58595472, -118.233841,3794.76)
+        pulser_locations['run1507'] = (37.58595472, -118.233841,3794.76)
 
-    #Site 1a 37.58595472° N 118.233841 W 
-    #Alt: 3763.1m (GPS)  3789.53 m (MSL) Google Earth: 3794.76
-    pulser_locations['run1506'] = (37.58595472, -118.233841,3794.76)
-    pulser_locations['run1507'] = (37.58595472, -118.233841,3794.76)
+        #Site 2 37.58568583° N 118.225942 W 
+        #Alt: 3690.70m (GPS)  3717.04m (MSL) Google Earth: 3729.228
+        pulser_locations['run1508'] = (37.58568583, -118.225942,3729.228)
+        pulser_locations['run1509'] = (37.58568583, -118.225942,3729.228)
 
-    #Site 2 37.58568583° N 118.225942 W 
-    #Alt: 3690.70m (GPS)  3717.04m (MSL) Google Earth: 3729.228
-    pulser_locations['run1508'] = (37.58568583, -118.225942,3729.228)
-    pulser_locations['run1509'] = (37.58568583, -118.225942,3729.228)
+        #Site 3 37.592001861° N 118.2354480278 W 
+        #Alt: 3806.25m (GPS)  3832.55m (MSL) Google Earth: 3827.6784
+        pulser_locations['run1511'] = (37.592001861, -118.2354480278,3827.6784)
+    elif deploy_index > 9:
+        print('Pulser location elevations from GPS (measured WGS84)')
+        #Trip 2
+        #Site 1  37.5859361 N 118.233918056 W  (37.5859361, -118.233918056)
+        #Alt: 3762.9m (GPS)  3789.32 m (MSL) Google Earth: Alt: 3796.284
+        pulser_locations['run1504'] = (37.5859361, -118.233918056,3762.9)
 
-    #Site 3 37.592001861° N 118.2354480278 W 
-    #Alt: 3806.25m (GPS)  3832.55m (MSL) Google Earth: 3827.6784
-    pulser_locations['run1511'] = (37.592001861, -118.2354480278,3827.6784)
+        #Site 1a 37.58595472° N 118.233841 W 
+        #Alt: 3763.1m (GPS)  3789.53 m (MSL) Google Earth: 3794.76
+        pulser_locations['run1506'] = (37.58595472, -118.233841,3763.1)
+        pulser_locations['run1507'] = (37.58595472, -118.233841,3763.1)
+
+        #Site 2 37.58568583° N 118.225942 W 
+        #Alt: 3690.70m (GPS)  3717.04m (MSL) Google Earth: 3729.228
+        pulser_locations['run1508'] = (37.58568583, -118.225942,3690.7)
+        pulser_locations['run1509'] = (37.58568583, -118.225942,3690.7)
+
+        #Site 3 37.592001861° N 118.2354480278 W 
+        #Alt: 3806.25m (GPS)  3832.55m (MSL) Google Earth: 3827.6784
+        pulser_locations['run1511'] = (37.592001861, -118.2354480278,3806.25)
+
 
     return pulser_locations    
 
@@ -840,7 +910,7 @@ def loadPulserLocationsENU(deploy_index=default_deploy):
     phase centers. loadPulserPhaseLocationsENU is better.
     '''
     pulser_locations_ENU = {}
-    pulser_locations = loadPulserLocations()
+    pulser_locations = loadPulserLocations(deploy_index=deploy_index)
 
     origin = loadAntennaZeroLocation(deploy_index=deploy_index)
     print(origin)
@@ -860,7 +930,7 @@ def loadPulserPhaseLocationsENU(deploy_index=default_deploy):
     for phase centers.
     '''
     pulser_locations_ENU = {}
-    pulser_locations = loadPulserLocations()
+    pulser_locations = loadPulserLocations(deploy_index=deploy_index)
 
     pulser_locations_ENU['physical'] = {}
 
@@ -868,41 +938,48 @@ def loadPulserPhaseLocationsENU(deploy_index=default_deploy):
     for key, location in pulser_locations.items():
         pulser_locations_ENU['physical'][key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
 
-    #pulser_locations_ENU['vpol'] = {'run1507':[275.708465, -372.224572, -82.673435], 'run1509':[1027.431897, -492.547030, -155.078725], 'run1511':[178.030733, 331.491744, -39.509867]}
-    #pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[1.106217, 1.246325, 2.503419], 'run1509':[5.552711, 2.469107, 5.305297], 'run1511':[1.324100, 2.146287, 2.310413]}
-    
-    '''
-    #These are the ones I got by flipping channel 2
-    pulser_locations_ENU['hpol'] = {'run1507':[253.799742, -355.808099, -117.460144], 'run1509':[1137.872525, -534.620695, -189.860634], 'run1511':[117.111896, 303.926298, -74.299903]}                                                         
-    pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[0.501879, 0.520719, 1.090585], 'run1509':[2.701943, 1.187494, 3.423798], 'run1511':[2.560162, 6.026819, 3.490432]}
-    pulser_locations_ENU['vpol'] = {'run1507':[263.002766, -355.657916, -80.473571], 'run1509':[1067.737570, -511.201739, -152.867512], 'run1511':[179.261666, 338.184460, -37.316588]}
-    pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[0.848562, 0.978776, 1.976002], 'run1509':[2.842634, 1.265834, 3.353987], 'run1511':[1.327852, 2.182353, 2.249852]}
-    '''
+    if deploy_index <= 9:
+        #pulser_locations_ENU['vpol'] = {'run1507':[275.708465, -372.224572, -82.673435], 'run1509':[1027.431897, -492.547030, -155.078725], 'run1511':[178.030733, 331.491744, -39.509867]}
+        #pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[1.106217, 1.246325, 2.503419], 'run1509':[5.552711, 2.469107, 5.305297], 'run1511':[1.324100, 2.146287, 2.310413]}
+        
+        '''
+        #These are the ones I got by flipping channel 2
+        pulser_locations_ENU['hpol'] = {'run1507':[253.799742, -355.808099, -117.460144], 'run1509':[1137.872525, -534.620695, -189.860634], 'run1511':[117.111896, 303.926298, -74.299903]}                                                         
+        pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[0.501879, 0.520719, 1.090585], 'run1509':[2.701943, 1.187494, 3.423798], 'run1511':[2.560162, 6.026819, 3.490432]}
+        pulser_locations_ENU['vpol'] = {'run1507':[263.002766, -355.657916, -80.473571], 'run1509':[1067.737570, -511.201739, -152.867512], 'run1511':[179.261666, 338.184460, -37.316588]}
+        pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[0.848562, 0.978776, 1.976002], 'run1509':[2.842634, 1.265834, 3.353987], 'run1511':[1.327852, 2.182353, 2.249852]}
+        '''
 
-    #These are the ones I got prior to 11/21/2019
-    pulser_locations_ENU['hpol'] = {'run1507':[259.417378, -353.989882, -84.468321], 'run1509':[1129.874543, -528.948053, -156.869667], 'run1511':[189.018118, 338.618832, -41.302878]}
-    pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[1.335408, 1.471356, 3.081678], 'run1509':[9.068532, 3.966986, 8.780782], 'run1511':[2.157532, 3.556144, 4.533434]}
-    pulser_locations_ENU['vpol'] = {'run1507':[271.225702, -362.785806, -75.741218], 'run1509':[1063.720642, -504.948969, -148.130744], 'run1511':[181.798419, 331.680671, -32.583995]}
-    pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[1.080508, 1.216558, 2.517439], 'run1509':[5.776634, 2.552221, 5.590785], 'run1511':[1.319455, 2.150750, 2.325213]}
+        #These are the ones I got prior to 11/21/2019
+        pulser_locations_ENU['hpol'] = {'run1507':[259.417378, -353.989882, -84.468321], 'run1509':[1129.874543, -528.948053, -156.869667], 'run1511':[189.018118, 338.618832, -41.302878]}
+        pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[1.335408, 1.471356, 3.081678], 'run1509':[9.068532, 3.966986, 8.780782], 'run1511':[2.157532, 3.556144, 4.533434]}
+        pulser_locations_ENU['vpol'] = {'run1507':[271.225702, -362.785806, -75.741218], 'run1509':[1063.720642, -504.948969, -148.130744], 'run1511':[181.798419, 331.680671, -32.583995]}
+        pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[1.080508, 1.216558, 2.517439], 'run1509':[5.776634, 2.552221, 5.590785], 'run1511':[1.319455, 2.150750, 2.325213]}
 
-    #pulser_locations_ENU['hpol'] = {'run1507':[265.441241, -366.161638, -91.314401], 'run1509':[1065.399706, -508.295499, -163.706607], 'run1511':[178.535899, 344.684624, -48.158593]}
-    #pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[1.384200, 1.534385, 3.015226], 'run1509':[8.512122, 3.788872, 7.223959], 'run1511':[2.282271, 3.801014, 4.190135]}
+        #pulser_locations_ENU['hpol'] = {'run1507':[265.441241, -366.161638, -91.314401], 'run1509':[1065.399706, -508.295499, -163.706607], 'run1511':[178.535899, 344.684624, -48.158593]}
+        #pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[1.384200, 1.534385, 3.015226], 'run1509':[8.512122, 3.788872, 7.223959], 'run1511':[2.282271, 3.801014, 4.190135]}
+    elif deploy_index == 10:
+        #These are using the physical coordinates and are not calibrated phase center positions.
+        pulser_locations_ENU['hpol'] = {'run1507':pulser_locations_ENU['physical']['run1507'], 'run1509':pulser_locations_ENU['physical']['run1509'], 'run1511':pulser_locations_ENU['physical']['run1511']}
+        pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[2, 2, 2], 'run1509':[2, 2, 2], 'run1511':[2, 2, 2]}
+        pulser_locations_ENU['vpol'] = {'run1507':pulser_locations_ENU['physical']['run1507'], 'run1509':pulser_locations_ENU['physical']['run1509'], 'run1511':pulser_locations_ENU['physical']['run1511']}
+        pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[2, 2, 2], 'run1509':[2, 2, 2], 'run1511':[2, 2, 2]}
 
     return pulser_locations_ENU
 
 
 
-def plotStationAndPulsers(plot_phase=False):
+def plotStationAndPulsers(deploy_index=default_deploy,plot_phase=False):
     '''
     Currently only intended to plot the most recent station with the three pulsers that we used for it.
     '''
-    antennas_physical, antennas_phase_hpol, antennas_phase_vpol = loadAntennaLocationsENU(deploy_index=1)
+    antennas_physical, antennas_phase_hpol, antennas_phase_vpol = loadAntennaLocationsENU(deploy_index=deploy_index)
 
     colors = ['b','g','r','c']
     pulser_colors = ['m','y','k']
 
     fig = plt.figure()
-    fig.canvas.set_window_title('Antenna Locations')
+    fig.canvas.set_window_title('Antenna + Pulser Locations')
     ax = fig.add_subplot(111, projection='3d')
 
     for i, a in antennas_physical.items():
@@ -943,6 +1020,27 @@ def plotStationAndPulsers(plot_phase=False):
         ax.plot([pulser_locations['vpol']['run1511'][0],pulser_locations['physical']['run1511'][0]],[pulser_locations['vpol']['run1511'][1],pulser_locations['physical']['run1511'][1]],[pulser_locations['vpol']['run1511'][2],pulser_locations['physical']['run1511'][2]],color=pulser_colors[2],linestyle='--',alpha=0.5)
         ax.scatter( pulser_locations['vpol']['run1511'][0] , pulser_locations['vpol']['run1511'][1] , pulser_locations['vpol']['run1511'][2] , color=pulser_colors[2] , marker='^',alpha=0.8)
 
+
+    ax.set_xlabel('E (m)')
+    ax.set_ylabel('N (m)')
+    ax.set_zlabel('Relative Elevation (m)')
+    plt.legend()
+
+
+    fig = plt.figure()
+    fig.canvas.set_window_title('Antenna Locations')
+    ax = fig.add_subplot(111, projection='3d')
+
+    for i, a in antennas_physical.items():
+        ax.scatter(a[0], a[1], a[2], marker='o',color=colors[i],label='Physical %i'%i,alpha=0.8)
+
+    if plot_phase == True:
+        for i, a in antennas_phase_hpol.items():
+            ax.plot([antennas_physical[i][0],antennas_phase_hpol[i][0]],[antennas_physical[i][1],antennas_phase_hpol[i][1]],[antennas_physical[i][2],antennas_phase_hpol[i][2]],color=colors[i],linestyle='--',alpha=0.5)
+            ax.scatter(a[0], a[1], a[2], marker='*',color=colors[i],label='%s Phase Center %i'%('Hpol', i),alpha=0.8)
+        for i, a in antennas_phase_vpol.items():
+            ax.plot([antennas_physical[i][0],antennas_phase_vpol[i][0]],[antennas_physical[i][1],antennas_phase_vpol[i][1]],[antennas_physical[i][2],antennas_phase_vpol[i][2]],color=colors[i],linestyle='--',alpha=0.5)
+            ax.scatter(a[0], a[1], a[2], marker='^',color=colors[i],label='%s Phase Center %i'%('Vpol', i),alpha=0.8)
 
     ax.set_xlabel('E (m)')
     ax.set_ylabel('N (m)')
@@ -1217,6 +1315,7 @@ if __name__ == '__main__':
         #known_planes, calibrated_trigtime, output_tracks = getKnownPlaneTracks()
 
         print('\n\n\n\n')
+        plotStationAndPulsers(deploy_index=10,plot_phase=False)
 
         if False:
             for deploy_index in [1,2,3]:
@@ -1247,7 +1346,7 @@ if __name__ == '__main__':
                 else:
                     print('Pulser location 3 phi is: %0.2f degrees North of East'%abs(numpy.rad2deg(p3_phi)))
 
-        if True:
+        if False:
             fig = plt.figure()
             fig.canvas.set_window_title('Antenna Positions In Various Calibrations')
             ax = fig.add_subplot(111, projection='3d')

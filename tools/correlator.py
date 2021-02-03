@@ -1280,8 +1280,8 @@ class Correlator:
                             contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_1subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                         elif baseline_index == 5:
                             contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_2subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-
-                    #ax.clabel(contours, contours.levels, inline=True, fontsize=10, fmt=['%s: %0.2f'%(pair_index,time_delay)])
+                    fmt = str(pair) + ':' + r'%0.2f'
+                    ax.clabel(contours, contours.levels, inline=True, fontsize=10, fmt=fmt,manual=False) #manual helpful for presentation quality plots.
             return im, ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
