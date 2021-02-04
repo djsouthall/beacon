@@ -1132,7 +1132,7 @@ def loadIgnorableEventids():
     ignore_eventids['run1511'] = numpy.sort(numpy.append(ignore_eventids['run1511'],numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1511_pulser_ignoreids.csv',delimiter=',').astype(int)))
     return ignore_eventids
 
-def loadPulserEventids(remove_ignored=False):
+def loadPulserEventids(remove_ignored=True):
     '''
     Loads a dictionary containing the known eventids for pulsers.
 
