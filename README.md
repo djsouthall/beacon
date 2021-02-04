@@ -23,6 +23,12 @@ Many of the tools will depend on stored meta data such as antenna positions.  Th
 
 0.1.0 [Dependencies](#010-dependencies)
 
+0.1.1 [Loading in Python and ROOT Environment on Midway](#011-loading-in-python-and-root-environment-on-midway)
+
+0.1.2 [Installing Beaconroot](#012-Installing-Beaconroot])
+0.1.3 [Installing libRootFftwWrapper](#013-Installing-libRootFftwWrapper])
+0.1.4 [Known Missing Python Modules](#014-Known-Missing-Python-Modules])
+
 0.2.0 [Paths](#020-paths)
 
 1.0.0 [Calibration](#100-calibration)
@@ -37,7 +43,7 @@ Many of the tools will depend on stored meta data such as antenna positions.  Th
 
 3.0.0 [Analysis](#300-analysis)
 
-3.1.0 [Sample Script](#310-sample-script)
+3.1.0 [Sample Scripts](#310-sample-scripts)
 
 3.2.0 [Plotting](#320-plotting)
 
@@ -179,7 +185,7 @@ To add an additional analysis script it is recommended to look at the general st
 
 Here analysis specifically means work done "after batch", i.e. working with the precomputed data, doing things like making maps, histograms, etc.  This section also includes any discussion of analysis that does not require precomputing values.  
 
-## 3.1.0 Sample Script
+## 3.1.0 Sample Scripts
 
 Two sample scripts have been created for onboarding purposes.  The first ([analysis/sample_script_A.py](https://github.com/djsouthall/beacon/tree/master/analysis/sample_script_A.py)) is intended to demonstrate how one can load in events, antenna positions, etc.  This mostly aims to dodge the use of most of the tools developed for handling this data, and just provide an example of the raw event handling and how one can access information like pulser eventids.
 
