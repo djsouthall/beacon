@@ -26,7 +26,9 @@ Many of the tools will depend on stored meta data such as antenna positions.  Th
 0.1.1 [Loading in Python and ROOT Environment on Midway](#011-loading-in-python-and-root-environment-on-midway)
 
 0.1.2 [Installing Beaconroot](#012-Installing-Beaconroot])
+
 0.1.3 [Installing libRootFftwWrapper](#013-Installing-libRootFftwWrapper])
+
 0.1.4 [Known Missing Python Modules](#014-Known-Missing-Python-Modules])
 
 0.2.0 [Paths](#020-paths)
