@@ -30,7 +30,7 @@ import pymap3d as pm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
-default_deploy = 11#2#4#2 #The deployment time to use as the default.
+default_deploy = 1#2#4#2 #The deployment time to use as the default.
 
 
 def loadKnownPlaneDict(ignore_planes=[]):
@@ -441,7 +441,7 @@ def loadAntennaZeroLocation(deploy_index=default_deploy):
         A0Location = (37.5893,-118.2381,3894.12)#latitude,longtidue,elevation  #ELEVATION GIVEN FROM GOOGLE EARTH given in m
     elif deploy_index > 0 and deploy_index <= 9:
         A0Location = (37.589310, -118.237621, 3875.53)#latitude,longtidue,elevation #ELEVATION FROM GOOGLE EARTH given in m  
-    elif deploy_index > 9:
+    elif deploy_index > 9 and deploy_index <= 11:
         #For these deploy indices I am attempting to be more sure of which elevation metric is being used, and ensuring it is properly handled.
         #These coordinates are coming from a picture taken near the base of antenna 0 on a OnePlus 6T, which uses MSL elevation.
         #The offset between MSL and WGS84 onsite according to pulsing data averages to MSL = WGS84 + 26.356m, so I am subtracting the offset such that datum is WGS84
@@ -449,6 +449,9 @@ def loadAntennaZeroLocation(deploy_index=default_deploy):
         # A1Location = (37.5892, -118.2380,                                                    3862.776 - 26.356) #No good photos for elevation.  Could be off on this one, this is from a picture taken at approximately the same height?  GPS come from pictures and google maps.  Likely too high.
         # A2Location = (37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 - 26.356) #6ft below antennas, ~3ft to the side (north east ish)
         # A3Location = (37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 - 26.356) #Slightly downhill south, closer to antenna
+
+    elif deploy_index > 11:
+        A0Location = (37.0 + 35.0/60.0 + 21.6528/3600, -(118. + 14.0/60.0 + 15.4715/3600.0),   3850.333) #Interpreting this as WGS84
 
     return A0Location
 
@@ -646,9 +649,9 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
             #Western Vpol calibration
             antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-30.058825, -18.207762, 15.411190], 2 : [-7.416143, -51.399893, 9.940570], 3 : [-29.094910, -45.333878, 18.812656]}
             antennas_phase_vpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.002770, 0.007155, 0.002050], 2 : [0.093939, 0.138281, 0.121274], 3 : [0.000847, 0.001238, 0.001117]}
-    elif deploy_index > 9:
+    elif deploy_index > 9 and deploy_index <= 11:
         #For these deploy indices I am attempting to be more sure of which elevation metric is being used, and ensuring it is properly handled.
-        #The origin of coordinates are coming from a picture taken near the base of antenna 0 on a OnePlus 6T, which uses MSL elevation (then adjusted below to be WGS84)
+        #The origin of coordinates are coming from a picture taken near the base of antenna 0 on a OnePlus 6T, which **I THINK** uses MSL elevation (then adjusted below to be WGS84)
         origin = loadAntennaZeroLocation(deploy_index = deploy_index)
         #The offset between MSL and WGS84 onsite according to pulsing data averages to MSL = WGS84 + 26.356m, so I am subtracting the offset such that datum is WGS84
         # A0Location = (37.0 + 35.0/60.0 + 21.6528/3600, -(118. + 14.0/60.0 + 15.4715/3600.0), 3850.333 - 26.356) #6ft below antennas, ~3ft to the side (north east ish)
@@ -657,6 +660,7 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
         # A3Location = (37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 - 26.356) #Slightly downhill south, closer to antenna
 
         #plotting these makes me think that antenna 2 is not low enough?  Hopefully that fixes in a calibration?  
+        print('Antenna Physical location elevations from photos with OnePlus 6t using a false assumption that it is MSL (so doing elevation - 26.356 to get what was suspected to be WGS84 but was not)')
         antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3862.776 - 26.356),2:(37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 - 26.356),3:(37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 - 26.356)} #MSL mostly derived from pictures taken with a OnePlus 6t phone, then converted to WGS84 by subtracting measured offset from pulsing site gps
         antennas_physical = {}
         for key, location in antennas_physical_latlon.items():
@@ -675,6 +679,29 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
             antennas_phase_vpol = {0 : [0.000000, 0.000000, 4.999999], 1 : [-32.828532, -13.166628, 9.409578], 2 : [-7.902534, -48.485135, 2.249786], 3 : [-28.853200, -43.872502, 13.687206]}
             antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 7.807538], 1 : [0.854570, 0.469628, 8.731584], 2 : [0.248426, 0.184186, 7.639721], 3 : [0.779508, 0.313825, 5.027621]}
 
+    elif deploy_index > 11:
+        #For these deploy indices I am attempting to be more sure of which elevation metric is being used, and ensuring it is properly handled.
+        #Plotting the reported coordinates of every photo I took on the hillside, including those beside the pulsing site 1, I believe the oneplus 6T reports in WGS84.
+        origin = loadAntennaZeroLocation(deploy_index = deploy_index)
+        # A0Location = (37.0 + 35.0/60.0 + 21.6528/3600, -(118. + 14.0/60.0 + 15.4715/3600.0), 3850.333) #6ft below antennas, ~3ft to the side (north east ish)
+        # A1Location = (37.5892, -118.2380, 3862.776) #No good photos for elevation.  Could be off on this one, this is from a picture taken at approximately the same height?  GPS come from pictures and google maps.  Likely too high.
+        # A2Location = (37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583) #6ft below antennas, ~3ft to the side (north east ish)
+        # A3Location = (37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079) #Slightly downhill south, closer to antenna
+
+        #plotting these makes me think that antenna 2 is not low enough?  Hopefully that fixes in a calibration?  
+        print('Antenna Physical location elevations from photos with OnePlus 6t interpreted as WGS84')
+        antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3862.776 ),2:(37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 ),3:(37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 )} 
+
+        antennas_physical = {}
+        for key, location in antennas_physical_latlon.items():
+            antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+        if deploy_index == 12:
+            #Errors not currently used.
+            print('Using best guess physical as both phase locations as well!')
+            antennas_phase_vpol = {0 : [antennas_physical_latlon[0][0],antennas_physical_latlon[0][1],antennas_physical_latlon[0][2]], 1 : [antennas_physical_latlon[1][0],antennas_physical_latlon[1][1],antennas_physical_latlon[1][2]], 2 : [antennas_physical_latlon[2][0],antennas_physical_latlon[2][1],antennas_physical_latlon[2][2]], 3 : [antennas_physical_latlon[3][0],antennas_physical_latlon[3][1],antennas_physical_latlon[3][2]]}
+            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+            antennas_phase_hpol = {0 : [antennas_physical_latlon[0][0],antennas_physical_latlon[0][1],antennas_physical_latlon[0][2]], 1 : [antennas_physical_latlon[1][0],antennas_physical_latlon[1][1],antennas_physical_latlon[1][2]], 2 : [antennas_physical_latlon[2][0],antennas_physical_latlon[2][1],antennas_physical_latlon[2][2]], 3 : [antennas_physical_latlon[3][0],antennas_physical_latlon[3][1],antennas_physical_latlon[3][2]]}
+            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
 
