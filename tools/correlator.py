@@ -500,7 +500,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def generateTimeIndices(self):
+    def generateTimeIndices(self,debug=False):
         '''
         This is meant to calculate all of the time delays corresponding to each source direction in advance.  Should be
         called again if self.map_source_distance_m changes.
@@ -515,6 +515,7 @@ class Correlator:
 
             #Source direction is the direction FROM BEACON ANTENNA 0 you look to see the source.
             #Position is a vector to a distant source
+            #double check shift to center points!!
             signal_source_position_hpol        = numpy.zeros((self.mesh_azimuth_rad.shape[0], self.mesh_azimuth_rad.shape[1], 3))
             signal_source_position_hpol[:,:,0] = self.map_source_distance_m * numpy.multiply( numpy.cos(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) ) + self.A0_hpol[0] #Shifting points to be centered around antenna 0
             signal_source_position_hpol[:,:,1] = self.map_source_distance_m * numpy.multiply( numpy.sin(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) ) + self.A0_hpol[1] #Shifting points to be centered around antenna 0
@@ -524,6 +525,19 @@ class Correlator:
             signal_source_position_vpol[:,:,0] = self.map_source_distance_m * numpy.multiply( numpy.cos(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) ) + self.A0_vpol[0] #Shifting points to be centered around antenna 0
             signal_source_position_vpol[:,:,1] = self.map_source_distance_m * numpy.multiply( numpy.sin(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) ) + self.A0_vpol[1] #Shifting points to be centered around antenna 0
             signal_source_position_vpol[:,:,2] = self.map_source_distance_m * numpy.cos(self.mesh_zenith_rad) + self.A0_vpol[2] #Shifting points to be centered around antenna 0
+
+            if debug:
+                fig = plt.figure()
+                ax = fig.gca(projection='3d')
+                ax.scatter(signal_source_position_hpol[:,:,0],signal_source_position_hpol[:,:,1],signal_source_position_hpol[:,:,2],marker=',',alpha=0.3)
+                ax.scatter(self.A0_hpol[0],self.A0_hpol[1],self.A0_hpol[2],label='A0',c='tab:blue')
+                ax.scatter(self.A1_hpol[0],self.A1_hpol[1],self.A1_hpol[2],label='A1',c='tab:orange')
+                ax.scatter(self.A2_hpol[0],self.A2_hpol[1],self.A2_hpol[2],label='A2',c='tab:green')
+                ax.scatter(self.A3_hpol[0],self.A3_hpol[1],self.A3_hpol[2],label='A3',c='tab:red')
+                ax.set_xlabel('E (m)')
+                ax.set_ylabel('N (m)')
+                ax.set_zlabel('Relative Elevation (m)')
+                plt.legend()
 
             #Calculate the expected readout time for each antenna (including cable delays)
             hpol_arrival_time_ns_0 = self.cable_delays[0] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A0_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A0_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A0_hpol[2])**2 )/self.c)*1.0e9 #ns
@@ -884,6 +898,10 @@ class Correlator:
         '''
         if event.dblclick == True:
             try:
+                try:
+                    plt.close(self.popout_fig)
+                except:
+                    pass #Just maintaining only one popout at a time.
                 event_ax = event.inaxes
                 pol = event_ax.get_title().split('-')[2]
                 eventid = int(event_ax.get_title().split('-')[1])
@@ -940,10 +958,6 @@ class Correlator:
                 roll2 = int(numpy.rint(t_best_0subtract2/self.dt_resampled))
                 roll3 = int(numpy.rint(t_best_0subtract3/self.dt_resampled))
 
-                try:
-                    plt.close(self.popout_fig)
-                except:
-                    pass #Just maintaining only one popout at a time.
                 self.popout_fig = plt.figure()
                 self.popout_ax = self.popout_fig.gca()
                 plt.suptitle('ENU %s\nAzimuth = %0.3f, Zenith = %0.3f'%(event_ax.get_title().replace('-',' ').title(), event.xdata,event.ydata))
@@ -1281,7 +1295,7 @@ class Correlator:
                         elif baseline_index == 5:
                             contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_2subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                     fmt = str(pair) + ':' + r'%0.2f'
-                    ax.clabel(contours, contours.levels, inline=True, fontsize=10, fmt=fmt,manual=False) #manual helpful for presentation quality plots.
+                    ax.clabel(contours, contours.levels, inline=False, fontsize=10, fmt=fmt,manual=False) #manual helpful for presentation quality plots.
             return im, ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])

@@ -808,58 +808,122 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def plotEvent(self, eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None, additional_title_text=None):
+    def plotEvent(self, eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None, additional_title_text=None, time_delays=None, verbose=False):
         '''
         This will plot all given channels in both time domain and frequency domain.
+        If time delays are given then this will attempt to roll signals as specified.  Expects time delays to be
+        given in the format: [0-2, 0-4, 0-6, 2-4, 2-6, 4-6, 1-3, 1-5, 1-7, 3-5, 3-7, 5-7].
+
+        It will plot twice, once using the first three time delays to align to antenna 0/1, then using the later
+        three time delays of each polarity to align signals with antenna 6/7.
         '''
-        fig = plt.figure()
-        if additional_title_text is not None:
-            fig.canvas.set_window_title('%s: r%i-e%i Waveform and Spectrum'%(additional_title_text,self.reader.run,eventid))
-            plt.suptitle('%s\nRun %i, Eventid %i'%(additional_title_text,self.reader.run,eventid))
-        else:
-            fig.canvas.set_window_title('r%i-e%i Waveform and Spectrum'%(self.reader.run,eventid))
-            plt.suptitle('Run %i, eventid %i'%(self.reader.run,eventid))
-        plt.subplot(2,1,1)
-        plt.ylabel('adu')
-        plt.xlabel('ns')
-        plt.minorticks_on()
-        plt.grid(b=True, which='major', color='k', linestyle='-')
-        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-        plt.subplot(2,1,2)
-        plt.ylabel('dBish')
-        plt.xlabel('freq')
-        plt.minorticks_on()
-        plt.grid(b=True, which='major', color='k', linestyle='-')
-        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                
-        self.setEntry(eventid)
-        t_ns = self.t()
-        print(eventid)
-        if apply_tukey is None:
-            apply_tukey = self.tukey_default
-        
-        for channel in channels:
-            channel=int(channel)
-            if sine_subtract == True:
-                wf, ss_freqs, n_fits = self.wf(channel,apply_filter=apply_filter,hilbert=hilbert,tukey=apply_tukey,sine_subtract=sine_subtract, return_sine_subtract_info=sine_subtract)
-                print(list(zip(n_fits, ss_freqs)))
+        try:
+            fig = plt.figure()
+            if additional_title_text is not None:
+                fig.canvas.set_window_title('%s: r%i-e%i Waveform and Spectrum'%(additional_title_text,self.reader.run,eventid))
+                plt.suptitle('%s\nRun %i, Eventid %i'%(additional_title_text,self.reader.run,eventid))
             else:
-                wf = self.wf(channel,apply_filter=apply_filter,hilbert=hilbert,tukey=apply_tukey,sine_subtract=sine_subtract, return_sine_subtract_info=sine_subtract)
+                fig.canvas.set_window_title('r%i-e%i Waveform and Spectrum'%(self.reader.run,eventid))
+                plt.suptitle('Run %i, eventid %i'%(self.reader.run,eventid))
 
-            freqs, spec_dbish, spec = self.rfftWrapper(t_ns, wf)
+            if time_delays is None:
+                plt.subplot(2,1,1)
+                plt.ylabel('adu')
+                plt.xlabel('ns')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                plt.subplot(2,1,2)
+                plt.ylabel('dBish')
+                plt.xlabel('freq')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            else:
+                plt.subplot(3,1,1)
+                plt.ylabel('adu')
+                plt.xlabel('ns\n(Unshifted)')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                
+                plt.subplot(3,1,2)
+                plt.ylabel('adu')
+                plt.xlabel('ns\n(Aligned to Antenna 3)')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                plt.subplot(3,1,3)
+                plt.ylabel('adu')
+                plt.xlabel('ns\n(Aligned to Antenna 3)')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
 
-            plt.subplot(2,1,1)
-            plt.plot(t_ns,wf)
 
-            plt.subplot(2,1,2)
-            plt.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel)
-            plt.legend(loc = 'upper right')
-            #plt.xlim(10,110)
-            plt.ylim(-10,30)
-        ax = plt.gca()
-        return fig, ax
+                    
+            self.setEntry(eventid)
+            t_ns = self.t()
+            if verbose:
+                print(eventid)
+            if apply_tukey is None:
+                apply_tukey = self.tukey_default
+            
+            for channel in channels:
+                channel=int(channel)
+                if sine_subtract == True:
+                    wf, ss_freqs, n_fits = self.wf(channel,apply_filter=apply_filter,hilbert=hilbert,tukey=apply_tukey,sine_subtract=sine_subtract, return_sine_subtract_info=sine_subtract)
+                    if verbose:
+                        print(list(zip(n_fits, ss_freqs)))
+                else:
+                    wf = self.wf(channel,apply_filter=apply_filter,hilbert=hilbert,tukey=apply_tukey,sine_subtract=sine_subtract, return_sine_subtract_info=sine_subtract)
+
+                freqs, spec_dbish, spec = self.rfftWrapper(t_ns, wf)
+
+                if time_delays is None:
+
+                    plt.subplot(2,1,1)
+                    plt.plot(t_ns,wf)
+
+                    plt.subplot(2,1,2)
+                    plt.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel)
+                    plt.legend(loc = 'upper right')
+                    #plt.xlim(10,110)
+                    plt.ylim(-10,30)
+                else:
+                    plt.subplot(3,1,1)
+                    plt.plot(t_ns,wf)
+
+
+                    plt.subplot(3,1,2)
+                    #Aligning to channel 0/1
+                    if channel//2 == 0:
+                        plt.plot(t_ns,wf,label='Ch%i'%channel)
+                    else:
+                        plt.plot(t_ns + time_delays[int([0,1,2][channel//2 - 1]) + 6*(channel%2)],wf,label='Ch%i shifted %0.3f'%(channel, time_delays[int([0,1,2][channel//2 - 1]) + 6*(channel%2)]))
+
+                    plt.legend(loc='upper right')
+
+                    #Aligning to channel 6/7
+                    plt.subplot(3,1,3)
+                    if channel//2 == 3:
+                        plt.plot(t_ns,wf,label='Ch%i'%channel)
+                    else:
+                        plt.plot(t_ns - time_delays[int([2,4,5][channel//2]) + 6*(channel%2)],wf,label='Ch%i shifted %0.3f'%(channel, - time_delays[int([2,4,5][channel//2]) + 6*(channel%2)]))
+                    plt.legend(loc='upper right')
+
+
+            ax = plt.gca()
+            return fig, ax
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
 
 class TimeDelayCalculator(FFTPrepper):
@@ -1093,7 +1157,7 @@ class TimeDelayCalculator(FFTPrepper):
                     plt.xlim(t[numpy.argmax(upsampled_waveforms[pair[0]])] - 1.5*display_half_time_window , t[numpy.argmax(upsampled_waveforms[pair[0]])] + 2.0*display_half_time_window)
                     plt.tight_layout()
                     plt.legend()
-                    ax_roll = plt.axes([0.25, 0.15, 0.65, 0.03])
+                    ax_roll = plt.axes([0.25, 0.05, 0.65, 0.03])
 
                     slider_roll = Slider(ax_roll, 'Roll Ant %i'%pair[1], max(-upsampled_waveforms.shape[1],start_roll-slider_half_time_window_index), min(start_roll+slider_half_time_window_index,upsampled_waveforms.shape[1]), valinit=start_roll, valstep=1.0)
 
@@ -1101,6 +1165,13 @@ class TimeDelayCalculator(FFTPrepper):
                     def update(val):
                         roll = slider_roll.val
                         plot.set_xdata(t + roll*self.dt_ns_upsampled)
+
+                        selected_index = int(len(t) + slider_roll.val)
+                        search_window_cut = numpy.logical_and(self.corr_time_shifts > (self.corr_time_shifts[selected_index] - align_method_10_window_ns),  self.corr_time_shifts < (self.corr_time_shifts[selected_index] + align_method_10_window_ns) )
+                        search_window_indices = numpy.where(search_window_cut)[0]
+                        index = search_window_indices[numpy.argmax(corrs[pair_index][search_window_cut])]
+                        plt.xlabel('t (ns)  Snapped dt=%0.3f ns'%(self.corr_time_shifts[index]))
+
                         self.persistent_object[fig_index].canvas.draw_idle()
 
 
@@ -1122,8 +1193,8 @@ class TimeDelayCalculator(FFTPrepper):
                 '''
                 Requires an expected time delay that is used to snap to the closest peak to that.  
                 '''
-                print(align_method_10_estimate)
-                print(align_method_10_window_ns)
+                # print(align_method_10_estimate)
+                # print(align_method_10_window_ns)
                 if align_method_10_estimate is None:
                     print('NEED TO GIVE VALUE FOR align_method_10_estimate IF USING aligned_method = 10.  Failing.')
                 else:
@@ -1261,6 +1332,12 @@ class TimeDelayCalculator(FFTPrepper):
 
             if align_method_10_estimates is None:
                 align_method_10_estimates = [None]*len(eventids)
+            elif len(numpy.shape(align_method_10_estimates)) == 1:
+                if len(align_method_10_estimates) == 6:
+                    align_method_10_estimates = numpy.tile(align_method_10_estimates,(len(eventids),2)) #Giving same estimates for both hpol and vpol for all events
+                elif len(align_method_10_estimates) == 12:
+                    align_method_10_estimates = numpy.tile(align_method_10_estimates,(len(eventids),1)) #Giving same estimates for for all events
+
             for event_index, eventid in enumerate(eventids):
                 if align_method == 9:
                     sys.stdout.write('(%i/%i)\t\t\t\n'%(event_index+1,len(eventids)))

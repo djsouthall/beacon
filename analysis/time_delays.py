@@ -51,22 +51,28 @@ if __name__ == '__main__':
     final_corr_length = 2**17 #Should be a factor of 2 for fastest performance
     apply_phase_response = True
     
-    crit_freq_low_pass_MHz = [100,75,75,75,75,75,75,75]
-    low_pass_filter_order = [8,12,14,14,14,14,14,14]
+    # crit_freq_low_pass_MHz = [100,75,75,75,75,75,75,75]
+    # low_pass_filter_order = [8,12,14,14,14,14,14,14]
     
-    crit_freq_high_pass_MHz = None#30#None#50
-    high_pass_filter_order = None#5#None#8
+    # crit_freq_high_pass_MHz = None#30#None#50
+    # high_pass_filter_order = None#5#None#8
+
+    crit_freq_low_pass_MHz = None#[80,70,70,70,70,70,60,70] #Filters here are attempting to correct for differences in signals from pulsers.
+    low_pass_filter_order = None#[0,8,8,8,10,8,3,8]
+
+    crit_freq_high_pass_MHz = None#65
+    high_pass_filter_order = None#12
 
     sine_subtract = True
     sine_subtract_min_freq_GHz = 0.03
-    sine_subtract_max_freq_GHz = 0.09
+    sine_subtract_max_freq_GHz = 0.13
     sine_subtract_percent = 0.03
     
     plot_filters = False
     plot_multiple = False
 
     hilbert = False #Apply hilbert envelope to wf before correlating
-    align_method = 0
+    align_method = 9
 
     shorten_signals = True
     shorten_thresh = 0.7
@@ -99,8 +105,8 @@ if __name__ == '__main__':
         expected_time_differences_vpol  =  [((0, 1), -39.7774564691897), ((0, 2), 103.04747677383648), ((0, 3), 33.348616734485404), ((1, 2), 142.82493324302618), ((1, 3), 73.1260732036751), ((2, 3), -69.69886003935108)]
         max_time_differences_vpol  =  [((0, 1), -116.30631267571034), ((0, 2), 167.91381462435598), ((0, 3), 173.23375803172078), ((1, 2), 148.37193587533608), ((1, 3), 107.24435568878336), ((2, 3), -78.60480502528327)]
 
-        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=1)
-        pulser_location = info.loadPulserLocationsENU()['run1507'] #ENU
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=12)
+        pulser_location = info.loadPulserLocationsENU(deploy_index=12)['run1507'] #ENU
 
 
     elif site == 2:
@@ -115,23 +121,39 @@ if __name__ == '__main__':
         max_time_differences_vpol  =  [((0, 1), -116.30631267571034), ((0, 2), 167.91381462435598), ((0, 3), -173.23375803172078), ((1, 2), 148.37193587533608), ((1, 3), 107.24435568878336), ((2, 3), -78.60480502528327)]
 
 
-        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=1)
-        pulser_location = info.loadPulserLocationsENU()['run1509'] #ENU
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=12)
+        pulser_location = info.loadPulserLocationsENU(deploy_index=12)['run1509'] #ENU
 
     elif site == 3:
         waveform_index_range = (1250,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
         runs = numpy.array([1511])
 
-        expected_time_differences_physical  =  [((0, 1), -103.1812449168724), ((0, 2), -142.99918760162836), ((0, 3), -183.12401361615616), ((1, 2), -39.81794268475596), ((1, 3), -79.94276869928376), ((2, 3), -40.1248260145278)]
-        max_time_differences_physical  =  [((0, 1), -129.37157110284315), ((0, 2), -152.48216718324971), ((0, 3), -184.0463943150346), ((1, 2), -139.82851662731397), ((1, 3), -104.08254793314117), ((2, 3), -81.41340851163496)]
-        expected_time_differences_hpol  =  [((0, 1), -101.15104066991898), ((0, 2), -147.48113054454006), ((0, 3), -173.9731100821191), ((1, 2), -46.33008987462108), ((1, 3), -72.82206941220011), ((2, 3), -26.491979537579027)]
+
+        #I don't remember where these came from
+        # expected_time_differences_physical  =  [((0, 1), -103.1812449168724), ((0, 2), -142.99918760162836), ((0, 3), -183.12401361615616), ((1, 2), -39.81794268475596), ((1, 3), -79.94276869928376), ((2, 3), -40.1248260145278)]
+        # max_time_differences_physical  =  [((0, 1), -129.37157110284315), ((0, 2), -152.48216718324971), ((0, 3), -184.0463943150346), ((1, 2), -139.82851662731397), ((1, 3), -104.08254793314117), ((2, 3), -81.41340851163496)]
+        # expected_time_differences_hpol  =  [((0, 1), -101.15104066991898), ((0, 2), -147.48113054454006), ((0, 3), -173.9731100821191), ((1, 2), -46.33008987462108), ((1, 3), -72.82206941220011), ((2, 3), -26.491979537579027)]
+        # max_time_differences_hpol  =  [((0, 1), -126.12707694881749), ((0, 2), -161.95012224782622), ((0, 3), -175.32227710151258), ((1, 2), -152.8775395859053), ((1, 3), -115.57550659269941), ((2, 3), -83.00271992904541)]
+        # expected_time_differences_vpol  =  [((0, 1), -99.18571126908932), ((0, 2), -151.7951737712349), ((0, 3), -171.08543756381596), ((1, 2), -52.60946250214556), ((1, 3), -71.89972629472663), ((2, 3), -19.290263792581072)]
+        # max_time_differences_vpol  =  [((0, 1), -116.30631267571034), ((0, 2), -167.91381462435598), ((0, 3), -173.23375803172078), ((1, 2), -148.37193587533608), ((1, 3), -107.24435568878336), ((2, 3), -78.60480502528327)]
+
+        #Here I am attempting to calculate once based upon method 9, then that will be used in method 10.  
+
+        expected_time_differences_physical  =  [((0, 1), -103.1812449168724), ((0, 2), -142.99918760162836), ((0, 3), -183.12401361615616), ((1, 2), -39.81794268475596), ((1, 3), -79.94276869928376), ((2, 3), -40.1248260145278)] # THESE ARE MEANINGLESS LIKELY
+        max_time_differences_physical  =  [((0, 1), -129.37157110284315), ((0, 2), -152.48216718324971), ((0, 3), -184.0463943150346), ((1, 2), -139.82851662731397), ((1, 3), -104.08254793314117), ((2, 3), -81.41340851163496)] # THESE ARE MEANINGLESS LIKELY
+
+        expected_time_differences_hpol  =  [((0, 1), -122.623), ((0, 2), -171.529), ((0, 3), -191.497), ((1, 2), -48.906), ((1, 3), -82.374), ((2, 3), -33.281)]
         max_time_differences_hpol  =  [((0, 1), -126.12707694881749), ((0, 2), -161.95012224782622), ((0, 3), -175.32227710151258), ((1, 2), -152.8775395859053), ((1, 3), -115.57550659269941), ((2, 3), -83.00271992904541)]
+
         expected_time_differences_vpol  =  [((0, 1), -99.18571126908932), ((0, 2), -151.7951737712349), ((0, 3), -171.08543756381596), ((1, 2), -52.60946250214556), ((1, 3), -71.89972629472663), ((2, 3), -19.290263792581072)]
         max_time_differences_vpol  =  [((0, 1), -116.30631267571034), ((0, 2), -167.91381462435598), ((0, 3), -173.23375803172078), ((1, 2), -148.37193587533608), ((1, 3), -107.24435568878336), ((2, 3), -78.60480502528327)]
 
+        align_method_10_estimates_hpol = [ -122.623, -171.529, -191.497, -48.906, -82.374, -33.281]
+        align_method_10_estimates_vpol = [ -95.311,-150.341,-175.966,-55.030,-80.655,-25.656]
 
-        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=1)
-        pulser_location = info.loadPulserLocationsENU()['run1511'] #ENU
+
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=12)
+        pulser_location = info.loadPulserLocationsENU(deploy_index=12)['run1511'] #ENU
 
     if False:
         fig = plt.figure()
@@ -196,15 +218,31 @@ if __name__ == '__main__':
                 tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filters,apply_phase_response=apply_phase_response)
                 if sine_subtract == True:
                     tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
-                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids,align_method=align_method,hilbert=hilbert,plot=plot_multiple,hpol_cut=hpol_eventids_cut,vpol_cut=vpol_eventids_cut, sine_subtract=sine_subtract)
+                if align_method == 9:
+                    print('HPol Time Delay Estimate Calculations')
+                    hpol_time_shifts, hpol_corrs, pairs = tdc.calculateMultipleTimeDelays([all_eventids[hpol_eventids_cut][0]],align_method=12,hilbert=hilbert,plot=plot_multiple, sine_subtract=sine_subtract)
+                    print('VPol Time Delay Estimate Calculations')
+                    vpol_time_shifts, vpol_corrs, pairs = tdc.calculateMultipleTimeDelays([all_eventids[vpol_eventids_cut][0]],align_method=11,hilbert=hilbert,plot=plot_multiple, sine_subtract=sine_subtract)
+                    align_method_10_estimates=numpy.append(hpol_time_shifts[0:6],vpol_time_shifts[6:12])
+                    #align_method_10_estimates=numpy.append(vpol_time_shifts[6:12],vpol_time_shifts[6:12])
+
+                    print('HPol Time Delay Estimate Calculations')
+                    hpol_time_shifts, hpol_corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids[hpol_eventids_cut],align_method=10,hilbert=hilbert,plot=plot_multiple, sine_subtract=sine_subtract,align_method_10_estimates=align_method_10_estimates)
+                    print('VPol Time Delay Estimate Calculations')
+                    vpol_time_shifts, vpol_corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids[vpol_eventids_cut],align_method=10,hilbert=hilbert,plot=plot_multiple, sine_subtract=sine_subtract,align_method_10_estimates=align_method_10_estimates)
+                else:
+                    print('HPol Time Delay Calculations')
+                    hpol_time_shifts, hpol_corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids[hpol_eventids_cut],align_method=align_method,hilbert=hilbert,plot=plot_multiple, sine_subtract=sine_subtract,align_method_10_estimates=align_method_10_estimates_hpol)
+                    print('VPol Time Delay Calculations')
+                    vpol_time_shifts, vpol_corrs, pairs = tdc.calculateMultipleTimeDelays(all_eventids[vpol_eventids_cut],align_method=align_method,hilbert=hilbert,plot=plot_multiple, sine_subtract=sine_subtract,align_method_10_estimates=align_method_10_estimates_vpol)
 
                 for pair_index, pair in enumerate(pairs):
                     if pair in hpol_pairs:
-                        all_hpol_delays[str(pair)] = numpy.append(all_hpol_delays[str(pair)],time_shifts[pair_index][hpol_eventids_cut])
-                        all_hpol_corrs[str(pair)] = numpy.append(all_hpol_delays[str(pair)],corrs[pair_index][hpol_eventids_cut])
+                        all_hpol_delays[str(pair)] = numpy.append(all_hpol_delays[str(pair)],hpol_time_shifts[pair_index])
+                        all_hpol_corrs[str(pair)] = numpy.append(all_hpol_delays[str(pair)],hpol_corrs[pair_index])
                     elif pair in vpol_pairs:
-                        all_vpol_delays[str(pair)] = numpy.append(all_vpol_delays[str(pair)],time_shifts[pair_index][vpol_eventids_cut])
-                        all_vpol_corrs[str(pair)] = numpy.append(all_vpol_delays[str(pair)],corrs[pair_index][vpol_eventids_cut])
+                        all_vpol_delays[str(pair)] = numpy.append(all_vpol_delays[str(pair)],vpol_time_shifts[pair_index])
+                        all_vpol_corrs[str(pair)] = numpy.append(all_vpol_delays[str(pair)],vpol_corrs[pair_index])
 
 
             except Exception as e:

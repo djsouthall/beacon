@@ -16,6 +16,7 @@ deploy_index = 1:
 import sys
 import os
 import inspect
+
 import numpy
 import csv
 
@@ -30,7 +31,7 @@ import pymap3d as pm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
-default_deploy = 1#2#4#2 #The deployment time to use as the default.
+default_deploy = 15#2#4#2 #The deployment time to use as the default.
 
 
 def loadKnownPlaneDict(ignore_planes=[]):
@@ -450,8 +451,25 @@ def loadAntennaZeroLocation(deploy_index=default_deploy):
         # A2Location = (37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 - 26.356) #6ft below antennas, ~3ft to the side (north east ish)
         # A3Location = (37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 - 26.356) #Slightly downhill south, closer to antenna
 
-    elif deploy_index > 11:
+    elif deploy_index == 12:
         A0Location = (37.0 + 35.0/60.0 + 21.6528/3600, -(118. + 14.0/60.0 + 15.4715/3600.0),   3850.333) #Interpreting this as WGS84
+    elif deploy_index >= 13:
+        #These positions from from photo_gps.py, which was used to make a plane model of the hillside based on GPS coordinates of
+        #cell phone pictures.  The GPS coordinates are then input in this plane to calculate the altitudes.  
+        # ENU calculated below relative to deploy_index == 1
+        # Antenna 0
+        # (E, N, U)       : (0.000000,0.000000,-22.687778)
+        # (lat, lon, alt) : (37.589310,-118.237621,3852.842222)
+        # Antenna 1
+        # (E, N, U)       : (-33.493731,-12.216161,-2.989690)
+        # (lat, lon, alt) : (37.589200,-118.238000,3872.540409)
+        # Antenna 2
+        # (E, N, U)       : (-8.660669,-44.533633,-26.183296)
+        # (lat, lon, alt) : (37.588909,-118.237719,3849.346866)
+        # Antenna 3
+        # (E, N, U)       : (-32.168224,-43.200941,-10.301701)
+        # (lat, lon, alt) : (37.588921,-118.237985,3865.228526)
+        A0Location = (37.589310,-118.237621,3852.842222) #WGS84
 
     return A0Location
 
@@ -679,7 +697,7 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
             antennas_phase_vpol = {0 : [0.000000, 0.000000, 4.999999], 1 : [-32.828532, -13.166628, 9.409578], 2 : [-7.902534, -48.485135, 2.249786], 3 : [-28.853200, -43.872502, 13.687206]}
             antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 7.807538], 1 : [0.854570, 0.469628, 8.731584], 2 : [0.248426, 0.184186, 7.639721], 3 : [0.779508, 0.313825, 5.027621]}
 
-    elif deploy_index > 11:
+    elif deploy_index == 12:
         #For these deploy indices I am attempting to be more sure of which elevation metric is being used, and ensuring it is properly handled.
         #Plotting the reported coordinates of every photo I took on the hillside, including those beside the pulsing site 1, I believe the oneplus 6T reports in WGS84.
         origin = loadAntennaZeroLocation(deploy_index = deploy_index)
@@ -695,13 +713,56 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
         antennas_physical = {}
         for key, location in antennas_physical_latlon.items():
             antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
-        if deploy_index == 12:
-            #Errors not currently used.
+        #Errors not currently used.
+        print('Using best guess physical as both phase locations as well!')
+        antennas_phase_vpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
+        antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+        antennas_phase_hpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
+        antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+    
+    elif deploy_index >= 13:
+        #These positions from from photo_gps.py, which was used to make a plane model of the hillside based on GPS coordinates of
+        #cell phone pictures.  The GPS coordinates are then input in this plane to calculate the altitudes.  
+        # ENU calculated below relative to deploy_index == 1
+        # Antenna 0
+        # (E, N, U)       : (0.000000,0.000000,-22.687778)
+        # (lat, lon, alt) : (37.589310,-118.237621,3852.842222)
+        # Antenna 1
+        # (E, N, U)       : (-33.493731,-12.216161,-2.989690)
+        # (lat, lon, alt) : (37.589200,-118.238000,3872.540409)
+        # Antenna 2
+        # (E, N, U)       : (-8.660669,-44.533633,-26.183296)
+        # (lat, lon, alt) : (37.588909,-118.237719,3849.346866)
+        # Antenna 3
+        # (E, N, U)       : (-32.168224,-43.200941,-10.301701)
+        # (lat, lon, alt) : (37.588921,-118.237985,3865.228526)
+        origin = loadAntennaZeroLocation(deploy_index = deploy_index)
+        print('Antenna Physical location elevations from plane fit to gps coordinates from photos with OnePlus 6t interpreted as WGS84')
+        antennas_physical_latlon = {0:origin,1:(37.589200,-118.238000,3872.540409),2:(37.588909,-118.237719,3849.346866),3:(37.588921,-118.237985,3865.228526)} 
+
+        antennas_physical = {}
+        for key, location in antennas_physical_latlon.items():
+            antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+        #Errors not currently used.
+        if deploy_index == 13:
             print('Using best guess physical as both phase locations as well!')
-            antennas_phase_vpol = {0 : [antennas_physical_latlon[0][0],antennas_physical_latlon[0][1],antennas_physical_latlon[0][2]], 1 : [antennas_physical_latlon[1][0],antennas_physical_latlon[1][1],antennas_physical_latlon[1][2]], 2 : [antennas_physical_latlon[2][0],antennas_physical_latlon[2][1],antennas_physical_latlon[2][2]], 3 : [antennas_physical_latlon[3][0],antennas_physical_latlon[3][1],antennas_physical_latlon[3][2]]}
+            antennas_phase_vpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
             antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
-            antennas_phase_hpol = {0 : [antennas_physical_latlon[0][0],antennas_physical_latlon[0][1],antennas_physical_latlon[0][2]], 1 : [antennas_physical_latlon[1][0],antennas_physical_latlon[1][1],antennas_physical_latlon[1][2]], 2 : [antennas_physical_latlon[2][0],antennas_physical_latlon[2][1],antennas_physical_latlon[2][2]], 3 : [antennas_physical_latlon[3][0],antennas_physical_latlon[3][1],antennas_physical_latlon[3][2]]}
+            antennas_phase_hpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
             antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+        elif deploy_index == 14:
+            antennas_phase_hpol = {0 : [-0.171160, 1.999962, -3.377134], 1 : [-34.009522, -10.993301, 10.040922], 2 : [-7.848979, -46.517627, 4.278406], 3 : [-32.649573, -41.250262, 16.077983]}
+            antennas_phase_hpol_hesse = {0 : [0.652427, 3.986116, 4.445558], 1 : [0.699547, 0.223363, 15.134269], 2 : [0.660478, 0.795400, 3.666424], 3 : [0.707570, 0.270289, 3.338366]}
+            
+            antennas_phase_vpol = {0 : [-1.424875, 1.992824, 7.248382], 1 : [-33.783376, -11.218451, 11.753426], 2 : [-7.280174, -46.531850, 2.117580], 3 : [-30.760044, -42.275804, 15.503537]}
+            antennas_phase_vpol_hesse = {0 : [0.795334, 3.995309, 12.736719], 1 : [0.874418, 0.546834, 11.724445], 2 : [0.814953, 2.000217, 4.394386], 3 : [0.855157, 0.555719, 4.022556]}
+
+    elif deploy_index == 15:
+        antennas_phase_hpol = {0 : [-0.121226, 1.755070, -4.164016], 1 : [-33.783739, -12.067049, 14.709302], 2 : [-6.931436, -47.135687, 0.600605], 3 : [-30.835281, -42.606386, 14.853267]}
+        antennas_phase_hpol_hesse = {0 : [1.107598, 1.155382, 8.290938], 1 : [1.208719, 1.214783, 5.448297], 2 : [1.184062, 1.182823, 9.523712], 3 : [1.251305, 1.219051, 7.934458]}
+
+        antennas_phase_vpol = {0 : [-0.442439, 1.784501, -3.595621], 1 : [-34.121366, -11.965828, 14.797254], 2 : [-7.324517, -47.078042, 0.728544], 3 : [-30.611585, -42.820426, 14.415308]}
+        antennas_phase_vpol_hesse = {0 : [0.286134, 0.170131, 1.475580], 1 : [0.630060, 0.204455, 9.826477], 2 : [0.283998, 0.178813, 1.356786], 3 : [0.282316, 0.180412, 1.246523]}
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
 
@@ -740,8 +801,21 @@ def loadCableDelays(deploy_index=default_deploy,return_raw=False):
         #cable_delays_vpol_hesse = numpy.array([0.500000,3.390690,0.407566,2.505386])
         #cable_delays_hpol_hesse = numpy.array([0.500000,5.916741,0.885048,1.197699])
 
+    elif deploy_index == 14:
+        cable_delays =  {   'hpol':     numpy.array([3.451618,7.826725,8.083331,7.546091]), \
+                            'vpol':     numpy.array([10.914086,7.477607,16.681922,7.471445])}
+    elif deploy_index == 15:
+        # cable_delays_hpol = numpy.array([17.809761,3.103724,9.518142,7.911402])
+        # cable_delays_hpol_hesse = numpy.array([17.980015,17.603312,15.514188,4.179351])
+        # cable_delays_vpol = numpy.array([21.671835,4.689877,17.031305,7.945473])
+        # cable_delays_vpol_hesse = numpy.array([0.746272,19.473516,0.748978,0.742503])
+
+        cable_delays =  {   'hpol':     numpy.array([17.809761,3.103724,9.518142,7.911402]), \
+                            'vpol':     numpy.array([21.671835,4.689877,17.031305,7.945473])}
+
 
     else:
+        print('Using unmodified cable delays.')
         cable_delays =  {'hpol': numpy.array([423.37836156, 428.43979143, 415.47714969, 423.58803498]), \
                          'vpol': numpy.array([428.59277751, 430.16685915, 423.56765695, 423.50469285])}
 
@@ -985,8 +1059,9 @@ def loadPulserPhaseLocationsENU(deploy_index=default_deploy):
 
         #pulser_locations_ENU['hpol'] = {'run1507':[265.441241, -366.161638, -91.314401], 'run1509':[1065.399706, -508.295499, -163.706607], 'run1511':[178.535899, 344.684624, -48.158593]}
         #pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[1.384200, 1.534385, 3.015226], 'run1509':[8.512122, 3.788872, 7.223959], 'run1511':[2.282271, 3.801014, 4.190135]}
-    elif deploy_index == 10:
+    elif deploy_index > 9:
         #These are using the physical coordinates and are not calibrated phase center positions.
+        print('Using physical location GPS measurements for pulser phase centers.')
         pulser_locations_ENU['hpol'] = {'run1507':pulser_locations_ENU['physical']['run1507'], 'run1509':pulser_locations_ENU['physical']['run1509'], 'run1511':pulser_locations_ENU['physical']['run1511']}
         pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[2, 2, 2], 'run1509':[2, 2, 2], 'run1511':[2, 2, 2]}
         pulser_locations_ENU['vpol'] = {'run1507':pulser_locations_ENU['physical']['run1507'], 'run1509':pulser_locations_ENU['physical']['run1509'], 'run1511':pulser_locations_ENU['physical']['run1511']}
