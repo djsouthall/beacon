@@ -43,6 +43,9 @@ class BeamMaker(Correlator):
     Uses some of the framework of the correlator class,
     while adding specific tools for making beams.
 
+    For a detailed parameter list look at the correlator class, as it is kept
+    more up to date. 
+
     Parameters
     ----------
     reader : examples.beacon_data_reader.Reader
@@ -59,9 +62,9 @@ class BeamMaker(Correlator):
         The specified range of zenith angles to probe.
     
     '''
-    def __init__(self, reader,  n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None)):
+    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6):
         try:
-            super().__init__(reader,  upsample=None, n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, waveform_index_range=waveform_index_range)
+            super().__init__(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, waveform_index_range=waveform_index_range, apply_phase_response=apply_phase_response, tukey=tukey, sine_subtract=sine_subtract, map_source_distance_m=map_source_distance_m)
             self.prepInterpFunc()
 
 
