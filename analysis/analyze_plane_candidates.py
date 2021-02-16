@@ -247,6 +247,7 @@ if __name__ == '__main__':
     final_corr_length = 2**18
 
     calculate_time_delays = True # Or just use precalculated time delays.
+    filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_%i-align_%i'%(final_corr_length,default_align_method)
 
     #FILTER STRING USED IF ABOVE IS FALSE
     default_align_method=0 #WILL BE CHANGED IF GIVEN ABOVE
@@ -282,7 +283,6 @@ if __name__ == '__main__':
     shorten_delay = 10.0
     shorten_length = 90.0
 
-    filter_string = 'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_%i-align_%i'%(final_corr_length,default_align_method)
     
 
     try:

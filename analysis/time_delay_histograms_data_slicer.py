@@ -40,7 +40,7 @@ datapath = os.environ['BEACON_DATA']
 if __name__=="__main__":
     plt.close('all')
     trigger_types = [2]#[2]
-    if len(sys.argv) > 2:
+    if len(sys.argv) >= 2:
         run = int(sys.argv[1])
         if len(sys.argv) == 3:
             trigger_types = [int(sys.argv[1])]
@@ -51,14 +51,14 @@ if __name__=="__main__":
 
     impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
-    map_direction_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'#'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
+    map_direction_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_15'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'#'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
 
     # 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1'
     # 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
     # 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'
 
-    crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = 8
+    crit_freq_low_pass_MHz = None#100 #This new pulser seems to peak in the region of 85 MHz or so
+    low_pass_filter_order = None#8
 
     crit_freq_high_pass_MHz = None
     high_pass_filter_order = None
@@ -71,7 +71,7 @@ if __name__=="__main__":
     hilbert=False
     final_corr_length = 2**10
 
-    db_subset_plot_ranges = [[0,30],[30,40],[40,50]] #Used as bin edges.  
+    db_subset_plot_ranges = []#[[0,30],[30,40],[40,50]] #Used as bin edges.  
     plot_maps = True
 
     subset_cm = plt.cm.get_cmap('autumn', 10)
@@ -265,21 +265,21 @@ if __name__=="__main__":
                                 zenith_deg = numpy.rad2deg(numpy.arccos(sources_ENU[roi_key][2]/distance_m))
                                 elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(sources_ENU[roi_key][2]/distance_m))
                                 azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU[roi_key][1],sources_ENU[roi_key][0]))
+                                include_baselines = numpy.array([0,1,2,3,4,5])
 
+                                # mean_corr_values, fig, ax = cor.map(eventid, 'hpol', include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg)#, zenith_cut_ENU=[90,180]
+                                # all_figs.append(fig)
+                                # all_axs.append(ax)
 
-                                mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=True, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg)#, zenith_cut_ENU=[90,180]
-                                all_figs.append(fig)
-                                all_axs.append(ax)
-
-                                mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg)#, zenith_cut_ENU=[90,180]
+                                mean_corr_values, fig, ax = cor.map(eventid, 'hpol', include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg)#, zenith_cut_ENU=[90,180]
                                 all_figs.append(fig)
                                 all_axs.append(ax)
                             except:
-                                mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=True, zenith_cut_array_plane=None, interactive=True)#, zenith_cut_ENU=[90,180]
+                                mean_corr_values, fig, ax = cor.map(eventid, 'hpol', include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_array_plane=None, interactive=True)#, zenith_cut_ENU=[90,180]
                                 all_figs.append(fig)
                                 all_axs.append(ax)
 
-                                mean_corr_values, fig, ax = cor.map(eventid, 'hpol', plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True)#, zenith_cut_ENU=[90,180]
+                                mean_corr_values, fig, ax = cor.map(eventid, 'hpol', include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True)#, zenith_cut_ENU=[90,180]
                                 all_figs.append(fig)
                                 all_axs.append(ax)
 

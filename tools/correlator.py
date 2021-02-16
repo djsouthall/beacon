@@ -137,6 +137,10 @@ class Correlator:
             '''
             self.prep = FFTPrepper(self.reader, final_corr_length=2**10, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filter,tukey_alpha=0.1,tukey_default=False,apply_phase_response=apply_phase_response)
             self.prepareTimes() 
+            if numpy.all(self.prep.filter_original == 1.0):
+                self.apply_filter = False
+            else:
+                self.apply_filter = True
 
             self.figs = []
             self.axs = []
@@ -181,10 +185,6 @@ class Correlator:
             self.generateTimeIndices() #Must be called again if map_source_distance_m is reset
             self.calculateArrayNormalVector()
 
-            if numpy.all(self.prep.filter_original == 1.0):
-                self.apply_filter = False
-            else:
-                self.apply_filter = True
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)

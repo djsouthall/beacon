@@ -143,12 +143,12 @@ if __name__=="__main__":
         else:
             filter_string += 'maxmethod_%i-'%(max_method)
 
-        filter_string += 'sinesubtract_%i'%(int(sine_subtract))
+        filter_string += 'sinesubtract_%i-'%(int(sine_subtract))
 
+        filter_string += 'deploy_calibration_%i'%(info.returnDefaultDeploy())
 
         print(filter_string)
 
-        
 
         try:
             run = int(run)
@@ -349,9 +349,9 @@ if __name__=="__main__":
                                     sys.stdout.flush()
                                 m = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert)
                                 if max_method is not None:
-                                    row_index, column_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3 = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode)
+                                    linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3 = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode)
                                 else:
-                                    row_index, column_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3 = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode)        
+                                    linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3 = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode)        
                                 file['map_direction'][filter_string]['%s_ENU_zenith'%mode][eventid] = theta_best 
                                 file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][eventid] = phi_best 
                                 file['map_times'][filter_string]['%s_0subtract1'%mode][eventid] = t_0subtract1 

@@ -816,6 +816,8 @@ class FFTPrepper:
 
         It will plot twice, once using the first three time delays to align to antenna 0/1, then using the later
         three time delays of each polarity to align signals with antenna 6/7.
+
+        It does not use any upsampling.
         '''
         try:
             fig = plt.figure()
@@ -891,8 +893,8 @@ class FFTPrepper:
                     plt.subplot(2,1,2)
                     plt.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel)
                     plt.legend(loc = 'upper right')
-                    #plt.xlim(10,110)
-                    plt.ylim(-10,30)
+                    plt.xlim(10,110)
+                    plt.ylim(-50,30)
                 else:
                     plt.subplot(3,1,1)
                     plt.plot(t_ns,wf)

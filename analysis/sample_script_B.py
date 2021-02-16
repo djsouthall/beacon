@@ -58,7 +58,7 @@ will not run if it is under "if False".
 
 
 if __name__ == '__main__':
-    plt.close('all') #Uncomment this if you want figures to be closed before this is run (helps if running multiple times in a row to avoid plot congestion).
+    #plt.close('all') #Uncomment this if you want figures to be closed before this is run (helps if running multiple times in a row to avoid plot congestion).
     
 
 
@@ -77,11 +77,11 @@ if __name__ == '__main__':
         #This is just to demonstrate the difference.
         final_corr_length = 2**17
 
-        crit_freq_low_pass_MHz = [90,75,75,75,75,75,75,75] #Filters here are attempting to correct for differences in signals from pulsers.
-        low_pass_filter_order = [8,8,14,8,12,8,8,8]
+        crit_freq_low_pass_MHz = [80,70,70,70,70,70,60,70] #Filters here are attempting to correct for differences in signals from pulsers.
+        low_pass_filter_order = [0,8,8,8,10,8,3,8]
 
-        crit_freq_high_pass_MHz = None
-        high_pass_filter_order = None
+        crit_freq_high_pass_MHz = 65
+        high_pass_filter_order = 12
 
         apply_phase_response = True
         hilbert = False
@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
         sine_subtract = True
         sine_subtract_min_freq_GHz = 0.03
-        sine_subtract_max_freq_GHz = 0.09
+        sine_subtract_max_freq_GHz = 0.13
         sine_subtract_percent = 0.03
 
         apply_phase_response = True
