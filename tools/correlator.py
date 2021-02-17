@@ -1253,75 +1253,73 @@ class Correlator:
             baseline_cm = plt.cm.get_cmap('tab10', 10)
             baseline_colors = baseline_cm(numpy.linspace(0, 1, 10))[0:6] #only want the first 6 colours in this list of 10 colors.
 
-            baseline_index = -1
             for pair_key, pair_time_delay in time_delays.items():
-                baseline_index += 1
-                if numpy.isin(baseline_index ,include_baselines ):
+                pair = numpy.array(pair_key.replace('[','').replace(']','').split(','),dtype=int)
+                pair_index = numpy.where(numpy.sum(pair == pairs,axis=1) == 2)[0][0] #Used for consistent coloring.
+
+                if numpy.isin(pair_index ,include_baselines ):
                     linestyle = '-'
                 else:
                     linestyle = '--'
 
-                pair = numpy.array(pair_key.replace('[','').replace(']','').split(','),dtype=int)
-                pair_index = numpy.where(numpy.sum(pair == pairs,axis=1) == 2)[0][0] #Used for consistent coloring.
                 i = pair[0]
                 j = pair[1]
 
                 for time_delay in pair_time_delay:
-                    print(baseline_index)
                     #Attempting to use precalculate expected time delays per direction to derive theta here.
                     if mollweide == True:
                         if mode == 'hpol':
-                            if baseline_index == 0:
+                            if pair_index == 0:
                                 contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_hpol_0subtract1, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 1:
+                            elif pair_index == 1:
                                 contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_hpol_0subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 2:
+                            elif pair_index == 2:
                                 contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_hpol_0subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 3:
+                            elif pair_index == 3:
                                 contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_hpol_1subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 4:
+                            elif pair_index == 4:
                                 contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_hpol_1subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 5:
+                            elif pair_index == 5:
                                 contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_hpol_2subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                         else:
-                            if baseline_index == 0:
+                            if pair_index == 0:
                                 contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_vpol_0subtract1, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 1:
+                            elif pair_index == 1:
                                 contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_vpol_0subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 2:
+                            elif pair_index == 2:
                                 contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_vpol_0subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 3:
+                            elif pair_index == 3:
                                 contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_vpol_1subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 4:
+                            elif pair_index == 4:
                                 contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_vpol_1subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 5:
+                            elif pair_index == 5:
                                 contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_vpol_2subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                     else:
                         if mode == 'hpol':
-                            if baseline_index == 0:
+                            if pair_index == 0:
                                 contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_0subtract1, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 1:
+                            elif pair_index == 1:
                                 contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_0subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 2:
+                            elif pair_index == 2:
                                 contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_0subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 3:
+                            elif pair_index == 3:
                                 contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_1subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 4:
+                            elif pair_index == 4:
                                 contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_1subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 5:
+                            elif pair_index == 5:
                                 contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_2subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                         else:
-                            if baseline_index == 0:
+                            if pair_index == 0:
                                 contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_0subtract1, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 1:
+                            elif pair_index == 1:
                                 contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_0subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 2:
+                            elif pair_index == 2:
                                 contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_0subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 3:
+                            elif pair_index == 3:
                                 contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_1subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 4:
+                            elif pair_index == 4:
                                 contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_1subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
-                            elif baseline_index == 5:
+                            elif pair_index == 5:
                                 contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_2subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
 
                     fmt = str(pair) + ':' + r'%0.2f'
