@@ -229,8 +229,11 @@ if __name__ == '__main__':
         plot_time_delays_on_maps = True
         plot_expected_direction = True
         limit_events = 10 #Number of events use for time delay calculation
+        valley_source_run = 1650
         if False:
+            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
             # Southern Calibration
+            unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             if mode == 'hpol':
                 use_sources = ['Solar Plant']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
                 included_pulsers = ['run1507','run1509','run1511'] #Only included if include_pulsers == True
@@ -238,7 +241,9 @@ if __name__ == '__main__':
                 use_sources = ['East Dyer Substation','Goldfield KGFN-FM']
                 included_pulsers = ['run1507','run1509','run1511'] #Only included if include_pulsers == True
         elif False:
+            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
             # Southern Calibration
+            unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             if mode == 'hpol':
                 use_sources = ['East Dyer Substation','Goldfield KGFN-FM','Silver Peak Substation']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
                 included_pulsers = ['run1507','run1509'] #Only included if include_pulsers == True
@@ -246,6 +251,8 @@ if __name__ == '__main__':
                 use_sources = ['East Dyer Substation','Goldfield KGFN-FM']
                 included_pulsers = ['run1507','run1509'] #Only included if include_pulsers == True
         elif False:
+            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+            unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             if mode == 'hpol':
                 # Northern Calibration
                 #use_sources = ['Tonopah KTPH','Solar Plant','Silver Peak Substation']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
@@ -255,30 +262,47 @@ if __name__ == '__main__':
                 use_sources = ['Tonopah KTPH','Solar Plant']
                 included_pulsers = ['run1507','run1509']#['run1511'] #Only included if include_pulsers == True
         
-        elif True:
+        elif False:
+            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+            unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             if mode == 'hpol':
                 use_sources = []#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
             elif mode == 'vpol':
                 use_sources = ['East Dyer Substation']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+        elif False:
+            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+            unknown_source_dir_valley = True #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unique_cut_subset = ['Solar Plant','Tonopah KTPH','West Dyer Substation','East Dyer Substation','Beatty Mountain Cell Tower','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation'] #these are all uniquely identified clusters.  Their names are not certain sources
+            if mode == 'hpol':
+                use_sources = ['Solar Plant','Tonopah KTPH','West Dyer Substation','East Dyer Substation','Beatty Mountain Cell Tower','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation']#['Solar Plant','Tonopah KTPH','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
+                included_pulsers = ['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+            elif mode == 'vpol':
+                use_sources = ['East Dyer Substation']#'East Dyer Substation',
+                included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
         else:
+            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+            unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             use_sources = [] #iterating through potential sources until something makes sense
             included_pulsers = ['run1507','run1509','run1511']#,'run1511' #Only included if include_pulsers == True
 
-        #only_plot = use_sources
+        only_plot = use_sources
         
-        only_plot   = [ 'Solar Plant',\
-                        'Tonopah KTPH',\
-                        'Dyer Cell Tower',\
-                        'West Dyer Substation',\
-                        'East Dyer Substation',\
-                        'Beatty Substation',\
-                        'Palmetto Cell Tower',\
-                        'Black Mountain',\
-                        'Cedar Peak',\
-                        'Goldfield Hill Tower',\
-                        'Silver Peak Substation']
+        # only_plot   = [ 'Solar Plant',\
+        #                 'Tonopah KTPH']
+
+        # only_plot   = [ 'Solar Plant',\
+        #                 'Tonopah KTPH',\
+        #                 'Dyer Cell Tower',\
+        #                 'West Dyer Substation',\
+        #                 'East Dyer Substation',\
+        #                 'Beatty Substation',\
+        #                 'Palmetto Cell Tower',\
+        #                 'Black Mountain',\
+        #                 'Cedar Peak',\
+        #                 'Goldfield Hill Tower',\
+        #                 'Silver Peak Substation']
 
         # only_plot   = [ 'Solar Plant',\
         #                 'Tonopah KTPH',\
@@ -338,9 +362,11 @@ if __name__ == '__main__':
         map_direction_dset_key = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
 
         plot_residuals = False
+        plot_histograms = True
         #plot_time_delays_on_maps = False
 
         final_corr_length = 2**17
+        cor_upsample = final_corr_length
 
         crit_freq_low_pass_MHz = None#[80,70,70,70,70,70,60,70]#90#
         low_pass_filter_order = None#[0,8,8,8,10,8,3,8]#8#
@@ -360,17 +386,28 @@ if __name__ == '__main__':
 
         include_pulsers = True 
         include_baseline_measurements = True
-        pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+        baseline_measurement_uncertainty_m = 3 #Assuming a 3m spread in our data.  This is very approximate.
+        time_delay_measurement_uncertainty_ns = 20 #ns, The time window used to as error in chi^2 for time delay.  If you are assuming that the time delays are 100% accurate then this is usually sub ns.  But if you think it is slipping cycles you could give this a larger value. 
         include_sanity = False
-        plot_predicted_time_shifts = True
+        plot_predicted_time_shifts = False
         random_offset_amount = 0.5 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
+        included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
+        included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
+        plot_overlap = True #Will plot the overlap map for time delays from each source.
+        overlap_window_ns = 50 #ns The time window used to define sufficient overlap. 
+        overlap_goal = overlap_window_ns*len(included_antennas_channels)*len(use_sources) #This shouldn't be varied, vary the error if anything.  This is the portion of chi^2 coming from overlapping valley source time delays.  The measured map max will be subtracted from this in a chi^2 calculation.  
+        overlap_error = overlap_goal/50 #The error portion of chi^2 coming from overlapping valley source time delays will be devided by this number.
+
 
         #Limits 
-        initial_step = 0.25 #m
-        cable_delay_guess_range = 10 #ns
-        antenna_position_guess_range_x = 5#2#None#3#3 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_y = 5#2#None#10#antenna_position_guess_range_x
-        antenna_position_guess_range_z = 5#8#10#6#antenna_position_guess_range_x#antenna_position_guess_range_x#None #Limit to how far from input phase locations to limit the parameter space to
+        initial_step_x = 1.0 #m
+        initial_step_y = 1.0 #m
+        initial_step_z = 1.0 #m
+        initial_step_cable_delay = 3.0 #ns
+        cable_delay_guess_range = 15 #ns
+        antenna_position_guess_range_x = 10 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = 10 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_z = 10 #Limit to how far from input phase locations to limit the parameter space to
         fix_ant0_x = False
         fix_ant0_y = False
         fix_ant0_z = False
@@ -387,6 +424,25 @@ if __name__ == '__main__':
         fix_cable_delay1 = False
         fix_cable_delay2 = False
         fix_cable_delay3 = False
+
+        #Force antennas not to be included to be fixed.  
+        if not(0 in included_antennas_lumped):
+            fix_ant0_x = True
+            fix_ant0_y = True
+            fix_ant0_z = True
+        if not(1 in included_antennas_lumped):
+            fix_ant1_x = True
+            fix_ant1_y = True
+            fix_ant1_z = True
+        if not(2 in included_antennas_lumped):
+            fix_ant2_x = True
+            fix_ant2_y = True
+            fix_ant2_z = True
+        if not(3 in included_antennas_lumped):
+            fix_ant3_x = True
+            fix_ant3_y = True
+            fix_ant3_z = True
+
 
         #I think adding an absolute time offset for each antenna and letting that vary could be interesting.  It could be used to adjust the cable delays.
         cable_delays = info.loadCableDelays()[mode]
@@ -475,10 +531,9 @@ if __name__ == '__main__':
             # #Done for OR condition
             # _eventids = numpy.sort(numpy.unique(numpy.append(ds.getCutsFromROI('Simple Template H > 0.7',load=False,save=False),ds.getCutsFromROI('Simple Template V > 0.7',load=False,save=False))))
             # roi_eventids = numpy.intersect1d(ds.getCutsFromROI(roi_key),_eventids)
-            source_event_run = 1650
             antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
 
-            if False:
+            if True:
                 if mode == 'hpol':
                     antennas_phase_start = antennas_phase_hpol
                 else:
@@ -492,15 +547,14 @@ if __name__ == '__main__':
             #DETERMINE THE TIME DELAYS TO BE USED IN THE ACTUAL CALCULATION
 
             print('Calculating time delays from info.py')
-            run = 1650
-            reader = Reader(datapath,run)
+            reader = Reader(datapath,valley_source_run)
             tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=False,apply_phase_response=apply_phase_response)
             if sine_subtract:
                 tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
             
 
             ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
-                        curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                        curve_choice=0, trigger_types=[2],included_antennas=included_antennas_channels,include_test_roi=False,\
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
                         impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                         time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
@@ -639,11 +693,10 @@ if __name__ == '__main__':
             chi2_ax.scatter(antennas_phase_start[2][0], antennas_phase_start[2][1], antennas_phase_start[2][2],c='b',alpha=0.5,label='Initial Ant2')
             chi2_ax.scatter(antennas_phase_start[3][0], antennas_phase_start[3][1], antennas_phase_start[3][2],c='m',alpha=0.5,label='Initial Ant3')
 
-            pairs = numpy.array(list(itertools.combinations((0,1,2,3), 2)))
 
             if include_baseline_measurements:
                 #This will weight against differences that result in longer baselines than measured.   I.e. smaller number if current baseline > measured.  Large for current < measured. 
-                w = lambda measured, current : numpy.exp(measured - current)**2
+                #w = lambda measured, current : numpy.exp(measured - current)**2
                 measured_baselines = {'01':129*0.3048,
                                       '02':163*0.3048,
                                       '03':181*0.3048,
@@ -651,36 +704,103 @@ if __name__ == '__main__':
                                       '13':102*0.3048,
                                       '23':85 *0.3048}
 
-            def rawChi2(ant0_x, ant0_y, ant0_z,ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, cable_delay0, cable_delay1, cable_delay2, cable_delay3):
+            #This math is to set the pairs to include in the calculation.  Typically it will be all of them, but if the option is enabled to remove some
+            #from the calculation then this will allow for that to be done.
+            pairs = numpy.array(list(itertools.combinations((0,1,2,3), 2)))
+            pairs_cut = []
+            for pair in numpy.array(list(itertools.combinations((0,1,2,3), 2))):
+                pairs_cut.append(numpy.all(numpy.isin(numpy.array(pair),included_antennas_lumped)))
+
+            include_baselines = numpy.where(pairs_cut)[0]
+            print('Including baseline pairs:')
+            print(pairs[pairs_cut])
+
+            if True:
+                ant0_x=antennas_phase_start[0][0]
+                ant0_y=antennas_phase_start[0][1]
+                ant0_z=antennas_phase_start[0][2]
+                ant1_x=antennas_phase_start[1][0]
+                ant1_y=antennas_phase_start[1][1]
+                ant1_z=antennas_phase_start[1][2]
+                ant2_x=antennas_phase_start[2][0]
+                ant2_y=antennas_phase_start[2][1]
+                ant2_z=antennas_phase_start[2][2]
+                ant3_x=antennas_phase_start[3][0]
+                ant3_y=antennas_phase_start[3][1]
+                ant3_z=antennas_phase_start[3][2]
+
+                #Initial baselines just to be printed out
+                initial_baselines = {   '01':numpy.sqrt((ant0_x - ant1_x)**2 + (ant0_y - ant1_y)**2 + (ant0_z - ant1_z)**2),\
+                                        '02':numpy.sqrt((ant0_x - ant2_x)**2 + (ant0_y - ant2_y)**2 + (ant0_z - ant2_z)**2),\
+                                        '03':numpy.sqrt((ant0_x - ant3_x)**2 + (ant0_y - ant3_y)**2 + (ant0_z - ant3_z)**2),\
+                                        '12':numpy.sqrt((ant1_x - ant2_x)**2 + (ant1_y - ant2_y)**2 + (ant1_z - ant2_z)**2),\
+                                        '13':numpy.sqrt((ant1_x - ant3_x)**2 + (ant1_y - ant3_y)**2 + (ant1_z - ant3_z)**2),\
+                                        '23':numpy.sqrt((ant2_x - ant3_x)**2 + (ant2_y - ant3_y)**2 + (ant2_z - ant3_z)**2)}
+                print('The initial baselines (specified by deploy_index = %i) in meters are:'%(info.returnDefaultDeploy()))
+                print(initial_baselines)
+
+                for key in included_pulsers:
+                    d0 = numpy.sqrt((pulser_locations_ENU[key][0] - ant0_x)**2 + (pulser_locations_ENU[key][1] - ant0_y)**2 + (pulser_locations_ENU[key][2] - ant0_z)**2 ) #m
+                    print('Pulser %s is %0.2f m away from Antenna 0'%(key, d0))
+
+            if unknown_source_dir_valley:
+                # Need correlator map class to use in chi^2.
+                chi_2_reader = Reader(datapath,valley_source_run)
+                chi_2_cor = Correlator(chi_2_reader,  upsample=cor_upsample, n_phi=180, n_theta=180, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
+                chi_2_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+                td_dicts = {}
+                for source_key in use_sources:
+                    td_dicts[source_key] = {mode:{'[0, 1]' :  [time_delay_dict[source_key][0]], '[0, 2]' : [time_delay_dict[source_key][1]], '[0, 3]' : [time_delay_dict[source_key][2]], '[1, 2]' : [time_delay_dict[source_key][3]], '[1, 3]' : [time_delay_dict[source_key][4]], '[2, 3]' : [time_delay_dict[source_key][5]]}}
+
+    
+            def rawChi2(ant0_x, ant0_y, ant0_z, ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, cable_delay0, cable_delay1, cable_delay2, cable_delay3):
                 '''
                 This is a chi^2 that loops over locations from potential RFI, calculating expected time delays for those locations.  Then
                 it will compares those to the calculated time delays for suspected corresponding events.  
                 '''
                 try:
-                    #chi2_ax.scatter(ant0_x, ant0_y, ant0_z,label='Antenna 0',c='r',alpha=0.5)
-                    #chi2_ax.scatter(ant1_x, ant1_y, ant1_z,label='Antenna 1',c='g',alpha=0.5)
-                    #chi2_ax.scatter(ant2_x, ant2_y, ant2_z,label='Antenna 2',c='b',alpha=0.5)
-                    #chi2_ax.scatter(ant3_x, ant3_y, ant3_z,label='Antenna 3',c='m',alpha=0.5)
-
                     #Calculate distances (already converted to ns) from pulser to each antenna
                     chi_2 = 0.0
                     _cable_delays = [cable_delay0,cable_delay1,cable_delay2,cable_delay3]
 
-                    for key in use_sources:
-                            d0 = (numpy.sqrt((sources_ENU[key][0] - ant0_x)**2 + (sources_ENU[key][1] - ant0_y)**2 + (sources_ENU[key][2] - ant0_z)**2 )/c)*1.0e9 #ns
-                            d1 = (numpy.sqrt((sources_ENU[key][0] - ant1_x)**2 + (sources_ENU[key][1] - ant1_y)**2 + (sources_ENU[key][2] - ant1_z)**2 )/c)*1.0e9 #ns
-                            d2 = (numpy.sqrt((sources_ENU[key][0] - ant2_x)**2 + (sources_ENU[key][1] - ant2_y)**2 + (sources_ENU[key][2] - ant2_z)**2 )/c)*1.0e9 #ns
-                            d3 = (numpy.sqrt((sources_ENU[key][0] - ant3_x)**2 + (sources_ENU[key][1] - ant3_y)**2 + (sources_ENU[key][2] - ant3_z)**2 )/c)*1.0e9 #ns
+                    if unknown_source_dir_valley == False:
+                        #Assuming you know the source, calcualting time delays assuming that source direction.
+                        for key in use_sources:
+                                d0 = (numpy.sqrt((sources_ENU[key][0] - ant0_x)**2 + (sources_ENU[key][1] - ant0_y)**2 + (sources_ENU[key][2] - ant0_z)**2 )/c)*1.0e9 #ns
+                                d1 = (numpy.sqrt((sources_ENU[key][0] - ant1_x)**2 + (sources_ENU[key][1] - ant1_y)**2 + (sources_ENU[key][2] - ant1_z)**2 )/c)*1.0e9 #ns
+                                d2 = (numpy.sqrt((sources_ENU[key][0] - ant2_x)**2 + (sources_ENU[key][1] - ant2_y)**2 + (sources_ENU[key][2] - ant2_z)**2 )/c)*1.0e9 #ns
+                                d3 = (numpy.sqrt((sources_ENU[key][0] - ant3_x)**2 + (sources_ENU[key][1] - ant3_y)**2 + (sources_ENU[key][2] - ant3_z)**2 )/c)*1.0e9 #ns
 
-                            d = [d0,d1,d2,d3]
+                                d = [d0,d1,d2,d3]
 
+                                for pair_index, pair in enumerate(pairs):
+                                    if pairs_cut[pair_index]:
+                                        geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
 
-                            for pair_index, pair in enumerate(pairs):
-                                if pair_index > 2:
-                                    geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
+                                        vals = ((geometric_time_delay - time_delay_dict[key][pair_index])**2)/time_delay_measurement_uncertainty_ns**2 #Assumes time delays are accurate
+                                        chi_2 += numpy.sum(vals)
+                    else:
+                        #Assuming you DON'T know the source, and using the precalculated time delays with the existing geometry to determine if the array points ANYWHERE for that source.
+                        ant0_ENU = numpy.array([ant0_x, ant0_y, ant0_z])
+                        ant1_ENU = numpy.array([ant1_x, ant1_y, ant1_z])
+                        ant2_ENU = numpy.array([ant2_x, ant2_y, ant2_z])
+                        ant3_ENU = numpy.array([ant3_x, ant3_y, ant3_z])
+                        if mode == 'hpol':
+                            chi_2_cor.overwriteCableDelays(cable_delay0, chi_2_cor.cable_delays[1], cable_delay1, chi_2_cor.cable_delays[3], cable_delay2, chi_2_cor.cable_delays[5], cable_delay3, chi_2_cor.cable_delays[7],verbose=False, suppress_time_delay_calculations=True)#WARNING, SUPRESSING CALCULATION OF TIME DELAY TABLE HERE, MAKE SURE IT HAPPENS WHEN ANTENNAS CHANGE
+                            chi_2_cor.overwriteAntennaLocations(chi_2_cor.A0_physical,chi_2_cor.A1_physical,chi_2_cor.A2_physical,chi_2_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,chi_2_cor.A0_vpol,chi_2_cor.A1_vpol,chi_2_cor.A2_vpol,chi_2_cor.A3_vpol,verbose=False, suppress_time_delay_calculations=False)
+                        else:
+                            chi_2_cor.overwriteCableDelays(chi_2_cor.cable_delays[0], cable_delay0, chi_2_cor.cable_delays[2], cable_delay1, chi_2_cor.cable_delays[4], cable_delay2, chi_2_cor.cable_delays[6], cable_delay3,verbose=False, suppress_time_delay_calculations=True)#WARNING, SUPRESSING CALCULATION OF TIME DELAY TABLE HERE, MAKE SURE IT HAPPENS WHEN ANTENNAS CHANGE
+                            chi_2_cor.overwriteAntennaLocations(chi_2_cor.A0_physical,chi_2_cor.A1_physical,chi_2_cor.A2_physical,chi_2_cor.A3_physical,chi_2_cor.A0_hpol,chi_2_cor.A1_hpol,chi_2_cor.A2_hpol,chi_2_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False, suppress_time_delay_calculations=False)
 
-                                    vals = ((geometric_time_delay - time_delay_dict[key][pair_index])**2) #Assumes time delays are accurate
-                                    chi_2 += numpy.sum(vals)
+                        for key in use_sources:
+                            td_dict = td_dicts[key]
+
+                            mesh_azimuth_deg, mesh_elevation_deg, overlap_map = chi_2_cor.generateTimeDelayOverlapMap(mode, td_dict, overlap_window_ns, value_mode='distance', plot_map=False, mollweide=False,center_dir='E',window_title=None, include_baselines=include_baselines)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = chi_2_cor.mapMax(overlap_map, max_method=0, verbose=False, zenith_cut_ENU=[90,115], zenith_cut_array_plane=[0,88], pol=mode) #This is used so that max value must be in reasonable window.
+
+                            max_value = overlap_map.flatten()[linear_max_index]
+                            
+                            chi_2 += ((max_value - overlap_goal)**2)/(overlap_error**2) 
 
                     if include_pulsers:
                         for key in included_pulsers:
@@ -692,14 +812,15 @@ if __name__ == '__main__':
                             d = [d0,d1,d2,d3]
 
                             for pair_index, pair in enumerate(pairs):
-                                # pulser_time_delay_dict
-                                # pulser_time_delay_error_dict
-                                if pulser_time_delay_dict[key][pair_index][0][0] == pair[0] and pulser_time_delay_dict[key][pair_index][0][1] == pair[1]:
-                                    geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
-                                    vals = ((geometric_time_delay - pulser_time_delay_dict[key][pair_index][1])**2) #Assumes time delays are accurate
-                                    chi_2 += pulser_weight*numpy.sum(vals)
-                                else:
-                                    print('PAIR INDICES DONT MATCH, SOMETHING IS WRONG')
+                                if pairs_cut[pair_index]:
+                                    # pulser_time_delay_dict
+                                    # pulser_time_delay_error_dict
+                                    if pulser_time_delay_dict[key][pair_index][0][0] == pair[0] and pulser_time_delay_dict[key][pair_index][0][1] == pair[1]:
+                                        geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
+                                        vals = ((geometric_time_delay - pulser_time_delay_dict[key][pair_index][1])**2) #Assumes time delays are accurate
+                                        chi_2 += pulser_weight*numpy.sum(vals)
+                                    else:
+                                        print('PAIR INDICES DONT MATCH, SOMETHING IS WRONG')
 
                     if include_baseline_measurements:
                         #This will weight against differences that result in longer baselines than measured.   I.e. smaller number if current baseline > measured.  Large for current < measured. 
@@ -709,30 +830,17 @@ if __name__ == '__main__':
                                                 '12':numpy.sqrt((ant1_x - ant2_x)**2 + (ant1_y - ant2_y)**2 + (ant1_z - ant2_z)**2),\
                                                 '13':numpy.sqrt((ant1_x - ant3_x)**2 + (ant1_y - ant3_y)**2 + (ant1_z - ant3_z)**2),\
                                                 '23':numpy.sqrt((ant2_x - ant3_x)**2 + (ant2_y - ant3_y)**2 + (ant2_z - ant3_z)**2)}
-
-                        # baseline_weights = {  '01':w(measured_baselines['01'], current_baselines['01']),
-                        #                       '02':w(measured_baselines['02'], current_baselines['02']),
-                        #                       '03':w(measured_baselines['03'], current_baselines['03']),
-                        #                       '12':w(measured_baselines['12'], current_baselines['12']),
-                        #                       '13':w(measured_baselines['13'], current_baselines['13']),
-                        #                       '23':w(measured_baselines['23'], current_baselines['23'])}
-                        # print(current_baselines['01'])
-                        # print(measured_baselines['01'])
-
-
-                        # chi_2 += ((current_baselines['01'] - measured_baselines['01'])**2)/baseline_weights['01'] + \
-                        #          ((current_baselines['02'] - measured_baselines['02'])**2)/baseline_weights['02'] + \
-                        #          ((current_baselines['03'] - measured_baselines['03'])**2)/baseline_weights['03'] + \
-                        #          ((current_baselines['12'] - measured_baselines['12'])**2)/baseline_weights['12'] + \
-                        #          ((current_baselines['13'] - measured_baselines['13'])**2)/baseline_weights['13'] + \
-                        #          ((current_baselines['23'] - measured_baselines['23'])**2)/baseline_weights['23']
-
                         
-                        #Adds 100 to chi^2 as soon as any baseline exceeds that measured with a tape measure.
-                        chi_2 += 100*numpy.any([(current_baselines['01'] - measured_baselines['01']) > 0, (current_baselines['02'] - measured_baselines['02']) > 0, (current_baselines['03'] - measured_baselines['03']) > 0, (current_baselines['12'] - measured_baselines['12']) > 0, (current_baselines['13'] - measured_baselines['13']) > 0, current_baselines['23'] - measured_baselines['23']])
+                        #Adds chi^2 as soon as any baseline exceeds that measured with a tape measure.
+                        #chi_2 += 100*numpy.any([(current_baselines['01'] - measured_baselines['01']) > baseline_upper_bound_tolerance, (current_baselines['02'] - measured_baselines['02']) > baseline_upper_bound_tolerance, (current_baselines['03'] - measured_baselines['03']) > baseline_upper_bound_tolerance, (current_baselines['12'] - measured_baselines['12']) > baseline_upper_bound_tolerance, (current_baselines['13'] - measured_baselines['13']) > baseline_upper_bound_tolerance, (current_baselines['23'] - measured_baselines['23']) > baseline_upper_bound_tolerance])
+                        for pair_index, pair in enumerate(pairs):
+                            if pairs_cut[pair_index]:
+                                key = str(int(pair[0])) + str(int(pair[1]))
+                                chi_2 += ((current_baselines[key] - measured_baselines[key])**2)/(baseline_measurement_uncertainty_m**2)
+
                     if include_sanity:
-                        if ant1_z - ant2_z < 3:
-                            chi_2 = chi_2*2
+                        chi_2 += max(ant2_z - ant1_z,0) #If antenna 2 is lower than antenna 1 then it will add to chi^2 linearly as that happens.  
+                    print(chi_2)
                     return chi_2
                 except Exception as e:
                     print('Error in rawChi2')
@@ -767,22 +875,22 @@ if __name__ == '__main__':
                             cable_delay1=cable_delays[1],\
                             cable_delay2=cable_delays[2],\
                             cable_delay3=cable_delays[3],\
-                            error_ant0_x=initial_step,\
-                            error_ant0_y=initial_step,\
-                            error_ant0_z=initial_step,\
-                            error_ant1_x=initial_step,\
-                            error_ant1_y=initial_step,\
-                            error_ant1_z=initial_step,\
-                            error_ant2_x=initial_step,\
-                            error_ant2_y=initial_step,\
-                            error_ant2_z=initial_step,\
-                            error_ant3_x=initial_step,\
-                            error_ant3_y=initial_step,\
-                            error_ant3_z=initial_step,\
-                            error_cable_delay0=0.5,\
-                            error_cable_delay1=0.5,\
-                            error_cable_delay2=0.5,\
-                            error_cable_delay3=0.5,\
+                            error_ant0_x=initial_step_x,\
+                            error_ant0_y=initial_step_y,\
+                            error_ant0_z=initial_step_z,\
+                            error_ant1_x=initial_step_x,\
+                            error_ant1_y=initial_step_y,\
+                            error_ant1_z=initial_step_z,\
+                            error_ant2_x=initial_step_x,\
+                            error_ant2_y=initial_step_y,\
+                            error_ant2_z=initial_step_z,\
+                            error_ant3_x=initial_step_x,\
+                            error_ant3_y=initial_step_y,\
+                            error_ant3_z=initial_step_z,\
+                            error_cable_delay0=initial_step_cable_delay,\
+                            error_cable_delay1=initial_step_cable_delay,\
+                            error_cable_delay2=initial_step_cable_delay,\
+                            error_cable_delay3=initial_step_cable_delay,\
                             errordef = 1.0,\
                             limit_ant0_x=ant0_physical_limits_x,\
                             limit_ant0_y=ant0_physical_limits_y,\
@@ -820,12 +928,18 @@ if __name__ == '__main__':
 
             result = m.migrad(resume=False)
 
-
-            m.hesse()
-            m.minos()
-            pprint(m.get_fmin())
             print(result)
-            # These plotting functions don't work
+            m.hesse()
+            if False:
+                m.minos()
+                pprint(m.get_fmin())
+            else:
+                try:
+                    m.minos()
+                    pprint(m.get_fmin())
+                except:
+                    print('MINOS FAILED, NOT VALID SOLUTION.')
+            print('\a')
 
             # m.draw_mncontour('ant1_x','ant1_y')
 
@@ -896,8 +1010,6 @@ if __name__ == '__main__':
             chi2_ax.dist = 10
             plt.legend()
 
-            # cor_upsample =  len(reader.t())
-            cor_upsample = 2**17
 
             cor = Correlator(reader,  upsample=cor_upsample, n_phi=360*5, n_theta=180*5, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
             cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
@@ -944,6 +1056,9 @@ if __name__ == '__main__':
                     else:
                         td_dict = {}
 
+                    if plot_overlap:
+                        adjusted_cor.generateTimeDelayOverlapMap(mode, td_dict, overlap_window_ns, plot_map=True, mollweide=False,center_dir='E',window_title='Adjusted Map Overlap\n%s'%source_key, include_baselines=include_baselines)
+
                     ds.addROI(source_key,cut_dict)
                     roi_eventids = numpy.intersect1d(ds.getCutsFromROI(source_key),_eventids)
                     roi_impulsivity = ds.getDataFromParam(roi_eventids,'impulsivity_h')
@@ -953,7 +1068,9 @@ if __name__ == '__main__':
                     #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=original_zenith_deg, circle_az=original_azimuth_deg, time_delay_dict=td_dict)
                     adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
                     #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
-            
+                    if plot_histograms:
+                        hist = adjusted_cor.histMapPeak(roi_eventids, mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + source_key, include_baselines=include_baselines)
+
 
             if include_pulsers:
                 
@@ -981,7 +1098,6 @@ if __name__ == '__main__':
                     #Load in correct reader for this pulser
                     reader = Reader(datapath,int(key.replace('run','')))
                     # cor_upsample =  len(reader.t())
-                    cor_upsample = 2**17
                     cor = Correlator(reader,  upsample=cor_upsample, n_phi=360*4, n_theta=180*4, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
@@ -1027,15 +1143,17 @@ if __name__ == '__main__':
                     eventid = numpy.random.choice(known_pulser_ids[key][mode])
                     
                     #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
-                    adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
+                    adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
                     #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
+                    if plot_histograms:
+                        hist = adjusted_cor.histMapPeak(known_pulser_ids[key][mode], mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + key, include_baselines=include_baselines)
 
 
 
 
-
-
-            
+            print('\n')
+            print(result)
+            print('\n')
             print('Copy-Paste Prints:\n------------')
             print('')
             print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, m.values['ant0_x'],m.values['ant0_y'],m.values['ant0_z'] ,  m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z'],  m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z'],  m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']))
@@ -1043,6 +1161,9 @@ if __name__ == '__main__':
             print('')
             print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%(mode,m.values['cable_delay0'],m.values['cable_delay1'],m.values['cable_delay2'],m.values['cable_delay3']))
             print('cable_delays_%s_hesse = numpy.array([%f,%f,%f,%f])'%(mode,m.errors['cable_delay0'],m.errors['cable_delay1'],m.errors['cable_delay2'],m.errors['cable_delay3']))
+
+            print('Code completed.')
+            print('\a')
     except Exception as e:
         print('Error in main loop.')
         print(e)

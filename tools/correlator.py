@@ -192,7 +192,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def overwriteAntennaLocations(self, A0_physical,A1_physical,A2_physical,A3_physical,A0_hpol,A1_hpol,A2_hpol,A3_hpol,A0_vpol,A1_vpol,A2_vpol,A3_vpol,verbose=False):
+    def overwriteAntennaLocations(self, A0_physical,A1_physical,A2_physical,A3_physical,A0_hpol,A1_hpol,A2_hpol,A3_hpol,A0_vpol,A1_vpol,A2_vpol,A3_vpol, verbose=True, suppress_time_delay_calculations=False):
         '''
         Allows you to set the antenna physical and phase positions, if the default values saved in info.py are not
         what you want. Will then recalculate time delays corresponding to arrival directions.
@@ -221,6 +221,14 @@ class Correlator:
             The ENU coordinates of the vpol phase center location for antenna 2.
         A3_vpol : float
             The ENU coordinates of the vpol phase center location for antenna 3.
+        verbose : bool
+            Enables or disables print statements.
+        suppress_time_delay_calculations : bool
+            USE WITH CAUTION.  This will disabled the time delay table from being calculated when the antennas are input.
+            In most cases this will result incorrect maps.  The only obvious scenario in which this should be used is if
+            both antenna positions AND cable delays or source distance are being reset at the same time, in which case 
+            the time delay tables would only need to be calculated after both are altered.  Even in this scenario, if 
+            time isn't really limited for safety I would always have this as False. 
         '''
         try:
             if A0_physical is not None:
@@ -249,10 +257,18 @@ class Correlator:
                 self.A2_vpol = numpy.asarray(A2_vpol)
             if A3_vpol is not None:
                 self.A3_vpol = numpy.asarray(A3_vpol)
-            if verbose:
-                print('Rerunning time delay prep with antenna positions.')
-            self.generateTimeIndices()
-            self.calculateArrayNormalVector()
+            
+            if suppress_time_delay_calculations == False:
+                if verbose:
+                    print('Rerunning time delay prep with antenna positions.')
+                self.generateTimeIndices() #Must be called again if map_source_distance_m is reset
+                self.calculateArrayNormalVector()
+            else:
+                if verbose:
+                    print('WARNING!  Time Indices NOT recalculated in overwriteAntennaLocations.')
+                    print('WARNING!  Array Normal Vector NOT recalculated in overwriteAntennaLocations.')
+
+
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -344,7 +360,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def overwriteCableDelays(self, ch0, ch1, ch2, ch3, ch4, ch5, ch6, ch7):
+    def overwriteCableDelays(self, ch0, ch1, ch2, ch3, ch4, ch5, ch6, ch7, verbose=True, suppress_time_delay_calculations=False):
         '''
         Allows user to reset the cable delays if the default values are insufficient.
         
@@ -382,11 +398,24 @@ class Correlator:
             The new cable delay for channel 7.  Should be given in ns.  Positive values imply
             the signal takes that much longer to propogate through the cable corresponding to
             that channel. 
+        suppress_time_delay_calculations : bool
+            USE WITH CAUTION.  This will disabled the time delay table from being calculated when the antennas are input.
+            In most cases this will result incorrect maps.  The only obvious scenario in which this should be used is if
+            both antenna positions AND cable delays or source distance are being reset at the same time, in which case 
+            the time delay tables would only need to be calculated after both are altered.  Even in this scenario, if 
+            time isn't really limited for safety I would always have this as False. 
         '''
         try:
             self.cable_delays = numpy.array([ch0, ch1, ch2, ch3, ch4, ch5, ch6, ch7])
-            print('Rerunning time delay prep with new cable delays.')
-            self.generateTimeIndices()
+
+            if suppress_time_delay_calculations == False:
+                if verbose:
+                    print('Rerunning time delay prep with new cable delays.')
+                self.generateTimeIndices() #Must be called again if map_source_distance_m is reset
+            else:
+                if verbose:
+                    print('WARNING!  Time Indices NOT recalculated in overwriteSourceDistance.')
+
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -394,7 +423,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def overwriteSourceDistance(self, map_source_distance_m):
+    def overwriteSourceDistance(self, map_source_distance_m, verbose=True, suppress_time_delay_calculations=False):
         '''
         Allows user to reset the source distance use when generating maps.
         
@@ -402,11 +431,23 @@ class Correlator:
         ----------
         map_source_distance_m : float
             The new source distance, given in meters.
+        suppress_time_delay_calculations : bool
+            USE WITH CAUTION.  This will disabled the time delay table from being calculated when the antennas are input.
+            In most cases this will result incorrect maps.  The only obvious scenario in which this should be used is if
+            both antenna positions AND cable delays or source distance are being reset at the same time, in which case 
+            the time delay tables would only need to be calculated after both are altered.  Even in this scenario, if 
+            time isn't really limited for safety I would always have this as False. 
         '''
         try:
             self.map_source_distance_m = map_source_distance_m
-            print('Rerunning time delay prep with new source distance.')
-            self.generateTimeIndices() #Must be called again if map_source_distance_m is reset
+            if suppress_time_delay_calculations == False:
+                if verbose:
+                    print('Rerunning time delay prep with new source distance.')
+                self.generateTimeIndices() #Must be called again if map_source_distance_m is reset
+            else:
+                if verbose:
+                    print('WARNING!  Time Indices NOT recalculated in overwriteSourceDistance.')
+
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -1681,33 +1722,33 @@ class Correlator:
 
             if plot_map:
                 if ~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))):
-                    add_xtext = '\nIncluded baselines = ' + str(numpy.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])[include_baselines])
+                    add_text = '\nIncluded baselines = ' + str(numpy.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])[include_baselines])
                 else:
-                    add_xtext = ''
+                    add_text = ''
 
                 if center_dir.upper() == 'E':
                     center_dir_full = 'East'
                     azimuth_offset_rad = 0 #This is subtracted from the xaxis to roll it effectively.
                     azimuth_offset_deg = 0 #This is subtracted from the xaxis to roll it effectively.
-                    xlabel = 'Azimuth (From East = 0 deg, North = 90 deg)' + add_xtext
+                    xlabel = 'Azimuth (From East = 0 deg, North = 90 deg)' + add_text
                     roll = 0
                 elif center_dir.upper() == 'N':
                     center_dir_full = 'North'
                     azimuth_offset_rad = numpy.pi/2 #This is subtracted from the xaxis to roll it effectively. 
                     azimuth_offset_deg = 90 #This is subtracted from the xaxis to roll it effectively. 
-                    xlabel = 'Azimuth (From North = 0 deg, West = 90 deg)' + add_xtext
+                    xlabel = 'Azimuth (From North = 0 deg, West = 90 deg)' + add_text
                     roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
                 elif center_dir.upper() == 'W':
                     center_dir_full = 'West'
                     azimuth_offset_rad = numpy.pi #This is subtracted from the xaxis to roll it effectively.
                     azimuth_offset_deg = 180 #This is subtracted from the xaxis to roll it effectively.
-                    xlabel = 'Azimuth (From West = 0 deg, South = 90 deg)' + add_xtext
+                    xlabel = 'Azimuth (From West = 0 deg, South = 90 deg)' + add_text
                     roll = len(self.phis_rad)//2
                 elif center_dir.upper() == 'S':
                     center_dir_full = 'South'
                     azimuth_offset_rad = -numpy.pi/2 #This is subtracted from the xaxis to roll it effectively.
                     azimuth_offset_deg = -90 #This is subtracted from the xaxis to roll it effectively.
-                    xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)' + add_xtext
+                    xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)' + add_text
                     roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
 
                 rolled_values = numpy.roll(mean_corr_values,roll,axis=1)
@@ -2231,7 +2272,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def histMapPeak(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, use_weight=False, zenith_cut_ENU=None):
+    def histMapPeak(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None):
         '''
         This will loop over eventids and makes a histogram from of location of maximum correlation
         value in the corresponding correlation maps. 
@@ -2250,38 +2291,324 @@ class Correlator:
             Enables performing calculations with Hilbert envelopes of waveforms. 
         max_method : bool
             Determines how the most probable source direction is from the map.
+        center_dir : str
+            Specifies the center direction when plotting.  By default this is 'E' which is East (ENU standard).
+        mollweide : bool
+            Makes the plot with a mollweide projection.  Default is False.
+        zenith_cut_ENU : list of 2 float values
+            Given in degrees, angles within these two values are considered.  If None is given for the first then it is
+            assumed to be 0 (overhead), if None is given for the latter then it is assumed to be 180 (straight down).
+        zenith_cut_array_plane : list of 2 float values
+            Given in degrees, angles within these two values are considered.  If None is given for the first then it is
+            assumed to be 0 (overhead), if None is given for the latter then it is assumed to be 180 (straight down).  This is
+            polarization dependant because it depends on the calibration of the antennas positions.  So if pol=None then this will
+            be ignored.
+        circle_zenith : list of floats
+            List of zenith values to circle on the plot.  These could be known background sources like planes.
+            The length of this must match the length of circle_az.  Should be given in degrees.
+        circle_az : list of floats
+            List of azimuths values to circle on the plot.  These could be known background sources like planes.
+            The length of this must match the length of circle_zenith.  Should be given in degrees.
         '''
-        if pol == 'both':
-            hpol_hist = self.histMapPeak(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert, max_method=max_method, use_weight=use_weight, zenith_cut_ENU=zenith_cut_ENU)
-            vpol_hist = self.histMapPeak(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert, max_method=max_method, use_weight=use_weight, zenith_cut_ENU=zenith_cut_ENU)
-            return (hpol_hist,vpol_hist)
-        else:
-            hist = numpy.zeros((self.n_theta, self.n_phi))
-            for event_index, eventid in enumerate(eventids):
-                sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
-                sys.stdout.flush()
-                m = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert)/len(eventids)
-                if max_method is not None:
-                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU, pol=pol)
-                else:
-                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU, pol=pol)        
+        try:
+            if pol == 'both':
+                hpol_hist = self.histMapPeak(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert, max_method=max_method, use_weight=use_weight, zenith_cut_ENU=zenith_cut_ENU)
+                vpol_hist = self.histMapPeak(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert, max_method=max_method, use_weight=use_weight, zenith_cut_ENU=zenith_cut_ENU)
+                return (hpol_hist,vpol_hist)
+            else:
+                hist = numpy.zeros_like(self.mesh_azimuth_rad,dtype=int)
+                for event_index, eventid in enumerate(eventids):
+                    sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
+                    sys.stdout.flush()
+                    m = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=include_baselines, hilbert=hilbert)/len(eventids)
+                    if max_method is not None:
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+                    else:
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
 
-                if use_weight == True:
-                    hist.flat[linear_max_index] += m.flat[linear_max_index]
+                    if use_weight == True:
+                        hist.flat[linear_max_index] += m.flat[linear_max_index]
+                    else:
+                        hist.flat[linear_max_index] += 1
+
+                #After all events completed, run once more on histogram.
+                if max_method is not None:
+                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(hist,pol=pol)
                 else:
-                    hist.flat[linear_max_index] += 1
+                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(hist,pol=pol)
+
+
+                if plot_map:
+                    if ~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))):
+                            add_text = '\nIncluded baselines = ' + str(numpy.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])[include_baselines])
+                    else:
+                        add_text = ''
+                    if center_dir.upper() == 'E':
+                        center_dir_full = 'East'
+                        azimuth_offset_rad = 0 #This is subtracted from the xaxis to roll it effectively.
+                        azimuth_offset_deg = 0 #This is subtracted from the xaxis to roll it effectively.
+                        xlabel = 'Azimuth (From East = 0 deg, North = 90 deg)' + add_text
+                        roll = 0
+                    elif center_dir.upper() == 'N':
+                        center_dir_full = 'North'
+                        azimuth_offset_rad = numpy.pi/2 #This is subtracted from the xaxis to roll it effectively. 
+                        azimuth_offset_deg = 90 #This is subtracted from the xaxis to roll it effectively. 
+                        xlabel = 'Azimuth (From North = 0 deg, West = 90 deg)' + add_text
+                        roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+                    elif center_dir.upper() == 'W':
+                        center_dir_full = 'West'
+                        azimuth_offset_rad = numpy.pi #This is subtracted from the xaxis to roll it effectively.
+                        azimuth_offset_deg = 180 #This is subtracted from the xaxis to roll it effectively.
+                        xlabel = 'Azimuth (From West = 0 deg, South = 90 deg)' + add_text
+                        roll = len(self.phis_rad)//2
+                    elif center_dir.upper() == 'S':
+                        center_dir_full = 'South'
+                        azimuth_offset_rad = -numpy.pi/2 #This is subtracted from the xaxis to roll it effectively.
+                        azimuth_offset_deg = -90 #This is subtracted from the xaxis to roll it effectively.
+                        xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)' + add_text
+                        roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+
+                    rolled_values = numpy.roll(hist,roll,axis=1)
+
+                    fig = plt.figure()
+
+                    if window_title is None:
+                        window_title = 'r%i %s Peak Correlation Map Hist'%(self.reader.run,pol.title())
+                    fig.canvas.set_window_title(window_title)
+
+                    if mollweide == True:
+                        ax = fig.add_subplot(1,1,1, projection='mollweide')
+                    else:
+                        ax = fig.add_subplot(1,1,1)                    
+
+                    if mollweide == True:
+                        #Automatically converts from rads to degs
+                        im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=0.1, vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm,norm=matplotlib.colors.LogNorm())
+                    else:
+                        im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=0.1, vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm,norm=matplotlib.colors.LogNorm())
+
+                    cbar = fig.colorbar(im)
+                    if use_weight == False:
+                        cbar.set_label('Counts')
+                    else:
+                        cbar.set_label('Counts (Weighted)')
+
+                    plt.xlabel('Azimuth Angle (Degrees)')
+                    plt.ylabel('Elevation Angle (Degrees)')
+                    plt.grid(True)
+
+                    #Added circles as specified.
+                    ax, peak_circle = self.addCircleToMap(ax, phi_best, 90.0 - theta_best, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+
+                    if circle_az is not None:
+                        if circle_zenith is not None:
+                            if circle_az is list:
+                                circle_az = numpy.array(circle_az)
+                            elif circle_az != numpy.ndarray:
+                                circle_az = numpy.array([circle_az])
+
+                            _circle_az = circle_az.copy() #These were changing when 'both' was called for pol.  So copying them to ensure original input maintains values.
+
+                            if circle_zenith is list:
+                                circle_zenith = numpy.array(circle_zenith)
+                            elif circle_zenith != numpy.ndarray:
+                                circle_zenith = numpy.array([circle_zenith])
+
+                            _circle_zenith = circle_zenith.copy() #These were changing when 'both' was called for pol.  So copying them to ensure original input maintains values.
+
+                            if len(_circle_zenith) == len(_circle_az):
+                                additional_circles = []
+                                for i in range(len(_circle_az)):
+                                    ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
+                                    additional_circles.append(_circ)
+                            plt.title('%s Difference from reconstructed \nand expected peaks is %0.2f'%( window_title,  numpy.sqrt( (_circle_az[i] - phi_best)**2 + (_circle_zenith[i] - theta_best)**2 ) ))
+                            print('%s\nDifference in degrees from reconstructed and expected peaks is %0.2f'%( window_title,  numpy.sqrt( (_circle_az[i] - phi_best)**2 + (_circle_zenith[i] - theta_best)**2 ) ))
+
+                    return hist
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def generateTimeDelayOverlapMap(self, pol, time_delay_dict, window_ns, value_mode='distance', plot_map=False, mollweide=False,center_dir='E',window_title=None, include_baselines=[0,1,2,3,4,5]):
+        '''
+        For this given time delays (to be filtered to match the specified included baselines), this will generate a map
+        that can be used to determine if the given time delays are capable overlapping given the current calibration.
+        It does so by creating a weighted window around the given time delays.  Time delays within the window will be
+        given a value of 1 (or some other weighting as specified).  This is done for each baseline, then the maps are
+        summed.  If there is a point on that map that has a value equal to the total number of baselines specified, then
+        that can be interpreted as a point in the sky where all of the given time delays overlap (within the specified
+        window/tolerance).
+
+        Parameters
+        ----------
+
+        pol : str
+            The polarization you wish to plot.  Options: 'hpol', 'vpol', 'both'
+        time_delay_dict : dict of list of floats
+            The first level of the dict should specify 'hpol' and/or 'vpol'
+            The following key within should have each of the baseline pairs that you wish to plot.  Each of these
+            will correspond to a list containing a single float that is the time delay for that baseline.
+        window : float
+            Given in ns, this represents the one sided window for which time delays will be considered as matching. 
+            For example a map of expected time delays coming from each source direction defined as "map_baseline" will
+            undergo the calculation numpy.logical_and(numpy.abs(map_baseline - time_delay_baseline) < window_ns ).
+        plot_map : bool
+            Whether to actually plot the results.  
+        '''
+        try:
+            if pol == 'hpol':
+                all_antennas = numpy.vstack((self.A0_hpol,self.A1_hpol,self.A2_hpol,self.A3_hpol))
+                time_delays = time_delay_dict['hpol']
+            elif pol == 'vpol':
+                all_antennas = numpy.vstack((self.A0_vpol,self.A1_vpol,self.A2_vpol,self.A3_vpol))
+                time_delays = time_delay_dict['vpol']
+
+            pairs = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
+            baseline_cm = plt.cm.get_cmap('tab10', 10)
+            baseline_colors = baseline_cm(numpy.linspace(0, 1, 10))[0:6] #only want the first 6 colours in this list of 10 colors.
+
+            if value_mode == 'box':
+                overlap_map = numpy.zeros_like(self.mesh_azimuth_deg,dtype=int)
+            elif value_mode == 'distance':
+                overlap_map = numpy.zeros_like(self.mesh_azimuth_deg,dtype=float)
+
+            for pair_key, pair_time_delay in time_delays.items():
+                time_delay = pair_time_delay[0]
+
+                pair = numpy.array(pair_key.replace('[','').replace(']','').split(','),dtype=int)
+                pair_index = numpy.where(numpy.sum(pair == pairs,axis=1) == 2)[0][0] #Used for consistent coloring.
+
+                if numpy.isin(pair_index ,include_baselines ):
+                    i = pair[0]
+                    j = pair[1]
+
+                    #Attempting to use precalculate expected time delays per direction to derive theta here.
+                    if value_mode == 'box':
+                        if pol == 'hpol':
+                            if pair_index == 0:
+                                overlap_map +=  (numpy.abs(self.t_hpol_0subtract1 - time_delay) < window_ns).astype(int)
+                            elif pair_index == 1:
+                                overlap_map +=  (numpy.abs(self.t_hpol_0subtract2 - time_delay) < window_ns).astype(int)
+                            elif pair_index == 2:
+                                overlap_map +=  (numpy.abs(self.t_hpol_0subtract3 - time_delay) < window_ns).astype(int)
+                            elif pair_index == 3:
+                                overlap_map +=  (numpy.abs(self.t_hpol_1subtract2 - time_delay) < window_ns).astype(int)
+                            elif pair_index == 4:
+                                overlap_map +=  (numpy.abs(self.t_hpol_1subtract3 - time_delay) < window_ns).astype(int)
+                            elif pair_index == 5:
+                                overlap_map +=  (numpy.abs(self.t_hpol_2subtract3 - time_delay) < window_ns).astype(int)
+                        else:
+                            if pair_index == 0:
+                                overlap_map +=  (numpy.abs(self.t_vpol_0subtract1 - time_delay) < window_ns).astype(int)
+                            elif pair_index == 1:
+                                overlap_map +=  (numpy.abs(self.t_vpol_0subtract2 - time_delay) < window_ns).astype(int)
+                            elif pair_index == 2:
+                                overlap_map +=  (numpy.abs(self.t_vpol_0subtract3 - time_delay) < window_ns).astype(int)
+                            elif pair_index == 3:
+                                overlap_map +=  (numpy.abs(self.t_vpol_1subtract2 - time_delay) < window_ns).astype(int)
+                            elif pair_index == 4:
+                                overlap_map +=  (numpy.abs(self.t_vpol_1subtract3 - time_delay) < window_ns).astype(int)
+                            elif pair_index == 5:
+                                overlap_map +=  (numpy.abs(self.t_vpol_2subtract3 - time_delay) < window_ns).astype(int)
+                    elif value_mode == 'distance':
+                        if pol == 'hpol':
+                            if pair_index == 0:
+                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract1 - time_delay), (numpy.abs(self.t_hpol_0subtract1 - time_delay) < window_ns).astype(int))
+                            elif pair_index == 1:
+                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract2 - time_delay), (numpy.abs(self.t_hpol_0subtract2 - time_delay) < window_ns).astype(int))
+                            elif pair_index == 2:
+                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract3 - time_delay), (numpy.abs(self.t_hpol_0subtract3 - time_delay) < window_ns).astype(int))
+                            elif pair_index == 3:
+                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_1subtract2 - time_delay), (numpy.abs(self.t_hpol_1subtract2 - time_delay) < window_ns).astype(int))
+                            elif pair_index == 4:
+                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_1subtract3 - time_delay), (numpy.abs(self.t_hpol_1subtract3 - time_delay) < window_ns).astype(int))
+                            elif pair_index == 5:
+                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_2subtract3 - time_delay), (numpy.abs(self.t_hpol_2subtract3 - time_delay) < window_ns).astype(int))
+                        else:
+                            if pair_index == 0:
+                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract1 - time_delay), (numpy.abs(self.t_vpol_0subtract1 - time_delay) < window_ns).astype(int))
+                            elif pair_index == 1:
+                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract2 - time_delay), (numpy.abs(self.t_vpol_0subtract2 - time_delay) < window_ns).astype(int))
+                            elif pair_index == 2:
+                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract3 - time_delay), (numpy.abs(self.t_vpol_0subtract3 - time_delay) < window_ns).astype(int))
+                            elif pair_index == 3:
+                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_1subtract2 - time_delay), (numpy.abs(self.t_vpol_1subtract2 - time_delay) < window_ns).astype(int))
+                            elif pair_index == 4:
+                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_1subtract3 - time_delay), (numpy.abs(self.t_vpol_1subtract3 - time_delay) < window_ns).astype(int))
+                            elif pair_index == 5:
+                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_2subtract3 - time_delay), (numpy.abs(self.t_vpol_2subtract3 - time_delay) < window_ns).astype(int))
+
 
             if plot_map:
-                fig = plt.figure()
-                fig.canvas.set_window_title('r%i %s Peak Correlation Map Hist'%(self.reader.run,pol.title()))
-                ax = fig.add_subplot(1,1,1)
-                im = ax.imshow(hist, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.winter,norm=matplotlib.colors.LogNorm()) #cmap=plt.cm.jet)
-                cbar = fig.colorbar(im)
-                cbar.set_label('Counts (Maybe Weighted)')
-                plt.xlabel('Azimuth Angle (Degrees)')
-                plt.ylabel('Elevation Angle (Degrees)')
+                if ~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))):
+                    add_text = '\nIncluded baselines = ' + str(numpy.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])[include_baselines])
+                else:
+                    add_text = ''
 
-                return hist
+                if center_dir.upper() == 'E':
+                    center_dir_full = 'East'
+                    azimuth_offset_rad = 0 #This is subtracted from the xaxis to roll it effectively.
+                    azimuth_offset_deg = 0 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From East = 0 deg, North = 90 deg)' + add_text
+                    roll = 0
+                elif center_dir.upper() == 'N':
+                    center_dir_full = 'North'
+                    azimuth_offset_rad = numpy.pi/2 #This is subtracted from the xaxis to roll it effectively. 
+                    azimuth_offset_deg = 90 #This is subtracted from the xaxis to roll it effectively. 
+                    xlabel = 'Azimuth (From North = 0 deg, West = 90 deg)' + add_text
+                    roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+                elif center_dir.upper() == 'W':
+                    center_dir_full = 'West'
+                    azimuth_offset_rad = numpy.pi #This is subtracted from the xaxis to roll it effectively.
+                    azimuth_offset_deg = 180 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From West = 0 deg, South = 90 deg)' + add_text
+                    roll = len(self.phis_rad)//2
+                elif center_dir.upper() == 'S':
+                    center_dir_full = 'South'
+                    azimuth_offset_rad = -numpy.pi/2 #This is subtracted from the xaxis to roll it effectively.
+                    azimuth_offset_deg = -90 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)' + add_text
+                    roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+
+                rolled_values = numpy.roll(overlap_map,roll,axis=1)
+
+                fig = plt.figure()
+                if window_title is None:
+                    fig.canvas.set_window_title('Overlap Map'%(self.reader.run,eventid,pol.title()))
+                else:
+                    fig.canvas.set_window_title(window_title)
+                if mollweide == True:
+                    ax = fig.add_subplot(1,1,1, projection='mollweide')
+                else:
+                    ax = fig.add_subplot(1,1,1)                    
+
+                if mollweide == True:
+                    #Automatically converts from rads to degs
+                    im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
+                else:
+                    im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
+
+                cbar = fig.colorbar(im)
+                cbar.set_label('N Overlapping Time Delays')
+                plt.xlabel(xlabel,fontsize=18)
+                plt.ylabel('Elevation Angle (Degrees)',fontsize=18)
+                plt.grid(True)
+                im, ax = self.addTimeDelayCurves(im, time_delay_dict, pol, ax, mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg, include_baselines=include_baselines)
+            if plot_map == True:
+                return self.mesh_azimuth_deg, self.mesh_elevation_deg, overlap_map, im, ax
+            else:
+                return self.mesh_azimuth_deg, self.mesh_elevation_deg, overlap_map
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
 
     def beamMap(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None):
         '''

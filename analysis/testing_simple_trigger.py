@@ -44,7 +44,7 @@ cable_delays = info.loadCableDelays()
 
 
 if __name__ == '__main__':
-    plt.close('all')
+    #plt.close('all')
     run = 1700 #Doesn't really matter, using correlator for antenna positions more than anything
     final_corr_length = 2**16
     #FILTER STRING USED IF ABOVE IS FALSE
@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
     pol = 'hpol'
 
-    if True:
+    if False:
         #This tests Eric's original idea of just setting a trigger where the top antennas trigger first. 
         if pol == 'hpol':
             top_antenna_cut = numpy.logical_and(cor.t_hpol_0subtract1 >= 0, cor.t_hpol_2subtract3 >= 0)
@@ -108,11 +108,29 @@ if __name__ == '__main__':
             mean_corr_values = top_antenna_cut < 300
             time_delay_dict = {'vpol':{'[0,1]':[0.0],'[0,2]':[0.0],'[0,3]':[0.0],'[1,2]':[0.0],'[1,3]':[0.0],'[2,3]':[0.0]}}
     elif True:
+        #This cuts out the sky below 50
         #This is where I want to play with some other baselines to see if I can isolate the sky.
         #top_antenna_cut = numpy.abs(cor.t_hpol_0subtract1) + numpy.abs(cor.t_hpol_0subtract2) + numpy.abs(cor.t_hpol_0subtract3) + numpy.abs(cor.t_hpol_1subtract2) + numpy.abs(cor.t_hpol_1subtract3) + numpy.abs(cor.t_hpol_2subtract3)
-        top_antenna_cut = cor.t_hpol_0subtract1# + numpy.abs(cor.t_hpol_0subtract2) + numpy.abs(cor.t_hpol_0subtract3) + numpy.abs(cor.t_hpol_1subtract2) + numpy.abs(cor.t_hpol_1subtract3) + numpy.abs(cor.t_hpol_2subtract3)
+        top_antenna_cut = (cor.t_hpol_0subtract1 > -25).astype(int) + (cor.t_hpol_0subtract2 < 130).astype(int) + (cor.t_hpol_0subtract3 > -65).astype(int) + (cor.t_hpol_1subtract3 > -75).astype(int) + (cor.t_hpol_1subtract2 < 60).astype(int) + (cor.t_hpol_2subtract3 > -20).astype(int) #(cor.t_hpol_0subtract1 < -30.0 )*(cor.t_hpol_0subtract3 < -30.0)*(cor.t_hpol_1subtract2 > 30.0)*(cor.t_hpol_2subtract3 < -30.0)# + numpy.abs(cor.t_hpol_0subtract2) + numpy.abs(cor.t_hpol_0subtract3) + numpy.abs(cor.t_hpol_1subtract2) + numpy.abs(cor.t_hpol_1subtract3) + numpy.abs(cor.t_hpol_2subtract3)
+        #top_antenna_cut = top_antenna_cut == 4
+        top_antenna_cut = numpy.multiply(top_antenna_cut,cor.hpol_dot_angle_from_plane_deg > 0)
+        #top_antenna_cut = top_antenna_cut == 4
         mean_corr_values = top_antenna_cut
-        time_delay_dict = {'hpol':{'[0,1]':[0.0],'[0,2]':[0.0],'[0,3]':[0.0],'[1,2]':[0.0],'[1,3]':[0.0],'[2,3]':[0.0]}}
+        time_delay_dict = {'hpol':{'[0,1]':[-25.0],'[0,2]':[130.0],'[0,3]':[-65.0],'[1,2]':[60.0],'[1,3]':[-75.0],'[2,3]':[-20.0]}}#{'hpol':{'[0,1]':[0.0],'[0,2]':[0.0],'[0,3]':[0.0],'[1,2]':[0.0],'[1,3]':[0.0],'[2,3]':[0.0]}}
+    elif False:
+        #This tries to identify the existence of a point where expected time delays exist.  
+        #basically just using this tool to explore a different problem.
+        top_antenna_cut = (numpy.abs(cor.t_hpol_0subtract1) < 10).astype(int) + (numpy.abs(cor.t_hpol_0subtract2) < 10).astype(int) + (numpy.abs(cor.t_hpol_0subtract3) < 10).astype(int) + (numpy.abs(cor.t_hpol_1subtract3) < 10).astype(int) + (numpy.abs(cor.t_hpol_1subtract2) < 10).astype(int) + (numpy.abs(cor.t_hpol_2subtract3) < 10).astype(int) 
+        #top_antenna_cut = top_antenna_cut == 4
+        #top_antenna_cut = top_antenna_cut == 4
+        mean_corr_values = top_antenna_cut
+        time_delay_dict = {'hpol':{'[0,1]':[0],'[0,2]':[0],'[0,3]':[0],'[1,2]':[0],'[1,3]':[0],'[2,3]':[0]}}
+        cor.generateTimeDelayOverlapMap('hpol', time_delay_dict, 10.0, plot_map=True, mollweide=False,center_dir='E', window_title='TESTING', include_baselines=[0,1,2,3,4,5])
+
+    else:
+        top_antenna_cut = cor.t_hpol_1subtract2 # + numpy.abs(cor.t_hpol_0subtract2) + numpy.abs(cor.t_hpol_0subtract3) + numpy.abs(cor.t_hpol_1subtract2) + numpy.abs(cor.t_hpol_1subtract3) + numpy.abs(cor.t_hpol_2subtract3)
+        mean_corr_values = top_antenna_cut
+        time_delay_dict = {'hpol':{'[1,2]':[20.0]}}#{'hpol':{'[0,1]':[0.0],'[0,2]':[0.0],'[0,3]':[0.0],'[1,2]':[0.0],'[1,3]':[0.0],'[2,3]':[0.0]}}
 
     
     include_baselines = numpy.array([])
@@ -122,7 +140,7 @@ if __name__ == '__main__':
     max_method = None
     waveforms = None
     verbose = True
-    mollweide = True
+    mollweide = False
     zenith_cut_ENU = None
     zenith_cut_array_plane = None
     center_dir = 'E'
@@ -210,6 +228,7 @@ if __name__ == '__main__':
         selection_index = 2 
     
     plane_xy = cor.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+
     # #Plot array plane 0 elevation curve.
     im = cor.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = cor.min_elevation_linewidth, color='k')
 
@@ -222,8 +241,7 @@ if __name__ == '__main__':
         im = cor.addCurveToMap(im, lower_plane_xy,  mollweide=mollweide, linewidth = cor.min_elevation_linewidth, color='k',linestyle = '--')
 
     #Add curves for time delays if present.
-    im = cor.addTimeDelayCurves(im, time_delay_dict, pol,  mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg, include_baselines=include_baselines)
-
+    im = cor.addTimeDelayCurves(im, time_delay_dict, pol,  ax, mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg, include_baselines=include_baselines)
 
     #Added circles as specified.
     #ax, peak_circle = cor.addCircleToMap(ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)

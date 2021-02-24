@@ -33,7 +33,7 @@ datapath = os.environ['BEACON_DATA']
 if __name__ == '__main__':
     plt.close('all')
     
-    runs = numpy.arange(1500,2200)#numpy.append(numpy.arange(1500,1700),numpy.arange(3530,3555))#numpy.arange(1500,1700)
+    runs = numpy.arange(1625,1900)#numpy.append(numpy.arange(1500,1700),numpy.arange(3530,3555))#numpy.arange(1500,1700)
     
     #Prepare for getting data
     mean_std = numpy.zeros((len(runs),8))
@@ -50,12 +50,14 @@ if __name__ == '__main__':
             filename = createFile(reader)
             if filename is not None:
                 with h5py.File(filename, 'r') as file:
-                    event_type_counts[run_index,0] = sum(file['trigger_type'][...] == 1) # [1] Software
-                    event_type_counts[run_index,1] = sum(file['trigger_type'][...] == 2) # [2] RF
-                    event_type_counts[run_index,2] = sum(file['trigger_type'][...] == 3) # [3] GPS
+                    N = reader.head_tree.Draw("trigger_type","","goff") 
+                    trigger_type = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N).astype(int)
+                    event_type_counts[run_index,0] = sum(trigger_type == 1) # [1] Software
+                    event_type_counts[run_index,1] = sum(trigger_type == 2) # [2] RF
+                    event_type_counts[run_index,2] = sum(trigger_type == 3) # [3] GPS
                     
 
-                    std = file['std'][...]
+                    std = file['std'][...][trigger_type == 2]
                     mean_std[run_index,:] = numpy.mean(std,axis=0)
                     file.close()
             else:
@@ -80,7 +82,7 @@ if __name__ == '__main__':
     plt.minorticks_on()
     plt.grid(b=True, which='major', color='k', linestyle='-')
     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-    plt.ylabel('Mean Time Domain Std (adu)')
+    plt.ylabel('Mean Time Domain Std (adu)\nRFI Triggers Only')
     plt.xlabel('Run Number')
     plt.legend(['Channel 0','Channel 2','Channel 4','Channel 6'],loc='upper left')
 
@@ -94,7 +96,7 @@ if __name__ == '__main__':
     plt.minorticks_on()
     plt.grid(b=True, which='major', color='k', linestyle='-')
     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-    plt.ylabel('Mean Time Domain Std (adu)')
+    plt.ylabel('Mean Time Domain Std (adu)\nRFI Triggers Only')
     plt.xlabel('Run Number')
     plt.legend(['Channel 1','Channel 3','Channel 5','Channel 7'],loc='upper left')
 
