@@ -140,6 +140,7 @@ class dataSlicerSingleRun():
 
             #I want to work on adding: 'std', 'p2p', and 'snr', where snr is p2p/std.  I think these could be interesting, and are already available by default per signal. 
             #self.known_param_keys = ['impulsivity_hv', 'cr_template_search', 'std', 'p2p', 'snr'] #If it is not listed in here then it cannot be used.
+            #Should add triggered beam to this list of params. 
             self.known_param_keys = [   'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
                                         'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
                                         'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',
@@ -629,6 +630,11 @@ class dataSlicerSingleRun():
         load : bool
             If load == True then this will attempt to load the bin data from the analysis file.  Otherwise (or if load fails)
             this will calculate the data and return the counts. 
+        set_bins : bool
+            If True this will set the current loaded bins to the set appropriate for this data.  This should only be
+            called the first time this data is accessed, otherwise unecessary computation is performed.  The common
+            occurance of this is calling it when plotting a 2d histogram, but NOT when plotting contours overtop of
+            said histogram. 
         '''
         try:
             if load == True:
@@ -645,9 +651,9 @@ class dataSlicerSingleRun():
                         self.current_label_x = label_x
                         self.current_bin_edges_y = bin_edges_y
                         self.current_label_y = label_y
-                        self.current_bin_centers_mesh_h, self.current_bin_centers_mesh_v = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
+                        self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
 
-                    counts = numpy.zeros(self.current_bin_centers_mesh_h.shape, dtype=int)
+                    counts = numpy.zeros(self.current_bin_centers_mesh_x.shape, dtype=int)
                     #Add counts based on stored indices.
                     numpy.add.at(counts,(bin_indices_y,bin_indices_x),1) #Need to double check this works as I expect, and is not transposed.  
                 except Exception as e:
@@ -942,7 +948,7 @@ class dataSlicerSingleRun():
         self.current_bin_edges_x, self.current_label_x = self.getSingleParamPlotBins(main_param_key_x, eventids)
         self.current_bin_edges_y, self.current_label_y = self.getSingleParamPlotBins(main_param_key_y, eventids)
 
-        self.current_bin_centers_mesh_h, self.current_bin_centers_mesh_v = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
+        self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
         
 
     def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids, title=None,cmap='coolwarm',load=False):
@@ -961,12 +967,12 @@ class dataSlicerSingleRun():
             else:
                 plt.title('%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types)))
 
-            _im = _ax.pcolormesh(self.current_bin_centers_mesh_h, self.current_bin_centers_mesh_v, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+            _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
             if 'theta_best_' in main_param_key_y:
                 _ax.invert_yaxis()
             if True:
                 if numpy.logical_or(numpy.logical_and('phi_best_' in main_param_key_x,'phi_best_' in main_param_key_y),numpy.logical_or(numpy.logical_and('theta_best_' in main_param_key_x,'theta_best_' in main_param_key_y),numpy.logical_and('elevation_best_' in main_param_key_x,'elevation_best_' in main_param_key_y))):
-                    plt.plot(self.current_bin_centers_mesh_v[:,0],self.current_bin_centers_mesh_v[:,0],linewidth=1,linestyle='--',color='tab:gray',alpha=0.5)
+                    plt.plot(self.current_bin_centers_mesh_y[:,0],self.current_bin_centers_mesh_y[:,0],linewidth=1,linestyle='--',color='tab:gray',alpha=0.5)
                 if numpy.logical_and('phi_best_' in main_param_key_x,numpy.logical_or('theta_best_' in main_param_key_y,'elevation_best_' in main_param_key_y)):
                     #Make cor to plot the array plane.
                     cor = Correlator(self.reader,  upsample=2**10, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,apply_phase_response=False, tukey=False, sine_subtract=False) #only for array plane
@@ -1058,9 +1064,9 @@ class dataSlicerSingleRun():
             #     _alpha = alpha*( 0.7*((index+1)/len(levels)) + 0.3) #Highest level contour should be specified alpha, others are dimmer to make it clear where high concentration is.  Doesn't let opacity go below 0.3.
             #     # print(_alpha)
             #     print(level)
-            #     cs = ax.contour(self.current_bin_centers_mesh_h, self.current_bin_centers_mesh_v, counts, colors=[contour_color],levels=[level],alpha=_alpha, antialiased=True)
+            #     cs = ax.contour(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts, colors=[contour_color],levels=[level],alpha=_alpha, antialiased=True)
             # print(levels)
-            cs = ax.contour(self.current_bin_centers_mesh_h, self.current_bin_centers_mesh_v, counts, colors=[contour_color],levels=levels,alpha=alpha, antialiased=True)
+            cs = ax.contour(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts, colors=[contour_color],levels=levels,alpha=alpha, antialiased=True)
 
             return ax, cs
         except Exception as e:
@@ -1333,107 +1339,452 @@ class dataSlicerSingleRun():
                 meta_file.write(str(self.roi[roi_key]))
                 meta_file.close()
 
-# class dataSlicer():
-#     '''
-#     This will perform the same functions as dataSlicerSingleRun, however instead of being passed a single reader 
-#     (which is associated with a single run), this class will accept a list of several runs.  Then it will create
-#     and requested histogram plots using counts from all listed runs.  It does this by creating multiple
-#     dataSlicerSingleRun objects, and calling their functions, combining results, and plotting. 
+class dataSlicer():
+    '''
+    This will perform the same functions as dataSlicerSingleRun, however instead of being passed a single reader 
+    (which is associated with a single run), this class will accept a list of several runs.  Then it will create
+    and requested histogram plots using counts from all listed runs.  It does this by creating multiple
+    dataSlicerSingleRun objects, and calling their functions, combining results, and plotting. 
 
-#     Given the list of runs, this can produce 2d histogram plots for each of the known measureable 
-#     quantities, with contour functionality for highlighting regions of interest (ROI) as created by the user.  To see
-#     a list of the currently accepted known parameter keys use the printKnownParamKeys function.
+    Given the list of runs, this can produce 2d histogram plots for each of the known measureable 
+    quantities, with contour functionality for highlighting regions of interest (ROI) as created by the user.  To see
+    a list of the currently accepted known parameter keys use the printKnownParamKeys function.
 
-#     FOr ROI support, supply a dictionary to the addROI function to apply a cut on any (up to all) of the known parameters
-#     using this dictionary.  Cuts on each parameter are simple min/max window cuts, but by combining many parameters can
-#     be used to create higher dimensional parameter box cuts.
+    FOr ROI support, supply a dictionary to the addROI function to apply a cut on any (up to all) of the known parameters
+    using this dictionary.  Cuts on each parameter are simple min/max window cuts, but by combining many parameters can
+    be used to create higher dimensional parameter box cuts.
     
-#     With any ROI's defined, call the plotROI2dHist function, selecting 2 parameters you want histogrammed (2DHist).  
-#     This histogram will be plotted for all events passing early cuts like trigger_types and included_antennas (defined
-#     in the calling of the class).  Then the ROI's will be plotted on top of this underlying plot - shown as Contours.  
-#     These contours effectively circle where events passing a particular ROI's cuts show up as a population in the 
-#     plotted 2d histogram plot.  This can be used to further constrain the ROI or to simply understand it's behaviour
-#     better.   
+    With any ROI's defined, call the plotROI2dHist function, selecting 2 parameters you want histogrammed (2DHist).  
+    This histogram will be plotted for all events passing early cuts like trigger_types and included_antennas (defined
+    in the calling of the class).  Then the ROI's will be plotted on top of this underlying plot - shown as Contours.  
+    These contours effectively circle where events passing a particular ROI's cuts show up as a population in the 
+    plotted 2d histogram plot.  This can be used to further constrain the ROI or to simply understand it's behaviour
+    better.   
 
-#     Parameters
-#     ----------
-#     runs : list of ints
-#         This should be a list of run numbers, all of which should be formatted identically with similar analysis
-#         datasets (especially those specified by impulsivity_dset_key and )
-#     impulsivity_dset_key : str
-#         This is a string that must correspond to a specific stored and precalculated impulsivity dataset stored in the
-#         analysis h5py files.  This will be used whenever attempting to plot or cut on impulsivity values.
-#     time_delays_dset_key : str
-#         This is a string that must correspond to a specific stored and precalculated time delay dataset stored in the
-#         analysis h5py files.  This will be used whenever attempting to plot or cut on time delay values.
-#     map_dset_key : str
-#         This is a string that must correspond to a specific stored and precalculated map/alt-az dataset stored in the
-#         analysis h5py files.  This will be used whenever attempting to plot or cut on map/alt-az values.
-#     curve_choice : int
-#         Which curve/cr template you wish to use when loading the template search results from the cr template search.
-#         Currently the only option is 0, which corresponds to a simple bi-polar delta function convolved with the known
-#         BEACON responses. 
-#     trigger_types : list of ints
-#         The trigger types you want to include in each plot.  This may be later done on a function by function basis, but
-#         for now is called at the beginning. 
-#     included_antennas : list of ints
-#         List should contain list of antennas trusted for this particular run.  This will be used in certain cuts which
-#         may look at the max or average values of a certain polarization.  If the antenna is not included on this list
-#         then it will not be included in those calculations.  This does not apply to any precalculated values that already
-#         washed out antenna specific information.  This can also be used to investigate particular antenna pairings by
-#         leaving only them remaining.  
-#     cr_template_n_bins_h : int
-#         The number of bins in the x dimension of the cr template search plot.
-#     cr_template_n_bins_v : int
-#         The number of bins in the y dimension of the cr template search plot.
-#     impulsivity_hv_n_bins : int
-#         The number of bins in the impulsivity_hv plot.
-#     std_n_bins_h :
-#         The number of bins for plotting std of the h antennas.
-#     std_n_bins_v :
-#         The number of bins for plotting std of the v antennas.
-#     max_std_val :
-#         The max bin edge value for plotting std on both antennas.  Default is None.  If None is given then this will be
-#         automatically calculated (though likely too high).
-#     p2p_n_bins_h :
-#         The number of bins for plotting p2p of the h antennas.
-#     p2p_n_bins_v :
-#         The number of bins for plotting p2p of the v antennas.
-#     max_p2p_val :
-#         The max bin edge value for plotting p2p on both antennas.  Default is 128.  If None is given then this will be
-#         automatically calculated.
-#     snr_n_bins_h :
-#         The number of bins for plotting snr of the h antennas.
-#     snr_n_bins_v :
-#         The number of bins for plotting snr of the v antennas.
-#     max_snr_val :
-#         The max bin edge value for plotting snr on both antennas.  Default is None.  If None is given then this will be
-#         automatically calculated (though likely too high).
-#     include_test_roi :
-#         This will include test regions of interest that are more for testing the class itself. 
-#     '''
-#     def __init__(self,  reader, impulsivity_dset_key, time_delays_dset_key, map_dset_key, \
-#                         curve_choice=0, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
-#                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
-#                         impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
-#                         time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-200,max_time_delays_val=200,\
-#                         std_n_bins_h=200,std_n_bins_v=200,max_std_val=None,\
-#                         p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-#                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=None):
-#         try:
+    Parameters
+    ----------
+    runs : list of ints
+        This should be a list of run numbers, all of which should be formatted identically with similar analysis
+        datasets (especially those specified by impulsivity_dset_key and )
+    impulsivity_dset_key : str
+        This is a string that must correspond to a specific stored and precalculated impulsivity dataset stored in the
+        analysis h5py files.  This will be used whenever attempting to plot or cut on impulsivity values.
+    time_delays_dset_key : str
+        This is a string that must correspond to a specific stored and precalculated time delay dataset stored in the
+        analysis h5py files.  This will be used whenever attempting to plot or cut on time delay values.
+    map_dset_key : str
+        This is a string that must correspond to a specific stored and precalculated map/alt-az dataset stored in the
+        analysis h5py files.  This will be used whenever attempting to plot or cut on map/alt-az values.
+    curve_choice : int
+        Which curve/cr template you wish to use when loading the template search results from the cr template search.
+        Currently the only option is 0, which corresponds to a simple bi-polar delta function convolved with the known
+        BEACON responses. 
+    trigger_types : list of ints
+        The trigger types you want to include in each plot.  This may be later done on a function by function basis, but
+        for now is called at the beginning. 
+    included_antennas : list of ints
+        List should contain list of antennas trusted for this particular run.  This will be used in certain cuts which
+        may look at the max or average values of a certain polarization.  If the antenna is not included on this list
+        then it will not be included in those calculations.  This does not apply to any precalculated values that already
+        washed out antenna specific information.  This can also be used to investigate particular antenna pairings by
+        leaving only them remaining.  
+    cr_template_n_bins_h : int
+        The number of bins in the x dimension of the cr template search plot.
+    cr_template_n_bins_v : int
+        The number of bins in the y dimension of the cr template search plot.
+    impulsivity_hv_n_bins : int
+        The number of bins in the impulsivity_hv plot.
+    std_n_bins_h :
+        The number of bins for plotting std of the h antennas.
+    std_n_bins_v :
+        The number of bins for plotting std of the v antennas.
+    max_std_val :
+        The max bin edge value for plotting std on both antennas.  Default is None.  If None is given then this will be
+        automatically calculated (though likely too high).
+    p2p_n_bins_h :
+        The number of bins for plotting p2p of the h antennas.
+    p2p_n_bins_v :
+        The number of bins for plotting p2p of the v antennas.
+    max_p2p_val :
+        The max bin edge value for plotting p2p on both antennas.  Default is 128.  If None is given then this will be
+        automatically calculated.
+    snr_n_bins_h :
+        The number of bins for plotting snr of the h antennas.
+    snr_n_bins_v :
+        The number of bins for plotting snr of the v antennas.
+    max_snr_val :
+        The max bin edge value for plotting snr on both antennas.  Default is None.  If None is given then this will be
+        automatically calculated (though likely too high).
+    include_test_roi :
+        This will include test regions of interest that are more for testing the class itself. 
+    '''
+    def __init__(self,  runs, impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs):
+        try:
+            self.runs = numpy.sort(runs).astype(int)
+            self.roi = {}
+            self.data_slicers = [dataSlicerSingleRun(Reader(datapath,run),impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs) for run in self.runs]
+            self.trigger_types = self.data_slicers[0].trigger_types
+        except:
+            import pdb; pdb.set_trace()
+    def concatenateParamDict(self, param_data_dict):
+        '''
+        Given a dictionary (keys indicating run number) for a parameter of data.  This will turn that into a 1d array.
+        Useful for histogramming when run information is unimportant.
+        '''
+        data = []
+        for key, _data in param_data_dict.items():
+            data.append(_data)
+        return numpy.concatenate(data)
+    def printKnownParamKeys(self):
+        return self.data_slicers[0].printKnownParamKeys()
+    def checkForBothMapDatasets(self, verbose=False):
+        for run_index, run in enumerate(self.runs):
+            if verbose:
+                print('Run %i'%run)
+            self.data_slicers[run_index].checkForBothMapDatasets()
+    def printDatasets(self, verbose=False):
+        for run_index, run in enumerate(self.runs):
+            if verbose:
+                print('Run %i'%run)
+            self.data_slicers[run_index].printDatasets()
+    def printSampleROI(self, verbose=False):
+        return self.data_slicers[0].printDatasets
+    def addROI(self, roi_key, roi_dict, verbose=False):
+        self.roi[roi_key] = roi_dict
+        self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, len(list(self.roi.keys())))]
+        for run_index, run in enumerate(self.runs):
+            if verbose:
+                print('Run %i'%run)
+            self.data_slicers[run_index].addROI(roi_key, roi_dict)
+    def resetAllROI(self, verbose=False):
+        for run_index, run in enumerate(self.runs):
+            if verbose:
+                print('Run %i'%run)
+            self.data_slicers[run_index].resetAllROI()
+    def getEventidsFromTriggerType(self, verbose=False):
+        eventids_dict = {}
+        for run_index, run in enumerate(self.runs):
+            if verbose:
+                print('Run %i'%run)
+            eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+        return eventids_dict
+    def getDataFromParam(self, eventids_dict, param_key, verbose=False):
+        '''
+        Key should be run number as int.  Will return data for all events given in the eventids_dict.
+        '''
+        data = {}
+        for run_index, run in enumerate(self.runs):
+            if run in list(eventids_dict.keys()):
+                if verbose:
+                    print('Run %i'%run)
+                eventids = eventids_dict[run]
+                data[run] = self.data_slicers[run_index].getDataFromParam(eventids, param_key)
+        return data
+    def getCutsFromROI(self,roi_key,verbose=False):
+        eventids_dict = {}
+        for run_index, run in enumerate(self.runs):
+            if verbose:
+                print('Run %i'%run)
+            eventids_dict[run] = self.data_slicers[run_index].getCutsFromROI(roi_key)
+        return eventids_dict
+    def setCurrentPlotBins(self, main_param_key_x, main_param_key_y, eventids_dict):
+        '''
+        Loops over all saved dataSlicerSingleRun, gets their bounds, then makes sure all match using the largest windows.
+        '''
+        try:
+            x_bin_min = 1e12
+            y_bin_min = 1e12
+            x_bin_max = -1e12
+            y_bin_max = -1e12
+            len_x = []
+            len_y = []
+            for run_index, run in enumerate(self.runs):
+                if run in list(eventids_dict.keys()):
+                    self.data_slicers[run_index].setCurrentPlotBins(main_param_key_x, main_param_key_y, eventids_dict[run])
 
-#     def setCurrentPlotBins(self, main_param_key_x, main_param_key_y, eventids):
-#         '''
-#         Loops over all saved dataSlicerSingleRun, gets their bounds, then makes sure all match using the largest windows.
-#         '''
+                    current_bin_edges_x, current_label_x = self.data_slicers[run_index].getSingleParamPlotBins(main_param_key_x, eventids_dict[run])
+                    current_bin_edges_y, current_label_y = self.data_slicers[run_index].getSingleParamPlotBins(main_param_key_y, eventids_dict[run])
 
-#         for slicer in self.slicers:
-#             slicer.setCurrentPlotBins(main_param_key_x, main_param_key_y, eventids)
+                    if min(current_bin_edges_x) < x_bin_min:
+                        x_bin_min = min(current_bin_edges_x)
+
+                    if min(current_bin_edges_y) < y_bin_min:
+                        y_bin_min = min(current_bin_edges_y)
+
+                    if max(current_bin_edges_x) > x_bin_max:
+                        x_bin_max = max(current_bin_edges_x)
+
+                    if max(current_bin_edges_y) > y_bin_max:
+                        y_bin_max = max(current_bin_edges_y)
+
+
+                    len_x.append(len(current_bin_edges_x))
+                    len_y.append(len(current_bin_edges_y))
+
+            self.current_label_x = current_label_x # Assuming same for all runs
+            self.current_label_y = current_label_y # Assuming same for all runs
+
+            self.current_bin_edges_x = numpy.linspace(x_bin_min,x_bin_max,int(numpy.mean(len_x)))
+            self.current_bin_edges_y = numpy.linspace(y_bin_min,y_bin_max,int(numpy.mean(len_y)))
+
+            self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
+                   
+            for ds in self.data_slicers:
+                ds.current_bin_edges_x = self.current_bin_edges_x
+                ds.current_bin_edges_y = self.current_bin_edges_y
+                ds.current_bin_centers_mesh_x = self.current_bin_centers_mesh_x
+                ds.current_bin_centers_mesh_v = self.current_bin_centers_mesh_y
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def get2dHistCounts(self, main_param_key_x, main_param_key_y, eventids_dict, set_bins=True):
+        try:
+            if set_bins == True:
+                self.setCurrentPlotBins(main_param_key_x,main_param_key_y,eventids_dict)
+            counts = numpy.zeros_like(self.current_bin_centers_mesh_x) #Need to double check this works. 
+            print('\tLoading data for %s'%main_param_key_x)
+            param_x = self.getDataFromParam(eventids_dict, main_param_key_x)
+            print('\tLoading data for %s'%main_param_key_y)
+            param_y = self.getDataFromParam(eventids_dict, main_param_key_y)
+            print('\tGetting counts from 2dhist')
+            counts = numpy.histogram2d(self.concatenateParamDict(param_x), self.concatenateParamDict(param_y), bins = [self.current_bin_edges_x,self.current_bin_edges_y])[0].T #Outside of file being open 
+
+            return counts
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids_dict, title=None,cmap='coolwarm'):
+        '''
+        This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
+        (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
+        up as a contour on the plot.  
+        '''
+        try:
+            #Should make eventids a self.eventids so I don't need to call this every time.
+            counts = self.get2dHistCounts(main_param_key_x,main_param_key_y,eventids_dict,set_bins=True) #set_bins should only be called on first call, not on contours.
             
-#         self.current_bin_edges_x, self.current_label_x = self.getSingleParamPlotBins(main_param_key_x, eventids)
-#         self.current_bin_edges_y, self.current_label_y = self.getSingleParamPlotBins(main_param_key_y, eventids)
+            _fig, _ax = plt.subplots()
+            if title is not None:
+                plt.title(title)
+            else:
+                plt.title('%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types)))
 
-#         self.current_bin_centers_mesh_h, self.current_bin_centers_mesh_v = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
+            _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+            if 'theta_best_' in main_param_key_y:
+                _ax.invert_yaxis()
+            if True:
+                if numpy.logical_or(numpy.logical_and('phi_best_' in main_param_key_x,'phi_best_' in main_param_key_y),numpy.logical_or(numpy.logical_and('theta_best_' in main_param_key_x,'theta_best_' in main_param_key_y),numpy.logical_and('elevation_best_' in main_param_key_x,'elevation_best_' in main_param_key_y))):
+                    plt.plot(self.current_bin_centers_mesh_y[:,0],self.current_bin_centers_mesh_y[:,0],linewidth=1,linestyle='--',color='tab:gray',alpha=0.5)
+                if numpy.logical_and('phi_best_' in main_param_key_x,numpy.logical_or('theta_best_' in main_param_key_y,'elevation_best_' in main_param_key_y)):
+                    #Make cor to plot the array plane.
+                    cor = Correlator(data_slicers[0].reader,  upsample=2**10, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,apply_phase_response=False, tukey=False, sine_subtract=False) #only for array plane
+                    if numpy.logical_and(main_param_key_x.split('_')[-1] == 'h', main_param_key_y.split('_')[-1] == 'h'):
+                        plane_xy = cor.getPlaneZenithCurves(cor.n_hpol.copy(), 'hpol', 90.0, azimuth_offset_deg=0.0)
+                    elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'v', main_param_key_y.split('_')[-1] == 'v'):
+                        plane_xy = cor.getPlaneZenithCurves(cor.n_vpol.copy(), 'vpol', 90.0, azimuth_offset_deg=0.0)
+                    else:
+                        plane_xy = None
+                    if plane_xy is not None:
+                        if 'elevation_best_' in main_param_key_y:
+                            plane_xy[1] = 90.0 - plane_xy[1]
+                        plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=1,color='k')
+                        plt.xlim([-180,180])
+            plt.xlabel(self.current_label_x)
+            plt.ylabel(self.current_label_y)
+            plt.grid(which='both', axis='both')
+            _ax.minorticks_on()
+            _ax.grid(b=True, which='major', color='k', linestyle='-')
+            _ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+            try:
+                cbar = _fig.colorbar(_im)
+                cbar.set_label('Counts')
+            except Exception as e:
+                print('Error in colorbar, often caused by no events.')
+                print(e)
+
+            return _fig, _ax
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+    def addContour(self, ax, main_param_key_x, main_param_key_y, contour_eventids_dict, contour_color, n_contour=5, alpha=0.85, log_contour=True):
+        '''
+        Given the plot made from plot2dHist, this will add contours to it for the events specified by contour_eventids.
+        This assumes that setCurrentPlotBins has already been called by plot2dHist. 
+
+        Parameters
+        ----------
+        ax : matplotlib axes
+            This should be the output axes from plot2dHist.
+        main_param_key : str
+            This should match the one used for plt2dHist, as it is used to determine the xy coords of the contour and
+            what parameter should be calculated (or loaded) for each selected eventid.
+        contour_eventids : numpy.ndarray of int
+            This should be a list of eventids that meet the cut you wish to plot.
+        contour_color : tuple
+            The color which you want the contour to be plotted on top of the 
+        n_contour : int
+            The number of contours to plot.  This will create contours ranging from the min to max count value, with n+1
+            lines.  The lowest line will NOT be plotted (thus plotting n total), because this is often 0 and clutters
+            the plot.
+        log_contour : bool
+            If True then the Locator used in matplotlib.axes.Axes.contour will be matplotlib.ticker.LogLocator(), 
+            rather than the default contour behaviour of matplotlib.ticker.MaxNLocator.
+
+        Returns
+        -------
+        ax : matplotlib axes
+            This is the updated axes that the contour was added to.
+        cs : QuadContourSet
+            This is the contour object, that can be used for adding labels to the legend for this contour.
+        '''
+        try:
+            counts = self.get2dHistCounts(main_param_key_x, main_param_key_y, contour_eventids_dict, set_bins=False)
+
+            if log_contour:
+                #Log?
+                #locator = ticker.LogLocator()
+                levels = numpy.ceil(numpy.logspace(0,numpy.log10(numpy.max(counts)),n_contour))[1:n_contour+1] #Not plotting bottom contour because it is often background and clutters plot.
+            else:
+                #Linear?
+                #locator = ticker.MaxNLocator()
+                levels = numpy.ceil(numpy.linspace(0,numpy.max(counts),n_contour))[1:n_contour+1] #Not plotting bottom contour because it is often background and clutters plot.
+
+            levels = numpy.unique(levels) #Covers edge case of very low counts resulting in degenerate contour labels (Must be increasing)
+
+            # The below code was intended to make outer contours more transparent, but it produced differing results from plotting contour once, and I don't know why, so I am just commenting it out :/
+            # import pdb; pdb.set_trace()
+            # print(levels)
+            # for index, level in enumerate(levels[::-1]):
+            #     # if index != len(levels)-1:
+            #     #     continue
+            #     _alpha = alpha*( 0.7*((index+1)/len(levels)) + 0.3) #Highest level contour should be specified alpha, others are dimmer to make it clear where high concentration is.  Doesn't let opacity go below 0.3.
+            #     # print(_alpha)
+            #     print(level)
+            #     cs = ax.contour(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts, colors=[contour_color],levels=[level],alpha=_alpha, antialiased=True)
+            # print(levels)
+            cs = ax.contour(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts, colors=[contour_color],levels=levels,alpha=alpha, antialiased=True)
+
+            return ax, cs
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', include_roi=True):
+        '''
+        This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
+        calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
+        ROI has a box cut in self.roi for EACH parameter.  I.e. it expects the # of listed entries in each ROI to be
+        the same, and it will add a contour for the eventids that pass ALL cuts for that specific roi. 
+
+        If eventids is given then then those events will be used to create the plot, and the trigger type cut will be ignored.
+        '''
+        try:
+            if eventids_dict is None:
+                eventids_dict = {}
+                for run_index, run in enumerate(self.runs):
+                    eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+                #The given eventids don't necessarily match the default cut, and thus shouldn't be labeled as such in the title.
+                title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types))                
+            else:
+                title = '%s, Runs = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())))
+            fig, ax = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap) #prepares binning, must be called early (before addContour)
+
+            #these few lines below this should be used for adding contours to the map. 
+            if include_roi:
+                legend_properties = []
+                legend_labels = []
+
+                for roi_index, roi_key in enumerate(list(self.roi.keys())):
+                    contour_eventids_dict = self.getCutsFromROI(roi_key)
+                    for run_index, run in enumerate(self.runs):
+                        if run in list(eventids_dict.keys()): 
+                            contour_eventids_dict[run] = numpy.intersect1d(contour_eventids_dict[run],eventids_dict[run]) #getCutsFromROI doesn't account for eventids, this makes it only those that are in ROI and given.
+                        else:
+                            del contour_eventids_dict[run]
+                    ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids_dict, self.roi_colors[roi_index], n_contour=6)
+                    legend_properties.append(cs.legend_elements()[0][0])
+                    legend_labels.append('roi %i: %s'%(roi_index, roi_key))
+
+                plt.legend(legend_properties,legend_labels,loc='upper left')
+
+            return fig, ax
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+    def plotTimeDelayHist(self,include_roi=True):
+        '''
+        This will plot 1d histograms for all time delays, plotted in a grid.  It will make a seperate plot
+        for both hpol and vpol (total of 12 subplots).
+        '''
+        try:
+            eventids_dict = {}
+            for run_index, run in enumerate(self.runs):
+                eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+                
+
+            if include_roi:
+                roi_eventids_dict = {}
+                for roi_index, roi_key in enumerate(list(self.roi.keys())):
+                    roi_eventids_dict[roi_key] = self.getCutsFromROI(roi_key)
+
+            for mode in ['h','v']:
+                fig = plt.figure()
+                fig.canvas.set_window_title('%spol Time Delays'%(mode.title()))
+                for baseline_index, baseline in enumerate([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]):
+                    param_key = 'time_delay_%isubtract%i_%s'%(baseline[0],baseline[1],mode)
+                    self.setCurrentPlotBins(param_key, param_key, eventids_dict)
+                    label = self.current_label_x
+                    param = concatenateParamDict(self.getDataFromParam(eventids_dict, param_key))
+                    ax = plt.subplot(3,2,baseline_index+1)
+                    if include_roi:
+                        alpha = 0.5
+                    else:
+                        alpha = 1.0
+
+                    plt.hist(param, bins = self.current_bin_edges_x,label=label,alpha=alpha)
+                    plt.minorticks_on()
+                    plt.yscale('log', nonposy='clip')
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                    if baseline_index in [4,5]:
+                        plt.xlabel('Time Delay (ns)')
+                    if baseline_index in [0,2,4]:
+                        plt.ylabel('Counts')
+
+                    if include_roi:
+                        for roi_index, roi_key in enumerate(list(self.roi.keys())):
+                            param = concatenateParamDict(self.getDataFromParam(roi_eventids_dict[roi_key], param_key))
+                            c = numpy.copy(self.roi_colors[roi_index])
+                            c[3] = 0.7 #setting alpha for fill but not for edge.
+                            plt.hist(param, bins = self.current_bin_edges_x,label = 'roi %i: %s'%(roi_index, roi_key), color = c, edgecolor='black', linewidth=1)
+                    plt.legend(fontsize=10)
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
 
 if __name__ == '__main__':
 
@@ -1443,82 +1794,80 @@ if __name__ == '__main__':
     plt.close('all')
     
     #runs = [1642,1643,1644,1645,1646,1647]
-    runs = [1644]
-    for run in runs:
-        reader = Reader(datapath,run)
-        #.replace('-sinesubtract','sinesubtract') #catches one-off case misnaming dset
-        impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00-sinesubtract_1'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_262144-align_0'
-        time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00-sinesubtract_1'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'
-        print("Preparing dataSlicerSingleRun")
-        ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
-                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
-                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False)
+    if True:
+        for runs in [[1644],[1645],[1644,1645]]:
+            impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+            time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+            map_direction_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_15'
+            print("Preparing dataSlicer")
+            ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
+                            cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                            std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                            snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False)
 
-        print('Adding ROI to dataSlicerSingleRun')
+            print('Adding ROI to dataSlicer')
 
-        ds.addROI('corr A',{'cr_template_search_h':[0.575,0.665],'cr_template_search_v':[0.385,0.46]})
-        ds.addROI('high v imp',{'impulsivity_h':[0.479,0.585],'impulsivity_h':[0.633,0.7]})
-        ds.addROI('small h.4 v.4 imp',{'impulsivity_h':[0.34,0.45],'impulsivity_h':[0.42,0.5]})
+            ds.addROI('corr A',{'cr_template_search_h':[0.575,0.665],'cr_template_search_v':[0.385,0.46]})
+            ds.addROI('high v imp',{'impulsivity_h':[0.479,0.585],'impulsivity_h':[0.633,0.7]})
+            ds.addROI('small h.4 v.4 imp',{'impulsivity_h':[0.34,0.45],'impulsivity_h':[0.42,0.5]})
 
-        ds.addROI('imp cluster',{'impulsivity_h':[0.35,0.46],'impulsivity_v':[0.45,0.50]})
+            ds.addROI('imp cluster',{'impulsivity_h':[0.35,0.46],'impulsivity_v':[0.45,0.50]})
 
-        params_needed_for_roi = []
-        for key in list(ds.roi.keys()):
-            for k in list(ds.roi[key].keys()):
-                params_needed_for_roi.append(k)
-        params_needed_for_roi = numpy.unique(params_needed_for_roi)
-        for param in params_needed_for_roi:
-            ds.saveHistogramData(param)
+            print('Generating plots:')
+            for key_x, key_y in [['impulsivity_h','impulsivity_v']]:#[['p2p_h','p2p_v'],['impulsivity_h','impulsivity_v'],['p2p_h','impulsivity_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h']]:#ds.known_param_keys:
+                print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                print('Testing plot for calculating %s and %s'%(key_x,key_y))
+                ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
 
-        import timeit
-        print('Generating plots:')
-        for key_x, key_y in [['p2p_h','p2p_v'],['impulsivity_h','impulsivity_v'],['p2p_h','impulsivity_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h']]:#ds.known_param_keys:
-            print('Generating %s plot'%(key_x + ' vs ' + key_y))
-            print('Testing plot for calculating %s and %s'%(key_x,key_y))
-            start_time = timeit.default_timer()
-            ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
-            elapsed_1 = timeit.default_timer() - start_time
-            print('[TIME] Calculation Plot: %0.1f seconds'%elapsed_1)
+    if False:
+        for run in runs:
+            reader = Reader(datapath,run)
+            #.replace('-sinesubtract','sinesubtract') #catches one-off case misnaming dset
+            impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00-sinesubtract_1'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_262144-align_0'
+            time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00-sinesubtract_1'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'
+            print("Preparing dataSlicerSingleRun")
+            ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
+                            cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                            std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                            snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False)
 
-            print('Saving data for %s and %s'%(key_x,key_y))
+            print('Adding ROI to dataSlicerSingleRun')
 
-            ds.saveHistogramData(key_x)
-            ds.saveHistogramData(key_y)
-            elapsed_2 = timeit.default_timer() - start_time
-            print('[TIME] Saving Data: %0.1f seconds'%(elapsed_2 - elapsed_1))
+            ds.addROI('corr A',{'cr_template_search_h':[0.575,0.665],'cr_template_search_v':[0.385,0.46]})
+            ds.addROI('high v imp',{'impulsivity_h':[0.479,0.585],'impulsivity_h':[0.633,0.7]})
+            ds.addROI('small h.4 v.4 imp',{'impulsivity_h':[0.34,0.45],'impulsivity_h':[0.42,0.5]})
 
-            print('Testing plot for loading %s and %s'%(key_x,key_y))
-            ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
-            
-            elapsed_3 = timeit.default_timer() - start_time
-            print('[TIME] Loading Plot: %0.1f seconds'%(elapsed_3 - elapsed_2))
+            ds.addROI('imp cluster',{'impulsivity_h':[0.35,0.46],'impulsivity_v':[0.45,0.50]})
 
-        # ds.saveHistogramData('p2p_h')
-        # ds.saveHistogramData('p2p_v')
-        # eventids = numpy.arange(ds.reader.N())
-        # bin_indices_raw, bin_edges, label = ds.loadHistogramData('p2p_h',eventids)
-        # bin_indices = ds.cleanHistogramData(bin_indices_raw, bin_edges)
-    #main() #This is the analysis before it was turned into a class.
-    
-    
-    #Sample data to test making 2dhists from stored bin numbers of 1dhists.
-    # data_A = numpy.random.uniform(0,1,100)
-    # data_B = numpy.random.uniform(0,1,100)**2 + 2
-    # data_C = (numpy.random.uniform(0,1,100) - numpy.random.uniform(0,1,100))**2
+            params_needed_for_roi = []
+            for key in list(ds.roi.keys()):
+                for k in list(ds.roi[key].keys()):
+                    params_needed_for_roi.append(k)
+            params_needed_for_roi = numpy.unique(params_needed_for_roi)
+            for param in params_needed_for_roi:
+                ds.saveHistogramData(param)
 
-    # bin_edges_A = numpy.linspace(0,1,101)
-    # bin_edges_B = numpy.linspace(1,2,201)
-    # bin_edges_C = numpy.linspace(0,1,51)
+            import timeit
+            print('Generating plots:')
+            for key_x, key_y in [['p2p_h','p2p_v'],['impulsivity_h','impulsivity_v'],['p2p_h','impulsivity_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h']]:#ds.known_param_keys:
+                print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                print('Testing plot for calculating %s and %s'%(key_x,key_y))
+                start_time = timeit.default_timer()
+                ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+                elapsed_1 = timeit.default_timer() - start_time
+                print('[TIME] Calculation Plot: %0.1f seconds'%elapsed_1)
 
-    # #This step is done at calculation phase
-    # index_A = numpy.digitize(data_A,bins=bin_edges_A)
-    # index_B = numpy.digitize(data_B,bins=bin_edges_B)
-    # index_C = numpy.digitize(data_C,bins=bin_edges_C)
+                print('Saving data for %s and %s'%(key_x,key_y))
 
-    # #This is done after loading to get back to histogram counts.  Below works for 1D hist.  Must develop and test for 2D hist. 
-    # #https://stackoverflow.com/questions/56509600/can-numpy-add-at-be-used-with-2d-indices
-    # masked_A = numpy.ma.masked_array(index_A,mask=numpy.logical_or(index_A == 0, index_A == len(bin_edges_A))) - 1 #Mask to ignore underflow/overflow bins.  Indices are base 1 here it seems.  
-    # counts_A = numpy.zeros(len(bin_edges_A)-1,dtype=int); numpy.add.at(counts_A,masked_A,1)
+                ds.saveHistogramData(key_x)
+                ds.saveHistogramData(key_y)
+                elapsed_2 = timeit.default_timer() - start_time
+                print('[TIME] Saving Data: %0.1f seconds'%(elapsed_2 - elapsed_1))
 
-    # hist_A = numpy.histogram(data_A,bin_edges_A)[0]
+                print('Testing plot for loading %s and %s'%(key_x,key_y))
+                ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+                
+                elapsed_3 = timeit.default_timer() - start_time
+                print('[TIME] Loading Plot: %0.1f seconds'%(elapsed_3 - elapsed_2))
+
+      

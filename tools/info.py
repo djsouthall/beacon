@@ -31,7 +31,7 @@ import pymap3d as pm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
-default_deploy = 15#15#The deployment calibration to use as the default.
+default_deploy = 13#15#The deployment calibration to use as the default.
 
 def returnDefaultDeploy():
     return default_deploy

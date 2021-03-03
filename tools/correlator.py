@@ -10,6 +10,7 @@ import os
 import sys
 import gc
 import pymap3d as pm
+import latex
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 
@@ -24,7 +25,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.mplot3d import Axes3D
-
+import scipy.stats
 import scipy.signal
 import scipy.stats
 import numpy
@@ -47,6 +48,7 @@ font = {'weight' : 'bold',
 matplotlib.rc('font', **font)
 matplotlib.rcParams['figure.figsize'] = [10, 11]
 matplotlib.rcParams.update({'font.size': 16})
+
 
 
 class Correlator:
@@ -808,9 +810,11 @@ class Correlator:
         '''
         try:
             norm = norm/numpy.linalg.norm(norm)
+            n_points = max(100,self.n_phi) #n_phi here is just to set an arbitrary numbers of points on the curve, and has no geometric significance
+
             if zenith_deg == 0.0:
-                thetas      = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(norm[2]/numpy.linalg.norm(norm))) #n_phi here is just to set an arbitrary numbers of points on the curve, and has no geometric significance
-                phis        = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(norm[1],norm[0]))
+                thetas      = numpy.ones(n_points) * numpy.rad2deg(numpy.arccos(norm[2]/numpy.linalg.norm(norm))) 
+                phis        = numpy.ones(n_points) * numpy.rad2deg(numpy.arctan2(norm[1],norm[0]))
                 phis -= azimuth_offset_deg
                 phis[phis < -180.0] += 360.0
                 phis[phis > 180.0] -= 360.0
@@ -818,15 +822,15 @@ class Correlator:
                 #Rotations of az don't matter because the same value.
                 return [phis, thetas]
             elif zenith_deg == 180.0:
-                thetas      = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arccos(-norm[2]/numpy.linalg.norm(norm)))
-                phis        = numpy.ones(self.n_phi) * numpy.rad2deg(numpy.arctan2(-norm[1],-norm[0]))
+                thetas      = numpy.ones(n_points) * numpy.rad2deg(numpy.arccos(-norm[2]/numpy.linalg.norm(norm)))
+                phis        = numpy.ones(n_points) * numpy.rad2deg(numpy.arctan2(-norm[1],-norm[0]))
                 phis -= azimuth_offset_deg
                 phis[phis < -180.0] += 360.0
                 phis[phis > 180.0] -= 360.0
                 #Rotations of az don't matter because the same value.
                 return [phis, thetas]
             else:
-                dtheta_rad = numpy.deg2rad(numpy.diff(self.phis_deg)[0])
+                dtheta_rad = numpy.deg2rad(360.0/n_points) #Make full circle, regardless of span given for theta.  
 
                 if mode == 'physical':
                     a0 = self.A0_physical
@@ -884,9 +888,9 @@ class Correlator:
                     
                     ax.quiver(0, 0, 0, zenith_vector[0], zenith_vector[1], zenith_vector[2], normalize=True,alpha=0.5)
 
-                output_az_degs = numpy.zeros(self.n_phi)
-                output_zenith_degs = numpy.zeros(self.n_phi)
-                for i in range(self.n_phi):
+                output_az_degs = numpy.zeros(n_points)
+                output_zenith_degs = numpy.zeros(n_points)
+                for i in range(n_points):
                     #parellel portion of vector is 0 because A2 is in plane and n is defined as perp to plane. 
                     zenith_vector = self.rotateAaboutBbyTheta(zenith_vector,norm,dtheta_rad)
                     if debug:
@@ -902,7 +906,12 @@ class Correlator:
                 output_az_degs -= azimuth_offset_deg
                 output_az_degs[output_az_degs < -180.0] += 360.0
                 output_az_degs[output_az_degs > 180.0] -= 360.0
-                out = [numpy.roll(output_az_degs,-numpy.argmin(output_az_degs)) , numpy.roll(output_zenith_degs,-numpy.argmin(output_az_degs))]
+                out_x = numpy.roll(output_az_degs,-numpy.argmin(output_az_degs)) #Rolled for sorting purposes.  
+                out_y = numpy.roll(output_zenith_degs,-numpy.argmin(output_az_degs))
+                azimuth_cut = numpy.logical_and(out_x >= min(self.range_phi_deg), out_x <= min(self.range_phi_deg))
+                zenith_cut =  numpy.logical_and(out_y >= min(self.range_theta_deg), out_y <= min(self.range_theta_deg))
+                out_cut = numpy.logical_and(azimuth_cut,zenith_cut)
+                out = [out_x , out_y]
 
                 return out
         except Exception as e:
@@ -1859,10 +1868,15 @@ class Correlator:
                         #Block out simple ENU zenith cut region. 
                         plt.axhspan(numpy.deg2rad(90 - min(zenith_cut_ENU)),numpy.deg2rad(90.0),alpha=0.5)
                         plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut_ENU)),alpha=0.5)
+                        plt.ylim(numpy.deg2rad((90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg))  ))
+                        plt.xlim(numpy.deg2rad(self.range_phi_deg))
+
                     else:
                         #Block out simple ENU zenith cut region. 
                         plt.axhspan(90 - min(zenith_cut_ENU),90.0,alpha=0.5)
                         plt.axhspan(-90 , 90 - max(zenith_cut_ENU),alpha=0.5)
+                        plt.ylim(90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg)  )
+                        plt.xlim(self.range_phi_deg)
 
                 #Enable Interactive Portion
                 if interactive == True:
@@ -2079,10 +2093,16 @@ class Correlator:
                     #Block out simple ENU zenith cut region. 
                     plt.axhspan(numpy.deg2rad(90 - min(zenith_cut_ENU)),numpy.deg2rad(90.0),alpha=0.5)
                     plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut_ENU)),alpha=0.5)
+                    plt.ylim(numpy.deg2rad((90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg))  ))
+                    plt.xlim(numpy.deg2rad(self.range_phi_deg))
+
                 else:
                     #Block out simple ENU zenith cut region. 
                     plt.axhspan(90 - min(zenith_cut_ENU),90.0,alpha=0.5)
                     plt.axhspan(-90 , 90 - max(zenith_cut_ENU),alpha=0.5)
+                    plt.ylim(90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg)  )
+                    plt.xlim(self.range_phi_deg)
+
             ax.legend(loc='lower left')
             self.figs.append(fig)
             self.axs.append(ax)
@@ -2181,6 +2201,9 @@ class Correlator:
             plt.xlabel(xlabel)
             plt.ylabel('Elevation Angle (Degrees)')
             plt.grid(True)
+
+            plt.ylim(90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg)  )
+            plt.xlim(self.range_phi_deg)
 
 
             #Prepare array cut curves
@@ -2317,14 +2340,21 @@ class Correlator:
                 return (hpol_hist,vpol_hist)
             else:
                 hist = numpy.zeros_like(self.mesh_azimuth_rad,dtype=int)
+
+                all_theta_best = numpy.zeros(len(eventids))
+                all_phi_best = numpy.zeros(len(eventids))
+
                 for event_index, eventid in enumerate(eventids):
                     sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
                     sys.stdout.flush()
                     m = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=include_baselines, hilbert=hilbert)/len(eventids)
                     if max_method is not None:
-                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
                     else:
-                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=plot_map,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+
+                    all_theta_best[event_index] = theta_best
+                    all_phi_best[event_index] = phi_best
 
                     if use_weight == True:
                         hist.flat[linear_max_index] += m.flat[linear_max_index]
@@ -2377,9 +2407,9 @@ class Correlator:
                     fig.canvas.set_window_title(window_title)
 
                     if mollweide == True:
-                        ax = fig.add_subplot(1,1,1, projection='mollweide')
+                        ax = fig.add_subplot(2,1,1, projection='mollweide')
                     else:
-                        ax = fig.add_subplot(1,1,1)                    
+                        ax = fig.add_subplot(2,1,1)                    
 
                     if mollweide == True:
                         #Automatically converts from rads to degs
@@ -2387,6 +2417,16 @@ class Correlator:
                     else:
                         im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=0.1, vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm,norm=matplotlib.colors.LogNorm())
 
+                    stacked_variables = numpy.vstack((all_phi_best,all_theta_best)) #x,y
+                    covariance_matrix = numpy.cov(stacked_variables)
+                    sig_phi = numpy.sqrt(covariance_matrix[0,0])
+                    sig_theta = numpy.sqrt(covariance_matrix[1,1])
+                    rho_phi_theta = covariance_matrix[0,1]/(sig_phi*sig_theta)
+                    mean_phi = numpy.mean(all_phi_best)
+                    mean_theta = numpy.mean(all_theta_best)
+
+                    
+                    
                     cbar = fig.colorbar(im)
                     if use_weight == False:
                         cbar.set_label('Counts')
@@ -2423,6 +2463,46 @@ class Correlator:
                                     additional_circles.append(_circ)
                             plt.title('%s Difference from reconstructed \nand expected peaks is %0.2f'%( window_title,  numpy.sqrt( (_circle_az[i] - phi_best)**2 + (_circle_zenith[i] - theta_best)**2 ) ))
                             print('%s\nDifference in degrees from reconstructed and expected peaks is %0.2f'%( window_title,  numpy.sqrt( (_circle_az[i] - phi_best)**2 + (_circle_zenith[i] - theta_best)**2 ) ))
+                            
+                            if False:
+                                string = 'Covariance Matrix:\n' + str(covariance_matrix) 
+                                ax.text(0.45, 0.85, string, fontsize=12, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure) #Need to reset the x and y here to be appropriate for the values in the plot. 
+                            else:                                
+                                if False:
+                                    string = 'sig_phi = %0.3f\nsig_theta = %0.3f\nrho_phi,theta = %0.3f\nReconstruction Offset = %0.3f deg'%(sig_phi, sig_phi, rho_phi_theta, numpy.sqrt( (_circle_az[i] - phi_best)**2 + (_circle_zenith[i] - theta_best)**2 ) )
+                                    ax.text(0.45, 0.85, string, fontsize=12, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure) #Need to reset the x and y here to be appropriate for the values in the plot. 
+                                else:
+                                    string = '$\\sigma_\\phi$ = %0.3f\n$\\sigma_\\theta$ = %0.3f\n$\\rho_{\\phi,\\theta}$ = %0.3f\nReconstruction Offset = %0.3f deg'%(sig_phi, sig_theta, rho_phi_theta, numpy.sqrt( (_circle_az[i] - phi_best)**2 + (_circle_zenith[i] - theta_best)**2 ) )
+                                    ax.text(0.45, 0.85, string, fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
+
+                    plt.subplot(2,2,3)
+                    plt.ylabel('Counts (PDF)')
+                    plt.xlabel('Azimuth Distribution (Degrees)')
+                    #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
+                    plt.hist(all_phi_best - mean_phi, bins=self.phis_deg-mean_phi, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=True)
+                    x = numpy.linspace(min(self.phis_deg-mean_phi),max(self.phis_deg-mean_phi),200)
+                    plt.plot(x,scipy.stats.norm.pdf(x,0,sig_phi),label='Gaussian Fit')
+                    plt.legend(loc = 'upper right',fontsize=10)
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.xlim(min(all_phi_best - mean_phi) - 1.0,max(all_phi_best - mean_phi) + 1.0)
+
+
+                    plt.subplot(2,2,4)
+                    #plt.ylabel('Counts (PDF)')
+                    plt.xlabel('Zenith Distribution (Degrees)')
+                    #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
+                    plt.hist(all_theta_best - mean_theta, bins=self.thetas_deg-mean_theta, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=True)
+                    x = numpy.linspace(min(self.thetas_deg-mean_theta),max(self.thetas_deg-mean_theta),200)
+                    plt.plot(x,scipy.stats.norm.pdf(x,0,sig_theta),label='Gaussian Fit')
+                    plt.legend(loc = 'upper right',fontsize=10)
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.xlim(min(all_theta_best - mean_theta) - 1.0,max(all_theta_best - mean_theta) + 1.0)
+
+                    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.25)
 
                     return hist
         except Exception as e:
