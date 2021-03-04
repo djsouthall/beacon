@@ -19,7 +19,7 @@ import glob
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
-from tools.data_slicer import dataSlicerSingleRun
+from tools.data_slicer import dataSlicerSingleRun, dataSlicer
 import tools.clock_correct as cc
 import tools.info as info
 from tools.data_handler import createFile, getTimes
@@ -102,39 +102,16 @@ if __name__ == '__main__':
     if True:
         #This tests Eric's original idea of just setting a trigger where the top antennas trigger first. 
         if pol == 'hpol':
-            top_antenna_cut = numpy.logical_and(cor.t_hpol_0subtract1 >= 0, cor.t_hpol_2subtract3 >= 0)
+            top_antenna_cut = numpy.logical_and(cor.t_hpol_0subtract1 >= 10.0, cor.t_hpol_2subtract3 >= 10.0)
             mean_corr_values = top_antenna_cut
-            time_delay_dict = {'hpol':{'[0,1]':[0.0],'[2,3]':[0.0]}}
-            ds.addROI('Simple Pass',{'time_delay_0subtract1_h':[0.0,300],'time_delay_2subtract3_h':[0.0,300]})
-            #ds.addROI('Simple Fail',{'time_delay_0subtract1_h':[-300,-0.00001],'time_delay_2subtract3_h':[-300,-0.00001]})
-            plot_param_pairs = [['phi_best_h','elevation_best_h'],['time_delay_0subtract1_h', 'time_delay_2subtract3_h'],['cr_template_search_h', 'cr_template_search_v']]
-            for key_x, key_y in plot_param_pairs:
-                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+            time_delay_dict = {'hpol':{'[0,1]':[10.0],'[2,3]':[10.0]}}
+            roi_dicts['Simple Pass'] = {'time_delay_0subtract1_h':[10.0,300],'time_delay_2subtract3_h':[10.0,300]}
+            roi_dicts['Simple Pass, High CR Corr'] = {'time_delay_0subtract1_h':[10.0,300],'time_delay_2subtract3_h':[10.0,300],'cr_template_search_h':[0.4,1.0], 'cr_template_search_v':[0.4,1.0]}
         else:
-            top_antenna_cut = numpy.logical_and(cor.t_vpol_0subtract1 >= 0, cor.t_vpol_2subtract3 >= 0)
+            top_antenna_cut = numpy.logical_and(cor.t_vpol_0subtract1 >= 10.0, cor.t_vpol_2subtract3 >= 10.0)
             mean_corr_values = top_antenna_cut
-            time_delay_dict = {'hpol':{'[0,1]':[0.0],'[2,3]':[0.0]}}
-            roi_dicts['Simple Pass'] = {'time_delay_0subtract1_v':[0.0,300],'time_delay_2subtract3_v':[0.0,300]}
-
-            #ds.addROI('Simple Fail',{'time_delay_0subtract1_v':[-300,-0.00001],'time_delay_2subtract3_v':[-300,-0.00001]})
-
-            plot_param_pairs = [['phi_best_v','elevation_best_v'],['time_delay_0subtract1_v', 'time_delay_2subtract3_v'],['cr_template_search_h', 'cr_template_search_v']]
-            for key_x, key_y in plot_param_pairs:
-                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
-
-        eventids = ds.getCutsFromROI('Simple Pass',load=False,save=False)
-        azs = ds.getDataFromParam(eventids, 'phi_best_h')
-        for event_index, eventid in enumerate(eventids):
-            if abs(azs[event_index]) < 45:
-                center_dir='E'
-            elif numpy.logical_and(azs[event_index] > 45,azs[event_index] < 135):
-                center_dir='N'
-            elif numpy.logical_and(azs[event_index] < -45,azs[event_index] > -135):
-                center_dir='S'
-            else:
-                center_dir='W'
-            result = cor.map(eventid, pol, center_dir=center_dir, plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=0,mollweide=False,circle_zenith=None,circle_az=None)
-        hist = cor.histMapPeak(eventids, pol, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,90],window_title='Simple Pass Hist')
+            time_delay_dict = {'hpol':{'[0,1]':[10.0],'[2,3]':[10.0]}}
+            roi_dicts['Simple Pass'] = {'time_delay_0subtract1_v':[10.0,300],'time_delay_2subtract3_v':[10.0,300]}
 
 
     elif False:
@@ -329,22 +306,60 @@ if __name__ == '__main__':
 
     #Here I loop over runs to match the above plotted cut.  
 
-    for run in runs:
-        reader = Reader(datapath,run)
-        cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
+    runs = numpy.arange(1650,1675)
 
-        cor.calculateArrayNormalVector(plot_map=False,mollweide=True, pol='both')
-        roi_dicts = {}
+    ds = dataSlicer(    runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
+                        curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                        impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                        time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
+                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+                        p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
 
-        ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
-                            curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
-                            cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
-                            impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
-                            time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
-                            std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
-                            p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-                            snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+    [ds.addROI(key, item) for key, item in roi_dicts.items()]
 
-        ds.addROI(key, item) for key, item in roi_dicts.items()
 
-        
+
+    eventids_dict = ds.getCutsFromROI('Simple Pass')
+    if pol == 'hpol':
+        plot_param_pairs = [['phi_best_h','elevation_best_h'],['time_delay_0subtract1_h', 'time_delay_2subtract3_h'],['cr_template_search_h', 'cr_template_search_v']]
+    else:
+        plot_param_pairs = [['phi_best_v','elevation_best_v'],['time_delay_0subtract1_v', 'time_delay_2subtract3_v'],['cr_template_search_h', 'cr_template_search_v']]
+    for key_x, key_y in plot_param_pairs:
+        fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+    for key_x, key_y in plot_param_pairs:
+        fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True, eventids_dict=eventids_dict)
+    if True:
+        print(ds.getCutsFromROI('Simple Pass, High CR Corr',verbose=True))
+        azs_dict = ds.getDataFromParam(eventids_dict, 'phi_best_h')
+        run_index = -1
+        hist = None
+        for run, eventids in eventids_dict.items():
+            run_index += 1
+            azs = azs_dict[run]
+            reader = Reader(datapath,run)
+            cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
+
+            cor.calculateArrayNormalVector(plot_map=False,mollweide=True, pol='both')
+
+            # for event_index, eventid in enumerate(eventids):
+            #     if abs(azs[event_index]) < 45:
+            #         center_dir='E'
+            #     elif numpy.logical_and(azs[event_index] > 45,azs[event_index] < 135):
+            #         center_dir='N'
+            #     elif numpy.logical_and(azs[event_index] < -45,azs[event_index] > -135):
+            #         center_dir='S'
+            #     else:
+            #         center_dir='W'
+            #     result = cor.map(eventid, pol, center_dir=center_dir, plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=0,mollweide=False,circle_zenith=None,circle_az=None)
+            if run_index == 0:
+                #First call, no input histogram.
+                hist, all_phi_best, all_theta_best = cor.histMapPeak(eventids, pol, plot_map=False, initial_hist=None, initial_phis=None, initial_thetas=None, hilbert=False, max_method=0, plot_max=False, use_weight=False, mollweide=False, center_dir='E', zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,90],window_title='Simple Pass Hist')
+            elif run_index < len(list(eventids_dict.keys())) - 1:
+                #Every other time use the previous hist as input, but don't plot.
+                hist, all_phi_best, all_theta_best = cor.histMapPeak(eventids, pol, plot_map=False, initial_hist=hist, initial_phis=all_phi_best, initial_thetas=all_theta_best, hilbert=False, max_method=0, plot_max=False, use_weight=False, mollweide=False, center_dir='E', zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,90],window_title='Simple Pass Hist')
+            else:
+                #Final time, plot the hist. 
+                hist, all_phi_best, all_theta_best = cor.histMapPeak(eventids, pol, plot_map=True, initial_hist=hist, initial_phis=all_phi_best, initial_thetas=all_theta_best, hilbert=False, max_method=0, plot_max=False, use_weight=False, mollweide=False, center_dir='E', zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,90],window_title='Simple Pass Hist')
+

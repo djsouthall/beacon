@@ -684,7 +684,7 @@ class dataSlicerSingleRun():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def getSingleParamPlotBins(self, param_key, eventids):
+    def getSingleParamPlotBins(self, param_key, eventids, verbose=False):
         '''
         This will determine the current bins to be used for param_key based on the internally defined parameters and
         measured quantitites.  This will be called by setCurrentPlotBins for each param key, but can also be called for
@@ -737,7 +737,8 @@ class dataSlicerSingleRun():
                 print('Given key [%s] is not listed in known_param_keys:\n%s'%(param_key,str(self.known_param_keys)))
                 return
             else:
-                print('\tPreparing to get counts for %s'%param_key)
+                if verbose:
+                    print('\tPreparing to get counts for %s'%param_key)
 
                 calculate_bins_from_min_max = True #By default will be calculated at bottom of conditional list, unless a specific condition overrides.
 
@@ -1575,7 +1576,10 @@ class dataSlicer():
             if title is not None:
                 plt.title(title)
             else:
-                plt.title('%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types)))
+                if numpy.all(numpy.diff(list(eventids_dict.keys()))) == 1:
+                    plt.title('%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types)))
+                else:
+                    plt.title('%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types)))
 
             _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
             if 'theta_best_' in main_param_key_y:
@@ -1585,7 +1589,7 @@ class dataSlicer():
                     plt.plot(self.current_bin_centers_mesh_y[:,0],self.current_bin_centers_mesh_y[:,0],linewidth=1,linestyle='--',color='tab:gray',alpha=0.5)
                 if numpy.logical_and('phi_best_' in main_param_key_x,numpy.logical_or('theta_best_' in main_param_key_y,'elevation_best_' in main_param_key_y)):
                     #Make cor to plot the array plane.
-                    cor = Correlator(data_slicers[0].reader,  upsample=2**10, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,apply_phase_response=False, tukey=False, sine_subtract=False) #only for array plane
+                    cor = Correlator(self.data_slicers[0].reader,  upsample=2**10, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,apply_phase_response=False, tukey=False, sine_subtract=False) #only for array plane
                     if numpy.logical_and(main_param_key_x.split('_')[-1] == 'h', main_param_key_y.split('_')[-1] == 'h'):
                         plane_xy = cor.getPlaneZenithCurves(cor.n_hpol.copy(), 'hpol', 90.0, azimuth_offset_deg=0.0)
                     elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'v', main_param_key_y.split('_')[-1] == 'v'):
@@ -1699,9 +1703,15 @@ class dataSlicer():
                 for run_index, run in enumerate(self.runs):
                     eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
                 #The given eventids don't necessarily match the default cut, and thus shouldn't be labeled as such in the title.
-                title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types))                
+                if numpy.all(numpy.diff(list(eventids_dict.keys()))) == 1:
+                    title = '%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types))
+                else:
+                    title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types))
             else:
-                title = '%s, Runs = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())))
+                if numpy.all(numpy.diff(list(eventids_dict.keys()))) == 1:
+                    title = '%s, Runs = %i-%i'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1])
+                else:
+                    title = '%s, Runs = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())))
             fig, ax = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap) #prepares binning, must be called early (before addContour)
 
             #these few lines below this should be used for adding contours to the map. 

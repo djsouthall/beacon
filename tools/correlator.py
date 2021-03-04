@@ -2295,7 +2295,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def histMapPeak(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None):
+    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None):
         '''
         This will loop over eventids and makes a histogram from of location of maximum correlation
         value in the corresponding correlation maps. 
@@ -2332,74 +2332,80 @@ class Correlator:
         circle_az : list of floats
             List of azimuths values to circle on the plot.  These could be known background sources like planes.
             The length of this must match the length of circle_zenith.  Should be given in degrees.
+        initial_hist : None or 2d array
+            This allows for the user to pass a "starting" condition for this histogram.  This can be used to loop over
+            histograms from multiple runs, and plot the summed histogram (by consecutively feed each run with the past)
+            runs output.  This requries them all to have the same binning.  
         '''
         try:
-            if pol == 'both':
-                hpol_hist = self.histMapPeak(eventids, 'hpol', plot_map=plot_map, hilbert=hilbert, max_method=max_method, use_weight=use_weight, zenith_cut_ENU=zenith_cut_ENU)
-                vpol_hist = self.histMapPeak(eventids, 'vpol', plot_map=plot_map, hilbert=hilbert, max_method=max_method, use_weight=use_weight, zenith_cut_ENU=zenith_cut_ENU)
-                return (hpol_hist,vpol_hist)
-            else:
+            if initial_hist is None:
                 hist = numpy.zeros_like(self.mesh_azimuth_rad,dtype=int)
+            else:
+                hist = initial_hist.copy()
 
-                all_theta_best = numpy.zeros(len(eventids))
-                all_phi_best = numpy.zeros(len(eventids))
+            all_theta_best = numpy.zeros(len(eventids))
+            all_phi_best = numpy.zeros(len(eventids))
 
-                for event_index, eventid in enumerate(eventids):
-                    sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
-                    sys.stdout.flush()
-                    m = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=include_baselines, hilbert=hilbert)/len(eventids)
-                    if max_method is not None:
-                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
-                    else:
-                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
-
-                    all_theta_best[event_index] = theta_best
-                    all_phi_best[event_index] = phi_best
-
-                    if use_weight == True:
-                        hist.flat[linear_max_index] += m.flat[linear_max_index]
-                    else:
-                        hist.flat[linear_max_index] += 1
-
-                #After all events completed, run once more on histogram.
+            for event_index, eventid in enumerate(eventids):
+                sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
+                sys.stdout.flush()
+                m = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=include_baselines, hilbert=hilbert)/len(eventids)
                 if max_method is not None:
-                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(hist,pol=pol)
+                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
                 else:
-                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(hist,pol=pol)
+                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
 
+                all_theta_best[event_index] = theta_best
+                all_phi_best[event_index] = phi_best
 
+                if use_weight == True:
+                    hist.flat[linear_max_index] += m.flat[linear_max_index]
+                else:
+                    hist.flat[linear_max_index] += 1
+
+            #After all events completed, run once more on histogram.
+            if max_method is not None:
+                linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(hist,pol=pol)
+            else:
+                linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(hist,pol=pol)
+
+            if initial_thetas is not None:
+                all_theta_best = numpy.append(initial_thetas,all_theta_best)
+            if initial_phis is not None:
+                all_phi_best = numpy.append(initial_phis,all_phi_best)
+
+            if plot_map:
+                if ~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))):
+                        add_text = '\nIncluded baselines = ' + str(numpy.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])[include_baselines])
+                else:
+                    add_text = ''
+                if center_dir.upper() == 'E':
+                    center_dir_full = 'East'
+                    azimuth_offset_rad = 0 #This is subtracted from the xaxis to roll it effectively.
+                    azimuth_offset_deg = 0 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From East = 0 deg, North = 90 deg)' + add_text
+                    roll = 0
+                elif center_dir.upper() == 'N':
+                    center_dir_full = 'North'
+                    azimuth_offset_rad = numpy.pi/2 #This is subtracted from the xaxis to roll it effectively. 
+                    azimuth_offset_deg = 90 #This is subtracted from the xaxis to roll it effectively. 
+                    xlabel = 'Azimuth (From North = 0 deg, West = 90 deg)' + add_text
+                    roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+                elif center_dir.upper() == 'W':
+                    center_dir_full = 'West'
+                    azimuth_offset_rad = numpy.pi #This is subtracted from the xaxis to roll it effectively.
+                    azimuth_offset_deg = 180 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From West = 0 deg, South = 90 deg)' + add_text
+                    roll = len(self.phis_rad)//2
+                elif center_dir.upper() == 'S':
+                    center_dir_full = 'South'
+                    azimuth_offset_rad = -numpy.pi/2 #This is subtracted from the xaxis to roll it effectively.
+                    azimuth_offset_deg = -90 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)' + add_text
+                    roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+
+                rolled_values = numpy.roll(hist,roll,axis=1)
                 if plot_map:
-                    if ~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))):
-                            add_text = '\nIncluded baselines = ' + str(numpy.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])[include_baselines])
-                    else:
-                        add_text = ''
-                    if center_dir.upper() == 'E':
-                        center_dir_full = 'East'
-                        azimuth_offset_rad = 0 #This is subtracted from the xaxis to roll it effectively.
-                        azimuth_offset_deg = 0 #This is subtracted from the xaxis to roll it effectively.
-                        xlabel = 'Azimuth (From East = 0 deg, North = 90 deg)' + add_text
-                        roll = 0
-                    elif center_dir.upper() == 'N':
-                        center_dir_full = 'North'
-                        azimuth_offset_rad = numpy.pi/2 #This is subtracted from the xaxis to roll it effectively. 
-                        azimuth_offset_deg = 90 #This is subtracted from the xaxis to roll it effectively. 
-                        xlabel = 'Azimuth (From North = 0 deg, West = 90 deg)' + add_text
-                        roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
-                    elif center_dir.upper() == 'W':
-                        center_dir_full = 'West'
-                        azimuth_offset_rad = numpy.pi #This is subtracted from the xaxis to roll it effectively.
-                        azimuth_offset_deg = 180 #This is subtracted from the xaxis to roll it effectively.
-                        xlabel = 'Azimuth (From West = 0 deg, South = 90 deg)' + add_text
-                        roll = len(self.phis_rad)//2
-                    elif center_dir.upper() == 'S':
-                        center_dir_full = 'South'
-                        azimuth_offset_rad = -numpy.pi/2 #This is subtracted from the xaxis to roll it effectively.
-                        azimuth_offset_deg = -90 #This is subtracted from the xaxis to roll it effectively.
-                        xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)' + add_text
-                        roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
-
-                    rolled_values = numpy.roll(hist,roll,axis=1)
-
                     fig = plt.figure()
 
                     if window_title is None:
@@ -2413,9 +2419,9 @@ class Correlator:
 
                     if mollweide == True:
                         #Automatically converts from rads to degs
-                        im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=0.1, vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm,norm=matplotlib.colors.LogNorm())
+                        im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=0.1, vmax=numpy.max(rolled_values),cmap=plt.cm.Reds,norm=matplotlib.colors.LogNorm())
                     else:
-                        im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=0.1, vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm,norm=matplotlib.colors.LogNorm())
+                        im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=0.1, vmax=numpy.max(rolled_values),cmap=plt.cm.Reds,norm=matplotlib.colors.LogNorm())
 
                     stacked_variables = numpy.vstack((all_phi_best,all_theta_best)) #x,y
                     covariance_matrix = numpy.cov(stacked_variables)
@@ -2437,8 +2443,9 @@ class Correlator:
                     plt.ylabel('Elevation Angle (Degrees)')
                     plt.grid(True)
 
-                    #Added circles as specified.
-                    ax, peak_circle = self.addCircleToMap(ax, phi_best, 90.0 - theta_best, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+                    if plot_max:
+                        #Added circles as specified.
+                        ax, peak_circle = self.addCircleToMap(ax, phi_best, 90.0 - theta_best, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
 
                     if circle_az is not None:
                         if circle_zenith is not None:
@@ -2504,7 +2511,7 @@ class Correlator:
 
                     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.25)
 
-                    return hist
+            return hist, all_phi_best, all_theta_best
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
