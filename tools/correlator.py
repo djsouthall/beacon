@@ -17,6 +17,7 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
 import tools.info as info
+from tools.data_handler import getEventTimes
 import analysis.phase_response as pr
 import tools.get_plane_tracks as pt
 from tools.fftmath import FFTPrepper, TimeDelayCalculator
@@ -164,7 +165,11 @@ class Correlator:
             self.mesh_azimuth_deg, self.mesh_elevation_deg = numpy.meshgrid(numpy.linspace(min(range_phi_deg),max(range_phi_deg),n_phi), 90.0 - numpy.linspace(min(range_theta_deg),max(range_theta_deg),n_theta))
             self.mesh_zenith_deg = 90.0 - self.mesh_elevation_deg
             self.mesh_zenith_rad = numpy.deg2rad(self.mesh_zenith_deg)
-            #self.A0_latlonel = info.loadAntennaZeroLocation() #Used for conversion to RA and Dec coordinates.
+            
+            self.original_A0_latlonel = numpy.array(info.loadAntennaZeroLocation()) #This will not change.  Used as reference point when new antenna positions given. 
+            self.A0_latlonel_physical = self.original_A0_latlonel.copy() #Used for looking at planes.  Theoretically this should perfectly align with antenna 0, as antenna 0 can be adjusted, it will move accordingly.  
+            self.A0_latlonel_hpol = self.original_A0_latlonel.copy()
+            self.A0_latlonel_vpol = self.original_A0_latlonel.copy()
 
             antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
 
@@ -184,6 +189,7 @@ class Correlator:
             self.A3_vpol = numpy.asarray(antennas_phase_vpol[3])
 
             self.map_source_distance_m = map_source_distance_m
+            self.recalculateLatLonEl()
             self.generateTimeIndices() #Must be called again if map_source_distance_m is reset
             self.calculateArrayNormalVector()
 
@@ -193,6 +199,17 @@ class Correlator:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+    def recalculateLatLonEl(self):
+        '''
+        Given the current physical, hpol, and vpol antenna locations, this will convert those ENU coordinates (with 
+        reference to the original input lat lon el) to the shifted lat lon el.  This can be used as the origin for
+        calculated direction to airplanes etc.  
+        '''
+        self.A0_latlonel_physical = pm.enu2geodetic(self.A0_physical[0],self.A0_physical[1],self.A0_physical[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
+        self.A0_latlonel_hpol = pm.enu2geodetic(self.A0_hpol[0],self.A0_hpol[1],self.A0_hpol[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
+        self.A0_latlonel_vpol = pm.enu2geodetic(self.A0_vpol[0],self.A0_vpol[1],self.A0_vpol[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
+
 
     def overwriteAntennaLocations(self, A0_physical,A1_physical,A2_physical,A3_physical,A0_hpol,A1_hpol,A2_hpol,A3_hpol,A0_vpol,A1_vpol,A2_vpol,A3_vpol, verbose=True, suppress_time_delay_calculations=False):
         '''
@@ -263,6 +280,7 @@ class Correlator:
             if suppress_time_delay_calculations == False:
                 if verbose:
                     print('Rerunning time delay prep with antenna positions.')
+                self.recalculateLatLonEl()
                 self.generateTimeIndices() #Must be called again if map_source_distance_m is reset
                 self.calculateArrayNormalVector()
             else:
@@ -1547,7 +1565,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=False):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -1863,6 +1881,11 @@ class Correlator:
                                 ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
                                 additional_circles.append(_circ)
 
+                if add_airplanes:
+                    ax, airplane_direction_dict = self.addAirplanesToMap([eventid], pol, ax, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = 1.0, crosshair=False, color='r', min_approach_cut_km=200,plot_distance_cut_limit=200)
+                    if verbose:
+                        print('airplane_direction_dict:')
+                        print(airplane_direction_dict)
                 if zenith_cut_ENU is not None:
                     if mollweide == True:
                         #Block out simple ENU zenith cut region. 
@@ -2738,6 +2761,147 @@ class Correlator:
         a subset of the times and interpolate?  Definitely don't need as fine resolution as I often use for fftmath.
         '''
 
+    def getEventTimes(self,plot=False,smooth_window=101):
+        '''
+        Uses the function from the data handler.
+        This will hopefully do the appropriate math to determine the real time
+        of each event in a run.
+
+        Smoothing will be performed on the rates using the specified smooth window.
+        To disable this set the smooth window to None.
+        '''
+        actual_event_time_seconds = getEventTimes(self.reader,plot=plot,smooth_window=smooth_window)
+        return actual_event_time_seconds
+
+    def getENUTrackDict(self, *args, **kwargs):
+        '''
+        This will return a dict with the trajectories of each plane observed in the 
+        period of time specified (given in UTC timestamps).
+
+        Calls pt.getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_interest=[])
+        return flight_tracks_ENU, all_vals
+        return {}, []
+
+        '''
+        return pt.getENUTrackDict(*args, **kwargs)
+
+    def addAirplanesToMap(self, eventids, pol, ax, azimuth_offset_deg=0, mollweide=False, radius = 1.0, crosshair=False, color='k', min_approach_cut_km=100,plot_distance_cut_limit=100):
+        '''
+        This will add circles to a map for every airplane that is expected to be present in the sky at the time of the
+        event.  If a range of events are given then this will plot trajectories of planes ovr the map.
+
+        args and kwargs should be plot parameters.  A common set is:
+        linewidth=0.5,fill=False
+        Note that color will be used for both crosshair and edge_color of the circle if crosshair == True.  Thus it
+        has it's own kwarg.   
+    
+        Parameters
+        ----------
+        eventids : numpy.array of ints
+            The entries to be used for determining the time window appropriate to see if airplanes are visible.
+        pol : str
+            The polarization you wish to plot.  Used for determining direction of planes based off of antenna locations.
+            Either 'hpol' or 'vpol'.
+        ax : matplotlib.pyplot.axes
+            The axes inwhich the current map is plotted.  This will be modified and returned. 
+        azimuth_offset_deg : float
+            This is used when the centir_dir is not set to East, and allows for the center of the plot to align properly
+            with added plot components. 
+        mollweide : bool
+            This must match the axes given, as it is used to determine if radians or degrees are used when plotting. 
+        radius : float
+            The radius of the circle to be added around suspected airplane locations.
+        crosshair : bool
+            Enables a crosshair centered at the airplane locations.
+        color : str
+            The color string that the crosshair will be colored. 
+        *args : *args
+            The list of args for plotting style.
+        *kwargs : *kwargs
+            The list of kwargs for plotting style.
+        '''
+        try:
+            vmin = 0
+            vmax = plot_distance_cut_limit
+            norm = matplotlib.colors.Normalize(vmin, vmax)
+            cmap = matplotlib.cm.jet
+            # Determine if planes are in the sky in the time window of the event.
+            event_times = self.getEventTimes()[eventids]
+            start = min(event_times)
+            stop = max(event_times)
+            if pol == 'hpol':
+                origin = self.A0_latlonel_hpol
+            elif pol == 'vpol':
+                origin = self.A0_latlonel_vpol
+            else:
+                origin = self.A0_latlonel_physical
+
+            flight_tracks_ENU, all_vals = self.getENUTrackDict(start,stop,min_approach_cut_km,hour_window=2,flights_of_interest=[],origin=origin)
+
+            # Get interpolated airplane trajectories. 
+            airplane_direction_dict = {}
+
+            for plane_index, key in enumerate(list(flight_tracks_ENU.keys())):
+                airplane_direction_dict[key] = {}
+
+                original_norms = numpy.sqrt(flight_tracks_ENU[key][:,0]**2 + flight_tracks_ENU[key][:,1]**2 + flight_tracks_ENU[key][:,2]**2 )
+                cut = numpy.logical_and(original_norms/1000.0 < plot_distance_cut_limit,numpy.logical_and(min(flight_tracks_ENU[key][:,3]) <= start ,max(flight_tracks_ENU[key][:,3]) >= stop))
+                if numpy.sum(cut) == 0:
+                    continue
+                poly = pt.PlanePoly(flight_tracks_ENU[key][cut,3],(flight_tracks_ENU[key][cut,0],flight_tracks_ENU[key][cut,1],flight_tracks_ENU[key][cut,2]),order=5,plot=False)
+                interpolated_airplane_locations = poly.poly(event_times)
+                if len(poly.poly_funcs) > 0:
+                    
+                    # Geometry
+                    # Calculate phi and theta
+                    norms = numpy.sqrt(interpolated_airplane_locations[:,0]**2 + interpolated_airplane_locations[:,1]**2 + interpolated_airplane_locations[:,2]**2 )
+                    azimuths = numpy.rad2deg(numpy.arctan2(interpolated_airplane_locations[:,1],interpolated_airplane_locations[:,0]))
+                    #azimuths[azimuths < 0] = azimuths[azimuths < 0]%360
+                    zeniths = numpy.rad2deg(numpy.arccos(interpolated_airplane_locations[:,2]/norms))
+
+                    airplane_direction_dict[key]['azimuth'] = azimuths
+                    airplane_direction_dict[key]['zenith'] = zeniths
+                    airplane_direction_dict[key]['distance_km'] = norms/1000
+
+                    # plot each circle
+                    for direction_index in range(len(azimuths)):
+                        azimuth = azimuths[direction_index]
+                        zenith = zeniths[direction_index]
+                        elevation = 90.0 - zenith
+
+                        # Add best circle.
+                        azimuth = azimuth - azimuth_offset_deg
+                        if azimuth < -180.0:
+                            azimuth += 2*180.0
+                        elif azimuth > 180.0:
+                            azimuth -= 2*180.0
+                        
+                        if mollweide == True:
+                            radius = numpy.deg2rad(radius)
+                            elevation = numpy.deg2rad(elevation)
+                            azimuth = numpy.deg2rad(azimuth)
+
+                        circle = plt.Circle((azimuth, elevation), radius, edgecolor=cmap(norm(norms[direction_index]/1000)),fill=False)
+
+                        if crosshair == True:
+                            h = ax.axhline(elevation,c=color,linewidth=1,alpha=0.5)
+                            v = ax.axvline(azimuth,c=color,linewidth=1,alpha=0.5)
+
+                        ax.add_artist(circle)
+
+            sc = plt.scatter([0,0],[0,0],s=0,c=[vmin,vmax], cmap='jet', vmin = vmin, vmax = vmax, facecolors='none')
+            #import pdb; pdb.set_trace()
+            cbar = plt.colorbar(sc)
+            cbar.set_label('Airplane Distance (km)', rotation=90, labelpad=10)
+            
+            return ax, airplane_direction_dict
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
 def testMain():
     '''
     This was used for testing.
@@ -2872,26 +3036,11 @@ if __name__=="__main__":
         if sine_subtract:
             cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-        #Azimuth Cuts
-        mean_corr_values, fig, ax = cor.map(eventid, 'vpol', plot_map=True, plot_corr=False, hilbert=True,include_baselines=numpy.array([1,4]), zenith_cut_ENU=None, zenith_cut_array_plane=[0,110], interactive=True)
-
         for mode in ['hpol','vpol']:
-            mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,110], interactive=True)
-            all_figs.append(fig)
-            all_axs.append(ax)
-            # mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, interactive=True)
-            # all_figs.append(fig)
-            # all_axs.append(ax)
-
-            #Azimuth Cuts
-            mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True,include_baselines=numpy.array([1,4]), zenith_cut_ENU=None, zenith_cut_array_plane=[0,110], interactive=True)
+            mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='W', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
             all_figs.append(fig)
             all_axs.append(ax)
 
-            # #Zenith Cuts
-            mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True,include_baselines=numpy.array([0,2,3,5]), zenith_cut_ENU=None, zenith_cut_array_plane=[0,110], interactive=True)
-            all_figs.append(fig)
-            all_axs.append(ax)
 
             
         all_cors.append(cor)
@@ -2965,7 +3114,7 @@ if __name__=="__main__":
                         #ax.axvline(pulser_phi,c='r')
                         #ax.axhline(pulser_theta,c='r')
 
-                        mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=max_method,circle_zenith=pulser_theta,circle_az=pulser_phi,time_delay_dict=time_delay_dict)
+                        mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, center_dir='W',hilbert=False, interactive=True, max_method=max_method,circle_zenith=pulser_theta,circle_az=pulser_phi,time_delay_dict=time_delay_dict)
                         all_figs.append(fig)
                         all_axs.append(ax)
                 if False:
@@ -3002,7 +3151,7 @@ if __name__=="__main__":
 
             plane_polys = {}
             cors = []
-            interpolated_plane_locations = {}
+            interpolated_airplane_locations = {}
             origin = info.loadAntennaZeroLocation()
             plot_baseline_removal_hists = False
             plot_compare_trajectory = False
@@ -3020,8 +3169,8 @@ if __name__=="__main__":
                 enu = pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2])
                 plane_polys[key] = pt.PlanePoly(output_tracks[key]['timestamps'],enu,plot=False)
 
-                interpolated_plane_locations[key] = plane_polys[key].poly(calibrated_trigtime[key])
-                normalized_plane_locations = interpolated_plane_locations[key]/(numpy.tile(numpy.linalg.norm(interpolated_plane_locations[key],axis=1),(3,1)).T)
+                interpolated_airplane_locations[key] = plane_polys[key].poly(calibrated_trigtime[key])
+                normalized_plane_locations = interpolated_airplane_locations[key]/(numpy.tile(numpy.linalg.norm(interpolated_airplane_locations[key],axis=1),(3,1)).T)
 
                 run = numpy.unique(known_planes[key]['eventids'][:,0])[0]
                 calibrated_trigtime[key] = numpy.zeros(len(known_planes[key]['eventids'][:,0]))

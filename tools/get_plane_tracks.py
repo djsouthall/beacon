@@ -24,6 +24,7 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 from tools.data_handler import createFile
 import tools.info as info
+import tools.get_plane_tracks as pt
 
 #Plotting Imports
 import pymap3d as pm
@@ -148,23 +149,24 @@ def getTracks(start,stop,min_approach_cut_km,hour_window = 12):
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
 
-def getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_interest=[]):
+def getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_interest=[],origin=None):
     '''
     This will return a dict with the trajectories of each plane observed in the 
     period of time specified (given in UTC timestamps).
 
-    NOT UPDATED YET
+    origin should be a tuple in the same format as returned by loadAntennaZeroLocation (latitude,longtidue,elevation)
     '''
     try:
         unique_flights, all_vals = getTracks(start,stop,min_approach_cut_km,hour_window=hour_window)
-
         if numpy.size(flights_of_interest) != 0:
             unique_flights = unique_flights[numpy.isin(unique_flights,flights_of_interest)]
             all_vals = all_vals[numpy.isin(all_vals['names'],flights_of_interest)]
 
         if numpy.size(all_vals) != 0:
             flight_tracks_ENU = {}
-            origin = info.loadAntennaZeroLocation(deploy_index = 1) #Antenna 0
+            if origin is None:
+                origin = info.loadAntennaZeroLocation() #Antenna 0
+
 
             for unique_flight in unique_flights:
                 flight_cut = numpy.where(all_vals['names'] == unique_flight)[0]
@@ -327,17 +329,21 @@ class PlanePoly:
             self.fit_params = []
             self.poly_funcs = []
             self.range = (min(t),max(t))
-
+            self.valid = True
             if plot == True:
                 plane_norm_fig = plt.figure()
                 plane_norm_ax = plt.gca()
             for i in range(3):
                 index = numpy.sort(numpy.unique(enu[i],return_index=True)[1]) #Indices of values to be used in fit.
-                self.fit_params.append(numpy.polyfit(t[index] - self.time_offset, enu[i][index],self.order)) #Need to shift t to make fit work
-                self.poly_funcs.append(numpy.poly1d(self.fit_params[i]))
-                if plot == True:
-                    plane_norm_ax.plot(t,self.poly_funcs[i](t - self.time_offset)/1000.0,label='Fit %s Coord order %i'%(['E','N','U'][i],order))
-                    plane_norm_ax.scatter(t[index],enu[i][index]/1000.0,label='Data for %s'%(['E','N','U'][i]),alpha=0.3)
+                #Below a few datapoints this fit can't work.  
+                if len(index) >= 3:
+                    self.fit_params.append(numpy.polyfit(t[index] - self.time_offset, enu[i][index],self.order)) #Need to shift t to make fit work
+                    self.poly_funcs.append(numpy.poly1d(self.fit_params[i]))
+                    if plot == True:
+                        plane_norm_ax.plot(t,self.poly_funcs[i](t - self.time_offset)/1000.0,label='Fit %s Coord order %i'%(['E','N','U'][i],order))
+                        plane_norm_ax.scatter(t[index],enu[i][index]/1000.0,label='Data for %s'%(['E','N','U'][i]),alpha=0.3)
+                else:
+                    self.valid=False
             if plot == True:
                 plt.legend()
                 plt.minorticks_on()
@@ -359,7 +365,8 @@ class PlanePoly:
         Will return the resulting values of ENU for the given t.
         '''
         try:
-            return numpy.vstack((self.poly_funcs[0](t-self.time_offset),self.poly_funcs[1](t-self.time_offset),self.poly_funcs[2](t-self.time_offset))).T
+            if self.valid:
+                return numpy.vstack((self.poly_funcs[0](t-self.time_offset),self.poly_funcs[1](t-self.time_offset),self.poly_funcs[2](t-self.time_offset))).T
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
