@@ -31,7 +31,7 @@ import pymap3d as pm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
-default_deploy = 15#15#The deployment calibration to use as the default.
+default_deploy = 19#15#The deployment calibration to use as the default.
 
 def returnDefaultDeploy():
     return default_deploy
@@ -765,6 +765,43 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
 
             antennas_phase_hpol = {0 : [-0.121226, 1.755070, -4.164016], 1 : [-33.783739, -12.067049, 14.709302], 2 : [-6.931436, -47.135687, 0.600605], 3 : [-30.835281, -42.606386, 14.853267]}
             antennas_phase_vpol = {0 : [-0.442439, 1.784501, -3.595621], 1 : [-34.121366, -11.965828, 14.797254], 2 : [-7.324517, -47.078042, 0.728544], 3 : [-30.611585, -42.820426, 14.415308]}
+        elif deploy_index == 16:
+            #This set of coordinates DOES NOT COME FROM CHI^2. 
+            #This is meant as input.  Essentially starting with the relative antenna positions achieved using airplane 
+            #data in the past, but ensuring that antenna 0/the array is at the newly defined elevation.  The relative
+            #positions come from calibration 2.
+
+            #These include the next 6, specifically calibrated to be W sensitive. #currently the best for planes found in west
+            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-32.940076, -15.159404, 13.220501], 2 : [-9.459576, -48.470314, 9.195625], 3 : [-31.800885, -44.470317, 16.231648]}
+            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.010150, 0.021543, 0.007624], 2 : [0.010652, 0.025185, 0.008330], 3 : [0.009642, 0.020038, 0.006959]}
+            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-31.224503, -13.170500, 10.000003], 2 : [-9.765921, -46.417296, 3.205128], 3 : [-31.080523, -42.279361, 12.014143]}
+            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.037041, 0.074031, 4.992054], 2 : [0.023776, 0.044105, 0.048783], 3 : [0.027407, 0.050578, 0.057576]}
+        elif deploy_index == 17:
+            #This is using valley sources same as 8, but starting from 13. Results in time delays semi reasonable. 
+            #Saved and intended for use as a starting condition for low movement of just pulser data. 
+            antennas_phase_hpol = {0 : [-4.865278, 3.214076, 4.630806], 1 : [-32.974217, -15.411447, 22.795159], 2 : [-10.943711, -45.497623, -4.818512], 3 : [-32.061146, -42.722525, 9.177065]}
+            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+            antennas_phase_vpol = {0 : [-4.530553, 3.253017, 4.554258], 1 : [-31.055576, -16.501015, 24.679216], 2 : [-10.686676, -45.258288, -5.432522], 3 : [-31.480157, -42.663642, 9.087964]}
+            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+        elif deploy_index == 18:
+            #This set of coordinates DOES NOT COME FROM CHI^2. 
+            #This is meant as input.  Essentially starting with the relative antenna positions achieved using valley sources 
+            #(literally deploy_index 8), but with the origin set to match 13. 
+            #data in the past, but ensuring that antenna 0/the array is at the newly defined elevation.  The relative
+            #positions come from calibration 2.
+
+            #These include the next 6, specifically calibrated to be W sensitive. #currently the best for planes found in west
+            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-32.940076, -15.159404, 13.220501], 2 : [-9.459576, -48.470314, 9.195625], 3 : [-31.800885, -44.470317, 16.231648]}
+            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.010150, 0.021543, 0.007624], 2 : [0.010652, 0.025185, 0.008330], 3 : [0.009642, 0.020038, 0.006959]}
+            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-31.224503, -13.170500, 10.000003], 2 : [-9.765921, -46.417296, 3.205128], 3 : [-31.080523, -42.279361, 12.014143]}
+            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.037041, 0.074031, 4.992054], 2 : [0.023776, 0.044105, 0.048783], 3 : [0.027407, 0.050578, 0.057576]}
+        elif deploy_index == 19:
+            #This one works well for the 3 pulsers (which it is based on) and has good results for all antennas but antenna 0 in the valley.
+            #Rerunning with this as starting ocndition but with antenna 0 allowed to move. 
+            antennas_phase_hpol = {0 : [2.703403, -0.727873, 2.927082], 1 : [-28.493635, -14.166269, 14.698087], 2 : [-5.072297, -49.533393, 1.504482], 3 : [-27.537450, -44.914837, 17.271776]}
+            antennas_phase_hpol_hesse = {0 : [0.760297, 0.277011, 5.718408], 1 : [1.583672, 0.196639, 0.419612], 2 : [0.171910, 6.326707, 0.502885], 3 : [0.658066, 0.254736, 9.730493]}
+            antennas_phase_vpol = {0 : [2.531864, -0.815938, 4.787836], 1 : [-28.560448, -14.142631, 14.698089], 2 : [-5.005754, -49.488358, 1.504481], 3 : [-27.190815, -45.237602, 17.383858]}
+            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
 
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
@@ -815,6 +852,13 @@ def loadCableDelays(deploy_index=default_deploy,return_raw=False):
 
         cable_delays =  {   'hpol':     numpy.array([17.809761,3.103724,9.518142,7.911402]), \
                             'vpol':     numpy.array([21.671835,4.689877,17.031305,7.945473])}
+    elif deploy_index == 17:
+        cable_delays =  {   'hpol':     numpy.array([2.901715,11.148590,3.695444,13.082649]), \
+                            'vpol':     numpy.array([8.324117,19.208286,12.596147,12.946409])}
+    elif deploy_index == 19:
+        cable_delays =  {   'hpol':     numpy.array([12.890893,7.962642,5.000000,6.202864]), \
+                            'vpol':     numpy.array([15.835665,9.689739,13.090459,5.637693])}
+
 
 
     else:

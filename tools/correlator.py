@@ -11,6 +11,7 @@ import sys
 import gc
 import pymap3d as pm
 import latex
+import itertools
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 
@@ -770,6 +771,126 @@ class Correlator:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+    def generateExpectedStokesParameters(self, antenna_model='uniform', included_antennas=numpy.array([0,1,2,3]), debug=False):
+        '''
+        Given the local magnetic field vector, this will estimate the percieved Stokes parameters of a purely
+        geomagnetic signal as a function of azimuth and elevation. 
+        antenna_model : str
+            This sets the gain pattern used when comparing the relative powers of the vpol and hpol antennas.  The 
+            supported options are 'uniform' and 'dipole', any other input will be interpreted as uniform.  If uniform
+            is used then the signals powers will be calculated and compared agnostic of source direction, but if it
+            is dipole then the this will attempt to account for the decrease in power due to a simple dipole beam 
+            pattern.
+        '''
+        if antenna_model == 'dipole':
+            source_vector = 0#In the same basis as the antennas, assuming source directions and distance relative to antenna 0.
+
+
+        try:
+            signal_source_position_hpol        = numpy.zeros((self.mesh_azimuth_rad.shape[0], self.mesh_azimuth_rad.shape[1], 3))
+            signal_source_position_hpol[:,:,0] = self.map_source_distance_m * numpy.multiply( numpy.cos(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) ) + self.A0_hpol[0] #Shifting points to be centered around antenna 0
+            signal_source_position_hpol[:,:,1] = self.map_source_distance_m * numpy.multiply( numpy.sin(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) ) + self.A0_hpol[1] #Shifting points to be centered around antenna 0
+            signal_source_position_hpol[:,:,2] = self.map_source_distance_m * numpy.cos(self.mesh_zenith_rad) + self.A0_hpol[2] #Shifting points to be centered around antenna 0
+
+            signal_source_position_vpol        = numpy.zeros((self.mesh_azimuth_rad.shape[0], self.mesh_azimuth_rad.shape[1], 3))
+            signal_source_position_vpol[:,:,0] = self.map_source_distance_m * numpy.multiply( numpy.cos(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) ) + self.A0_vpol[0] #Shifting points to be centered around antenna 0
+            signal_source_position_vpol[:,:,1] = self.map_source_distance_m * numpy.multiply( numpy.sin(self.mesh_azimuth_rad) , numpy.sin(self.mesh_zenith_rad) ) + self.A0_vpol[1] #Shifting points to be centered around antenna 0
+            signal_source_position_vpol[:,:,2] = self.map_source_distance_m * numpy.cos(self.mesh_zenith_rad) + self.A0_vpol[2] #Shifting points to be centered around antenna 0
+
+            if debug:
+                fig = plt.figure()
+                ax = fig.gca(projection='3d')
+                ax.scatter(signal_source_position_hpol[:,:,0],signal_source_position_hpol[:,:,1],signal_source_position_hpol[:,:,2],marker=',',alpha=0.3)
+                ax.scatter(self.A0_hpol[0],self.A0_hpol[1],self.A0_hpol[2],label='A0',c='tab:blue')
+                ax.scatter(self.A1_hpol[0],self.A1_hpol[1],self.A1_hpol[2],label='A1',c='tab:orange')
+                ax.scatter(self.A2_hpol[0],self.A2_hpol[1],self.A2_hpol[2],label='A2',c='tab:green')
+                ax.scatter(self.A3_hpol[0],self.A3_hpol[1],self.A3_hpol[2],label='A3',c='tab:red')
+                ax.set_xlabel('E (m)')
+                ax.set_ylabel('N (m)')
+                ax.set_zlabel('Relative Elevation (m)')
+                plt.legend()
+
+            #Calculate the expected readout time for each antenna (including cable delays)
+            hpol_beam_angle_0 = None#Here I should calculate the angle of arrival at the antenna in the beam zenith such that I can calculate the beam multiplicative factor.#self.cable_delays[0] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A0_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A0_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A0_hpol[2])**2 )/self.c)*1.0e9 #ns
+            hpol_beam_angle_1 = None#Here I should calculate the angle of arrival at the antenna in the beam zenith such that I can calculate the beam multiplicative factor.#self.cable_delays[2] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A1_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A1_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A1_hpol[2])**2 )/self.c)*1.0e9 #ns
+            hpol_beam_angle_2 = None#Here I should calculate the angle of arrival at the antenna in the beam zenith such that I can calculate the beam multiplicative factor.#self.cable_delays[4] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A2_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A2_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A2_hpol[2])**2 )/self.c)*1.0e9 #ns
+            hpol_beam_angle_3 = None#Here I should calculate the angle of arrival at the antenna in the beam zenith such that I can calculate the beam multiplicative factor.#self.cable_delays[6] + (numpy.sqrt((signal_source_position_hpol[:,:,0] - self.A3_hpol[0])**2 + (signal_source_position_hpol[:,:,1] - self.A3_hpol[1])**2 + (signal_source_position_hpol[:,:,2] - self.A3_hpol[2])**2 )/self.c)*1.0e9 #ns
+
+            vpol_beam_angle_0 = None#Here I should calculate the angle of arrival at the antenna in the beam zenith such that I can calculate the beam multiplicative factor.#self.cable_delays[1] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A0_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A0_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A0_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_beam_angle_1 = None#Here I should calculate the angle of arrival at the antenna in the beam zenith such that I can calculate the beam multiplicative factor.#self.cable_delays[3] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A1_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A1_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A1_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_beam_angle_2 = None#Here I should calculate the angle of arrival at the antenna in the beam zenith such that I can calculate the beam multiplicative factor.#self.cable_delays[5] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A2_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A2_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A2_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_beam_angle_3 = None#Here I should calculate the angle of arrival at the antenna in the beam zenith such that I can calculate the beam multiplicative factor.#self.cable_delays[7] + (numpy.sqrt((signal_source_position_vpol[:,:,0] - self.A3_vpol[0])**2 + (signal_source_position_vpol[:,:,1] - self.A3_vpol[1])**2 + (signal_source_position_vpol[:,:,2] - self.A3_vpol[2])**2 )/self.c)*1.0e9 #ns
+
+
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
+
+    def calculateStokesParameters(self, eventid):
+        '''
+        This will calculate the Stokes parameters for a given waveform.  This does NOT account for beam pattern or
+        arrival direction.  The "expected" should be calculated in accordance with this such that the match when they
+        should.
+
+        Currently has no time windowing, so this is prone to being offset by the noise baseline. 
+
+        Parameters
+        ----------
+        eventid : int
+            The entry number you wish to have calculate the Stokes parameters for.
+        included_antennas : numpy.array
+            An array of the antennas you want the stokes parameters calculated for.  This uses the lumped antenna
+            labelling, where antenna 0 corresponds to channels 0 and 1, antenna 0 to 2 and 3, etc.  This is because
+            this calculation definitionally needs both polarizations within a given antenna to calculate the stokes
+            parameters.
+
+        References
+        ----------
+        https://inspirehep.net/files/84e7b61412acf86d5fe2964d55ac1e5e Section 5.2
+        https://en.wikipedia.org/wiki/Stokes_parameters
+        https://github.com/nichol77/libRootFftwWrapper/blob/master/src/FFTtools.cxx#L2956
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.hilbert.html
+        https://en.wikipedia.org/wiki/Analytic_signal
+        https://inspirehep.net/files/84e7b61412acf86d5fe2964d55ac1e5e
+
+
+
+        '''
+        included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas])
+
+        waveforms = self.wf(eventid, included_antennas_channels ,div_std=False,hilbert=False,apply_filter=self.apply_filter,tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract)
+        waveform_times = self.t()
+
+        stokes_parameters = numpy.zeros((len(included_antennas),4))
+        freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
+
+        for antenna_index, antenna in enumerate(included_antennas):
+            wf_h = waveforms[antenna_index//2]
+            hilbert_h = scipy.signal.hilbert(wf_h)
+            wf_v = waveforms[antenna_index//2 + 1]
+            hilbert_v = scipy.signal.hilbert(wf_v)
+
+            complex_uv_term = numpy.multiply(wf_h,hilbert_v)
+
+            stokes_I = numpy.sum(numpy.multiply(wf_h,hilbert_h) + numpy.multiply(wf_v,hilbert_v))
+            stokes_Q = numpy.sum(numpy.multiply(wf_h,hilbert_h) + numpy.multiply(wf_v,hilbert_v))
+            stokes_U = numpy.sum(2.0*numpy.real(complex_uv_term))
+            stokes_V = numpy.sum(-2.0*numpy.imag(complex_uv_term))
+
+            stokes_parameters[antenna_index] = numpy.array([stokes_I, stokes_Q, stokes_U, stokes_V])
+
+        return stokes_parameters
+
+
+
+
 
 
     def fixZenithAngleWrap(self, azimuth_angles_deg, zenith_angles_deg):
@@ -2318,7 +2439,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None):
+    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None):
         '''
         This will loop over eventids and makes a histogram from of location of maximum correlation
         value in the corresponding correlation maps. 
@@ -2359,6 +2480,14 @@ class Correlator:
             This allows for the user to pass a "starting" condition for this histogram.  This can be used to loop over
             histograms from multiple runs, and plot the summed histogram (by consecutively feed each run with the past)
             runs output.  This requries them all to have the same binning.  
+        iterate_sub_baselines : int
+            This is the subset size of subsets to include when generating the histogram.  Using this subset size, each
+            possible set of baselines within the predefined include_baselines is iterated over, with the max peak
+            being selected.  This allows for the user to have a spread visible that is induced by non-overlapping baselines
+            even if the signal itself is very consistent in form (and thus wouldn't have a large spread in histogram, 
+            even if it is inaccurate).  Default is None which results in matching the length of the original 
+            include_baselines (resulting in only the 1 full map being used).  You can use any subset you like, but 3 is
+            recommended if you want to have some actual level of pointing among the subsets of baselines. 
         '''
         try:
             if initial_hist is None:
@@ -2368,29 +2497,35 @@ class Correlator:
 
             all_theta_best = numpy.zeros(len(eventids))
             all_phi_best = numpy.zeros(len(eventids))
+            if iterate_sub_baselines is None:
+                iterate_sub_baselines = len(include_baselines)
+            elif iterate_sub_baselines > len(include_baselines):
+                print('WARNING, include_baselines > len(include_baselines, setting to len(include_baselines)')
+                iterate_sub_baselines = len(include_baselines)
+            include_baselines_all =  numpy.array(list(itertools.combinations(include_baselines,iterate_sub_baselines))) #Every subset of baselines matching the specified length within the allowable set. 
+                
+
 
             for event_index, eventid in enumerate(eventids):
                 sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
                 sys.stdout.flush()
-                m = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=include_baselines, hilbert=hilbert)/len(eventids)
-                if max_method is not None:
-                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
-                else:
-                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+                for _include_baselines in include_baselines_all:
+                    m = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=_include_baselines, hilbert=hilbert)/len(eventids)
+                    if max_method is not None:
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+                    else:
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
 
-                all_theta_best[event_index] = theta_best
-                all_phi_best[event_index] = phi_best
+                    all_theta_best[event_index] = theta_best
+                    all_phi_best[event_index] = phi_best
 
-                if use_weight == True:
-                    hist.flat[linear_max_index] += m.flat[linear_max_index]
-                else:
-                    hist.flat[linear_max_index] += 1
+                    if use_weight == True:
+                        hist.flat[linear_max_index] += m.flat[linear_max_index]
+                    else:
+                        hist.flat[linear_max_index] += 1
 
             #After all events completed, run once more on histogram.
-            if max_method is not None:
-                linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(hist,pol=pol)
-            else:
-                linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(hist,pol=pol)
+            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(hist,pol=pol, max_method=0)
 
             if initial_thetas is not None:
                 all_theta_best = numpy.append(initial_thetas,all_theta_best)
@@ -2398,8 +2533,8 @@ class Correlator:
                 all_phi_best = numpy.append(initial_phis,all_phi_best)
 
             if plot_map:
-                if ~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))):
-                        add_text = '\nIncluded baselines = ' + str(numpy.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])[include_baselines])
+                if numpy.logical_or(~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))),iterate_sub_baselines != len(include_baselines)):
+                        add_text = '\nIncluded baselines (subsets of len %i) = '%iterate_sub_baselines + str(numpy.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])[include_baselines])
                 else:
                     add_text = ''
                 if center_dir.upper() == 'E':
@@ -2468,7 +2603,7 @@ class Correlator:
 
                     if plot_max:
                         #Added circles as specified.
-                        ax, peak_circle = self.addCircleToMap(ax, phi_best, 90.0 - theta_best, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+                        ax, peak_circle = self.addCircleToMap(ax, phi_best, 90.0 - theta_best, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
 
                     if circle_az is not None:
                         if circle_zenith is not None:
@@ -2489,7 +2624,7 @@ class Correlator:
                             if len(_circle_zenith) == len(_circle_az):
                                 additional_circles = []
                                 for i in range(len(_circle_az)):
-                                    ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
+                                    ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=radius, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
                                     additional_circles.append(_circ)
                             plt.title('%s Difference from reconstructed \nand expected peaks is %0.2f'%( window_title,  numpy.sqrt( (_circle_az[i] - phi_best)**2 + (_circle_zenith[i] - theta_best)**2 ) ))
                             print('%s\nDifference in degrees from reconstructed and expected peaks is %0.2f'%( window_title,  numpy.sqrt( (_circle_az[i] - phi_best)**2 + (_circle_zenith[i] - theta_best)**2 ) ))

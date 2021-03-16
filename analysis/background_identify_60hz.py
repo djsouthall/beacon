@@ -239,6 +239,7 @@ if __name__ == '__main__':
             with h5py.File(filename, 'r') as file:
                 try:
                     load_cut = file['trigger_type'][...] == 2
+                    loaded_eventids = numpy.where(load_cut)[0]
                     calibrated_trig_time = file['calibrated_trigtime'][load_cut]
                     randomized_times = numpy.sort(numpy.random.uniform(low=calibrated_trig_time[0],high=calibrated_trig_time[-1],size=(len(calibrated_trig_time),)))
 
@@ -313,6 +314,11 @@ if __name__ == '__main__':
                         plt.minorticks_on()
                         plt.grid(b=True, which='major', color='k', linestyle='-')
                         plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                        if False:
+                            #flagged_eventids = numpy.vstack(numpy.ones(sum(~cut),dtype=int)*int(run),loaded_eventids[~cut]) #Stacked with run number in case
+                            numpy.savetxt("./flagged_60Hz_eventids_run%i.csv"%run, loaded_eventids[~cut], delimiter=",")
+
 
                     if False:
                         #This is intended to automate the process slightly without have to plot.

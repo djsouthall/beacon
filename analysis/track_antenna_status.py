@@ -33,7 +33,7 @@ datapath = os.environ['BEACON_DATA']
 if __name__ == '__main__':
     plt.close('all')
     
-    runs = numpy.arange(1625,1900)#numpy.append(numpy.arange(1500,1700),numpy.arange(3530,3555))#numpy.arange(1500,1700)
+    runs = numpy.arange(1770,1810)#numpy.append(numpy.arange(1500,1700),numpy.arange(3530,3555))#numpy.arange(1500,1700)
     
     #Prepare for getting data
     mean_std = numpy.zeros((len(runs),8))
