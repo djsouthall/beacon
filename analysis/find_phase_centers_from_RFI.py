@@ -258,14 +258,14 @@ if __name__ == '__main__':
                 use_sources = ['Tonopah KTPH','Solar Plant']
                 included_pulsers = ['run1507','run1509']#['run1511'] #Only included if include_pulsers == True
         
-        elif False:
-            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+        elif True:
+            pulser_weight = 0.0 #Each pulsing site worth this % as much as a valley source.
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             if mode == 'hpol':
-                use_sources = ['Tonopah KTPH']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
-                included_pulsers = ['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                use_sources = ['Tonopah Vortac','Tonopah AFS GATR Site']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
+                included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
             elif mode == 'vpol':
-                use_sources = ['East Dyer Substation']#'East Dyer Substation',
+                use_sources = ['Tonopah Vortac','Tonopah AFS GATR Site']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
         elif False:
             pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
@@ -295,20 +295,20 @@ if __name__ == '__main__':
 
         #only_plot = use_sources
         
-        only_plot   = [ 'Solar Plant',\
-                        'Tonopah KTPH']
+        only_plot   = [ 'Tonopah AFS GATR Site',\
+                        'Tonopah Vortac']
 
-        # only_plot   = [ 'Solar Plant',\
-        #                 'Tonopah KTPH',\
-        #                 'Dyer Cell Tower',\
-        #                 'West Dyer Substation',\
-        #                 'East Dyer Substation',\
-        #                 'Beatty Substation',\
-        #                 'Palmetto Cell Tower',\
-        #                 'Black Mountain',\
-        #                 'Cedar Peak',\
-        #                 'Goldfield Hill Tower',\
-        #                 'Silver Peak Substation']
+        only_plot   = [ 'Tonopah AFS GATR Site',\
+                        'Tonopah Vortac',\
+                        'Dyer Cell Tower',\
+                        'West Dyer Substation',\
+                        'East Dyer Substation',\
+                        'Beatty Substation',\
+                        'Palmetto Cell Tower',\
+                        'Black Mountain',\
+                        'Cedar Peak',\
+                        'Goldfield Hill Tower',\
+                        'Silver Peak Substation']
 
         # only_plot   = [ 'Solar Plant',\
         #                 'Tonopah KTPH',\
@@ -401,10 +401,10 @@ if __name__ == '__main__':
         time_delay_measurement_uncertainty_ns = 25 #ns, The time window used to as error in chi^2 for time delay.  If you are assuming that the time delays are 100% accurate then this is usually sub ns.  But if you think it is slipping cycles you could give this a larger value. 
         include_sanity = False #Slow
         plot_predicted_time_shifts = False
-        random_offset_amount = 2 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
+        random_offset_amount = 0.25 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
         included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
         included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
-        include_baselines = [0,1,2]#[0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
+        include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
         plot_overlap = True #Will plot the overlap map for time delays from each source.
         overlap_window_ns = 50 #ns The time window used to define sufficient overlap. 
         overlap_goal = overlap_window_ns*len(included_antennas_channels)*len(use_sources) #This shouldn't be varied, vary the error if anything.  This is the portion of chi^2 coming from overlapping valley source time delays.  The measured map max will be subtracted from this in a chi^2 calculation.  
@@ -413,37 +413,36 @@ if __name__ == '__main__':
         allowed_array_plane_azimuth_range = 20 #plus or minus this from East is not impacted by weighting. 
 
         #Limits 
-        initial_step_x = 0.5#75 #m
-        initial_step_y = 0.5#75 #m
-        initial_step_z = 0.5#5 #m
-        initial_step_cable_delay = 4.0 #ns
-        cable_delay_guess_range = 50 #ns
-        antenna_position_guess_range_x = 15 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_y = 15 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_z = 15 #Limit to how far from input phase locations to limit the parameter space to
+        initial_step_x = 0.25#75 #m
+        initial_step_y = 0.75#75 #m
+        initial_step_z = 0.75#5 #m
+        initial_step_cable_delay = 1.0 #ns
+        cable_delay_guess_range = 10 #ns
+        antenna_position_guess_range_x = 1#2#4 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = 1#2#7 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_z = 1#3 #Limit to how far from input phase locations to limit the parameter space to
 
         #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
-        manual_offset_ant0_x = 5#6
-        manual_offset_ant0_y = 5#15
-        manual_offset_ant0_z = 0#-4
-
+        manual_offset_ant0_x = 14#6
+        manual_offset_ant0_y = -2.7#15
+        manual_offset_ant0_z = -17#-4
 
         fix_ant0_x = False
         fix_ant0_y = False
-        fix_ant0_z = True
-        fix_ant1_x = True
-        fix_ant1_y = True
-        fix_ant1_z = True
-        fix_ant2_x = True
-        fix_ant2_y = True
-        fix_ant2_z = True
-        fix_ant3_x = True
-        fix_ant3_y = True
-        fix_ant3_z = True
+        fix_ant0_z = False
+        fix_ant1_x = False
+        fix_ant1_y = False
+        fix_ant1_z = False
+        fix_ant2_x = False
+        fix_ant2_y = False
+        fix_ant2_z = False
+        fix_ant3_x = False
+        fix_ant3_y = False
+        fix_ant3_z = False
         fix_cable_delay0 = False
-        fix_cable_delay1 = True
-        fix_cable_delay2 = True
-        fix_cable_delay3 = True
+        fix_cable_delay1 = False
+        fix_cable_delay2 = False
+        fix_cable_delay3 = False
 
         #Force antennas not to be included to be fixed.  
         if not(0 in included_antennas_lumped):
@@ -1323,6 +1322,15 @@ if __name__ == '__main__':
                     #Load in correct reader for this pulser
                     reader = Reader(datapath,int(key.replace('run','')))
                     # cor_upsample =  len(reader.t())
+                    if key == 'run1511':
+                        cor = Correlator(reader,  upsample=cor_upsample, n_phi=100,range_phi_deg=[-180,180], n_theta=50,range_theta_deg=[0,180], waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
+                        cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+                        if mode == 'hpol':
+                            cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,cor.A0_vpol,cor.A1_vpol,cor.A2_vpol,cor.A3_vpol,verbose=False)
+                        else:
+                            cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,cor.A0_hpol,cor.A1_hpol,cor.A2_hpol,cor.A3_hpol,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,verbose=False)
+                        cor.generateTimeIndices(debug=True)
                     
                     cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
@@ -1331,6 +1339,7 @@ if __name__ == '__main__':
                         cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,cor.A0_vpol,cor.A1_vpol,cor.A2_vpol,cor.A3_vpol,verbose=False)
                     else:
                         cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,cor.A0_hpol,cor.A1_hpol,cor.A2_hpol,cor.A3_hpol,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,verbose=False)
+
 
                     adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                     adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)

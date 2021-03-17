@@ -486,6 +486,8 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                     'Solar Plant'               :(38.238904, -117.363661, 4922 * 0.3048),\
                     'Quarry Substation'         :(38.323974, -117.335893, 5365 * 0.3048),\
                     'Tonopah KTPH'              :(38.051701, -117.226212, 7104 * 0.3048),\
+                    'Nye County Sherriff'       :(38.084554, -117.251408, 5866 * 0.3048),\
+                    'Tonopah AFS GATR Site'     :(38.1435,   -117.199212, 7140 * 0.3048),\
                     'Tonopah Vortac'            :(38.030653, -117.033528, 5350 * 0.3048),\
                     'Dyer Cell Tower'           :(37.665613, -118.065012, 4879 * 0.3048),\
                     'West Dyer Substation'      :(37.599110, -118.000846, 4942 * 0.3048),\
@@ -511,6 +513,8 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                                 'Solar Plant'               :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
                                 'Quarry Substation'         :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
                                 'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                'Nye County Sherriff'       :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                'Tonopah AFS GATR Site'     :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
                                 'Tonopah Vortac'            :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'West Dyer Substation'      :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
