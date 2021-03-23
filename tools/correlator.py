@@ -123,8 +123,14 @@ class Correlator:
         meters away).  To change the distance call the overwriteSourceDistance() function, which will implement the
         necessary adjustments for the new source distance.
     '''
-    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6):
+    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None):
         try:
+            if deploy_index is None:
+                self.deploy_index = info.returnDefaultDeploy()
+            else:
+                self.deploy_index = deploy_index 
+
+
             n = 1.0003 #Index of refraction of air  #Should use https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.453-11-201507-S!!PDF-E.pdf 
             self.c = 299792458.0/n #m/s
             self.min_elevation_linewidth = 0.5
@@ -150,7 +156,7 @@ class Correlator:
             self.axs = []
             self.animations = []
 
-            cable_delays = info.loadCableDelays()
+            cable_delays = info.loadCableDelays(deploy_index=self.deploy_index)
             self.cable_delays = numpy.array([cable_delays['hpol'][0],cable_delays['vpol'][0],cable_delays['hpol'][1],cable_delays['vpol'][1],cable_delays['hpol'][2],cable_delays['vpol'][2],cable_delays['hpol'][3],cable_delays['vpol'][3]])
 
             self.range_theta_deg = range_theta_deg
@@ -167,12 +173,12 @@ class Correlator:
             self.mesh_zenith_deg = 90.0 - self.mesh_elevation_deg
             self.mesh_zenith_rad = numpy.deg2rad(self.mesh_zenith_deg)
             
-            self.original_A0_latlonel = numpy.array(info.loadAntennaZeroLocation()) #This will not change.  Used as reference point when new antenna positions given. 
+            self.original_A0_latlonel = numpy.array(info.loadAntennaZeroLocation(deploy_index=self.deploy_index)) #This will not change.  Used as reference point when new antenna positions given. 
             self.A0_latlonel_physical = self.original_A0_latlonel.copy() #Used for looking at planes.  Theoretically this should perfectly align with antenna 0, as antenna 0 can be adjusted, it will move accordingly.  
             self.A0_latlonel_hpol = self.original_A0_latlonel.copy()
             self.A0_latlonel_vpol = self.original_A0_latlonel.copy()
 
-            antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
+            antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=self.deploy_index)
 
             self.A0_physical = numpy.asarray(antennas_physical[0])
             self.A1_physical = numpy.asarray(antennas_physical[1])
@@ -189,7 +195,10 @@ class Correlator:
             self.A2_vpol = numpy.asarray(antennas_phase_vpol[2])
             self.A3_vpol = numpy.asarray(antennas_phase_vpol[3])
 
-            self.map_source_distance_m = map_source_distance_m
+            if map_source_distance_m is None:
+                self.map_source_distance_m = 1e6
+            else:
+                self.map_source_distance_m = map_source_distance_m
             self.recalculateLatLonEl()
             self.generateTimeIndices() #Must be called again if map_source_distance_m is reset
             self.calculateArrayNormalVector()
@@ -1456,60 +1465,73 @@ class Correlator:
 
                 for time_delay in pair_time_delay:
                     #Attempting to use precalculate expected time delays per direction to derive theta here.
+                    x = (180.0 + self.mesh_azimuth_deg - azimuth_offset_deg)%360.0 - 180.0
+
+                    if azimuth_offset_deg == 0:
+                        roll = 0
+                    elif azimuth_offset_deg == 90:
+                        roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+                    elif azimuth_offset_deg == 180:
+                        roll = len(self.phis_rad)//2
+                    elif azimuth_offset_deg == -90:
+                        roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+                    else:
+                        print("WARNING ONLY CARDINAL DIRECTIONS CURRENTLY SUPPORTED FOR ROLLING IN addTimeDelayCurves")
+                    
                     if mollweide == True:
                         if mode == 'hpol':
                             if pair_index == 0:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_hpol_0subtract1, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_0subtract1,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 1:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_hpol_0subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_0subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 2:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_hpol_0subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_0subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 3:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_hpol_1subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_1subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 4:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_hpol_1subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_1subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 5:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_hpol_2subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_2subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                         else:
                             if pair_index == 0:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_vpol_0subtract1, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_0subtract1,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 1:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_vpol_0subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_0subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 2:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_vpol_0subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_0subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 3:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_vpol_1subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_1subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 4:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_vpol_1subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_1subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 5:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, self.t_vpol_2subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_2subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                     else:
                         if mode == 'hpol':
                             if pair_index == 0:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_0subtract1, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_0subtract1,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 1:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_0subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_0subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 2:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_0subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_0subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 3:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_1subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_1subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 4:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_1subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_1subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 5:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_hpol_2subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_2subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                         else:
                             if pair_index == 0:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_0subtract1, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_0subtract1,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 1:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_0subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_0subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 2:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_0subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_0subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 3:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_1subtract2, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_1subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 4:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_1subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_1subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 5:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, self.t_vpol_2subtract3, levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_2subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
 
                     fmt = str(pair) + ':' + r'%0.2f'
                     ax.clabel(contours, contours.levels, inline=False, fontsize=10, fmt=fmt,manual=False) #manual helpful for presentation quality plots.
@@ -1686,7 +1708,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=False):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -1978,7 +2000,7 @@ class Correlator:
 
 
                 #Added circles as specified.
-                ax, peak_circle = self.addCircleToMap(ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+                ax, peak_circle = self.addCircleToMap(ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
 
                 if circle_az is not None:
                     if circle_zenith is not None:
@@ -1999,11 +2021,11 @@ class Correlator:
                         if len(_circle_zenith) == len(_circle_az):
                             additional_circles = []
                             for i in range(len(_circle_az)):
-                                ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
+                                ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
                                 additional_circles.append(_circ)
 
                 if add_airplanes:
-                    ax, airplane_direction_dict = self.addAirplanesToMap([eventid], pol, ax, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = 1.0, crosshair=False, color='r', min_approach_cut_km=200,plot_distance_cut_limit=200)
+                    ax, airplane_direction_dict = self.addAirplanesToMap([eventid], pol, ax, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=False, color='r', min_approach_cut_km=200,plot_distance_cut_limit=200)
                     if verbose:
                         print('airplane_direction_dict:')
                         print(airplane_direction_dict)
@@ -2012,8 +2034,8 @@ class Correlator:
                         #Block out simple ENU zenith cut region. 
                         plt.axhspan(numpy.deg2rad(90 - min(zenith_cut_ENU)),numpy.deg2rad(90.0),alpha=0.5)
                         plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut_ENU)),alpha=0.5)
-                        plt.ylim(numpy.deg2rad((90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg))  ))
-                        plt.xlim(numpy.deg2rad(self.range_phi_deg))
+                        # plt.ylim(numpy.deg2rad((90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg))  ))
+                        # plt.xlim(numpy.deg2rad(self.range_phi_deg))
 
                     else:
                         #Block out simple ENU zenith cut region. 
@@ -2255,7 +2277,7 @@ class Correlator:
         else:
             return total_mean_corr_values
 
-    def animatedMap(self, eventids, pol, title, plane_zenith=None, plane_az=None, hilbert=False, max_method=None,center_dir='E',save=True,dpi=300,fps=3):
+    def animatedMap(self, eventids, pol, title, include_baselines=[0,1,2,3,4,5], plane_zenith=None, plane_az=None, map_source_distance_m=None, radius=1.0, hilbert=False, max_method=None,center_dir='E',save=True,dpi=300,fps=3):
         '''
         Does the same thing as map, but updates the canvas for each event creating an animation.
         Mostly helpful for repeated sources that are expected to be moving such as planes.
@@ -2280,21 +2302,40 @@ class Correlator:
         plane_az : list of floats
             List of azimuths values to circle on the plot.  These could be known background sources like planes.
             The length of this must match the length of plane_zenith.  Should be given in degrees.
+        map_source_distance_m : list of floats
+            This must be the same length as eventids (with distance corresponding to each eventid).  For each frame of 
+            this animation, this will recalculate expected time delays based on this distance.  This is currently not 
+            implemented but is intended to allow for accurate video maps of airplane trajectories. 
         '''
         if pol == 'both':
-            hpol_result = self.animatedMap(eventids, 'hpol',title, plane_zenith=plane_zenith, plane_az=plane_az, hilbert=hilbert, max_method=max_method,center_dir=center_dir,save=save)
-            vpol_result = self.animatedMap(eventids, 'vpol',title, plane_zenith=plane_zenith, plane_az=plane_az, hilbert=hilbert, max_method=max_method,center_dir=center_dir,save=save)
+            hpol_result = self.animatedMap(eventids, 'hpol', title,include_baselines=include_baselines, plane_zenith=plane_zenith, plane_az=plane_az, hilbert=hilbert, max_method=max_method,center_dir=center_dir,save=save, map_source_distance_m=None)
+            vpol_result = self.animatedMap(eventids, 'vpol', title,include_baselines=include_baselines, plane_zenith=plane_zenith, plane_az=plane_az, hilbert=hilbert, max_method=max_method,center_dir=center_dir,save=save, map_source_distance_m=None)
 
             return hpol_result, vpol_result
 
         try:
             print('Performing calculations for %s'%pol)
 
+            if map_source_distance_m is None:
+                change_per_frame = False
+                #Keep source distance as None for default handling.
+            elif len(map_source_distance_m) == 1:
+                change_per_frame = False
+                map_source_distance_m = map_source_distance_m[0]
+                self.overwriteSourceDistance(map_source_distance_m, verbose=False, suppress_time_delay_calculations=False)
+            elif len(map_source_distance_m) == len(eventids):
+                change_per_frame = True
+            else:
+                change_per_frame = False
+                #Keep source distance as None for default handling.
+
             all_maps = []# numpy.zeros((self.n_theta, self.n_phi))
             for event_index, eventid in enumerate(eventids):
                 sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
                 sys.stdout.flush()
-                m = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert) #Don't need to pass center_dir because performing rotation below!
+                if change_per_frame == True:
+                    self.overwriteSourceDistance(map_source_distance_m[event_index], verbose=False, suppress_time_delay_calculations=False)
+                m = self.map(eventid, pol, include_baselines=include_baselines, plot_map=False, plot_corr=False, hilbert=hilbert) #Don't need to pass center_dir because performing rotation below!
                 if center_dir.upper() == 'E':
                     center_dir_full = 'East'
                     azimuth_offset_rad = 0 #This is subtracted from the xaxis to roll it effectively.
@@ -2346,8 +2387,8 @@ class Correlator:
             plt.ylabel('Elevation Angle (Degrees)')
             plt.grid(True)
 
-            plt.ylim(90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg)  )
-            plt.xlim(self.range_phi_deg)
+            # plt.ylim(90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg)  )
+            # plt.xlim(self.range_phi_deg)
 
 
             #Prepare array cut curves
@@ -2382,15 +2423,19 @@ class Correlator:
                 plane_elevation = None
 
             if plane_elevation is not None and _plane_az is not None:
-                ax, circle, lines = self.addCircleToMap(ax, _plane_az[0], plane_elevation[0], azimuth_offset_deg=0.0, mollweide=True, radius=6.0, crosshair=True, return_circle=True, return_crosshair=True, color='fuchsia', linewidth=2.0,fill=False,zorder=10) #azimuth offset_deg already accounted for as passed.
+                ax, circle, lines = self.addCircleToMap(ax, _plane_az[0], plane_elevation[0], azimuth_offset_deg=0.0, mollweide=True, radius=radius, crosshair=True, return_circle=True, return_crosshair=True, color='fuchsia', linewidth=2.0,fill=False,zorder=10) #azimuth offset_deg already accounted for as passed.
+
 
             def update(frame):
                 _frame = frame%len(eventids) #lets it loop multiple times.  i.e. give animation more frames but same content looped.
                 # fig.canvas.set_window_title('Correlation Map Airplane Event %i'%(_frame))
                 # ax.set_title('Correlation Map Airplane Event %i'%(_frame))
                 fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[_frame]))
-                ax.set_title('r%i %s Correlation Map Eventid = %i\nSource Distance = %0.2f m'%(self.reader.run,pol.title(),eventids[_frame],self.map_source_distance_m))
-                im.set_array(all_maps[_frame].ravel())
+                if change_per_frame:
+                    ax.set_title('r%i %s Correlation Map Eventid = %i\nSource Distance = %0.2f km'%(self.reader.run,pol.title(),eventids[_frame],map_source_distance_m[_frame]/1000.0))
+                else:
+                    ax.set_title('r%i %s Correlation Map Eventid = %i\nSource Distance = %0.2f km'%(self.reader.run,pol.title(),eventids[_frame],self.map_source_distance_m/1000.0))
+                im.set_array(all_maps[_frame][:-1,:-1].ravel()) #Some obscure bug as noted here: https://stackoverflow.com/questions/29009743/using-set-array-with-pyplot-pcolormesh-ruins-figure
 
                 if hilbert == True:
                     im.set_clim(vmin=numpy.min(all_maps[_frame]),vmax=numpy.max(all_maps[_frame]))

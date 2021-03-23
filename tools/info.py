@@ -31,7 +31,7 @@ import pymap3d as pm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
-default_deploy = 19#15#The deployment calibration to use as the default.
+default_deploy = 13#19#15#The deployment calibration to use as the default.
 
 def returnDefaultDeploy():
     return default_deploy
@@ -489,16 +489,21 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                     'Nye County Sherriff'       :(38.084554, -117.251408, 5866 * 0.3048),\
                     'Tonopah AFS GATR Site'     :(38.1435,   -117.199212, 7140 * 0.3048),\
                     'Tonopah Vortac'            :(38.030653, -117.033528, 5350 * 0.3048),\
+                    'Tonopah Airport Antenna'   :(38.063273, -117.096715, 5426 * 0.3048),\
                     'Dyer Cell Tower'           :(37.665613, -118.065012, 4879 * 0.3048),\
                     'West Dyer Substation'      :(37.599110, -118.000846, 4942 * 0.3048),\
                     'East Dyer Substation'      :(37.494710, -117.860383, 5144 * 0.3048),\
                     'Beatty Mountain Cell Tower':(36.935220, -116.850985, 5782 * 0.3048),\
                     'Beatty Airport Vortac'     :(36.800590, -116.747633, 3928 * 0.3048),\
                     'Beatty Substation'         :(36.902775, -116.767806, 3378 * 0.3048),\
+                    'Oasis'                     :(37.486695, -117.914865, 5057 * 0.3048),\
+                    'Tokop'                     :(37.300047, -117.261011, 7097 * 0.3048),\
                     'Beatty Airport Antenna'    :(36.868032, -116.784008, 3166 * 0.3048),\
                     'Palmetto Cell Tower'       :(37.462089, -117.573584, 5943 * 0.3048),\
                     'Black Mountain'            :(37.283284, -116.646110, 7232 * 0.3048),\
                     'Cedar Peak'                :(37.706014, -116.335117, 8419 * 0.3048),\
+                    'Dome Thing'                :(37.753476, -116.538488, 5666 * 0.3048),\
+                    'Jack Rabbit Knob'          :(37.685060, -116.543169, 6058 * 0.3048),\
                     'Goldfield Hill Tower'      :(37.726953, -117.225670, 6092 * 0.3048),\
                     'Goldield Town Tower'       :(37.710925, -117.233411, 5670 * 0.3048),\
                     'Goldfield KGFN-FM'         :(37.708384, -117.235265, 5696 * 0.3048),\
@@ -516,16 +521,21 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                                 'Nye County Sherriff'       :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'Tonopah AFS GATR Site'     :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
                                 'Tonopah Vortac'            :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                'Tonopah Airport Antenna'   :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'West Dyer Substation'      :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
                                 'East Dyer Substation'      :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
                                 'Beatty Mountain Cell Tower':{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
                                 'Beatty Airport Vortac'     :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
                                 'Beatty Substation'         :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+                                'Oasis'                     :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+                                'Tokop'                     :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
                                 'Beatty Airport Antenna'    :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
                                 'Palmetto Cell Tower'       :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
                                 'Black Mountain'            :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
                                 'Cedar Peak'                :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                'Dome Thing'                :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                'Jack Rabbit Knob'          :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
                                 'Goldfield Hill Tower'      :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
                                 'Goldield Town Tower'       :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
                                 'Goldfield KGFN-FM'         :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
@@ -571,7 +581,6 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
         antennas_phase_hpol = {0:(  -0.02557475,   0.03116954,   0.09699316),1:(-6.07239516,  -1.57654064,   2.40102979),2:(-1.03349923, -10.66185761,   0.41323144),3:( 3.0254727 , -11.41386618,   1.08350273)}#ADJUSTED HPOL
         antennas_phase_vpol = {0:(-0.3113139 ,   0.37988811,   1.22224369),1:(-5.87779214,  -1.8179266 ,   1.68175401),2:(-1.57186065,  -9.98385335,   2.45102724),3:( 3.79236323, -12.37305718,  -1.80125484)}#ADJUSTED VPOL
         '''
-        ''
         #These were determined in first attempt with day 5 and day 6 data with no bounds on phase positons.
         antennas_phase_hpol = {0:( -1.05036701,  -2.83990607,   5.7301439) , 1:(-5.04455409,   1.80238432,  -3.37157069), 2:(-0.70469931,  -9.35762227,  -1.46880603),  3:( 0.62819922, -18.85449124,  14.09627911)}#ADJUSTED HPOL
         antennas_phase_vpol = {0:( -1.97517555,  -4.78830899,  10.53874329), 1:( -5.26414199,   0.06191184,  -1.6073464), 2:( -1.17891238,  -8.69156208,   0.24012179), 3:(  4.23558404, -11.0023696 ,  -4.13418962)}#ADJUSTED VPOL
@@ -806,6 +815,67 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
             antennas_phase_hpol_hesse = {0 : [0.760297, 0.277011, 5.718408], 1 : [1.583672, 0.196639, 0.419612], 2 : [0.171910, 6.326707, 0.502885], 3 : [0.658066, 0.254736, 9.730493]}
             antennas_phase_vpol = {0 : [2.531864, -0.815938, 4.787836], 1 : [-28.560448, -14.142631, 14.698089], 2 : [-5.005754, -49.488358, 1.504481], 3 : [-27.190815, -45.237602, 17.383858]}
             antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+        elif deploy_index == 20:
+            #Similar in effect to 19 but with slightly different antenna locations and cable delays.  
+            #This one works well for the 3 pulsers (which it is based on) and has good results for all antennas but antenna 0 in the valley.
+            #Rerunning with this as starting ocndition but with antenna 0 allowed to move. 
+            '''
+            #Starting from deploy_index 13
+            #Parameters trying to achieve the 3 antenna match starting from deploy_index = 13.
+            include_pulsers = True 
+            include_baseline_measurements = False
+            baseline_measurement_uncertainty_m = 3 #Assuming a 3m spread in our data.  This is very approximate.
+            time_delay_measurement_uncertainty_ns = 25 #ns, The time window used to as error in chi^2 for time delay.  If you are assuming that the time delays are 100% accurate then this is usually sub ns.  But if you think it is slipping cycles you could give this a larger value. 
+            include_sanity = True #Slow
+            plot_predicted_time_shifts = False
+            random_offset_amount = 0.25 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
+            included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
+            included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
+            include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
+            plot_overlap = True #Will plot the overlap map for time delays from each source.
+            overlap_window_ns = 50 #ns The time window used to define sufficient overlap. 
+            overlap_goal = overlap_window_ns*len(included_antennas_channels)*len(use_sources) #This shouldn't be varied, vary the error if anything.  This is the portion of chi^2 coming from overlapping valley source time delays.  The measured map max will be subtracted from this in a chi^2 calculation.  
+            overlap_error = overlap_goal/50 #The error portion of chi^2 coming from overlapping valley source time delays will be devided by this number.
+            limit_array_plane_azimuth_range = False #Should be seen as a temporary test.  Doesn't use any errors and isn't in standard chi^2 format.
+            allowed_array_plane_azimuth_range = 20 #plus or minus this from East is not impacted by weighting. 
+
+            #Limits 
+            initial_step_x = 0.5#75 #m
+            initial_step_y = 0.5#75 #m
+            initial_step_z = 0.5#5 #m
+            initial_step_cable_delay = 1.0 #ns
+            cable_delay_guess_range = 10 #ns
+            antenna_position_guess_range_x = 5#2#4 #Limit to how far from input phase locations to limit the parameter space to
+            antenna_position_guess_range_y = 5#2#7 #Limit to how far from input phase locations to limit the parameter space to
+            antenna_position_guess_range_z = 5#3 #Limit to how far from input phase locations to limit the parameter space to
+
+            #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
+            manual_offset_ant0_x = 0
+            manual_offset_ant0_y = 0
+            manual_offset_ant0_z = 0
+
+
+            fix_ant0_x = False
+            fix_ant0_y = False
+            fix_ant0_z = False
+            fix_ant1_x = False
+            fix_ant1_y = False
+            fix_ant1_z = False
+            fix_ant2_x = False
+            fix_ant2_y = False
+            fix_ant2_z = False
+            fix_ant3_x = False
+            fix_ant3_y = False
+            fix_ant3_z = False
+            fix_cable_delay0 = False
+            fix_cable_delay1 = False
+            fix_cable_delay2 = False
+            fix_cable_delay3 = False
+            '''
+            antennas_phase_hpol = {0 : [-0.982288, 1.447974, 4.762703], 1 : [-34.051753, -12.072183, 14.698504], 2 : [-7.246353, -47.198002, 1.340104], 3 : [-31.114755, -42.627657, 14.924516]}
+            antennas_phase_hpol_hesse = {0 : [0.351842, 0.260876, 7.831570], 1 : [0.504778, 0.276552, 7.620909], 2 : [0.354478, 0.265431, 8.304336], 3 : [0.354914, 0.273275, 1.883443]}
+            antennas_phase_vpol = {0 : [-0.784322, 1.765724, 1.553684], 1 : [-34.153473, -11.806226, 15.018032], 2 : [-7.391859, -46.958796, 1.473361], 3 : [-30.656309, -42.670223, 14.731633]}
+            antennas_phase_vpol_hesse = {0 : [0.682632, 0.613462, 3.806129], 1 : [0.718409, 0.646417, 8.186476], 2 : [0.696899, 0.646127, 8.174901], 3 : [0.714915, 0.643952, 3.290147]}
 
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
@@ -859,10 +929,13 @@ def loadCableDelays(deploy_index=default_deploy,return_raw=False):
     elif deploy_index == 17:
         cable_delays =  {   'hpol':     numpy.array([2.901715,11.148590,3.695444,13.082649]), \
                             'vpol':     numpy.array([8.324117,19.208286,12.596147,12.946409])}
+
     elif deploy_index == 19:
         cable_delays =  {   'hpol':     numpy.array([12.890893,7.962642,5.000000,6.202864]), \
                             'vpol':     numpy.array([15.835665,9.689739,13.090459,5.637693])}
-
+    elif deploy_index == 20:
+        cable_delays =  {   'hpol':     numpy.array([12.094088,3.168013,9.118150,7.905168]), \
+                            'vpol':     numpy.array([18.743829,4.867362,16.899300,8.054707])}
 
 
     else:

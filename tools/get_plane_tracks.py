@@ -149,7 +149,7 @@ def getTracks(start,stop,min_approach_cut_km,hour_window = 12):
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
 
-def getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_interest=[],origin=None):
+def getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_interest=[],origin=None,deploy_index=None):
     '''
     This will return a dict with the trajectories of each plane observed in the 
     period of time specified (given in UTC timestamps).
@@ -157,6 +157,9 @@ def getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_i
     origin should be a tuple in the same format as returned by loadAntennaZeroLocation (latitude,longtidue,elevation)
     '''
     try:
+        if deploy_index is None:
+            deploy_index = info.returnDefaultDeploy()
+
         unique_flights, all_vals = getTracks(start,stop,min_approach_cut_km,hour_window=hour_window)
         if numpy.size(flights_of_interest) != 0:
             unique_flights = unique_flights[numpy.isin(unique_flights,flights_of_interest)]
@@ -165,7 +168,7 @@ def getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_i
         if numpy.size(all_vals) != 0:
             flight_tracks_ENU = {}
             if origin is None:
-                origin = info.loadAntennaZeroLocation() #Antenna 0
+                origin = info.loadAntennaZeroLocation(deploy_index=deploy_index) #Antenna 0
 
 
             for unique_flight in unique_flights:
@@ -190,7 +193,7 @@ def getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_i
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
 
-def getTimeDelaysFromTrack(track, adjusted_antennas_physical=None,adjusted_antennas_phase_hpol=None,adjusted_antennas_phase_vpol=None, adjusted_cable_delays=None):
+def getTimeDelaysFromTrack(track, adjusted_antennas_physical=None,adjusted_antennas_phase_hpol=None,adjusted_antennas_phase_vpol=None, adjusted_cable_delays=None, deploy_index=None):
     '''
     Given a trajectory (each row specified x,y,z,t in ENU), this will determine the
     expected set of time delays based on the current saved antenna positions.
@@ -202,7 +205,9 @@ def getTimeDelaysFromTrack(track, adjusted_antennas_physical=None,adjusted_anten
     Same for cable delays.
     '''
     try:
-        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()# MAKE SURE TO PUT THE DEPLOY INDEX CORRECTLY
+        if deploy_index is None:
+            deploy_index = info.returnDefaultDeploy()
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=deploy_index)
 
 
         if adjusted_antennas_physical is not None:
@@ -219,7 +224,7 @@ def getTimeDelaysFromTrack(track, adjusted_antennas_physical=None,adjusted_anten
             print('Using given values of cable delays rather than the currently saved values.')
             cable_delays = adjusted_cable_delays.copy()
         else:
-            cable_delays = info.loadCableDelays()
+            cable_delays = info.loadCableDelays(deploy_index=deploy_index)
 
         pprint(cable_delays)
 
