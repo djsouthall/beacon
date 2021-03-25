@@ -226,89 +226,142 @@ if __name__ == '__main__':
         # 'Goldfield Radio'
         # Impulsive cross pol, better for hpol though
         valley_source_run = 1650
+
+        #included_airplanes = [ '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166']
         if False:
-            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+            pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            valley_weight = 1.0
+            airplane_weight = 1.0
             # Southern Calibration
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             if mode == 'hpol':
                 use_sources = ['Solar Plant']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
                 included_pulsers = ['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                included_airplanes =      [ '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166']
             elif mode == 'vpol':
                 use_sources = ['East Dyer Substation','Goldfield KGFN-FM']
                 included_pulsers = ['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
         elif False:
-            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+            pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            valley_weight = 1.0
+            airplane_weight = 1.0
             # Southern Calibration
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             if mode == 'hpol':
                 use_sources = ['East Dyer Substation','Goldfield KGFN-FM','Silver Peak Substation']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
                 included_pulsers = ['run1507','run1509'] #Only included if include_pulsers == True
+                included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
             elif mode == 'vpol':
                 use_sources = ['East Dyer Substation','Goldfield KGFN-FM']
                 included_pulsers = ['run1507','run1509'] #Only included if include_pulsers == True
+                included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
         elif False:
-            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+            pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            valley_weight = 1.0
+            airplane_weight = 1.0
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             if mode == 'hpol':
                 # Northern Calibration
                 #use_sources = ['Tonopah KTPH','Solar Plant','Silver Peak Substation']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
                 use_sources = ['Tonopah KTPH','Solar Plant']
                 included_pulsers = ['run1507','run1509']#['run1511'] #Only included if include_pulsers == True
+                included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
             elif mode == 'vpol':
                 use_sources = ['Tonopah KTPH','Solar Plant']
                 included_pulsers = ['run1507','run1509']#['run1511'] #Only included if include_pulsers == True
+                included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
         
-        elif True:
-            pulser_weight = 0.0 #Each pulsing site worth this % as much as a valley source.
+        elif False:
+            pulser_weight = 0.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            valley_weight = 1.0
+            airplane_weight = 1.0
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             if mode == 'hpol':
-                use_sources = ['Tonopah Vortac','Tonopah AFS GATR Site']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
+                use_sources = ['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
             elif mode == 'vpol':
-                use_sources = ['Tonopah Vortac','Tonopah AFS GATR Site']#'East Dyer Substation',
+                use_sources = ['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
         elif False:
-            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+            pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            valley_weight = 1.0
+            airplane_weight = 1.0
             unknown_source_dir_valley = True #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             unique_cut_subset = ['Solar Plant','Tonopah KTPH','West Dyer Substation','East Dyer Substation','Beatty Mountain Cell Tower','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation'] #these are all uniquely identified clusters.  Their names are not certain sources
             if mode == 'hpol':
                 use_sources = ['Solar Plant','Tonopah KTPH','West Dyer Substation','East Dyer Substation','Beatty Mountain Cell Tower','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation']#['Solar Plant','Tonopah KTPH','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
             elif mode == 'vpol':
                 use_sources = ['East Dyer Substation']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
         elif False:
-            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+            pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            valley_weight = 1.0
+            airplane_weight = 1.0
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             unique_cut_subset = ['Solar Plant','Tonopah KTPH','West Dyer Substation','East Dyer Substation','Beatty Mountain Cell Tower','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation'] #these are all uniquely identified clusters.  Their names are not certain sources
             if mode == 'hpol':
                 use_sources = ['Solar Plant']#['Solar Plant','Tonopah KTPH','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
             elif mode == 'vpol':
                 use_sources = ['Solar Plant']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
+        elif True:
+            unknown_source_dir_valley = True #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            if mode == 'hpol':
+                use_sources = ['Booker Antenna','Miller Substation','Dyer House Antenna A']
+                included_pulsers = []
+                included_airplanes = ['1774-178']#['1728-62026','1773-14413','1773-63659','1774-178']
+            elif mode == 'vpol':
+                use_sources = ['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#'East Dyer Substation',
+                included_pulsers = []#
+                included_airplanes = ['1728-62026','1773-14413','1773-63659','1774-178']
+            
+            pulser_weight  = len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            valley_weight = len(use_sources)
+            airplane_weight = 10*len(included_airplanes)
+
         else:
-            pulser_weight = 1.0 #Each pulsing site worth this % as much as a valley source.
+            pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            valley_weight = 1.0
+            airplane_weight = 1.0
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             use_sources = [] #iterating through potential sources until something makes sense
             included_pulsers = ['run1507','run1509','run1511']#,'run1511' #Only included if include_pulsers == True
+            included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
 
-        #only_plot = use_sources
-        
-        only_plot   = [ 'Tonopah AFS GATR Site',\
-                        'Tonopah Vortac']
 
-        only_plot   = [ 'Tonopah AFS GATR Site',\
-                        'Tonopah Vortac',\
-                        'Dyer Cell Tower',\
-                        'West Dyer Substation',\
-                        'East Dyer Substation',\
-                        'Beatty Substation',\
-                        'Palmetto Cell Tower',\
-                        'Black Mountain',\
-                        'Cedar Peak',\
-                        'Goldfield Hill Tower',\
-                        'Silver Peak Substation']
+        #only_plot = ['Booker Antenna','Miller Substation','Tonopah Airport Antenna','Tonopah KTPH','KNKN223','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna','Dyer House Antenna A']
+        only_plot = use_sources
+        only_plot.append('Palmetto Cell Tower')
+        only_plot.append('Cedar Peak')
+        only_plot.append('Beatty Airport Vortac')
+        # only_plot   = [ 'Tonopah AFS GATR Site',\
+        #                 'Tonopah Vortac']
+
+        # only_plot   = [ 'Tonopah AFS GATR Site',\
+        #                 'Tonopah Vortac',\
+        #                 'Tonopah Airport Antenna',\
+        #                 'Dyer Cell Tower',\
+        #                 'West Dyer Substation',\
+        #                 'East Dyer Substation',\
+        #                 'Oasis',\
+        #                 'Beatty Substation',\
+        #                 'Palmetto Cell Tower',\
+        #                 'Cedar Peak',\
+        #                 'Dome Thing',\
+        #                 'Goldfield Hill Tower',\
+        #                 'Silver Peak Substation',\
+        #                 'Silver Peak Town Antenna',\
+        #                 'Silver Peak Lithium Mine',\
+        #                 'Past SP Substation']
 
         # only_plot   = [ 'Solar Plant',\
         #                 'Tonopah KTPH',\
@@ -362,6 +415,9 @@ if __name__ == '__main__':
 
 
 
+        plot_animated_airplane = False #Otherwise plots first event from each plane.
+        plot_expected_airplane_direction = True
+        plot_airplane_tracks = True
         plot_time_delay_calculations = False
         plot_time_delays_on_maps = True
         plot_expected_direction = True
@@ -395,6 +451,9 @@ if __name__ == '__main__':
         apply_phase_response = True
         hilbert = False
 
+
+        '''
+        #The parameters as set before trying to go back.  These start from deploy_index=19 and try to get a 4 antenna match.
         include_pulsers = True 
         include_baseline_measurements = False
         baseline_measurement_uncertainty_m = 3 #Assuming a 3m spread in our data.  This is very approximate.
@@ -427,9 +486,56 @@ if __name__ == '__main__':
         manual_offset_ant0_y = -2.7#15
         manual_offset_ant0_z = -17#-4
 
-        fix_ant0_x = False
-        fix_ant0_y = False
-        fix_ant0_z = False
+        '''
+        #Parameters trying to achieve the 3 antenna match starting from deploy_index = 13.
+        include_pulsers = True 
+        include_baseline_measurements = True
+        baseline_measurement_uncertainty_m = 3 #Assuming a 3m spread in our data.  This is very approximate.
+        time_delay_measurement_uncertainty_ns = 1 #ns, The time window used to as error in chi^2 for time delay.  If you are assuming that the time delays are 100% accurate then this is usually sub ns.  But if you think it is slipping cycles you could give this a larger value. 
+        include_sanity = False #Slow
+        plot_predicted_time_shifts = False
+        random_offset_amount = 0.1#0.25 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
+        included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
+        included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
+        include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
+        plot_overlap = False #Will plot the overlap map for time delays from each source.
+        overlap_window_ns = 50 #ns The time window used to define sufficient overlap. 
+        overlap_goal = overlap_window_ns*len(included_antennas_channels)*len(use_sources) #This shouldn't be varied, vary the error if anything.  This is the portion of chi^2 coming from overlapping valley source time delays.  The measured map max will be subtracted from this in a chi^2 calculation.  
+        overlap_error = overlap_goal/50 #The error portion of chi^2 coming from overlapping valley source time delays will be devided by this number.
+        limit_array_plane_azimuth_range = False #Should be seen as a temporary test.  Doesn't use any errors and isn't in standard chi^2 format.
+        allowed_array_plane_azimuth_range = 20 #plus or minus this from East is not impacted by weighting. 
+
+        #Limits 
+        initial_step_x = 0.75 #m
+        initial_step_y = 0.75 #m
+        initial_step_z = 0.5 #m
+        initial_step_cable_delay = 0.25 #ns
+        cable_delay_guess_range = 3 #ns
+        antenna_position_guess_range_x = 5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = 5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_z = 5#2#3 #Limit to how far from input phase locations to limit the parameter space to
+
+        #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
+        manual_offset_ant0_x = 0#14
+        manual_offset_ant0_y = 0#-2.7
+        manual_offset_ant0_z = 0#-17
+
+        manual_offset_ant1_x = -1#0    + manual_offset_ant0_x
+        manual_offset_ant1_y = 2#-2   + manual_offset_ant0_y
+        manual_offset_ant1_z = 0#0    + manual_offset_ant0_z
+
+        manual_offset_ant2_x = 0#0    + manual_offset_ant0_x
+        manual_offset_ant2_y = -5#-4   + manual_offset_ant0_y
+        manual_offset_ant2_z = 12#0    + manual_offset_ant0_z
+
+        manual_offset_ant3_x = -3#0    + manual_offset_ant0_x
+        manual_offset_ant3_y = 0#0    + manual_offset_ant0_y
+        manual_offset_ant3_z = 3#-6   + manual_offset_ant0_z
+
+
+        fix_ant0_x = True
+        fix_ant0_y = True
+        fix_ant0_z = True
         fix_ant1_x = False
         fix_ant1_y = False
         fix_ant1_z = False
@@ -439,7 +545,7 @@ if __name__ == '__main__':
         fix_ant3_x = False
         fix_ant3_y = False
         fix_ant3_z = False
-        fix_cable_delay0 = False
+        fix_cable_delay0 = True
         fix_cable_delay1 = False
         fix_cable_delay2 = False
         fix_cable_delay3 = False
@@ -461,6 +567,17 @@ if __name__ == '__main__':
             fix_ant3_x = True
             fix_ant3_y = True
             fix_ant3_z = True
+
+        #This math is to set the pairs to include in the calculation.  Typically it will be all of them, but if the option is enabled to remove some
+        #from the calculation then this will allow for that to be done.
+        pairs = numpy.array(list(itertools.combinations((0,1,2,3), 2)))
+        pairs_cut = []
+        for pair_index, pair in enumerate(numpy.array(list(itertools.combinations((0,1,2,3), 2)))):
+            pairs_cut.append(numpy.logical_and(numpy.all(numpy.isin(numpy.array(pair),included_antennas_lumped)), pair_index in include_baselines)) #include_baselines Overwritten when antennas removed.
+
+        include_baselines = numpy.where(pairs_cut)[0] #Effectively the same as the pairs_cut but index based for baselines.
+        print('Including baseline pairs:')
+        print(pairs[pairs_cut])
 
 
         #I think adding an absolute time offset for each antenna and letting that vary could be interesting.  It could be used to adjust the cable delays.
@@ -543,803 +660,991 @@ if __name__ == '__main__':
                     else:
                         _eventid = numpy.random.choice(known_pulser_ids['run%i'%run]['vpol'])
                         _fig, _ax = tdc.plotEvent(_eventid, channels=[1,3,5,7], apply_filter=True, hilbert=hilbert, sine_subtract=True, apply_tukey=None, additional_title_text='Sample Event shifted by input time delays', time_delays=_time_delays)
+
+        #Note the above ROI assumes you have already cut out events that are below a certain correlation with a template.
+        # ds.addROI('Simple Template V > 0.7',{'cr_template_search_v':[0.7,1.0]})# Adding 2 ROI in different rows and appending as below allows for "OR" instead of "AND"
+        # ds.addROI('Simple Template H > 0.7',{'cr_template_search_h':[0.7,1.0]})
+        # #Done for OR condition
+        # _eventids = numpy.sort(numpy.unique(numpy.append(ds.getCutsFromROI('Simple Template H > 0.7',load=False,save=False),ds.getCutsFromROI('Simple Template V > 0.7',load=False,save=False))))
+        # roi_eventids = numpy.intersect1d(ds.getCutsFromROI(roi_key),_eventids)
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
+
         if True:
-            #Note the above ROI assumes you have already cut out events that are below a certain correlation with a template.
-            # ds.addROI('Simple Template V > 0.7',{'cr_template_search_v':[0.7,1.0]})# Adding 2 ROI in different rows and appending as below allows for "OR" instead of "AND"
-            # ds.addROI('Simple Template H > 0.7',{'cr_template_search_h':[0.7,1.0]})
-            # #Done for OR condition
-            # _eventids = numpy.sort(numpy.unique(numpy.append(ds.getCutsFromROI('Simple Template H > 0.7',load=False,save=False),ds.getCutsFromROI('Simple Template V > 0.7',load=False,save=False))))
-            # roi_eventids = numpy.intersect1d(ds.getCutsFromROI(roi_key),_eventids)
-            antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
-
-            if True:
-                if mode == 'hpol':
-                    antennas_phase_start = antennas_phase_hpol
-                else:
-                    antennas_phase_start = antennas_phase_vpol
+            if mode == 'hpol':
+                antennas_phase_start = antennas_phase_hpol
             else:
-                print('WARNING, USING PHYSICAL LOCATIONS TO START')
-                antennas_phase_start = antennas_physical            
+                antennas_phase_start = antennas_phase_vpol
+        else:
+            print('WARNING, USING PHYSICAL LOCATIONS TO START')
+            antennas_phase_start = antennas_physical            
 
+        colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+
+        #DETERMINE THE TIME DELAYS TO BE USED IN THE ACTUAL CALCULATION
+
+        #### VALLEY RFI PREPARATIONS ####
+
+        print('Calculating time delays from info.py')
+        reader = Reader(datapath,valley_source_run)
+        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=False,apply_phase_response=apply_phase_response)
+        if sine_subtract:
+            tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+        
+
+        ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
+                    curve_choice=0, trigger_types=[2],included_antennas=included_antennas_channels,include_test_roi=False,\
+                    cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                    impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                    time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
+                    std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+                    p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                    snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+
+        ds.addROI('Simple Template V > 0.7',{'cr_template_search_v':[0.7,1.0]})# Adding 2 ROI in different rows and appending as below allows for "OR" instead of "AND"
+        ds.addROI('Simple Template H > 0.7',{'cr_template_search_h':[0.7,1.0]})
+        #Done for OR condition
+        _eventids = numpy.sort(numpy.unique(numpy.append(ds.getCutsFromROI('Simple Template H > 0.7',load=False,save=False),ds.getCutsFromROI('Simple Template V > 0.7',load=False,save=False))))
+
+        time_delay_dict = {}
+        for source_key, cut_dict in data_slicer_cut_dict.items():
+            if plot_time_delays_on_maps == False:
+                #Only need some time delays
+                if not(source_key in use_sources):
+                    continue #Skipping calculating that one.
+            else:
+                if numpy.logical_and(not(source_key in use_sources),not(source_key in only_plot)):
+                    continue #Skipping calculating that one.
+
+            ds.addROI(source_key,cut_dict)
+            roi_eventids = numpy.intersect1d(ds.getCutsFromROI(source_key),_eventids)
+            roi_impulsivity = ds.getDataFromParam(roi_eventids,'impulsivity_h')
+            roi_impulsivity_sort = numpy.argsort(roi_impulsivity)[::-1] #Reverse sorting so high numbers are first.
+            
+            if len(roi_eventids) > limit_events:
+                print('LIMITING TIME DELAY CALCULATION TO %i MOST IMPULSIVE EVENTS'%limit_events)
+                roi_eventids = numpy.sort(roi_eventids[roi_impulsivity_sort[0:limit_events]])
+        
+            print('Calculating time delays for %s'%source_key)
+            time_shifts, corrs, td_pairs = tdc.calculateMultipleTimeDelays(roi_eventids,align_method=0,hilbert=hilbert,plot=numpy.logical_and(source_key in use_sources,plot_time_delay_calculations), sine_subtract=sine_subtract)
+
+            if mode == 'hpol':
+                # for event_index, eventid in enumerate(roi_eventids):
+                #     print(eventid)
+                #     print(time_shifts[0:6,event_index])
+                time_delay_dict[source_key] = numpy.mean(time_shifts[0:6,:],axis=1) #perhaps I should be fitting.  Assuming only using sources with consistent time delays
+            else:
+                time_delay_dict[source_key] = numpy.mean(time_shifts[6:12,:],axis=1)
+            
+            all_tds = numpy.mean(time_shifts,axis=1)
+
+            if plot_predicted_time_shifts:
+                    _eventid = numpy.random.choice(roi_eventids)
+                    if mode == 'hpol':
+                        _fig, _ax = tdc.plotEvent(_eventid, channels=[0,2,4,6], apply_filter=True, hilbert=hilbert, sine_subtract=True, apply_tukey=None, additional_title_text='%s Sample Event shifted by input time delays'%source_key, time_delays=all_tds)
+                    else:
+                        _fig, _ax = tdc.plotEvent(_eventid, channels=[1,3,5,7], apply_filter=True, hilbert=hilbert, sine_subtract=True, apply_tukey=None, additional_title_text='%s Sample Event shifted by input time delays'%source_key, time_delays=all_tds)
+            print('time_delay_dict[%s] = '%source_key)
+            print(time_delay_dict[source_key])
+            
+        for key in list(sources_ENU.keys()):
+            if key in use_sources:
+                print('Using key %s'%key)
+                continue
+            else:
+                del sources_ENU[key]
+                del data_slicer_cut_dict[key]
+
+
+
+        #### AIRPLANES ####
+        if len(included_airplanes) > 0:
+            try_to_use_precalculated_time_delays_airplanes = True
+            try_to_use_precalculated_time_delays_airplanes_but_just_as_guess_for_real_time_delays_why_is_this_so_long = False
+
+            print('Loading known plane locations.')
+            known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks(ignore_planes=[]) # ['1728-62026','1773-14413','1773-63659','1774-88800','1783-28830','1784-7166']#'1774-88800','1728-62026'
+            origin = info.loadAntennaZeroLocation()
+            antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU()
+            if mode == 'hpol':
+                antennas_phase_start = antennas_phase_hpol
+            else:
+                antennas_phase_start = antennas_phase_vpol
+
+            plane_polys = {}
+            interpolated_plane_locations = {}
+            measured_plane_time_delays = {}
+
+            if plot_airplane_tracks == True:
+                plane_fig = plt.figure()
+                plane_fig.canvas.set_window_title('3D Plane Tracks')
+                plane_ax = plane_fig.add_subplot(111, projection='3d')
+                plane_ax.scatter(0,0,0,label='Antenna 0',c='k')
             colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
-            #DETERMINE THE TIME DELAYS TO BE USED IN THE ACTUAL CALCULATION
-
-            print('Calculating time delays from info.py')
-            reader = Reader(datapath,valley_source_run)
-            tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=False,apply_phase_response=apply_phase_response)
-            if sine_subtract:
-                tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
-            
-
-            ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
-                        curve_choice=0, trigger_types=[2],included_antennas=included_antennas_channels,include_test_roi=False,\
-                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
-                        impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
-                        time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
-                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
-                        p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
-
-            ds.addROI('Simple Template V > 0.7',{'cr_template_search_v':[0.7,1.0]})# Adding 2 ROI in different rows and appending as below allows for "OR" instead of "AND"
-            ds.addROI('Simple Template H > 0.7',{'cr_template_search_h':[0.7,1.0]})
-            #Done for OR condition
-            _eventids = numpy.sort(numpy.unique(numpy.append(ds.getCutsFromROI('Simple Template H > 0.7',load=False,save=False),ds.getCutsFromROI('Simple Template V > 0.7',load=False,save=False))))
-
-            time_delay_dict = {}
-            for source_key, cut_dict in data_slicer_cut_dict.items():
-                if plot_time_delays_on_maps == False:
-                    #Only need some time delays
-                    if not(source_key in use_sources):
-                        continue #Skipping calculating that one.
-                else:
-                    if numpy.logical_and(not(source_key in use_sources),not(source_key in only_plot)):
-                        continue #Skipping calculating that one.
-
-                ds.addROI(source_key,cut_dict)
-                roi_eventids = numpy.intersect1d(ds.getCutsFromROI(source_key),_eventids)
-                roi_impulsivity = ds.getDataFromParam(roi_eventids,'impulsivity_h')
-                roi_impulsivity_sort = numpy.argsort(roi_impulsivity)[::-1] #Reverse sorting so high numbers are first.
-                
-                if len(roi_eventids) > limit_events:
-                    print('LIMITING TIME DELAY CALCULATION TO %i MOST IMPULSIVE EVENTS'%limit_events)
-                    roi_eventids = numpy.sort(roi_eventids[roi_impulsivity_sort[0:limit_events]])
-            
-                print('Calculating time delays for %s'%source_key)
-                time_shifts, corrs, pairs = tdc.calculateMultipleTimeDelays(roi_eventids,align_method=0,hilbert=hilbert,plot=numpy.logical_and(source_key in use_sources,plot_time_delay_calculations), sine_subtract=sine_subtract)
-
-                if mode == 'hpol':
-                    # for event_index, eventid in enumerate(roi_eventids):
-                    #     print(eventid)
-                    #     print(time_shifts[0:6,event_index])
-                    time_delay_dict[source_key] = numpy.mean(time_shifts[0:6,:],axis=1) #perhaps I should be fitting.  Assuming only using sources with consistent time delays
-                else:
-                    time_delay_dict[source_key] = numpy.mean(time_shifts[6:12,:],axis=1)
-                
-                all_tds = numpy.mean(time_shifts,axis=1)
-
-                if plot_predicted_time_shifts:
-                        _eventid = numpy.random.choice(roi_eventids)
-                        if mode == 'hpol':
-                            _fig, _ax = tdc.plotEvent(_eventid, channels=[0,2,4,6], apply_filter=True, hilbert=hilbert, sine_subtract=True, apply_tukey=None, additional_title_text='%s Sample Event shifted by input time delays'%source_key, time_delays=all_tds)
-                        else:
-                            _fig, _ax = tdc.plotEvent(_eventid, channels=[1,3,5,7], apply_filter=True, hilbert=hilbert, sine_subtract=True, apply_tukey=None, additional_title_text='%s Sample Event shifted by input time delays'%source_key, time_delays=all_tds)
-                print('time_delay_dict[%s] = '%source_key)
-                print(time_delay_dict[source_key])
-                
-            for key in list(sources_ENU.keys()):
-                if key in use_sources:
-                    print('Using key %s'%key)
+            airplane_pair_cuts = {}
+            for index, key in enumerate(list(calibrated_trigtime.keys())):
+                if key not in included_airplanes:
                     continue
-                else:
-                    del sources_ENU[key]
-                    del data_slicer_cut_dict[key]
 
-            if cable_delay_guess_range is not None:
+                pair_cut = numpy.array([pair in known_planes[key]['baselines'][mode] for pair in [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]] ]) #Checks which td_pairs are worth looping over.
+                pair_cut = numpy.logical_and(pair_cut,numpy.isin([0,1,2,3,4,5],include_baselines)) #To include the ability to disable baselines from this scripts settings.
+                if sum(pair_cut) < len(include_baselines):
+                    print('%s using less baselines than specified.'%key)
+                airplane_pair_cuts[key] = pair_cut
 
-                limit_cable_delay0 = (cable_delays[0] - cable_delay_guess_range , cable_delays[0] + cable_delay_guess_range)
-                limit_cable_delay1 = (cable_delays[1] - cable_delay_guess_range , cable_delays[1] + cable_delay_guess_range)
-                limit_cable_delay2 = (cable_delays[2] - cable_delay_guess_range , cable_delays[2] + cable_delay_guess_range)
-                limit_cable_delay3 = (cable_delays[3] - cable_delay_guess_range , cable_delays[3] + cable_delay_guess_range)
-            else:
-                limit_cable_delay0 = None#(cable_delays[0] , None)
-                limit_cable_delay1 = None#(cable_delays[1] , None)
-                limit_cable_delay2 = None#(cable_delays[2] , None)
-                limit_cable_delay3 = None#(cable_delays[3] , None)
+                run = int(key.split('-')[0])
+                reader = Reader(datapath,run)
+                eventids = known_planes[key]['eventids'][:,1]
 
-            if antenna_position_guess_range_x is not None:
-                ant0_physical_limits_x = (antennas_phase_start[0][0] + manual_offset_ant0_x - antenna_position_guess_range_x ,antennas_phase_start[0][0] + manual_offset_ant0_x + antenna_position_guess_range_x)
-                ant1_physical_limits_x = (antennas_phase_start[1][0] - antenna_position_guess_range_x ,antennas_phase_start[1][0] + antenna_position_guess_range_x)
-                ant2_physical_limits_x = (antennas_phase_start[2][0] - antenna_position_guess_range_x ,antennas_phase_start[2][0] + antenna_position_guess_range_x)
-                ant3_physical_limits_x = (antennas_phase_start[3][0] - antenna_position_guess_range_x ,antennas_phase_start[3][0] + antenna_position_guess_range_x)
-            else:
-                ant0_physical_limits_x = None#None 
-                ant1_physical_limits_x = None#(None,0.0) #Forced west of 0
-                ant2_physical_limits_x = None#None
-                ant3_physical_limits_x = None#(None,0.0) #Forced West of 0
+                enu = numpy.array(pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2]))
+                
+                unique_enu_indices = numpy.sort(numpy.unique(enu,axis=1,return_index=True)[1])
+                distance = numpy.sqrt(enu[0]**2 + enu[0]**2 + enu[0]**2)
+                distance_cut_indices = numpy.where(distance/1000.0 < 100)
+                unique_enu_indices = unique_enu_indices[numpy.isin(unique_enu_indices,distance_cut_indices)]
+                
+                plane_polys[key] = pt.PlanePoly(output_tracks[key]['timestamps'][unique_enu_indices],enu[:,unique_enu_indices],plot=False)
 
-            if antenna_position_guess_range_y is not None:
-                ant0_physical_limits_y = (antennas_phase_start[0][1] + manual_offset_ant0_y - antenna_position_guess_range_y ,antennas_phase_start[0][1] + manual_offset_ant0_y + antenna_position_guess_range_y)
-                ant1_physical_limits_y = (antennas_phase_start[1][1] - antenna_position_guess_range_y ,antennas_phase_start[1][1] + antenna_position_guess_range_y)
-                ant2_physical_limits_y = (antennas_phase_start[2][1] - antenna_position_guess_range_y ,antennas_phase_start[2][1] + antenna_position_guess_range_y)
-                ant3_physical_limits_y = (antennas_phase_start[3][1] - antenna_position_guess_range_y ,antennas_phase_start[3][1] + antenna_position_guess_range_y)
-            else:
-                ant0_physical_limits_y = None#None 
-                ant1_physical_limits_y = None#(None,0.0) #Forced west of 0
-                ant2_physical_limits_y = None#None
-                ant3_physical_limits_y = None#(None,0.0) #Forced West of 0
+                interpolated_plane_locations[key] = plane_polys[key].poly(calibrated_trigtime[key])
+                
 
-            if antenna_position_guess_range_z is not None:
-                ant0_physical_limits_z = (antennas_phase_start[0][2] + manual_offset_ant0_z - antenna_position_guess_range_z ,antennas_phase_start[0][2] + manual_offset_ant0_z + antenna_position_guess_range_z)
-                ant1_physical_limits_z = (antennas_phase_start[1][2] - antenna_position_guess_range_z ,antennas_phase_start[1][2] + antenna_position_guess_range_z)
-                ant2_physical_limits_z = (antennas_phase_start[2][2] - antenna_position_guess_range_z ,antennas_phase_start[2][2] + antenna_position_guess_range_z)
-                ant3_physical_limits_z = (antennas_phase_start[3][2] - antenna_position_guess_range_z ,antennas_phase_start[3][2] + antenna_position_guess_range_z)
-            else:
-                ant0_physical_limits_z = None#None 
-                ant1_physical_limits_z = None#(None,0.0) #Forced west of 0
-                ant2_physical_limits_z = None#None  $(antennas_phase_start[2][2] - 2.5 ,antennas_phase_start[2][2] + 2.5)#None#None
-                ant3_physical_limits_z = None#(None,0.0) #Forced West of 0
+                if plot_airplane_tracks == True:
+                    #Alpha ranges from 0.5 to 1, where 0.5 is the earliest times and 1 is the later times.
+                    #alpha = 0.5 + (calibrated_trigtime[key] - min(calibrated_trigtime[key]))/(2*(max(calibrated_trigtime[key]) - min(calibrated_trigtime[key])))
+                    arrow_index = len(enu[0][unique_enu_indices])//2
+                    arrow_dir = numpy.array([(enu[0][unique_enu_indices][arrow_index+1] - enu[0][unique_enu_indices][arrow_index])/1000.0,(enu[1][unique_enu_indices][arrow_index+1] - enu[1][unique_enu_indices][arrow_index])/1000.0,(enu[2][unique_enu_indices][arrow_index+1] - enu[2][unique_enu_indices][arrow_index])/1000.0])
+                    arrow_dir = 3*arrow_dir/numpy.linalg.norm(arrow_dir)
+                    plane_ax.plot(enu[0][unique_enu_indices]/1000.0,enu[1][unique_enu_indices]/1000.0,enu[2][unique_enu_indices]/1000.0,label=key + ' : ' + known_planes[key]['known_flight'],color=colors[index])
+                    plane_ax.quiver(enu[0][unique_enu_indices][arrow_index]/1000.0,enu[1][unique_enu_indices][arrow_index]/1000.0,enu[2][unique_enu_indices][arrow_index]/1000.0, arrow_dir[0],arrow_dir[1],arrow_dir[2],color=colors[index])
+                    plane_ax.scatter(interpolated_plane_locations[key][:,0]/1000.0,interpolated_plane_locations[key][:,1]/1000.0,interpolated_plane_locations[key][:,2]/1000.0,label=key + ' : ' + known_planes[key]['known_flight'],color=colors[index])
 
-            if random_offset_amount > 0:
-                print('RANDOMLY SHIFTING INPUT POSITIONS BY SPECIFIED AMOUNT:%0.2f m'%random_offset_amount)
-
-            initial_ant0_x = manual_offset_ant0_x + antennas_phase_start[0][0] + float(not fix_ant0_x)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
-            initial_ant0_y = manual_offset_ant0_y + antennas_phase_start[0][1] + float(not fix_ant0_y)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
-            initial_ant0_z = manual_offset_ant0_z + antennas_phase_start[0][2] + float(not fix_ant0_z)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
-            initial_ant1_x = antennas_phase_start[1][0] + float(not fix_ant1_x)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
-            initial_ant1_y = antennas_phase_start[1][1] + float(not fix_ant1_y)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
-            initial_ant1_z = antennas_phase_start[1][2] + float(not fix_ant1_z)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
-            initial_ant2_x = antennas_phase_start[2][0] + float(not fix_ant2_x)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
-            initial_ant2_y = antennas_phase_start[2][1] + float(not fix_ant2_y)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
-            initial_ant2_z = antennas_phase_start[2][2] + float(not fix_ant2_z)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
-            initial_ant3_x = antennas_phase_start[3][0] + float(not fix_ant3_x)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
-            initial_ant3_y = antennas_phase_start[3][1] + float(not fix_ant3_y)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
-            initial_ant3_z = antennas_phase_start[3][2] + float(not fix_ant3_z)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
-
-            initial_ant0_ENU = numpy.array([initial_ant0_x, initial_ant0_y, initial_ant0_z])
-            initial_ant1_ENU = numpy.array([initial_ant1_x, initial_ant1_y, initial_ant1_z])
-            initial_ant2_ENU = numpy.array([initial_ant2_x, initial_ant2_y, initial_ant2_z])
-            initial_ant3_ENU = numpy.array([initial_ant3_x, initial_ant3_y, initial_ant3_z])
-
-            ##########
-            # Define Chi^2
-            ##########
-
-            chi2_fig = plt.figure()
-            chi2_fig.canvas.set_window_title('Initial Positions')
-            chi2_ax = chi2_fig.add_subplot(111, projection='3d')
-            chi2_ax.scatter(initial_ant0_x, initial_ant0_y, initial_ant0_z,c='r',alpha=0.5,label='Initial Ant0')
-            chi2_ax.scatter(initial_ant1_x, initial_ant1_y, initial_ant1_z,c='g',alpha=0.5,label='Initial Ant1')
-            chi2_ax.scatter(initial_ant2_x, initial_ant2_y, initial_ant2_z,c='b',alpha=0.5,label='Initial Ant2')
-            chi2_ax.scatter(initial_ant3_x, initial_ant3_y, initial_ant3_z,c='m',alpha=0.5,label='Initial Ant3')
-
-            chi2_ax.set_xlabel('East (m)',linespacing=10)
-            chi2_ax.set_ylabel('North (m)',linespacing=10)
-            chi2_ax.set_zlabel('Up (m)',linespacing=10)
-            
-            if False:
-                for key, enu in sources_ENU.items():
-                    chi2_ax.scatter(enu[0], enu[1], enu[2],alpha=0.5,label=key)
-            else:
-                chi2_ax.dist = 10
-            plt.legend()
+                    plt.grid()
+                    plt.show()
 
 
-            chi2_fig = plt.figure()
-            chi2_fig.canvas.set_window_title('Both')
-            chi2_ax = chi2_fig.add_subplot(111, projection='3d')
-            chi2_ax.scatter(initial_ant0_x, initial_ant0_y, initial_ant0_z,c='r',alpha=0.5,label='Initial Ant0')
-            chi2_ax.scatter(initial_ant1_x, initial_ant1_y, initial_ant1_z,c='g',alpha=0.5,label='Initial Ant1')
-            chi2_ax.scatter(initial_ant2_x, initial_ant2_y, initial_ant2_z,c='b',alpha=0.5,label='Initial Ant2')
-            chi2_ax.scatter(initial_ant3_x, initial_ant3_y, initial_ant3_z,c='m',alpha=0.5,label='Initial Ant3')
+                if try_to_use_precalculated_time_delays_airplanes == True and numpy.logical_and('time_delays' in list(known_planes[key].keys()),'max_corrs' in list(known_planes[key].keys())):
+                    print('Using precalculated time delays from info.py')
+                    measured_plane_time_delays[key] = known_planes[key]['time_delays'][mode].T
 
+                elif try_to_use_precalculated_time_delays_airplanes_but_just_as_guess_for_real_time_delays_why_is_this_so_long == True:
 
-            if include_baseline_measurements:
-                #This will weight against differences that result in longer baselines than measured.   I.e. smaller number if current baseline > measured.  Large for current < measured. 
-                #w = lambda measured, current : numpy.exp(measured - current)**2
-                measured_baselines = {'01':129*0.3048,
-                                      '02':163*0.3048,
-                                      '03':181*0.3048,
-                                      '12':151*0.3048,
-                                      '13':102*0.3048,
-                                      '23':85 *0.3048}
+                    guess_time_delays = numpy.vstack((known_planes[key]['time_delays']['hpol'].T,known_planes[key]['time_delays']['vpol'].T)).T
 
-            #This math is to set the pairs to include in the calculation.  Typically it will be all of them, but if the option is enabled to remove some
-            #from the calculation then this will allow for that to be done.
-            pairs = numpy.array(list(itertools.combinations((0,1,2,3), 2)))
-            pairs_cut = []
-            for pair_index, pair in enumerate(numpy.array(list(itertools.combinations((0,1,2,3), 2)))):
-                pairs_cut.append(numpy.logical_and(numpy.all(numpy.isin(numpy.array(pair),included_antennas_lumped)), pair_index in include_baselines)) #include_baselines Overwritten when antennas removed.
+                    print('Calculating time delays from info.py')
+                    run = int(key.split('-')[0])
+                    reader = Reader(datapath,run)
+                    tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=False,apply_phase_response=apply_phase_response)
+                    if sine_subtract:
+                        tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-            include_baselines = numpy.where(pairs_cut)[0] #Effectively the same as the pairs_cut but index based for baselines.
-            print('Including baseline pairs:')
-            print(pairs[pairs_cut])
+                    
+                    time_shifts, corrs, td_pairs = tdc.calculateMultipleTimeDelays(eventids,align_method=10,hilbert=hilbert, align_method_10_estimates=guess_time_delays, align_method_10_window_ns=8, sine_subtract=sine_subtract)
 
-            if True:
-                #Initial baselines just to be printed out
-                initial_baselines = {   '01':numpy.sqrt((initial_ant0_x - initial_ant1_x)**2 + (initial_ant0_y - initial_ant1_y)**2 + (initial_ant0_z - initial_ant1_z)**2),\
-                                        '02':numpy.sqrt((initial_ant0_x - initial_ant2_x)**2 + (initial_ant0_y - initial_ant2_y)**2 + (initial_ant0_z - initial_ant2_z)**2),\
-                                        '03':numpy.sqrt((initial_ant0_x - initial_ant3_x)**2 + (initial_ant0_y - initial_ant3_y)**2 + (initial_ant0_z - initial_ant3_z)**2),\
-                                        '12':numpy.sqrt((initial_ant1_x - initial_ant2_x)**2 + (initial_ant1_y - initial_ant2_y)**2 + (initial_ant1_z - initial_ant2_z)**2),\
-                                        '13':numpy.sqrt((initial_ant1_x - initial_ant3_x)**2 + (initial_ant1_y - initial_ant3_y)**2 + (initial_ant1_z - initial_ant3_z)**2),\
-                                        '23':numpy.sqrt((initial_ant2_x - initial_ant3_x)**2 + (initial_ant2_y - initial_ant3_y)**2 + (initial_ant2_z - initial_ant3_z)**2)}
-                print('The initial baselines (specified by deploy_index = %i) with random offsets and manual adjustsments in meters are:'%(info.returnDefaultDeploy()))
-                print(initial_baselines)
-
-                for key in included_pulsers:
-                    d0 = numpy.sqrt((pulser_locations_ENU[key][0] - initial_ant0_x)**2 + (pulser_locations_ENU[key][1] - initial_ant0_y)**2 + (pulser_locations_ENU[key][2] - initial_ant0_z)**2 ) #m
-                    print('Pulser %s is %0.2f m away from Antenna 0'%(key, d0))
-
-            if unknown_source_dir_valley or include_sanity:
-                # Need correlator map class to use in chi^2.
-                chi_2_reader = Reader(datapath,valley_source_run)
-                chi_2_cor = Correlator(chi_2_reader,  upsample=cor_upsample, n_phi=180, n_theta=180, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
-                chi_2_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
-                td_dicts = {}
-                for source_key in use_sources:
-                    td_dicts[source_key] = {mode:{'[0, 1]' :  [time_delay_dict[source_key][0]], '[0, 2]' : [time_delay_dict[source_key][1]], '[0, 3]' : [time_delay_dict[source_key][2]], '[1, 2]' : [time_delay_dict[source_key][3]], '[1, 3]' : [time_delay_dict[source_key][4]], '[2, 3]' : [time_delay_dict[source_key][5]]}}
-
-            n_func = lambda v0, v1, v2 : - numpy.cross( v1 - v0 , v2 - v1 )/numpy.linalg.norm(- numpy.cross( v1 - v0 , v2 - v1 )) #Calculates normal vector of plane defined by 3 vectors.  
-            def rawChi2(ant0_x, ant0_y, ant0_z, ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, cable_delay0, cable_delay1, cable_delay2, cable_delay3):
-                '''
-                This is a chi^2 that loops over locations from potential RFI, calculating expected time delays for those locations.  Then
-                it will compares those to the calculated time delays for suspected corresponding events.  
-                '''
-                try:
-                    #Calculate distances (already converted to ns) from pulser to each antenna
-                    chi_2 = 0.0
-                    _cable_delays = [cable_delay0,cable_delay1,cable_delay2,cable_delay3]
-
-                    if include_sanity or unknown_source_dir_valley:
-                        #For each of these I need updated maps
-                        ant0_ENU = numpy.array([ant0_x, ant0_y, ant0_z])
-                        ant1_ENU = numpy.array([ant1_x, ant1_y, ant1_z])
-                        ant2_ENU = numpy.array([ant2_x, ant2_y, ant2_z])
-                        ant3_ENU = numpy.array([ant3_x, ant3_y, ant3_z])
-                        if mode == 'hpol':
-                            chi_2_cor.overwriteCableDelays(cable_delay0, chi_2_cor.cable_delays[1], cable_delay1, chi_2_cor.cable_delays[3], cable_delay2, chi_2_cor.cable_delays[5], cable_delay3, chi_2_cor.cable_delays[7],verbose=False, suppress_time_delay_calculations=True)#WARNING, SUPRESSING CALCULATION OF TIME DELAY TABLE HERE, MAKE SURE IT HAPPENS WHEN ANTENNAS CHANGE
-                            chi_2_cor.overwriteAntennaLocations(chi_2_cor.A0_physical,chi_2_cor.A1_physical,chi_2_cor.A2_physical,chi_2_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,chi_2_cor.A0_vpol,chi_2_cor.A1_vpol,chi_2_cor.A2_vpol,chi_2_cor.A3_vpol,verbose=False, suppress_time_delay_calculations=False)
-                        else:
-                            chi_2_cor.overwriteCableDelays(chi_2_cor.cable_delays[0], cable_delay0, chi_2_cor.cable_delays[2], cable_delay1, chi_2_cor.cable_delays[4], cable_delay2, chi_2_cor.cable_delays[6], cable_delay3,verbose=False, suppress_time_delay_calculations=True)#WARNING, SUPRESSING CALCULATION OF TIME DELAY TABLE HERE, MAKE SURE IT HAPPENS WHEN ANTENNAS CHANGE
-                            chi_2_cor.overwriteAntennaLocations(chi_2_cor.A0_physical,chi_2_cor.A1_physical,chi_2_cor.A2_physical,chi_2_cor.A3_physical,chi_2_cor.A0_hpol,chi_2_cor.A1_hpol,chi_2_cor.A2_hpol,chi_2_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False, suppress_time_delay_calculations=False)
-
-
-                    if unknown_source_dir_valley == False:
-                        #Assuming you know the source, calcualting time delays assuming that source direction.
-                        for key in use_sources:
-                                d0 = (numpy.sqrt((sources_ENU[key][0] - ant0_x)**2 + (sources_ENU[key][1] - ant0_y)**2 + (sources_ENU[key][2] - ant0_z)**2 )/c)*1.0e9 #ns
-                                d1 = (numpy.sqrt((sources_ENU[key][0] - ant1_x)**2 + (sources_ENU[key][1] - ant1_y)**2 + (sources_ENU[key][2] - ant1_z)**2 )/c)*1.0e9 #ns
-                                d2 = (numpy.sqrt((sources_ENU[key][0] - ant2_x)**2 + (sources_ENU[key][1] - ant2_y)**2 + (sources_ENU[key][2] - ant2_z)**2 )/c)*1.0e9 #ns
-                                d3 = (numpy.sqrt((sources_ENU[key][0] - ant3_x)**2 + (sources_ENU[key][1] - ant3_y)**2 + (sources_ENU[key][2] - ant3_z)**2 )/c)*1.0e9 #ns
-
-                                d = [d0,d1,d2,d3]
-
-                                for pair_index, pair in enumerate(pairs):
-                                    if pairs_cut[pair_index]:
-                                        geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
-
-                                        vals = ((geometric_time_delay - time_delay_dict[key][pair_index])**2)/time_delay_measurement_uncertainty_ns**2 #Assumes time delays are accurate
-                                        chi_2 += numpy.sum(vals)
+                    if mode == 'hpol':
+                        measured_plane_time_delays[key] = time_shifts[0:6,:]
                     else:
-                        #Assuming you DON'T know the source, and using the precalculated time delays with the existing geometry to determine if the array points ANYWHERE for that source.
-                        for key in use_sources:
-                            td_dict = td_dicts[key]
+                        measured_plane_time_delays[key] = time_shifts[6:12,:]
 
-                            mesh_azimuth_deg, mesh_elevation_deg, overlap_map = chi_2_cor.generateTimeDelayOverlapMap(mode, td_dict, overlap_window_ns, value_mode='distance', plot_map=False, mollweide=False,center_dir='E',window_title=None, include_baselines=include_baselines)
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = chi_2_cor.mapMax(overlap_map, max_method=0, verbose=False, zenith_cut_ENU=[90,115], zenith_cut_array_plane=[0,88], pol=mode) #This is used so that max value must be in reasonable window.
+                else:
+                    print('Calculating time delays from info.py')
+                    run = int(key.split('-')[0])
+                    reader = Reader(datapath,run)
+                    tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=False,apply_phase_response=apply_phase_response)
+                    if sine_subtract:
+                        tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+                    eventids = known_planes[key]['eventids'][:,1]
+                    time_shifts, corrs, td_pairs = tdc.calculateMultipleTimeDelays(eventids,align_method=0,hilbert=hilbert, sine_subtract=sine_subtract)
 
-                            max_value = overlap_map.flatten()[linear_max_index]
-                            
-                            chi_2 += ((max_value - overlap_goal)**2)/(overlap_error**2) 
+                    if mode == 'hpol':
+                        measured_plane_time_delays[key] = time_shifts[0:6,:]
+                    else:
+                        measured_plane_time_delays[key] = time_shifts[6:12,:]
 
-                    if include_pulsers:
-                        for key in included_pulsers:
-                            d0 = (numpy.sqrt((pulser_locations_ENU[key][0] - ant0_x)**2 + (pulser_locations_ENU[key][1] - ant0_y)**2 + (pulser_locations_ENU[key][2] - ant0_z)**2 )/c)*1.0e9 #ns
-                            d1 = (numpy.sqrt((pulser_locations_ENU[key][0] - ant1_x)**2 + (pulser_locations_ENU[key][1] - ant1_y)**2 + (pulser_locations_ENU[key][2] - ant1_z)**2 )/c)*1.0e9 #ns
-                            d2 = (numpy.sqrt((pulser_locations_ENU[key][0] - ant2_x)**2 + (pulser_locations_ENU[key][1] - ant2_y)**2 + (pulser_locations_ENU[key][2] - ant2_z)**2 )/c)*1.0e9 #ns
-                            d3 = (numpy.sqrt((pulser_locations_ENU[key][0] - ant3_x)**2 + (pulser_locations_ENU[key][1] - ant3_y)**2 + (pulser_locations_ENU[key][2] - ant3_z)**2 )/c)*1.0e9 #ns
+            if plot_airplane_tracks == True:
+                plane_ax.legend(loc='upper right')
+                plane_ax.set_xlabel('East (km)',linespacing=10)
+                plane_ax.set_ylabel('North (km)',linespacing=10)
+                plane_ax.set_zlabel('Up (km)',linespacing=10)
+                plane_ax.dist = 10
+
+
+
+        if cable_delay_guess_range is not None:
+
+            limit_cable_delay0 = (cable_delays[0] - cable_delay_guess_range , cable_delays[0] + cable_delay_guess_range)
+            limit_cable_delay1 = (cable_delays[1] - cable_delay_guess_range , cable_delays[1] + cable_delay_guess_range)
+            limit_cable_delay2 = (cable_delays[2] - cable_delay_guess_range , cable_delays[2] + cable_delay_guess_range)
+            limit_cable_delay3 = (cable_delays[3] - cable_delay_guess_range , cable_delays[3] + cable_delay_guess_range)
+        else:
+            limit_cable_delay0 = None#(cable_delays[0] , None)
+            limit_cable_delay1 = None#(cable_delays[1] , None)
+            limit_cable_delay2 = None#(cable_delays[2] , None)
+            limit_cable_delay3 = None#(cable_delays[3] , None)
+
+        if antenna_position_guess_range_x is not None:
+            ant0_physical_limits_x = (antennas_phase_start[0][0] + manual_offset_ant0_x - antenna_position_guess_range_x ,antennas_phase_start[0][0] + manual_offset_ant0_x + antenna_position_guess_range_x)
+            ant1_physical_limits_x = (antennas_phase_start[1][0] + manual_offset_ant1_x - antenna_position_guess_range_x ,antennas_phase_start[1][0] + manual_offset_ant1_x + antenna_position_guess_range_x)
+            ant2_physical_limits_x = (antennas_phase_start[2][0] + manual_offset_ant2_x - antenna_position_guess_range_x ,antennas_phase_start[2][0] + manual_offset_ant2_x + antenna_position_guess_range_x)
+            ant3_physical_limits_x = (antennas_phase_start[3][0] + manual_offset_ant3_x - antenna_position_guess_range_x ,antennas_phase_start[3][0] + manual_offset_ant3_x + antenna_position_guess_range_x)
+        else:
+            ant0_physical_limits_x = None#None 
+            ant1_physical_limits_x = None#(None,0.0) #Forced west of 0
+            ant2_physical_limits_x = None#None
+            ant3_physical_limits_x = None#(None,0.0) #Forced West of 0
+
+        if antenna_position_guess_range_y is not None:
+            ant0_physical_limits_y = (antennas_phase_start[0][1] + manual_offset_ant0_y - antenna_position_guess_range_y ,antennas_phase_start[0][1] + manual_offset_ant0_y + antenna_position_guess_range_y)
+            ant1_physical_limits_y = (antennas_phase_start[1][1] + manual_offset_ant1_y - antenna_position_guess_range_y ,antennas_phase_start[1][1] + manual_offset_ant1_y + antenna_position_guess_range_y)
+            ant2_physical_limits_y = (antennas_phase_start[2][1] + manual_offset_ant2_y - antenna_position_guess_range_y ,antennas_phase_start[2][1] + manual_offset_ant2_y + antenna_position_guess_range_y)
+            ant3_physical_limits_y = (antennas_phase_start[3][1] + manual_offset_ant3_y - antenna_position_guess_range_y ,antennas_phase_start[3][1] + manual_offset_ant3_y + antenna_position_guess_range_y)
+        else:
+            ant0_physical_limits_y = None#None 
+            ant1_physical_limits_y = None#(None,0.0) #Forced west of 0
+            ant2_physical_limits_y = None#None
+            ant3_physical_limits_y = None#(None,0.0) #Forced West of 0
+
+        if antenna_position_guess_range_z is not None:
+            ant0_physical_limits_z = (antennas_phase_start[0][2] + manual_offset_ant0_z - antenna_position_guess_range_z ,antennas_phase_start[0][2] + manual_offset_ant0_z + antenna_position_guess_range_z)
+            ant1_physical_limits_z = (antennas_phase_start[1][2] + manual_offset_ant1_z - antenna_position_guess_range_z ,antennas_phase_start[1][2] + manual_offset_ant1_z + antenna_position_guess_range_z)
+            ant2_physical_limits_z = (antennas_phase_start[2][2] + manual_offset_ant2_z - antenna_position_guess_range_z ,antennas_phase_start[2][2] + manual_offset_ant2_z + antenna_position_guess_range_z)
+            ant3_physical_limits_z = (antennas_phase_start[3][2] + manual_offset_ant3_z - antenna_position_guess_range_z ,antennas_phase_start[3][2] + manual_offset_ant3_z + antenna_position_guess_range_z)
+        else:
+            ant0_physical_limits_z = None#None 
+            ant1_physical_limits_z = None#(None,0.0) #Forced west of 0
+            ant2_physical_limits_z = None#None  $(antennas_phase_start[2][2] - 2.5 ,antennas_phase_start[2][2] + 2.5)#None#None
+            ant3_physical_limits_z = None#(None,0.0) #Forced West of 0
+
+        if random_offset_amount > 0:
+            print('RANDOMLY SHIFTING INPUT POSITIONS BY SPECIFIED AMOUNT:%0.2f m'%random_offset_amount)
+
+        initial_ant0_x = manual_offset_ant0_x + antennas_phase_start[0][0] + float(not fix_ant0_x)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+        initial_ant0_y = manual_offset_ant0_y + antennas_phase_start[0][1] + float(not fix_ant0_y)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+        initial_ant0_z = manual_offset_ant0_z + antennas_phase_start[0][2] + float(not fix_ant0_z)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+        initial_ant1_x = manual_offset_ant1_x + antennas_phase_start[1][0] + float(not fix_ant1_x)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+        initial_ant1_y = manual_offset_ant1_y + antennas_phase_start[1][1] + float(not fix_ant1_y)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+        initial_ant1_z = manual_offset_ant1_z + antennas_phase_start[1][2] + float(not fix_ant1_z)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+        initial_ant2_x = manual_offset_ant2_x + antennas_phase_start[2][0] + float(not fix_ant2_x)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+        initial_ant2_y = manual_offset_ant2_y + antennas_phase_start[2][1] + float(not fix_ant2_y)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+        initial_ant2_z = manual_offset_ant2_z + antennas_phase_start[2][2] + float(not fix_ant2_z)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+        initial_ant3_x = manual_offset_ant3_x + antennas_phase_start[3][0] + float(not fix_ant3_x)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+        initial_ant3_y = manual_offset_ant3_y + antennas_phase_start[3][1] + float(not fix_ant3_y)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+        initial_ant3_z = manual_offset_ant3_z + antennas_phase_start[3][2] + float(not fix_ant3_z)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+
+        initial_ant0_ENU = numpy.array([initial_ant0_x, initial_ant0_y, initial_ant0_z])
+        initial_ant1_ENU = numpy.array([initial_ant1_x, initial_ant1_y, initial_ant1_z])
+        initial_ant2_ENU = numpy.array([initial_ant2_x, initial_ant2_y, initial_ant2_z])
+        initial_ant3_ENU = numpy.array([initial_ant3_x, initial_ant3_y, initial_ant3_z])
+
+        ##########
+        # Define Chi^2
+        ##########
+
+        chi2_fig = plt.figure()
+        chi2_fig.canvas.set_window_title('Initial Positions')
+        chi2_ax = chi2_fig.add_subplot(111, projection='3d')
+        chi2_ax.scatter(initial_ant0_x, initial_ant0_y, initial_ant0_z,c='r',alpha=0.5,label='Initial Ant0')
+        chi2_ax.scatter(initial_ant1_x, initial_ant1_y, initial_ant1_z,c='g',alpha=0.5,label='Initial Ant1')
+        chi2_ax.scatter(initial_ant2_x, initial_ant2_y, initial_ant2_z,c='b',alpha=0.5,label='Initial Ant2')
+        chi2_ax.scatter(initial_ant3_x, initial_ant3_y, initial_ant3_z,c='m',alpha=0.5,label='Initial Ant3')
+
+        chi2_ax.set_xlabel('East (m)',linespacing=10)
+        chi2_ax.set_ylabel('North (m)',linespacing=10)
+        chi2_ax.set_zlabel('Up (m)',linespacing=10)
+        
+        if False:
+            for key, enu in sources_ENU.items():
+                chi2_ax.scatter(enu[0], enu[1], enu[2],alpha=0.5,label=key)
+        else:
+            chi2_ax.dist = 10
+        plt.legend()
+
+
+        chi2_fig = plt.figure()
+        chi2_fig.canvas.set_window_title('Both')
+        chi2_ax = chi2_fig.add_subplot(111, projection='3d')
+        chi2_ax.scatter(initial_ant0_x, initial_ant0_y, initial_ant0_z,c='r',alpha=0.5,label='Initial Ant0')
+        chi2_ax.scatter(initial_ant1_x, initial_ant1_y, initial_ant1_z,c='g',alpha=0.5,label='Initial Ant1')
+        chi2_ax.scatter(initial_ant2_x, initial_ant2_y, initial_ant2_z,c='b',alpha=0.5,label='Initial Ant2')
+        chi2_ax.scatter(initial_ant3_x, initial_ant3_y, initial_ant3_z,c='m',alpha=0.5,label='Initial Ant3')
+
+
+        if include_baseline_measurements:
+            #This will weight against differences that result in longer baselines than measured.   I.e. smaller number if current baseline > measured.  Large for current < measured. 
+            #w = lambda measured, current : numpy.exp(measured - current)**2
+            measured_baselines = {'01':129*0.3048,
+                                  '02':163*0.3048,
+                                  '03':181*0.3048,
+                                  '12':151*0.3048,
+                                  '13':102*0.3048,
+                                  '23':85 *0.3048}
+
+        if True:
+            #Initial baselines just to be printed out
+            initial_baselines = {   '01':numpy.sqrt((initial_ant0_x - initial_ant1_x)**2 + (initial_ant0_y - initial_ant1_y)**2 + (initial_ant0_z - initial_ant1_z)**2),\
+                                    '02':numpy.sqrt((initial_ant0_x - initial_ant2_x)**2 + (initial_ant0_y - initial_ant2_y)**2 + (initial_ant0_z - initial_ant2_z)**2),\
+                                    '03':numpy.sqrt((initial_ant0_x - initial_ant3_x)**2 + (initial_ant0_y - initial_ant3_y)**2 + (initial_ant0_z - initial_ant3_z)**2),\
+                                    '12':numpy.sqrt((initial_ant1_x - initial_ant2_x)**2 + (initial_ant1_y - initial_ant2_y)**2 + (initial_ant1_z - initial_ant2_z)**2),\
+                                    '13':numpy.sqrt((initial_ant1_x - initial_ant3_x)**2 + (initial_ant1_y - initial_ant3_y)**2 + (initial_ant1_z - initial_ant3_z)**2),\
+                                    '23':numpy.sqrt((initial_ant2_x - initial_ant3_x)**2 + (initial_ant2_y - initial_ant3_y)**2 + (initial_ant2_z - initial_ant3_z)**2)}
+            print('The initial baselines (specified by deploy_index = %i) with random offsets and manual adjustsments in meters are:'%(info.returnDefaultDeploy()))
+            print(initial_baselines)
+
+            for key in included_pulsers:
+                d0 = numpy.sqrt((pulser_locations_ENU[key][0] - initial_ant0_x)**2 + (pulser_locations_ENU[key][1] - initial_ant0_y)**2 + (pulser_locations_ENU[key][2] - initial_ant0_z)**2 ) #m
+                print('Pulser %s is %0.2f m away from Antenna 0'%(key, d0))
+
+        if unknown_source_dir_valley or include_sanity:
+            # Need correlator map class to use in chi^2.
+            chi_2_reader = Reader(datapath,valley_source_run)
+            chi_2_cor = Correlator(chi_2_reader,  upsample=cor_upsample, n_phi=180, n_theta=180, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
+            chi_2_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+            td_dicts = {}
+            for source_key in use_sources:
+                td_dicts[source_key] = {mode:{'[0, 1]' :  [time_delay_dict[source_key][0]], '[0, 2]' : [time_delay_dict[source_key][1]], '[0, 3]' : [time_delay_dict[source_key][2]], '[1, 2]' : [time_delay_dict[source_key][3]], '[1, 3]' : [time_delay_dict[source_key][4]], '[2, 3]' : [time_delay_dict[source_key][5]]}}
+
+        n_func = lambda v0, v1, v2 : - numpy.cross( v1 - v0 , v2 - v1 )/numpy.linalg.norm(- numpy.cross( v1 - v0 , v2 - v1 )) #Calculates normal vector of plane defined by 3 vectors.  
+        def rawChi2(ant0_x, ant0_y, ant0_z, ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, cable_delay0, cable_delay1, cable_delay2, cable_delay3):
+            '''
+            This is a chi^2 that loops over locations from potential RFI, calculating expected time delays for those locations.  Then
+            it will compares those to the calculated time delays for suspected corresponding events.  
+            '''
+            try:
+                #Calculate distances (already converted to ns) from pulser to each antenna
+                chi_2 = 0.0
+                _cable_delays = [cable_delay0,cable_delay1,cable_delay2,cable_delay3]
+
+                if include_sanity or unknown_source_dir_valley:
+                    #For each of these I need updated maps
+                    ant0_ENU = numpy.array([ant0_x, ant0_y, ant0_z])
+                    ant1_ENU = numpy.array([ant1_x, ant1_y, ant1_z])
+                    ant2_ENU = numpy.array([ant2_x, ant2_y, ant2_z])
+                    ant3_ENU = numpy.array([ant3_x, ant3_y, ant3_z])
+                    if mode == 'hpol':
+                        chi_2_cor.overwriteCableDelays(cable_delay0, chi_2_cor.cable_delays[1], cable_delay1, chi_2_cor.cable_delays[3], cable_delay2, chi_2_cor.cable_delays[5], cable_delay3, chi_2_cor.cable_delays[7],verbose=False, suppress_time_delay_calculations=True)#WARNING, SUPRESSING CALCULATION OF TIME DELAY TABLE HERE, MAKE SURE IT HAPPENS WHEN ANTENNAS CHANGE
+                        chi_2_cor.overwriteAntennaLocations(chi_2_cor.A0_physical,chi_2_cor.A1_physical,chi_2_cor.A2_physical,chi_2_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,chi_2_cor.A0_vpol,chi_2_cor.A1_vpol,chi_2_cor.A2_vpol,chi_2_cor.A3_vpol,verbose=False, suppress_time_delay_calculations=False)
+                    else:
+                        chi_2_cor.overwriteCableDelays(chi_2_cor.cable_delays[0], cable_delay0, chi_2_cor.cable_delays[2], cable_delay1, chi_2_cor.cable_delays[4], cable_delay2, chi_2_cor.cable_delays[6], cable_delay3,verbose=False, suppress_time_delay_calculations=True)#WARNING, SUPRESSING CALCULATION OF TIME DELAY TABLE HERE, MAKE SURE IT HAPPENS WHEN ANTENNAS CHANGE
+                        chi_2_cor.overwriteAntennaLocations(chi_2_cor.A0_physical,chi_2_cor.A1_physical,chi_2_cor.A2_physical,chi_2_cor.A3_physical,chi_2_cor.A0_hpol,chi_2_cor.A1_hpol,chi_2_cor.A2_hpol,chi_2_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False, suppress_time_delay_calculations=False)
+
+
+                if unknown_source_dir_valley == False:
+                    #Assuming you know the source, calcualting time delays assuming that source direction.
+                    for key in use_sources:
+                            d0 = (numpy.sqrt((sources_ENU[key][0] - ant0_x)**2 + (sources_ENU[key][1] - ant0_y)**2 + (sources_ENU[key][2] - ant0_z)**2 )/c)*1.0e9 #ns
+                            d1 = (numpy.sqrt((sources_ENU[key][0] - ant1_x)**2 + (sources_ENU[key][1] - ant1_y)**2 + (sources_ENU[key][2] - ant1_z)**2 )/c)*1.0e9 #ns
+                            d2 = (numpy.sqrt((sources_ENU[key][0] - ant2_x)**2 + (sources_ENU[key][1] - ant2_y)**2 + (sources_ENU[key][2] - ant2_z)**2 )/c)*1.0e9 #ns
+                            d3 = (numpy.sqrt((sources_ENU[key][0] - ant3_x)**2 + (sources_ENU[key][1] - ant3_y)**2 + (sources_ENU[key][2] - ant3_z)**2 )/c)*1.0e9 #ns
 
                             d = [d0,d1,d2,d3]
 
                             for pair_index, pair in enumerate(pairs):
                                 if pairs_cut[pair_index]:
-                                    # pulser_time_delay_dict
-                                    # pulser_time_delay_error_dict
-                                    if pulser_time_delay_dict[key][pair_index][0][0] == pair[0] and pulser_time_delay_dict[key][pair_index][0][1] == pair[1]:
-                                        geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
-                                        vals = ((geometric_time_delay - pulser_time_delay_dict[key][pair_index][1])**2) #Assumes time delays are accurate
-                                        chi_2 += pulser_weight*numpy.sum(vals)
-                                    else:
-                                        print('PAIR INDICES DONT MATCH, SOMETHING IS WRONG')
+                                    geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
 
-                    if include_baseline_measurements:
-                        #This will weight against differences that result in longer baselines than measured.   I.e. smaller number if current baseline > measured.  Large for current < measured. 
-                        current_baselines = {   '01':numpy.sqrt((ant0_x - ant1_x)**2 + (ant0_y - ant1_y)**2 + (ant0_z - ant1_z)**2),\
-                                                '02':numpy.sqrt((ant0_x - ant2_x)**2 + (ant0_y - ant2_y)**2 + (ant0_z - ant2_z)**2),\
-                                                '03':numpy.sqrt((ant0_x - ant3_x)**2 + (ant0_y - ant3_y)**2 + (ant0_z - ant3_z)**2),\
-                                                '12':numpy.sqrt((ant1_x - ant2_x)**2 + (ant1_y - ant2_y)**2 + (ant1_z - ant2_z)**2),\
-                                                '13':numpy.sqrt((ant1_x - ant3_x)**2 + (ant1_y - ant3_y)**2 + (ant1_z - ant3_z)**2),\
-                                                '23':numpy.sqrt((ant2_x - ant3_x)**2 + (ant2_y - ant3_y)**2 + (ant2_z - ant3_z)**2)}
+                                    vals = ((geometric_time_delay - time_delay_dict[key][pair_index])**2)/time_delay_measurement_uncertainty_ns**2 #Assumes time delays are accurate
+                                    chi_2 += valley_weight*numpy.sum(vals)
+                else:
+                    #Assuming you DON'T know the source, and using the precalculated time delays with the existing geometry to determine if the array points ANYWHERE for that source.
+                    for key in use_sources:
+                        td_dict = td_dicts[key]
+
+                        mesh_azimuth_deg, mesh_elevation_deg, overlap_map = chi_2_cor.generateTimeDelayOverlapMap(mode, td_dict, overlap_window_ns, value_mode='distance', plot_map=False, mollweide=False,center_dir='E',window_title=None, include_baselines=include_baselines)
+                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = chi_2_cor.mapMax(overlap_map, max_method=0, verbose=False, zenith_cut_ENU=[90,115], zenith_cut_array_plane=[0,88], pol=mode) #This is used so that max value must be in reasonable window.
+
+                        max_value = overlap_map.flatten()[linear_max_index]
                         
-                        #Adds chi^2 as soon as any baseline exceeds that measured with a tape measure.
-                        #chi_2 += 100*numpy.any([(current_baselines['01'] - measured_baselines['01']) > baseline_upper_bound_tolerance, (current_baselines['02'] - measured_baselines['02']) > baseline_upper_bound_tolerance, (current_baselines['03'] - measured_baselines['03']) > baseline_upper_bound_tolerance, (current_baselines['12'] - measured_baselines['12']) > baseline_upper_bound_tolerance, (current_baselines['13'] - measured_baselines['13']) > baseline_upper_bound_tolerance, (current_baselines['23'] - measured_baselines['23']) > baseline_upper_bound_tolerance])
+                        chi_2 += valley_weight*((max_value - overlap_goal)**2)/(overlap_error**2) 
+
+                if include_pulsers:
+                    for key in included_pulsers:
+                        d0 = (numpy.sqrt((pulser_locations_ENU[key][0] - ant0_x)**2 + (pulser_locations_ENU[key][1] - ant0_y)**2 + (pulser_locations_ENU[key][2] - ant0_z)**2 )/c)*1.0e9 #ns
+                        d1 = (numpy.sqrt((pulser_locations_ENU[key][0] - ant1_x)**2 + (pulser_locations_ENU[key][1] - ant1_y)**2 + (pulser_locations_ENU[key][2] - ant1_z)**2 )/c)*1.0e9 #ns
+                        d2 = (numpy.sqrt((pulser_locations_ENU[key][0] - ant2_x)**2 + (pulser_locations_ENU[key][1] - ant2_y)**2 + (pulser_locations_ENU[key][2] - ant2_z)**2 )/c)*1.0e9 #ns
+                        d3 = (numpy.sqrt((pulser_locations_ENU[key][0] - ant3_x)**2 + (pulser_locations_ENU[key][1] - ant3_y)**2 + (pulser_locations_ENU[key][2] - ant3_z)**2 )/c)*1.0e9 #ns
+
+                        d = [d0,d1,d2,d3]
+
                         for pair_index, pair in enumerate(pairs):
                             if pairs_cut[pair_index]:
-                                key = str(int(pair[0])) + str(int(pair[1]))
-                                chi_2 += ((current_baselines[key] - measured_baselines[key])**2)/(baseline_measurement_uncertainty_m**2)
+                                # pulser_time_delay_dict
+                                # pulser_time_delay_error_dict
+                                if pulser_time_delay_dict[key][pair_index][0][0] == pair[0] and pulser_time_delay_dict[key][pair_index][0][1] == pair[1]:
+                                    geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
+                                    vals = ((geometric_time_delay - pulser_time_delay_dict[key][pair_index][1])**2) #Assumes time delays are accurate
+                                    chi_2 += pulser_weight*numpy.sum(vals)
+                                else:
+                                    print('PAIR INDICES DONT MATCH, SOMETHING IS WRONG')
+                if len(included_airplanes) > 0:
+                    # if mode == 'hpol':
+                    #     antennas_phase_start = antennas_phase_hpol
+                    # else:
+                    #     antennas_phase_start = antennas_phase_vpol
 
-                    if limit_array_plane_azimuth_range == True:
-                        plane_normal_vector = n_func(numpy.array([ant0_x, ant0_y, ant0_z]),     numpy.array([ant2_x, ant2_y, ant2_z]),     (numpy.array([ant0_x, ant0_y, ant0_z])     + numpy.array([ant3_x, ant3_y, ant3_z]))/2.0)
-                        array_plane_az = numpy.rad2deg(numpy.arctan2(plane_normal_vector[1],plane_normal_vector[0]))
-                        chi_2 += numpy.max(numpy.abs(array_plane_az) - allowed_array_plane_azimuth_range ,0) #Within range 0 added, outside is adds the difference in degrees outside of the range.  
-                    if include_sanity:
+                    for index, key in enumerate(list(calibrated_trigtime.keys())):
+                        if key not in included_airplanes:
+                            continue
+
+                        interpolated_plane_locations[key][:,0]
+                        interpolated_plane_locations[key][:,1]
+                        interpolated_plane_locations[key][:,2]
+
+                        d0 = (numpy.sqrt((interpolated_plane_locations[key][:,0] - ant0_x)**2 + (interpolated_plane_locations[key][:,1] - ant0_y)**2 + (interpolated_plane_locations[key][:,2] - ant0_z)**2 )/c)*1.0e9 #ns
+                        d1 = (numpy.sqrt((interpolated_plane_locations[key][:,0] - ant1_x)**2 + (interpolated_plane_locations[key][:,1] - ant1_y)**2 + (interpolated_plane_locations[key][:,2] - ant1_z)**2 )/c)*1.0e9 #ns
+                        d2 = (numpy.sqrt((interpolated_plane_locations[key][:,0] - ant2_x)**2 + (interpolated_plane_locations[key][:,1] - ant2_y)**2 + (interpolated_plane_locations[key][:,2] - ant2_z)**2 )/c)*1.0e9 #ns
+                        d3 = (numpy.sqrt((interpolated_plane_locations[key][:,0] - ant3_x)**2 + (interpolated_plane_locations[key][:,1] - ant3_y)**2 + (interpolated_plane_locations[key][:,2] - ant3_z)**2 )/c)*1.0e9 #ns
+
+                        d = [d0,d1,d2,d3]
+
+                        airplane_pair_cuts[key]
+                        # = time_shifts[0:6,:]
+
+
+                        #import pdb; pdb.set_trace()
                         for pair_index, pair in enumerate(pairs):
-                            if pairs_cut[pair_index]:
-                                for key in use_sources:
-                                    if mode == 'hpol':
-                                        if pair_index == 0: 
-                                            #This can indicate that the baseline is not possible to create. 
-                                            difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_0subtract1)) - numpy.abs(time_delay_dict[key][0])
-                                            if difference < 0:
-                                                chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                        if pair_index == 1: 
-                                            #This can indicate that the baseline is not possible to create. 
-                                            difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_0subtract2)) - numpy.abs(time_delay_dict[key][1])
-                                            if difference < 0:
-                                                chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                        if pair_index == 2: 
-                                            #This can indicate that the baseline is not possible to create. 
-                                            difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_0subtract3)) - numpy.abs(time_delay_dict[key][2])
-                                            if difference < 0:
-                                                chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                        if pair_index == 3: 
-                                            #This can indicate that the baseline is not possible to create. 
-                                            difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_1subtract2)) - numpy.abs(time_delay_dict[key][3])
-                                            if difference < 0:
-                                                chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                        if pair_index == 4: 
-                                            #This can indicate that the baseline is not possible to create. 
-                                            difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_1subtract3)) - numpy.abs(time_delay_dict[key][4])
-                                            if difference < 0:
-                                                chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                        if pair_index == 5: 
-                                            #This can indicate that the baseline is not possible to create. 
-                                            difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_2subtract3)) - numpy.abs(time_delay_dict[key][5])
-                                            if difference < 0:
-                                                chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                        
-                                        if include_pulsers:
-                                            for key in included_pulsers:
-                                                if pair_index == 0: 
-                                                    #This can indicate that the baseline is not possible to create. 
-                                                    difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_0subtract1)) - numpy.abs(pulser_time_delay_dict[key][0][1])
-                                                    if difference < 0:
-                                                        chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                                if pair_index == 1: 
-                                                    #This can indicate that the baseline is not possible to create. 
-                                                    difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_0subtract2)) - numpy.abs(pulser_time_delay_dict[key][1][1])
-                                                    if difference < 0:
-                                                        chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                                if pair_index == 2: 
-                                                    #This can indicate that the baseline is not possible to create. 
-                                                    difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_0subtract3)) - numpy.abs(pulser_time_delay_dict[key][2][1])
-                                                    if difference < 0:
-                                                        chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                                if pair_index == 3: 
-                                                    #This can indicate that the baseline is not possible to create. 
-                                                    difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_1subtract2)) - numpy.abs(pulser_time_delay_dict[key][3][1])
-                                                    if difference < 0:
-                                                        chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                                if pair_index == 4: 
-                                                    #This can indicate that the baseline is not possible to create. 
-                                                    difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_1subtract3)) - numpy.abs(pulser_time_delay_dict[key][4][1])
-                                                    if difference < 0:
-                                                        chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                                if pair_index == 5: 
-                                                    #This can indicate that the baseline is not possible to create. 
-                                                    difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_2subtract3)) - numpy.abs(pulser_time_delay_dict[key][5][1])
-                                                    if difference < 0:
-                                                        chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                    else:
-                                        if pair_index == 0: 
-                                            #This can indicate that the baseline is not possible to create. 
-                                            difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_0subtract1)) - numpy.abs(time_delay_dict[key][0])
-                                            if difference < 0:
-                                                chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                        if pair_index == 1: 
-                                            #This can indicate that the baseline is not possible to create. 
-                                            difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_0subtract2)) - numpy.abs(time_delay_dict[key][1])
-                                            if difference < 0:
-                                                chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                        if pair_index == 2: 
-                                            #This can indicate that the baseline is not possible to create. 
-                                            difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_0subtract3)) - numpy.abs(time_delay_dict[key][2])
-                                            if difference < 0:
-                                                chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                        if pair_index == 3: 
-                                            #This can indicate that the baseline is not possible to create. 
-                                            difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_1subtract2)) - numpy.abs(time_delay_dict[key][3])
-                                            if difference < 0:
-                                                chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                        if pair_index == 4: 
-                                            #This can indicate that the baseline is not possible to create. 
-                                            difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_1subtract3)) - numpy.abs(time_delay_dict[key][4])
-                                            if difference < 0:
-                                                chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                        if pair_index == 5: 
-                                            #This can indicate that the baseline is not possible to create. 
-                                            difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_2subtract3)) - numpy.abs(time_delay_dict[key][5])
-                                            if difference < 0:
-                                                chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                        
-                                        if include_pulsers:
-                                            for key in included_pulsers:
-                                                if pair_index == 0: 
-                                                    #This can indicate that the baseline is not possible to create. 
-                                                    difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_0subtract1)) - numpy.abs(pulser_time_delay_dict[key][0][1])
-                                                    if difference < 0:
-                                                        chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                                if pair_index == 1: 
-                                                    #This can indicate that the baseline is not possible to create. 
-                                                    difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_0subtract2)) - numpy.abs(pulser_time_delay_dict[key][1][1])
-                                                    if difference < 0:
-                                                        chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                                if pair_index == 2: 
-                                                    #This can indicate that the baseline is not possible to create. 
-                                                    difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_0subtract3)) - numpy.abs(pulser_time_delay_dict[key][2][1])
-                                                    if difference < 0:
-                                                        chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                                if pair_index == 3: 
-                                                    #This can indicate that the baseline is not possible to create. 
-                                                    difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_1subtract2)) - numpy.abs(pulser_time_delay_dict[key][3][1])
-                                                    if difference < 0:
-                                                        chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                                if pair_index == 4: 
-                                                    #This can indicate that the baseline is not possible to create. 
-                                                    difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_1subtract3)) - numpy.abs(pulser_time_delay_dict[key][4][1])
-                                                    if difference < 0:
-                                                        chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
-                                                if pair_index == 5: 
-                                                    #This can indicate that the baseline is not possible to create. 
-                                                    difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_2subtract3)) - numpy.abs(pulser_time_delay_dict[key][5][1])
-                                                    if difference < 0:
-                                                        chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                            if airplane_pair_cuts[key][pair_index]:
+                                #td = 
+                                geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
+                                vals = ((geometric_time_delay - measured_plane_time_delays[key][pair_index])**2) #Assumes time delays are accurate
+                                chi_2 += airplane_weight*numpy.sum(vals)
 
 
-                        #chi_2 += max(ant2_z - ant1_z,0) #If antenna 2 is lower than antenna 1 then it will add to chi^2 linearly as that happens.  
-                    print(chi_2)
-                    return chi_2
-                except Exception as e:
-                    print('Error in rawChi2')
-                    print(e)
-                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                    print(exc_type, fname, exc_tb.tb_lineno)
 
 
-            
-            #-12 ft on pulser locations relative to antennas to account for additional mast elevation.
-            
-            
-            #rawChi2(ant0_x=antennas_phase_start[0][0], ant0_y=antennas_phase_start[0][1], ant0_z=antennas_phase_start[0][2], ant1_x=antennas_phase_start[1][0], ant1_y=antennas_phase_start[1][1], ant1_z=antennas_phase_start[1][2], ant2_x=antennas_phase_start[2][0], ant2_y=antennas_phase_start[2][1], ant2_z=antennas_phase_start[2][2], ant3_x=antennas_phase_start[3][0], ant3_y=antennas_phase_start[3][1], ant3_z=antennas_phase_start[3][2])
+                if include_baseline_measurements:
+                    #This will weight against differences that result in longer baselines than measured.   I.e. smaller number if current baseline > measured.  Large for current < measured. 
+                    current_baselines = {   '01':numpy.sqrt((ant0_x - ant1_x)**2 + (ant0_y - ant1_y)**2 + (ant0_z - ant1_z)**2),\
+                                            '02':numpy.sqrt((ant0_x - ant2_x)**2 + (ant0_y - ant2_y)**2 + (ant0_z - ant2_z)**2),\
+                                            '03':numpy.sqrt((ant0_x - ant3_x)**2 + (ant0_y - ant3_y)**2 + (ant0_z - ant3_z)**2),\
+                                            '12':numpy.sqrt((ant1_x - ant2_x)**2 + (ant1_y - ant2_y)**2 + (ant1_z - ant2_z)**2),\
+                                            '13':numpy.sqrt((ant1_x - ant3_x)**2 + (ant1_y - ant3_y)**2 + (ant1_z - ant3_z)**2),\
+                                            '23':numpy.sqrt((ant2_x - ant3_x)**2 + (ant2_y - ant3_y)**2 + (ant2_z - ant3_z)**2)}
+                    
+                    #Adds chi^2 as soon as any baseline exceeds that measured with a tape measure.
+                    #chi_2 += 100*numpy.any([(current_baselines['01'] - measured_baselines['01']) > baseline_upper_bound_tolerance, (current_baselines['02'] - measured_baselines['02']) > baseline_upper_bound_tolerance, (current_baselines['03'] - measured_baselines['03']) > baseline_upper_bound_tolerance, (current_baselines['12'] - measured_baselines['12']) > baseline_upper_bound_tolerance, (current_baselines['13'] - measured_baselines['13']) > baseline_upper_bound_tolerance, (current_baselines['23'] - measured_baselines['23']) > baseline_upper_bound_tolerance])
+                    for pair_index, pair in enumerate(pairs):
+                        if pairs_cut[pair_index]:
+                            key = str(int(pair[0])) + str(int(pair[1]))
+                            chi_2 += ((current_baselines[key] - measured_baselines[key])**2)/(baseline_measurement_uncertainty_m**2)
 
-            m = Minuit(     rawChi2,\
-                            ant0_x=initial_ant0_x,\
-                            ant0_y=initial_ant0_y,\
-                            ant0_z=initial_ant0_z,\
-                            ant1_x=initial_ant1_x,\
-                            ant1_y=initial_ant1_y,\
-                            ant1_z=initial_ant1_z,\
-                            ant2_x=initial_ant2_x,\
-                            ant2_y=initial_ant2_y,\
-                            ant2_z=initial_ant2_z,\
-                            ant3_x=initial_ant3_x,\
-                            ant3_y=initial_ant3_y,\
-                            ant3_z=initial_ant3_z,\
-                            cable_delay0=cable_delays[0],\
-                            cable_delay1=cable_delays[1],\
-                            cable_delay2=cable_delays[2],\
-                            cable_delay3=cable_delays[3],\
-                            error_ant0_x=initial_step_x,\
-                            error_ant0_y=initial_step_y,\
-                            error_ant0_z=initial_step_z,\
-                            error_ant1_x=initial_step_x,\
-                            error_ant1_y=initial_step_y,\
-                            error_ant1_z=initial_step_z,\
-                            error_ant2_x=initial_step_x,\
-                            error_ant2_y=initial_step_y,\
-                            error_ant2_z=initial_step_z,\
-                            error_ant3_x=initial_step_x,\
-                            error_ant3_y=initial_step_y,\
-                            error_ant3_z=initial_step_z,\
-                            error_cable_delay0=initial_step_cable_delay,\
-                            error_cable_delay1=initial_step_cable_delay,\
-                            error_cable_delay2=initial_step_cable_delay,\
-                            error_cable_delay3=initial_step_cable_delay,\
-                            errordef = 1.0,\
-                            limit_ant0_x=ant0_physical_limits_x,\
-                            limit_ant0_y=ant0_physical_limits_y,\
-                            limit_ant0_z=ant0_physical_limits_z,\
-                            limit_ant1_x=ant1_physical_limits_x,\
-                            limit_ant1_y=ant1_physical_limits_y,\
-                            limit_ant1_z=ant1_physical_limits_z,\
-                            limit_ant2_x=ant2_physical_limits_x,\
-                            limit_ant2_y=ant2_physical_limits_y,\
-                            limit_ant2_z=ant2_physical_limits_z,\
-                            limit_ant3_x=ant3_physical_limits_x,\
-                            limit_ant3_y=ant3_physical_limits_y,\
-                            limit_ant3_z=ant3_physical_limits_z,\
-                            limit_cable_delay0=limit_cable_delay0,\
-                            limit_cable_delay1=limit_cable_delay1,\
-                            limit_cable_delay2=limit_cable_delay2,\
-                            limit_cable_delay3=limit_cable_delay3,\
-                            fix_ant0_x=fix_ant0_x,\
-                            fix_ant0_y=fix_ant0_y,\
-                            fix_ant0_z=fix_ant0_z,\
-                            fix_ant1_x=fix_ant1_x,\
-                            fix_ant1_y=fix_ant1_y,\
-                            fix_ant1_z=fix_ant1_z,\
-                            fix_ant2_x=fix_ant2_x,\
-                            fix_ant2_y=fix_ant2_y,\
-                            fix_ant2_z=fix_ant2_z,\
-                            fix_ant3_x=fix_ant3_x,\
-                            fix_ant3_y=fix_ant3_y,\
-                            fix_ant3_z=fix_ant3_z,\
-                            fix_cable_delay0=fix_cable_delay0,\
-                            fix_cable_delay1=fix_cable_delay1,\
-                            fix_cable_delay2=fix_cable_delay2,\
-                            fix_cable_delay3=fix_cable_delay3)
+                if limit_array_plane_azimuth_range == True:
+                    plane_normal_vector = n_func(numpy.array([ant0_x, ant0_y, ant0_z]),     numpy.array([ant2_x, ant2_y, ant2_z]),     (numpy.array([ant0_x, ant0_y, ant0_z])     + numpy.array([ant3_x, ant3_y, ant3_z]))/2.0)
+                    array_plane_az = numpy.rad2deg(numpy.arctan2(plane_normal_vector[1],plane_normal_vector[0]))
+                    chi_2 += numpy.max(numpy.abs(array_plane_az) - allowed_array_plane_azimuth_range ,0) #Within range 0 added, outside is adds the difference in degrees outside of the range.  
+                
+                if include_sanity:
+                    for pair_index, pair in enumerate(pairs):
+                        if pairs_cut[pair_index]:
+                            for key in use_sources:
+                                if mode == 'hpol':
+                                    if pair_index == 0: 
+                                        #This can indicate that the baseline is not possible to create. 
+                                        difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_0subtract1)) - numpy.abs(time_delay_dict[key][0])
+                                        if difference < 0:
+                                            chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                    if pair_index == 1: 
+                                        #This can indicate that the baseline is not possible to create. 
+                                        difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_0subtract2)) - numpy.abs(time_delay_dict[key][1])
+                                        if difference < 0:
+                                            chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                    if pair_index == 2: 
+                                        #This can indicate that the baseline is not possible to create. 
+                                        difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_0subtract3)) - numpy.abs(time_delay_dict[key][2])
+                                        if difference < 0:
+                                            chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                    if pair_index == 3: 
+                                        #This can indicate that the baseline is not possible to create. 
+                                        difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_1subtract2)) - numpy.abs(time_delay_dict[key][3])
+                                        if difference < 0:
+                                            chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                    if pair_index == 4: 
+                                        #This can indicate that the baseline is not possible to create. 
+                                        difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_1subtract3)) - numpy.abs(time_delay_dict[key][4])
+                                        if difference < 0:
+                                            chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                    if pair_index == 5: 
+                                        #This can indicate that the baseline is not possible to create. 
+                                        difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_2subtract3)) - numpy.abs(time_delay_dict[key][5])
+                                        if difference < 0:
+                                            chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                    
+                                    if include_pulsers:
+                                        for key in included_pulsers:
+                                            if pair_index == 0: 
+                                                #This can indicate that the baseline is not possible to create. 
+                                                difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_0subtract1)) - numpy.abs(pulser_time_delay_dict[key][0][1])
+                                                if difference < 0:
+                                                    chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                            if pair_index == 1: 
+                                                #This can indicate that the baseline is not possible to create. 
+                                                difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_0subtract2)) - numpy.abs(pulser_time_delay_dict[key][1][1])
+                                                if difference < 0:
+                                                    chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                            if pair_index == 2: 
+                                                #This can indicate that the baseline is not possible to create. 
+                                                difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_0subtract3)) - numpy.abs(pulser_time_delay_dict[key][2][1])
+                                                if difference < 0:
+                                                    chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                            if pair_index == 3: 
+                                                #This can indicate that the baseline is not possible to create. 
+                                                difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_1subtract2)) - numpy.abs(pulser_time_delay_dict[key][3][1])
+                                                if difference < 0:
+                                                    chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                            if pair_index == 4: 
+                                                #This can indicate that the baseline is not possible to create. 
+                                                difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_1subtract3)) - numpy.abs(pulser_time_delay_dict[key][4][1])
+                                                if difference < 0:
+                                                    chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                            if pair_index == 5: 
+                                                #This can indicate that the baseline is not possible to create. 
+                                                difference = numpy.max(numpy.abs(chi_2_cor.t_hpol_2subtract3)) - numpy.abs(pulser_time_delay_dict[key][5][1])
+                                                if difference < 0:
+                                                    chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                else:
+                                    if pair_index == 0: 
+                                        #This can indicate that the baseline is not possible to create. 
+                                        difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_0subtract1)) - numpy.abs(time_delay_dict[key][0])
+                                        if difference < 0:
+                                            chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                    if pair_index == 1: 
+                                        #This can indicate that the baseline is not possible to create. 
+                                        difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_0subtract2)) - numpy.abs(time_delay_dict[key][1])
+                                        if difference < 0:
+                                            chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                    if pair_index == 2: 
+                                        #This can indicate that the baseline is not possible to create. 
+                                        difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_0subtract3)) - numpy.abs(time_delay_dict[key][2])
+                                        if difference < 0:
+                                            chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                    if pair_index == 3: 
+                                        #This can indicate that the baseline is not possible to create. 
+                                        difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_1subtract2)) - numpy.abs(time_delay_dict[key][3])
+                                        if difference < 0:
+                                            chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                    if pair_index == 4: 
+                                        #This can indicate that the baseline is not possible to create. 
+                                        difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_1subtract3)) - numpy.abs(time_delay_dict[key][4])
+                                        if difference < 0:
+                                            chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                    if pair_index == 5: 
+                                        #This can indicate that the baseline is not possible to create. 
+                                        difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_2subtract3)) - numpy.abs(time_delay_dict[key][5])
+                                        if difference < 0:
+                                            chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                    
+                                    if include_pulsers:
+                                        for key in included_pulsers:
+                                            if pair_index == 0: 
+                                                #This can indicate that the baseline is not possible to create. 
+                                                difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_0subtract1)) - numpy.abs(pulser_time_delay_dict[key][0][1])
+                                                if difference < 0:
+                                                    chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                            if pair_index == 1: 
+                                                #This can indicate that the baseline is not possible to create. 
+                                                difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_0subtract2)) - numpy.abs(pulser_time_delay_dict[key][1][1])
+                                                if difference < 0:
+                                                    chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                            if pair_index == 2: 
+                                                #This can indicate that the baseline is not possible to create. 
+                                                difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_0subtract3)) - numpy.abs(pulser_time_delay_dict[key][2][1])
+                                                if difference < 0:
+                                                    chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                            if pair_index == 3: 
+                                                #This can indicate that the baseline is not possible to create. 
+                                                difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_1subtract2)) - numpy.abs(pulser_time_delay_dict[key][3][1])
+                                                if difference < 0:
+                                                    chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                            if pair_index == 4: 
+                                                #This can indicate that the baseline is not possible to create. 
+                                                difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_1subtract3)) - numpy.abs(pulser_time_delay_dict[key][4][1])
+                                                if difference < 0:
+                                                    chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
+                                            if pair_index == 5: 
+                                                #This can indicate that the baseline is not possible to create. 
+                                                difference = numpy.max(numpy.abs(chi_2_cor.t_vpol_2subtract3)) - numpy.abs(pulser_time_delay_dict[key][5][1])
+                                                if difference < 0:
+                                                    chi_2 -= 100*difference #difference is negative, so subtracting negative is adding to chi^2 weighting against solution that results in maximum achievable baselines being too large.
 
 
-            result = m.migrad(resume=False)
+                    #chi_2 += max(ant2_z - ant1_z,0) #If antenna 2 is lower than antenna 1 then it will add to chi^2 linearly as that happens.  
+                print(chi_2)
+                return chi_2
+            except Exception as e:
+                print('Error in rawChi2')
+                print(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
 
-            print(result)
-            m.hesse()
-            if False:
+
+        
+        #-12 ft on pulser locations relative to antennas to account for additional mast elevation.
+        
+        
+        #rawChi2(ant0_x=antennas_phase_start[0][0], ant0_y=antennas_phase_start[0][1], ant0_z=antennas_phase_start[0][2], ant1_x=antennas_phase_start[1][0], ant1_y=antennas_phase_start[1][1], ant1_z=antennas_phase_start[1][2], ant2_x=antennas_phase_start[2][0], ant2_y=antennas_phase_start[2][1], ant2_z=antennas_phase_start[2][2], ant3_x=antennas_phase_start[3][0], ant3_y=antennas_phase_start[3][1], ant3_z=antennas_phase_start[3][2])
+
+        m = Minuit(     rawChi2,\
+                        ant0_x=initial_ant0_x,\
+                        ant0_y=initial_ant0_y,\
+                        ant0_z=initial_ant0_z,\
+                        ant1_x=initial_ant1_x,\
+                        ant1_y=initial_ant1_y,\
+                        ant1_z=initial_ant1_z,\
+                        ant2_x=initial_ant2_x,\
+                        ant2_y=initial_ant2_y,\
+                        ant2_z=initial_ant2_z,\
+                        ant3_x=initial_ant3_x,\
+                        ant3_y=initial_ant3_y,\
+                        ant3_z=initial_ant3_z,\
+                        cable_delay0=cable_delays[0],\
+                        cable_delay1=cable_delays[1],\
+                        cable_delay2=cable_delays[2],\
+                        cable_delay3=cable_delays[3],\
+                        error_ant0_x=initial_step_x,\
+                        error_ant0_y=initial_step_y,\
+                        error_ant0_z=initial_step_z,\
+                        error_ant1_x=initial_step_x,\
+                        error_ant1_y=initial_step_y,\
+                        error_ant1_z=initial_step_z,\
+                        error_ant2_x=initial_step_x,\
+                        error_ant2_y=initial_step_y,\
+                        error_ant2_z=initial_step_z,\
+                        error_ant3_x=initial_step_x,\
+                        error_ant3_y=initial_step_y,\
+                        error_ant3_z=initial_step_z,\
+                        error_cable_delay0=initial_step_cable_delay,\
+                        error_cable_delay1=initial_step_cable_delay,\
+                        error_cable_delay2=initial_step_cable_delay,\
+                        error_cable_delay3=initial_step_cable_delay,\
+                        errordef = 1.0,\
+                        limit_ant0_x=ant0_physical_limits_x,\
+                        limit_ant0_y=ant0_physical_limits_y,\
+                        limit_ant0_z=ant0_physical_limits_z,\
+                        limit_ant1_x=ant1_physical_limits_x,\
+                        limit_ant1_y=ant1_physical_limits_y,\
+                        limit_ant1_z=ant1_physical_limits_z,\
+                        limit_ant2_x=ant2_physical_limits_x,\
+                        limit_ant2_y=ant2_physical_limits_y,\
+                        limit_ant2_z=ant2_physical_limits_z,\
+                        limit_ant3_x=ant3_physical_limits_x,\
+                        limit_ant3_y=ant3_physical_limits_y,\
+                        limit_ant3_z=ant3_physical_limits_z,\
+                        limit_cable_delay0=limit_cable_delay0,\
+                        limit_cable_delay1=limit_cable_delay1,\
+                        limit_cable_delay2=limit_cable_delay2,\
+                        limit_cable_delay3=limit_cable_delay3,\
+                        fix_ant0_x=fix_ant0_x,\
+                        fix_ant0_y=fix_ant0_y,\
+                        fix_ant0_z=fix_ant0_z,\
+                        fix_ant1_x=fix_ant1_x,\
+                        fix_ant1_y=fix_ant1_y,\
+                        fix_ant1_z=fix_ant1_z,\
+                        fix_ant2_x=fix_ant2_x,\
+                        fix_ant2_y=fix_ant2_y,\
+                        fix_ant2_z=fix_ant2_z,\
+                        fix_ant3_x=fix_ant3_x,\
+                        fix_ant3_y=fix_ant3_y,\
+                        fix_ant3_z=fix_ant3_z,\
+                        fix_cable_delay0=fix_cable_delay0,\
+                        fix_cable_delay1=fix_cable_delay1,\
+                        fix_cable_delay2=fix_cable_delay2,\
+                        fix_cable_delay3=fix_cable_delay3)
+
+
+        result = m.migrad(resume=False)
+
+        print(result)
+        m.hesse()
+        if False:
+            m.minos()
+            pprint(m.get_fmin())
+        else:
+            try:
                 m.minos()
                 pprint(m.get_fmin())
-            else:
-                try:
-                    m.minos()
-                    pprint(m.get_fmin())
-                except:
-                    print('MINOS FAILED, NOT VALID SOLUTION.')
-            print('\a')
+            except:
+                print('MINOS FAILED, NOT VALID SOLUTION.')
+        print('\a')
 
-            # m.draw_mncontour('ant1_x','ant1_y')
+        # m.draw_mncontour('ant1_x','ant1_y')
 
+        for antenna in range(4):
+            fig = plt.figure()
+            fig.canvas.set_window_title('Ant %i chi^2'%antenna)
+            for index, key in enumerate(['ant%i_x'%antenna,'ant%i_y'%antenna,'ant%i_z'%antenna]):
+                plt.subplot(1,3,index + 1)
+                m.draw_profile(key)
+
+        if cable_delay_guess_range is not None:
+            fig = plt.figure()
+            fig.canvas.set_window_title('Cable Delays')
             for antenna in range(4):
-                fig = plt.figure()
-                fig.canvas.set_window_title('Ant %i chi^2'%antenna)
-                for index, key in enumerate(['ant%i_x'%antenna,'ant%i_y'%antenna,'ant%i_z'%antenna]):
-                    plt.subplot(1,3,index + 1)
-                    m.draw_profile(key)
-
-            if cable_delay_guess_range is not None:
-                fig = plt.figure()
-                fig.canvas.set_window_title('Cable Delays')
-                for antenna in range(4):
-                    plt.subplot(2,2,antenna + 1)
-                    m.draw_profile('cable_delay%i'%antenna)
+                plt.subplot(2,2,antenna + 1)
+                m.draw_profile('cable_delay%i'%antenna)
 
 
 
-            #12 variables
-            ant0_phase_x = m.values['ant0_x']
-            ant0_phase_y = m.values['ant0_y']
-            ant0_phase_z = m.values['ant0_z']
+        #12 variables
+        ant0_phase_x = m.values['ant0_x']
+        ant0_phase_y = m.values['ant0_y']
+        ant0_phase_z = m.values['ant0_z']
 
-            ant1_phase_x = m.values['ant1_x']
-            ant1_phase_y = m.values['ant1_y']
-            ant1_phase_z = m.values['ant1_z']
+        ant1_phase_x = m.values['ant1_x']
+        ant1_phase_y = m.values['ant1_y']
+        ant1_phase_z = m.values['ant1_z']
 
-            ant2_phase_x = m.values['ant2_x']
-            ant2_phase_y = m.values['ant2_y']
-            ant2_phase_z = m.values['ant2_z']
+        ant2_phase_x = m.values['ant2_x']
+        ant2_phase_y = m.values['ant2_y']
+        ant2_phase_z = m.values['ant2_z']
 
-            ant3_phase_x = m.values['ant3_x']
-            ant3_phase_y = m.values['ant3_y']
-            ant3_phase_z = m.values['ant3_z']
+        ant3_phase_x = m.values['ant3_x']
+        ant3_phase_y = m.values['ant3_y']
+        ant3_phase_z = m.values['ant3_z']
 
-            ant0_ENU = numpy.array([ant0_phase_x, ant0_phase_y, ant0_phase_z])
-            ant1_ENU = numpy.array([ant1_phase_x, ant1_phase_y, ant1_phase_z])
-            ant2_ENU = numpy.array([ant2_phase_x, ant2_phase_y, ant2_phase_z])
-            ant3_ENU = numpy.array([ant3_phase_x, ant3_phase_y, ant3_phase_z])
+        ant0_ENU = numpy.array([ant0_phase_x, ant0_phase_y, ant0_phase_z])
+        ant1_ENU = numpy.array([ant1_phase_x, ant1_phase_y, ant1_phase_z])
+        ant2_ENU = numpy.array([ant2_phase_x, ant2_phase_y, ant2_phase_z])
+        ant3_ENU = numpy.array([ant3_phase_x, ant3_phase_y, ant3_phase_z])
 
-            chi2_ax.plot([initial_ant0_x , ant0_phase_x], [initial_ant0_y , ant0_phase_y], [initial_ant0_z , ant0_phase_z],c='r',alpha=0.5,linestyle='--')
-            chi2_ax.plot([initial_ant1_x , ant1_phase_x], [initial_ant1_y , ant1_phase_y], [initial_ant1_z , ant1_phase_z],c='g',alpha=0.5,linestyle='--')
-            chi2_ax.plot([initial_ant2_x , ant2_phase_x], [initial_ant2_y , ant2_phase_y], [initial_ant2_z , ant2_phase_z],c='b',alpha=0.5,linestyle='--')
-            chi2_ax.plot([initial_ant3_x , ant3_phase_x], [initial_ant3_y , ant3_phase_y], [initial_ant3_z , ant3_phase_z],c='m',alpha=0.5,linestyle='--')
+        chi2_ax.plot([initial_ant0_x , ant0_phase_x], [initial_ant0_y , ant0_phase_y], [initial_ant0_z , ant0_phase_z],c='r',alpha=0.5,linestyle='--')
+        chi2_ax.plot([initial_ant1_x , ant1_phase_x], [initial_ant1_y , ant1_phase_y], [initial_ant1_z , ant1_phase_z],c='g',alpha=0.5,linestyle='--')
+        chi2_ax.plot([initial_ant2_x , ant2_phase_x], [initial_ant2_y , ant2_phase_y], [initial_ant2_z , ant2_phase_z],c='b',alpha=0.5,linestyle='--')
+        chi2_ax.plot([initial_ant3_x , ant3_phase_x], [initial_ant3_y , ant3_phase_y], [initial_ant3_z , ant3_phase_z],c='m',alpha=0.5,linestyle='--')
 
-            chi2_ax.scatter(ant0_phase_x, ant0_phase_y, ant0_phase_z,marker='*',c='r',alpha=0.5,label='Final Ant0')
-            chi2_ax.scatter(ant1_phase_x, ant1_phase_y, ant1_phase_z,marker='*',c='g',alpha=0.5,label='Final Ant1')
-            chi2_ax.scatter(ant2_phase_x, ant2_phase_y, ant2_phase_z,marker='*',c='b',alpha=0.5,label='Final Ant2')
-            chi2_ax.scatter(ant3_phase_x, ant3_phase_y, ant3_phase_z,marker='*',c='m',alpha=0.5,label='Final Ant3')
-            
-            chi2_ax.set_xlabel('East (m)',linespacing=10)
-            chi2_ax.set_ylabel('North (m)',linespacing=10)
-            chi2_ax.set_zlabel('Up (m)',linespacing=10)
-            chi2_ax.dist = 10
-            plt.legend()
-
-
-
-            chi2_fig = plt.figure()
-            chi2_fig.canvas.set_window_title('Final Positions')
-            chi2_ax = chi2_fig.add_subplot(111, projection='3d')
-            chi2_ax.scatter(ant0_phase_x, ant0_phase_y, ant0_phase_z,marker='*',c='r',alpha=0.5,label='Final Ant0')
-            chi2_ax.scatter(ant1_phase_x, ant1_phase_y, ant1_phase_z,marker='*',c='g',alpha=0.5,label='Final Ant1')
-            chi2_ax.scatter(ant2_phase_x, ant2_phase_y, ant2_phase_z,marker='*',c='b',alpha=0.5,label='Final Ant2')
-            chi2_ax.scatter(ant3_phase_x, ant3_phase_y, ant3_phase_z,marker='*',c='m',alpha=0.5,label='Final Ant3')
-
-            chi2_ax.set_xlabel('East (m)',linespacing=10)
-            chi2_ax.set_ylabel('North (m)',linespacing=10)
-            chi2_ax.set_zlabel('Up (m)',linespacing=10)
-            chi2_ax.dist = 10
-            plt.legend()
+        chi2_ax.scatter(ant0_phase_x, ant0_phase_y, ant0_phase_z,marker='*',c='r',alpha=0.5,label='Final Ant0')
+        chi2_ax.scatter(ant1_phase_x, ant1_phase_y, ant1_phase_z,marker='*',c='g',alpha=0.5,label='Final Ant1')
+        chi2_ax.scatter(ant2_phase_x, ant2_phase_y, ant2_phase_z,marker='*',c='b',alpha=0.5,label='Final Ant2')
+        chi2_ax.scatter(ant3_phase_x, ant3_phase_y, ant3_phase_z,marker='*',c='m',alpha=0.5,label='Final Ant3')
+        
+        chi2_ax.set_xlabel('East (m)',linespacing=10)
+        chi2_ax.set_ylabel('North (m)',linespacing=10)
+        chi2_ax.set_zlabel('Up (m)',linespacing=10)
+        chi2_ax.dist = 10
+        plt.legend()
 
 
-            
-            
 
-            sources_ENU, data_slicer_cut_dict = info.loadValleySourcesENU() #Plot all potential sources
-            
-            for source_key, cut_dict in data_slicer_cut_dict.items():
-                if source_key in only_plot:
-                    #Accounting for potentially shifted antenna 0.  Centering ENU to that for calculations.
-                    original_sources_ENU = numpy.array([sources_ENU[source_key][0] , sources_ENU[source_key][1] , sources_ENU[source_key][2]])
-                    original_distance_m = numpy.linalg.norm(original_sources_ENU)
-                    original_zenith_deg = numpy.rad2deg(numpy.arccos(original_sources_ENU[2]/original_distance_m))
-                    original_elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(original_sources_ENU[2]/original_distance_m))
-                    original_azimuth_deg = numpy.rad2deg(numpy.arctan2(original_sources_ENU[1],original_sources_ENU[0]))
+        chi2_fig = plt.figure()
+        chi2_fig.canvas.set_window_title('Final Positions')
+        chi2_ax = chi2_fig.add_subplot(111, projection='3d')
+        chi2_ax.scatter(ant0_phase_x, ant0_phase_y, ant0_phase_z,marker='*',c='r',alpha=0.5,label='Final Ant0')
+        chi2_ax.scatter(ant1_phase_x, ant1_phase_y, ant1_phase_z,marker='*',c='g',alpha=0.5,label='Final Ant1')
+        chi2_ax.scatter(ant2_phase_x, ant2_phase_y, ant2_phase_z,marker='*',c='b',alpha=0.5,label='Final Ant2')
+        chi2_ax.scatter(ant3_phase_x, ant3_phase_y, ant3_phase_z,marker='*',c='m',alpha=0.5,label='Final Ant3')
 
-                    sources_ENU_new = numpy.array([sources_ENU[source_key][0] - ant0_ENU[0] , sources_ENU[source_key][1] - ant0_ENU[1] , sources_ENU[source_key][2] - ant0_ENU[2]])
-                    distance_m = numpy.linalg.norm(sources_ENU_new)
-                    zenith_deg = numpy.rad2deg(numpy.arccos(sources_ENU_new[2]/distance_m))
-                    elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(sources_ENU_new[2]/distance_m))
-                    azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU_new[1],sources_ENU_new[0]))
+        chi2_ax.set_xlabel('East (m)',linespacing=10)
+        chi2_ax.set_ylabel('North (m)',linespacing=10)
+        chi2_ax.set_zlabel('Up (m)',linespacing=10)
+        chi2_ax.dist = 10
+        plt.legend()
 
-                    #Only used for map.  Hists use higher resolution on tighter area.
-                    map_resolution = 0.5 #degrees
-                    range_phi_deg=(-180, 180)
-                    range_theta_deg=(0,180)
+
+        
+        
+
+        sources_ENU, data_slicer_cut_dict = info.loadValleySourcesENU() #Plot all potential sources
+        reader = Reader(datapath,valley_source_run)
+        for source_key, cut_dict in data_slicer_cut_dict.items():
+            if source_key in only_plot:
+                #Accounting for potentially shifted antenna 0.  Centering ENU to that for calculations.
+                original_sources_ENU = numpy.array([sources_ENU[source_key][0] , sources_ENU[source_key][1] , sources_ENU[source_key][2]])
+                original_distance_m = numpy.linalg.norm(original_sources_ENU)
+                original_zenith_deg = numpy.rad2deg(numpy.arccos(original_sources_ENU[2]/original_distance_m))
+                original_elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(original_sources_ENU[2]/original_distance_m))
+                original_azimuth_deg = numpy.rad2deg(numpy.arctan2(original_sources_ENU[1],original_sources_ENU[0]))
+
+                sources_ENU_new = numpy.array([sources_ENU[source_key][0] - ant0_ENU[0] , sources_ENU[source_key][1] - ant0_ENU[1] , sources_ENU[source_key][2] - ant0_ENU[2]])
+                distance_m = numpy.linalg.norm(sources_ENU_new)
+                zenith_deg = numpy.rad2deg(numpy.arccos(sources_ENU_new[2]/distance_m))
+                elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(sources_ENU_new[2]/distance_m))
+                azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU_new[1],sources_ENU_new[0]))
+
+                #Only used for map.  Hists use higher resolution on tighter area.
+                map_resolution = 0.5 #degrees
+                range_phi_deg=(-180, 180)
+                range_theta_deg=(0,180)
+                n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
+                n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
+                
+                cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
+                cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+                #Want cor to be the initial correlator, which requires moving antennas to the positions they actually started at.
+                if mode == 'hpol':
+                    cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,cor.A0_vpol,cor.A1_vpol,cor.A2_vpol,cor.A3_vpol,verbose=False)
+                else:
+                    cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,cor.A0_hpol,cor.A1_hpol,cor.A2_hpol,cor.A3_hpol,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,verbose=False)
+
+
+                adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
+                adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+                
+                if mode == 'hpol':
+                    adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,adjusted_cor.A0_vpol,adjusted_cor.A1_vpol,adjusted_cor.A2_vpol,adjusted_cor.A3_vpol,verbose=False)
+                    adjusted_cor.overwriteCableDelays(m.values['cable_delay0'], adjusted_cor.cable_delays[1], m.values['cable_delay1'], adjusted_cor.cable_delays[3], m.values['cable_delay2'], adjusted_cor.cable_delays[5], m.values['cable_delay3'], adjusted_cor.cable_delays[7])
+                else:
+                    adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
+                    adjusted_cor.overwriteCableDelays(adjusted_cor.cable_delays[0], m.values['cable_delay0'], adjusted_cor.cable_delays[2], m.values['cable_delay1'], adjusted_cor.cable_delays[4], m.values['cable_delay2'], adjusted_cor.cable_delays[6], m.values['cable_delay3'])
+                
+                if source_key == 'Solar Plant':
+                    measured_baselines = {'01':129*0.3048,
+                                          '02':163*0.3048,
+                                          '03':181*0.3048,
+                                          '12':151*0.3048,
+                                          '13':102*0.3048,
+                                          '23':85 *0.3048}
+                    time_delay_dict_solarplant = [-125.95932801, -126.69556678, -180.32099852,   -0.81123762,  -54.37417032,  -53.60793201]
+                    print('min = %0.3f, max = %0.3f, expected = %0.3f, physical = %0.3f'%(numpy.min(adjusted_cor.t_hpol_0subtract1),numpy.max(adjusted_cor.t_hpol_0subtract1),time_delay_dict_solarplant[0], 1e9*measured_baselines['01']/c))
+                    print('min = %0.3f, max = %0.3f, expected = %0.3f, physical = %0.3f'%(numpy.min(adjusted_cor.t_hpol_0subtract2),numpy.max(adjusted_cor.t_hpol_0subtract2),time_delay_dict_solarplant[1], 1e9*measured_baselines['02']/c))
+                    print('min = %0.3f, max = %0.3f, expected = %0.3f, physical = %0.3f'%(numpy.min(adjusted_cor.t_hpol_0subtract3),numpy.max(adjusted_cor.t_hpol_0subtract3),time_delay_dict_solarplant[2], 1e9*measured_baselines['03']/c))
+                    print('min = %0.3f, max = %0.3f, expected = %0.3f, physical = %0.3f'%(numpy.min(adjusted_cor.t_hpol_1subtract2),numpy.max(adjusted_cor.t_hpol_1subtract2),time_delay_dict_solarplant[3], 1e9*measured_baselines['12']/c))
+                    print('min = %0.3f, max = %0.3f, expected = %0.3f, physical = %0.3f'%(numpy.min(adjusted_cor.t_hpol_1subtract3),numpy.max(adjusted_cor.t_hpol_1subtract3),time_delay_dict_solarplant[4], 1e9*measured_baselines['13']/c))
+                    print('min = %0.3f, max = %0.3f, expected = %0.3f, physical = %0.3f'%(numpy.min(adjusted_cor.t_hpol_2subtract3),numpy.max(adjusted_cor.t_hpol_2subtract3),time_delay_dict_solarplant[5], 1e9*measured_baselines['23']/c))
+
+                if plot_expected_direction == False:
+                    zenith_deg = None
+                    azimuth_deg = None
+                if plot_time_delays_on_maps:
+                    td_dict = {mode:{'[0, 1]' :  [time_delay_dict[source_key][0]], '[0, 2]' : [time_delay_dict[source_key][1]], '[0, 3]' : [time_delay_dict[source_key][2]], '[1, 2]' : [time_delay_dict[source_key][3]], '[1, 3]' : [time_delay_dict[source_key][4]], '[2, 3]' : [time_delay_dict[source_key][5]]}}
+                else:
+                    td_dict = {}
+
+                if plot_overlap:
+                    adjusted_cor.generateTimeDelayOverlapMap(mode, td_dict, overlap_window_ns, plot_map=True, mollweide=False,center_dir='E',window_title='Adjusted Map Overlap\n%s'%source_key, include_baselines=include_baselines)
+
+                ds.addROI(source_key,cut_dict)
+                roi_eventids = numpy.intersect1d(ds.getCutsFromROI(source_key),_eventids)
+                roi_impulsivity = ds.getDataFromParam(roi_eventids,'impulsivity_h')
+                roi_impulsivity_sort = numpy.argsort(roi_impulsivity) #NOT REVERSED
+                eventid = roi_eventids[roi_impulsivity_sort[-1]]
+                
+                #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=original_zenith_deg, circle_az=original_azimuth_deg, time_delay_dict=td_dict)
+                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key, include_baselines=include_baselines)
+                #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
+                
+                if plot_histograms:
+                    map_resolution = 0.25 #degrees
+                    range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
+                    range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
                     n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
                     n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
                     
                     cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-                    #Want cor to be the initial correlator, which requires moving antennas to the positions they actually started at.
                     if mode == 'hpol':
                         cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,cor.A0_vpol,cor.A1_vpol,cor.A2_vpol,cor.A3_vpol,verbose=False)
                     else:
                         cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,cor.A0_hpol,cor.A1_hpol,cor.A2_hpol,cor.A3_hpol,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,verbose=False)
 
-
                     adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                     adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
-                    
+
                     if mode == 'hpol':
                         adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,adjusted_cor.A0_vpol,adjusted_cor.A1_vpol,adjusted_cor.A2_vpol,adjusted_cor.A3_vpol,verbose=False)
                         adjusted_cor.overwriteCableDelays(m.values['cable_delay0'], adjusted_cor.cable_delays[1], m.values['cable_delay1'], adjusted_cor.cable_delays[3], m.values['cable_delay2'], adjusted_cor.cable_delays[5], m.values['cable_delay3'], adjusted_cor.cable_delays[7])
                     else:
                         adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
                         adjusted_cor.overwriteCableDelays(adjusted_cor.cable_delays[0], m.values['cable_delay0'], adjusted_cor.cable_delays[2], m.values['cable_delay1'], adjusted_cor.cable_delays[4], m.values['cable_delay2'], adjusted_cor.cable_delays[6], m.values['cable_delay3'])
-                    
-                    if source_key == 'Solar Plant':
-                        measured_baselines = {'01':129*0.3048,
-                                              '02':163*0.3048,
-                                              '03':181*0.3048,
-                                              '12':151*0.3048,
-                                              '13':102*0.3048,
-                                              '23':85 *0.3048}
-                        time_delay_dict_solarplant = [-125.95932801, -126.69556678, -180.32099852,   -0.81123762,  -54.37417032,  -53.60793201]
-                        print('min = %0.3f, max = %0.3f, expected = %0.3f, physical = %0.3f'%(numpy.min(adjusted_cor.t_hpol_0subtract1),numpy.max(adjusted_cor.t_hpol_0subtract1),time_delay_dict_solarplant[0], 1e9*measured_baselines['01']/c))
-                        print('min = %0.3f, max = %0.3f, expected = %0.3f, physical = %0.3f'%(numpy.min(adjusted_cor.t_hpol_0subtract2),numpy.max(adjusted_cor.t_hpol_0subtract2),time_delay_dict_solarplant[1], 1e9*measured_baselines['02']/c))
-                        print('min = %0.3f, max = %0.3f, expected = %0.3f, physical = %0.3f'%(numpy.min(adjusted_cor.t_hpol_0subtract3),numpy.max(adjusted_cor.t_hpol_0subtract3),time_delay_dict_solarplant[2], 1e9*measured_baselines['03']/c))
-                        print('min = %0.3f, max = %0.3f, expected = %0.3f, physical = %0.3f'%(numpy.min(adjusted_cor.t_hpol_1subtract2),numpy.max(adjusted_cor.t_hpol_1subtract2),time_delay_dict_solarplant[3], 1e9*measured_baselines['12']/c))
-                        print('min = %0.3f, max = %0.3f, expected = %0.3f, physical = %0.3f'%(numpy.min(adjusted_cor.t_hpol_1subtract3),numpy.max(adjusted_cor.t_hpol_1subtract3),time_delay_dict_solarplant[4], 1e9*measured_baselines['13']/c))
-                        print('min = %0.3f, max = %0.3f, expected = %0.3f, physical = %0.3f'%(numpy.min(adjusted_cor.t_hpol_2subtract3),numpy.max(adjusted_cor.t_hpol_2subtract3),time_delay_dict_solarplant[5], 1e9*measured_baselines['23']/c))
-
-                    if plot_expected_direction == False:
-                        zenith_deg = None
-                        azimuth_deg = None
-                    if plot_time_delays_on_maps:
-                        td_dict = {mode:{'[0, 1]' :  [time_delay_dict[source_key][0]], '[0, 2]' : [time_delay_dict[source_key][1]], '[0, 3]' : [time_delay_dict[source_key][2]], '[1, 2]' : [time_delay_dict[source_key][3]], '[1, 3]' : [time_delay_dict[source_key][4]], '[2, 3]' : [time_delay_dict[source_key][5]]}}
-                    else:
-                        td_dict = {}
-
-                    if plot_overlap:
-                        adjusted_cor.generateTimeDelayOverlapMap(mode, td_dict, overlap_window_ns, plot_map=True, mollweide=False,center_dir='E',window_title='Adjusted Map Overlap\n%s'%source_key, include_baselines=include_baselines)
-
-                    ds.addROI(source_key,cut_dict)
-                    roi_eventids = numpy.intersect1d(ds.getCutsFromROI(source_key),_eventids)
-                    roi_impulsivity = ds.getDataFromParam(roi_eventids,'impulsivity_h')
-                    roi_impulsivity_sort = numpy.argsort(roi_impulsivity) #NOT REVERSED
-                    eventid = roi_eventids[roi_impulsivity_sort[-1]]
-                    
-                    #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=original_zenith_deg, circle_az=original_azimuth_deg, time_delay_dict=td_dict)
-                    adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,100], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key, include_baselines=include_baselines)
-                    #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
-                    
-                    if plot_histograms:
-                        map_resolution = 0.25 #degrees
-                        range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
-                        range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
-                        n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
-                        n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
-                        
-                        cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
-                        cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
-
-                        if mode == 'hpol':
-                            cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,cor.A0_vpol,cor.A1_vpol,cor.A2_vpol,cor.A3_vpol,verbose=False)
-                        else:
-                            cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,cor.A0_hpol,cor.A1_hpol,cor.A2_hpol,cor.A3_hpol,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,verbose=False)
-
-                        adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
-                        adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
-
-                        if mode == 'hpol':
-                            adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,adjusted_cor.A0_vpol,adjusted_cor.A1_vpol,adjusted_cor.A2_vpol,adjusted_cor.A3_vpol,verbose=False)
-                            adjusted_cor.overwriteCableDelays(m.values['cable_delay0'], adjusted_cor.cable_delays[1], m.values['cable_delay1'], adjusted_cor.cable_delays[3], m.values['cable_delay2'], adjusted_cor.cable_delays[5], m.values['cable_delay3'], adjusted_cor.cable_delays[7])
-                        else:
-                            adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
-                            adjusted_cor.overwriteCableDelays(adjusted_cor.cable_delays[0], m.values['cable_delay0'], adjusted_cor.cable_delays[2], m.values['cable_delay1'], adjusted_cor.cable_delays[4], m.values['cable_delay2'], adjusted_cor.cable_delays[6], m.values['cable_delay3'])
 
 
-                        hist = adjusted_cor.histMapPeak(numpy.sort(numpy.random.choice(roi_eventids,min(limit_events,len(roi_eventids)))), mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,100],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + source_key, include_baselines=include_baselines,iterate_sub_baselines=iterate_sub_baselines)
+                    hist = adjusted_cor.histMapPeak(numpy.sort(numpy.random.choice(roi_eventids,min(limit_events,len(roi_eventids)))), mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,100],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + source_key, include_baselines=include_baselines,iterate_sub_baselines=iterate_sub_baselines)
 
-            if include_pulsers:
+        if include_pulsers:
+            
+            ant0_ENU = numpy.array([ant0_phase_x, ant0_phase_y, ant0_phase_z])
+            ant1_ENU = numpy.array([ant1_phase_x, ant1_phase_y, ant1_phase_z])
+            ant2_ENU = numpy.array([ant2_phase_x, ant2_phase_y, ant2_phase_z])
+            ant3_ENU = numpy.array([ant3_phase_x, ant3_phase_y, ant3_phase_z])
+            
+
+            for key in included_pulsers:
+                #Calculate old and new geometries
+                #Distance needed when calling correlator, as it uses that distance.
+                original_pulser_ENU = numpy.array([pulser_locations_ENU[key][0] , pulser_locations_ENU[key][1] , pulser_locations_ENU[key][2]])
+                original_distance_m = numpy.linalg.norm(original_pulser_ENU)
+                original_zenith_deg = numpy.rad2deg(numpy.arccos(original_pulser_ENU[2]/original_distance_m))
+                original_elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(original_pulser_ENU[2]/original_distance_m))
+                original_azimuth_deg = numpy.rad2deg(numpy.arctan2(original_pulser_ENU[1],original_pulser_ENU[0]))
+
+                pulser_ENU_new = numpy.array([pulser_locations_ENU[key][0] - ant0_ENU[0] , pulser_locations_ENU[key][1] - ant0_ENU[1] , pulser_locations_ENU[key][2] - ant0_ENU[2]])
+                distance_m = numpy.linalg.norm(pulser_ENU_new)
+                zenith_deg = numpy.rad2deg(numpy.arccos(pulser_ENU_new[2]/distance_m))
+                elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(pulser_ENU_new[2]/distance_m))
+                azimuth_deg = numpy.rad2deg(numpy.arctan2(pulser_ENU_new[1],pulser_ENU_new[0]))
+
+                map_resolution = 0.25 #degrees
+                range_phi_deg = (-90, 90)
+                range_theta_deg = (0,180)
+                n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
+                n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
                 
-                ant0_ENU = numpy.array([ant0_phase_x, ant0_phase_y, ant0_phase_z])
-                ant1_ENU = numpy.array([ant1_phase_x, ant1_phase_y, ant1_phase_z])
-                ant2_ENU = numpy.array([ant2_phase_x, ant2_phase_y, ant2_phase_z])
-                ant3_ENU = numpy.array([ant3_phase_x, ant3_phase_y, ant3_phase_z])
-                
-
-                for key in included_pulsers:
-                    #Calculate old and new geometries
-                    #Distance needed when calling correlator, as it uses that distance.
-                    original_pulser_ENU = numpy.array([pulser_locations_ENU[key][0] , pulser_locations_ENU[key][1] , pulser_locations_ENU[key][2]])
-                    original_distance_m = numpy.linalg.norm(original_pulser_ENU)
-                    original_zenith_deg = numpy.rad2deg(numpy.arccos(original_pulser_ENU[2]/original_distance_m))
-                    original_elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(original_pulser_ENU[2]/original_distance_m))
-                    original_azimuth_deg = numpy.rad2deg(numpy.arctan2(original_pulser_ENU[1],original_pulser_ENU[0]))
-
-                    pulser_ENU_new = numpy.array([pulser_locations_ENU[key][0] - ant0_ENU[0] , pulser_locations_ENU[key][1] - ant0_ENU[1] , pulser_locations_ENU[key][2] - ant0_ENU[2]])
-                    distance_m = numpy.linalg.norm(pulser_ENU_new)
-                    zenith_deg = numpy.rad2deg(numpy.arccos(pulser_ENU_new[2]/distance_m))
-                    elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(pulser_ENU_new[2]/distance_m))
-                    azimuth_deg = numpy.rad2deg(numpy.arctan2(pulser_ENU_new[1],pulser_ENU_new[0]))
-
-                    map_resolution = 0.25 #degrees
-                    range_phi_deg = (-90, 90)
-                    range_theta_deg = (0,180)
-                    n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
-                    n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
-                    
-                    #Load in correct reader for this pulser
-                    reader = Reader(datapath,int(key.replace('run','')))
-                    # cor_upsample =  len(reader.t())
-                    if key == 'run1511':
-                        cor = Correlator(reader,  upsample=cor_upsample, n_phi=100,range_phi_deg=[-180,180], n_theta=50,range_theta_deg=[0,180], waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
-                        cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
-
-                        if mode == 'hpol':
-                            cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,cor.A0_vpol,cor.A1_vpol,cor.A2_vpol,cor.A3_vpol,verbose=False)
-                        else:
-                            cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,cor.A0_hpol,cor.A1_hpol,cor.A2_hpol,cor.A3_hpol,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,verbose=False)
-                        cor.generateTimeIndices(debug=True)
-                    
-                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
+                #Load in correct reader for this pulser
+                reader = Reader(datapath,int(key.replace('run','')))
+                # cor_upsample =  len(reader.t())
+                if False and key == 'run1511':
+                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=100,range_phi_deg=[-180,180], n_theta=50,range_theta_deg=[0,180], waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                     if mode == 'hpol':
                         cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,cor.A0_vpol,cor.A1_vpol,cor.A2_vpol,cor.A3_vpol,verbose=False)
                     else:
                         cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,cor.A0_hpol,cor.A1_hpol,cor.A2_hpol,cor.A3_hpol,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,verbose=False)
+                    cor.generateTimeIndices(debug=True)
+                
+                cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
+                cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
+                if mode == 'hpol':
+                    cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,cor.A0_vpol,cor.A1_vpol,cor.A2_vpol,cor.A3_vpol,verbose=False)
+                else:
+                    cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,cor.A0_hpol,cor.A1_hpol,cor.A2_hpol,cor.A3_hpol,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,verbose=False)
+
+
+                adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
+                adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+                if mode == 'hpol':
+                    adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,adjusted_cor.A0_vpol,adjusted_cor.A1_vpol,adjusted_cor.A2_vpol,adjusted_cor.A3_vpol,verbose=False)
+                    adjusted_cor.overwriteCableDelays(m.values['cable_delay0'], adjusted_cor.cable_delays[1], m.values['cable_delay1'], adjusted_cor.cable_delays[3], m.values['cable_delay2'], adjusted_cor.cable_delays[5], m.values['cable_delay3'], adjusted_cor.cable_delays[7])
+                else:
+                    adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
+                    adjusted_cor.overwriteCableDelays(adjusted_cor.cable_delays[0], m.values['cable_delay0'], adjusted_cor.cable_delays[2], m.values['cable_delay1'], adjusted_cor.cable_delays[4], m.values['cable_delay2'], adjusted_cor.cable_delays[6], m.values['cable_delay3'])                    
+
+                if plot_expected_direction == False:
+                    zenith_deg = None
+                    azimuth_deg = None
+                if plot_time_delays_on_maps:
+                    # if key == 'run1509':
+                    #     td_dict = {mode:{'[0, 1]' :  [pulser_time_delay_dict[key][0][1]], '[0, 2]' : [pulser_time_delay_dict[key][1][1]], '[0, 3]' : [pulser_time_delay_dict[key][2][1]], '[1, 2]' : [pulser_time_delay_dict[key][3][1]], '[1, 3]' : [pulser_time_delay_dict[key][4][1]], '[2, 3]' : [-99.04]}}
+                    #     print(td_dict)
+                    # else:
+                    td_dict = {mode:{'[0, 1]' :  [pulser_time_delay_dict[key][0][1]], '[0, 2]' : [pulser_time_delay_dict[key][1][1]], '[0, 3]' : [pulser_time_delay_dict[key][2][1]], '[1, 2]' : [pulser_time_delay_dict[key][3][1]], '[1, 3]' : [pulser_time_delay_dict[key][4][1]], '[2, 3]' : [pulser_time_delay_dict[key][5][1]]}}
+                else:
+                    td_dict = {}
+
+                eventid = numpy.random.choice(known_pulser_ids[key][mode])
+                
+                #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
+                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
+                #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
+
+                if False and key == 'run1511':
+                    adjusted_cor.overwriteSourceDistance(1e6, verbose=True, suppress_time_delay_calculations=False,debug=False)
+                    adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
+
+                if plot_histograms:
+                    map_resolution = 0.1 #degrees
+                    range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
+                    range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
+                    n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
+                    n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
+                    
+                    #Load in correct reader for this pulser
+                    reader = Reader(datapath,int(key.replace('run','')))
+                    # cor_upsample =  len(reader.t())
+                    
+                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
+                    cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                     adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                     adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
@@ -1351,65 +1656,84 @@ if __name__ == '__main__':
                         adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
                         adjusted_cor.overwriteCableDelays(adjusted_cor.cable_delays[0], m.values['cable_delay0'], adjusted_cor.cable_delays[2], m.values['cable_delay1'], adjusted_cor.cable_delays[4], m.values['cable_delay2'], adjusted_cor.cable_delays[6], m.values['cable_delay3'])                    
 
-                    if plot_expected_direction == False:
-                        zenith_deg = None
-                        azimuth_deg = None
-                    if plot_time_delays_on_maps:
-                        # if key == 'run1509':
-                        #     td_dict = {mode:{'[0, 1]' :  [pulser_time_delay_dict[key][0][1]], '[0, 2]' : [pulser_time_delay_dict[key][1][1]], '[0, 3]' : [pulser_time_delay_dict[key][2][1]], '[1, 2]' : [pulser_time_delay_dict[key][3][1]], '[1, 3]' : [pulser_time_delay_dict[key][4][1]], '[2, 3]' : [-99.04]}}
-                        #     print(td_dict)
-                        # else:
-                        td_dict = {mode:{'[0, 1]' :  [pulser_time_delay_dict[key][0][1]], '[0, 2]' : [pulser_time_delay_dict[key][1][1]], '[0, 3]' : [pulser_time_delay_dict[key][2][1]], '[1, 2]' : [pulser_time_delay_dict[key][3][1]], '[1, 3]' : [pulser_time_delay_dict[key][4][1]], '[2, 3]' : [pulser_time_delay_dict[key][5][1]]}}
-                    else:
-                        td_dict = {}
+                    hist = adjusted_cor.histMapPeak(numpy.sort(numpy.random.choice(known_pulser_ids[key][mode],min(limit_events,len(known_pulser_ids[key][mode])))), mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + key, include_baselines=include_baselines,iterate_sub_baselines=iterate_sub_baselines)
 
-                    eventid = numpy.random.choice(known_pulser_ids[key][mode])
-                    
-                    #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
-                    adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
-                    #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict)
-                    if plot_histograms:
-                        map_resolution = 0.1 #degrees
-                        range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
-                        range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
-                        n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
-                        n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
-                        
-                        #Load in correct reader for this pulser
-                        reader = Reader(datapath,int(key.replace('run','')))
-                        # cor_upsample =  len(reader.t())
-                        
-                        cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
-                        cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+        if len(included_airplanes) > 0:
+            map_resolution = 0.5 #degrees
+            range_phi_deg = (-180, 180)
+            range_theta_deg = (0,180)
+            n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
+            n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
+                
+            cors = [] #So animations don't reset
+            for index, key in enumerate(list(calibrated_trigtime.keys())):
+                if key not in included_airplanes:
+                    continue
 
-                        adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
-                        adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+                run = int(key.split('-')[0])
+                reader = Reader(datapath,run)
+                eventids = known_planes[key]['eventids'][:,1]
 
-                        if mode == 'hpol':
-                            adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,adjusted_cor.A0_vpol,adjusted_cor.A1_vpol,adjusted_cor.A2_vpol,adjusted_cor.A3_vpol,verbose=False)
-                            adjusted_cor.overwriteCableDelays(m.values['cable_delay0'], adjusted_cor.cable_delays[1], m.values['cable_delay1'], adjusted_cor.cable_delays[3], m.values['cable_delay2'], adjusted_cor.cable_delays[5], m.values['cable_delay3'], adjusted_cor.cable_delays[7])
-                        else:
-                            adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
-                            adjusted_cor.overwriteCableDelays(adjusted_cor.cable_delays[0], m.values['cable_delay0'], adjusted_cor.cable_delays[2], m.values['cable_delay1'], adjusted_cor.cable_delays[4], m.values['cable_delay2'], adjusted_cor.cable_delays[6], m.values['cable_delay3'])                    
+                if plot_expected_airplane_direction == False:
+                    zenith_deg = None
+                    azimuth_deg = None
+                    source_distance_m = None
+                    initial_source_distance_m = 1e6 #m
+                else:
+                    source_distance_m = numpy.sqrt(interpolated_plane_locations[key][:,0]**2 + interpolated_plane_locations[key][:,1]**2 + interpolated_plane_locations[key][:,2]**2)
+                    initial_source_distance_m = source_distance_m[0] #m
+                    azimuth_deg = numpy.rad2deg(numpy.arctan2(interpolated_plane_locations[key][:,1],interpolated_plane_locations[key][:,0]))
+                    zenith_deg = numpy.rad2deg(numpy.arccos(interpolated_plane_locations[key][:,2]/source_distance_m))
 
-                        hist = adjusted_cor.histMapPeak(numpy.sort(numpy.random.choice(known_pulser_ids[key][mode],min(limit_events,len(known_pulser_ids[key][mode])))), mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + key, include_baselines=include_baselines,iterate_sub_baselines=iterate_sub_baselines)
+                adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=initial_source_distance_m, )
+                adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+                if mode == 'hpol':
+                    adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,adjusted_cor.A0_vpol,adjusted_cor.A1_vpol,adjusted_cor.A2_vpol,adjusted_cor.A3_vpol,verbose=False)
+                    adjusted_cor.overwriteCableDelays(m.values['cable_delay0'], adjusted_cor.cable_delays[1], m.values['cable_delay1'], adjusted_cor.cable_delays[3], m.values['cable_delay2'], adjusted_cor.cable_delays[5], m.values['cable_delay3'], adjusted_cor.cable_delays[7])
+                else:
+                    adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
+                    adjusted_cor.overwriteCableDelays(adjusted_cor.cable_delays[0], m.values['cable_delay0'], adjusted_cor.cable_delays[2], m.values['cable_delay1'], adjusted_cor.cable_delays[4], m.values['cable_delay2'], adjusted_cor.cable_delays[6], m.values['cable_delay3'])                    
+
+                airplane_include_baselines = numpy.where(airplane_pair_cuts[key])[0]
+
+                if plot_animated_airplane == True:
+                    adjusted_cor.animatedMap(eventids, mode, title=key + ' ' +  mode, include_baselines=airplane_include_baselines,map_source_distance_m = source_distance_m,  plane_zenith=zenith_deg,plane_az=azimuth_deg,hilbert=False, max_method=None,center_dir=known_planes[key]['dir'],save=False,dpi=300)
+                else:
+                    event_index = 0
+                    td_dict = {mode:{'[0, 1]' : [ measured_plane_time_delays[key][0][event_index]], '[0, 2]' : [measured_plane_time_delays[key][1][event_index]], '[0, 3]' : [measured_plane_time_delays[key][2][event_index]], '[1, 2]' : [measured_plane_time_delays[key][3][event_index]], '[1, 3]' : [measured_plane_time_delays[key][4][event_index]], '[2, 3]' : [measured_plane_time_delays[key][5][event_index]]}}
+                    adjusted_cor.overwriteSourceDistance(source_distance_m[event_index], verbose=False, suppress_time_delay_calculations=False)
+                    mean_corr_values, fig, ax = adjusted_cor.map(eventids[event_index], mode, include_baselines=airplane_include_baselines, plot_map=True, plot_corr=False, hilbert=False, center_dir=known_planes[key]['dir'], radius=1.0, zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=td_dict,window_title=key)
+
+                cors.append(adjusted_cor)
+
+        print('Estimated degrees of freedom: %i'%sum([not fix_ant0_x,not fix_ant0_y,not fix_ant0_z,not fix_ant1_x,not fix_ant1_y,not fix_ant1_z,not fix_ant2_x,not fix_ant2_y,not fix_ant2_z,not fix_ant3_x,not fix_ant3_y,not fix_ant3_z,not fix_cable_delay0,not fix_cable_delay1,not fix_cable_delay2,not fix_cable_delay3]))
+        print('Estimated input measured values: %i'%(len(include_baselines)*(pulser_weight > 0)*len(included_pulsers) + len(include_baselines)*len(use_sources)))
+
+
+        print('\n')
+        print('STARTING CONDITION INPUT VALUES HERE')
+        print('\n')
+        print('')
+        print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, initial_ant0_x,initial_ant0_y,initial_ant0_z ,  initial_ant1_x,initial_ant1_y,initial_ant1_z,  initial_ant2_x,initial_ant2_y,initial_ant2_z,  initial_ant3_x,initial_ant3_y,initial_ant3_z))
+        print('')
+        print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%(mode,cable_delays[0],cable_delays[1],cable_delays[2],cable_delays[3]))
 
 
 
+        print('\n')
+        print(result)
+        print('\n')
+        print('Copy-Paste Prints:\n------------')
+        print('')
+        print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, m.values['ant0_x'],m.values['ant0_y'],m.values['ant0_z'] ,  m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z'],  m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z'],  m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']))
+        print('antennas_phase_%s_hesse = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, m.errors['ant0_x'],m.errors['ant0_y'],m.errors['ant0_z'] ,  m.errors['ant1_x'],m.errors['ant1_y'],m.errors['ant1_z'],  m.errors['ant2_x'],m.errors['ant2_y'],m.errors['ant2_z'],  m.errors['ant3_x'],m.errors['ant3_y'],m.errors['ant3_z']))
+        print('')
+        print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%(mode,m.values['cable_delay0'],m.values['cable_delay1'],m.values['cable_delay2'],m.values['cable_delay3']))
+        print('cable_delays_%s_hesse = numpy.array([%f,%f,%f,%f])'%(mode,m.errors['cable_delay0'],m.errors['cable_delay1'],m.errors['cable_delay2'],m.errors['cable_delay3']))
 
-            print('\n')
-            print(result)
-            print('\n')
-            print('Copy-Paste Prints:\n------------')
-            print('')
-            print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, m.values['ant0_x'],m.values['ant0_y'],m.values['ant0_z'] ,  m.values['ant1_x'],m.values['ant1_y'],m.values['ant1_z'],  m.values['ant2_x'],m.values['ant2_y'],m.values['ant2_z'],  m.values['ant3_x'],m.values['ant3_y'],m.values['ant3_z']))
-            print('antennas_phase_%s_hesse = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(mode, m.errors['ant0_x'],m.errors['ant0_y'],m.errors['ant0_z'] ,  m.errors['ant1_x'],m.errors['ant1_y'],m.errors['ant1_z'],  m.errors['ant2_x'],m.errors['ant2_y'],m.errors['ant2_z'],  m.errors['ant3_x'],m.errors['ant3_y'],m.errors['ant3_z']))
-            print('')
-            print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%(mode,m.values['cable_delay0'],m.values['cable_delay1'],m.values['cable_delay2'],m.values['cable_delay3']))
-            print('cable_delays_%s_hesse = numpy.array([%f,%f,%f,%f])'%(mode,m.errors['cable_delay0'],m.errors['cable_delay1'],m.errors['cable_delay2'],m.errors['cable_delay3']))
-
-            print('Code completed.')
-            print('\a')
+        print('Code completed.')
+        print('\a')
 
 
             

@@ -472,7 +472,9 @@ def loadAntennaZeroLocation(deploy_index=default_deploy):
         # (E, N, U)       : (-32.168224,-43.200941,-10.301701)
         # (lat, lon, alt) : (37.588921,-118.237985,3865.228526)
         A0Location = (37.589310,-118.237621,3852.842222) #WGS84
-
+    elif deploy_index == 21:
+        #Using the positions of calibration 1 with the z value of 13
+        A0Location = (37.589310, -118.237621, 3852.842222)#latitude,longtidue,elevation 
     return A0Location
 
 def loadValleySourcesENU(deploy_index=default_deploy):
@@ -486,8 +488,12 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                     'Solar Plant'               :(38.238904, -117.363661, 4922 * 0.3048),\
                     'Quarry Substation'         :(38.323974, -117.335893, 5365 * 0.3048),\
                     'Tonopah KTPH'              :(38.051701, -117.226212, 7104 * 0.3048),\
+                    'Booker Antenna'            :(38.094374, -117.186576, 6856 * 0.3048),\
                     'Nye County Sherriff'       :(38.084554, -117.251408, 5866 * 0.3048),\
                     'Tonopah AFS GATR Site'     :(38.1435,   -117.199212, 7140 * 0.3048),\
+                    'KNKN223'                   :(38.017091, -117.773029, 4887 * 0.3048),\
+                    'Dyer House Antenna A'      :(37.740821, -118.076144, 4855 * 0.3048),\
+                    'Miller Substation'         :(38.131173, -117.459208, 4853 * 0.3048),\
                     'Tonopah Vortac'            :(38.030653, -117.033528, 5350 * 0.3048),\
                     'Tonopah Airport Antenna'   :(38.063273, -117.096715, 5426 * 0.3048),\
                     'Dyer Cell Tower'           :(37.665613, -118.065012, 4879 * 0.3048),\
@@ -513,13 +519,18 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                     'Silver Peak Substation'    :(37.754281, -117.632355, 4274 * 0.3048)}
 
 
+    # 'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
     #Below are the cuts that were used in the data slicer class to isolate the above clusters.
     data_slicer_cut_dict = {    'Northern Cell Tower'       :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
                                 'Solar Plant'               :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
                                 'Quarry Substation'         :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
-                                'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                'Booker Antenna'              :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
                                 'Nye County Sherriff'       :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'Tonopah AFS GATR Site'     :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                'KNKN223'                   :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                'Dyer House Antenna A'      :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                'Miller Substation'         :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'Tonopah Vortac'            :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'Tonopah Airport Antenna'   :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
@@ -876,6 +887,96 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
             antennas_phase_hpol_hesse = {0 : [0.351842, 0.260876, 7.831570], 1 : [0.504778, 0.276552, 7.620909], 2 : [0.354478, 0.265431, 8.304336], 3 : [0.354914, 0.273275, 1.883443]}
             antennas_phase_vpol = {0 : [-0.784322, 1.765724, 1.553684], 1 : [-34.153473, -11.806226, 15.018032], 2 : [-7.391859, -46.958796, 1.473361], 3 : [-30.656309, -42.670223, 14.731633]}
             antennas_phase_vpol_hesse = {0 : [0.682632, 0.613462, 3.806129], 1 : [0.718409, 0.646417, 8.186476], 2 : [0.696899, 0.646127, 8.174901], 3 : [0.714915, 0.643952, 3.290147]}
+        elif deploy_index == 21:
+            #Using relative positions from deploy 1 with z of deploy 13
+            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.307267, -12.610417, 11.411196], 2 : [-10.464510, -46.217141, -0.229276], 3 : [-31.172820, -42.069610, 14.812669]}
+            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.042770, 0.047592, 0.232313], 2 : [0.069353, 0.034351, 0.297275], 3 : [0.065285, 0.047254, 0.249236]}
+            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-29.908104, -12.713682, 11.649818], 2 : [-9.956527, -46.119743, 1.003367], 3 : [-31.175775, -41.743273, 15.241286]}
+            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.057717, 0.065283, 0.261789], 2 : [0.080427, 0.046084, 0.282382], 3 : [0.084447, 0.065313, 0.276901]}
+        elif deploy_index == 22:
+            '''
+            This one comes from starting with 13, then manually shifting antennas around.  Limiting cable delay variation
+            and locking down the position of antenna 0, and using only valley sources.
+
+            pulser_weight = 0.0 #Each pulsing site worth this % as much as a valley source.
+            unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            if mode == 'hpol':
+                use_sources = ['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
+                included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+            elif mode == 'vpol':
+                use_sources = ['Tonopah Vortac','Tonopah AFS GATR Site']#'East Dyer Substation',
+                included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+
+
+
+            #Parameters trying to achieve the 3 antenna match starting from deploy_index = 13.
+            include_pulsers = True 
+            include_baseline_measurements = True
+            baseline_measurement_uncertainty_m = 3 #Assuming a 3m spread in our data.  This is very approximate.
+            time_delay_measurement_uncertainty_ns = 1 #ns, The time window used to as error in chi^2 for time delay.  If you are assuming that the time delays are 100% accurate then this is usually sub ns.  But if you think it is slipping cycles you could give this a larger value. 
+            include_sanity = False #Slow
+            plot_predicted_time_shifts = False
+            random_offset_amount = 0.1#0.25 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
+            included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
+            included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
+            include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
+            plot_overlap = False #Will plot the overlap map for time delays from each source.
+            overlap_window_ns = 50 #ns The time window used to define sufficient overlap. 
+            overlap_goal = overlap_window_ns*len(included_antennas_channels)*len(use_sources) #This shouldn't be varied, vary the error if anything.  This is the portion of chi^2 coming from overlapping valley source time delays.  The measured map max will be subtracted from this in a chi^2 calculation.  
+            overlap_error = overlap_goal/50 #The error portion of chi^2 coming from overlapping valley source time delays will be devided by this number.
+            limit_array_plane_azimuth_range = False #Should be seen as a temporary test.  Doesn't use any errors and isn't in standard chi^2 format.
+            allowed_array_plane_azimuth_range = 20 #plus or minus this from East is not impacted by weighting. 
+
+            #Limits 
+            initial_step_x = 0.75 #m
+            initial_step_y = 0.75 #m
+            initial_step_z = 0.5 #m
+            initial_step_cable_delay = 0.25 #ns
+            cable_delay_guess_range = 3 #ns
+            antenna_position_guess_range_x = 5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
+            antenna_position_guess_range_y = 5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
+            antenna_position_guess_range_z = 5#2#3 #Limit to how far from input phase locations to limit the parameter space to
+
+            #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
+            manual_offset_ant0_x = 0#14
+            manual_offset_ant0_y = 0#-2.7
+            manual_offset_ant0_z = 0#-17
+
+            manual_offset_ant1_x = -1#0    + manual_offset_ant0_x
+            manual_offset_ant1_y = 5#-2   + manual_offset_ant0_y
+            manual_offset_ant1_z = 0#0    + manual_offset_ant0_z
+
+            manual_offset_ant2_x = 0#0    + manual_offset_ant0_x
+            manual_offset_ant2_y = -5#-4   + manual_offset_ant0_y
+            manual_offset_ant2_z = 12#0    + manual_offset_ant0_z
+
+            manual_offset_ant3_x = -3#0    + manual_offset_ant0_x
+            manual_offset_ant3_y = 0#0    + manual_offset_ant0_y
+            manual_offset_ant3_z = 3#-6   + manual_offset_ant0_z
+
+
+            fix_ant0_x = True
+            fix_ant0_y = True
+            fix_ant0_z = True
+            fix_ant1_x = False
+            fix_ant1_y = False
+            fix_ant1_z = False
+            fix_ant2_x = False
+            fix_ant2_y = False
+            fix_ant2_z = False
+            fix_ant3_x = False
+            fix_ant3_y = False
+            fix_ant3_z = False
+            fix_cable_delay0 = True
+            fix_cable_delay1 = False
+            fix_cable_delay2 = False
+            fix_cable_delay3 = False
+            '''
+            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-39.493623, -4.905741, 14.698088], 2 : [-12.239970, -51.023459, 3.504483], 3 : [-37.662065, -38.394831, 10.386077]}
+            antennas_phase_hpol_hesse = {0 : [0.750000, 0.750000, 0.500000], 1 : [1.981312, 0.439145, 7.869927], 2 : [0.222825, 0.508381, 7.186704], 3 : [0.225246, 0.502959, 6.634587]}
+            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-39.493635, -5.121617, 14.698087], 2 : [-12.425378, -50.901975, 7.789672], 3 : [-37.428109, -39.320700, 11.755655]}
+            antennas_phase_vpol_hesse = {0 : [0.750000, 0.750000, 0.500000], 1 : [7.476337, 0.667707, 6.331664], 2 : [0.303953, 0.562640, 7.032839], 3 : [0.319401, 0.566975, 5.809684]}
+
 
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
@@ -936,6 +1037,15 @@ def loadCableDelays(deploy_index=default_deploy,return_raw=False):
     elif deploy_index == 20:
         cable_delays =  {   'hpol':     numpy.array([12.094088,3.168013,9.118150,7.905168]), \
                             'vpol':     numpy.array([18.743829,4.867362,16.899300,8.054707])}
+
+    elif deploy_index == 22:
+        cable_delays =  {   'hpol':     numpy.array([7.901212,15.961225,2.999975,11.110831]), \
+                            'vpol':     numpy.array([13.115628,17.688231,11.090487,11.027541])}
+        
+
+        #cable_delays_hpol_hesse = numpy.array([0.250000,3.177605,4.465699,4.766975])
+        #cable_delays_vpol_hesse = numpy.array([0.250000,5.576029,4.727528,5.035706])
+
 
 
     else:

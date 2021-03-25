@@ -453,7 +453,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def overwriteSourceDistance(self, map_source_distance_m, verbose=True, suppress_time_delay_calculations=False):
+    def overwriteSourceDistance(self, map_source_distance_m, verbose=True, suppress_time_delay_calculations=False, debug=False):
         '''
         Allows user to reset the source distance use when generating maps.
         
@@ -473,7 +473,7 @@ class Correlator:
             if suppress_time_delay_calculations == False:
                 if verbose:
                     print('Rerunning time delay prep with new source distance.')
-                self.generateTimeIndices() #Must be called again if map_source_distance_m is reset
+                self.generateTimeIndices(debug=debug) #Must be called again if map_source_distance_m is reset
             else:
                 if verbose:
                     print('WARNING!  Time Indices NOT recalculated in overwriteSourceDistance.')
