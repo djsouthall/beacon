@@ -30,6 +30,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import scipy.stats
 import scipy.signal
 import scipy.stats
+from scipy.linalg import lstsq
 import numpy
 import sys
 import math
@@ -306,7 +307,40 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateArrayNormalVector(self,plot_map=False,mollweide=False, pol='both'):
+    def fitPlaneGetNorm(self,xyz,verbose=False):
+        '''
+        Given an array of similarly lengthed x,y,z data, this will fit a plane to the data, and then
+        determine the normal vector to that plane and return it.  The xyz data should be stacked such that
+        the first column is x, second is y, and third is z.
+        '''
+        try:
+            x = xyz[:,0]
+            y = xyz[:,1]
+            z = xyz[:,2]
+
+            A = numpy.matrix(numpy.vstack((x,y,numpy.ones_like(x))).T)
+            b = numpy.matrix(z).T
+            fit, residual, rnk, s = lstsq(A, b)
+            if verbose:
+                print("solution: %f x + %f y + %f = z" % (fit[0], fit[1], fit[2]))
+            plane_func = lambda _x, _y : fit[0]*_x + fit[1]*_y + fit[2]
+            zero = numpy.array([0,0,plane_func(0,0)[0]]) #2 points in plane per vector, common point at 0,0 between the 2 vectors. 
+
+            v0 = numpy.array([1,0,plane_func(1,0)[0]]) - zero
+            v0 = v0/numpy.linalg.norm(v0)
+            v1 = numpy.array([0,1,plane_func(0,1)[0]]) - zero
+            v1 = v1/numpy.linalg.norm(v1)
+            norm = numpy.cross(v0,v1)
+            norm = norm/numpy.linalg.norm(norm)
+            return norm
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+    
+    def calculateArrayNormalVector(self,plot_map=False,mollweide=False, pol='both',method='fit',verbose=False):
         '''
         This function will determine the normal vector to the plane defined by the array.  This can be
         used with a dot product of expected directions to determine which scenario might be more likely.
@@ -320,15 +354,25 @@ class Correlator:
         try:
             n_func = lambda v0, v1, v2 : - numpy.cross( v1 - v0 , v2 - v1 )/numpy.linalg.norm(- numpy.cross( v1 - v0 , v2 - v1 ))
 
-            self.n_physical = n_func(self.A0_physical, self.A2_physical, (self.A0_physical + self.A3_physical)/2.0)
-            self.n_hpol     = n_func(self.A0_hpol,     self.A2_hpol,     (self.A0_hpol     + self.A3_hpol)/2.0)
-            self.n_vpol     = n_func(self.A0_vpol,     self.A2_vpol,     (self.A0_vpol     + self.A3_vpol)/2.0)
-            self.n_all      = n_func((self.A0_hpol + self.A0_vpol),     (self.A2_hpol + self.A2_vpol),     ((self.A0_hpol + self.A0_vpol)     + (self.A3_hpol + self.A3_vpol))/2.0) #Might be janky to use.
+            if method == 'vec':
+                if len(included_antennas) < 4:
+                    print('WARNING, vec METHOD OF ARRAY PLANE DOES NOT SUPPPORT LIMITING INCLUDED ANTENNAS.')
+                self.n_physical = n_func(self.A0_physical, self.A2_physical, (self.A0_physical + self.A3_physical)/2.0)
+                self.n_hpol     = n_func(self.A0_hpol,     self.A2_hpol,     (self.A0_hpol     + self.A3_hpol)/2.0)
+                self.n_vpol     = n_func(self.A0_vpol,     self.A2_vpol,     (self.A0_vpol     + self.A3_vpol)/2.0)
+                self.n_all      = n_func((self.A0_hpol + self.A0_vpol),     (self.A2_hpol + self.A2_vpol),     ((self.A0_hpol + self.A0_vpol)     + (self.A3_hpol + self.A3_vpol))/2.0) #Might be janky to use.
 
+            elif method == 'fit':
+                self.n_physical = self.fitPlaneGetNorm(numpy.vstack((self.A0_physical,self.A1_physical,self.A2_physical,self.A3_physical)))
+                self.n_hpol     = self.fitPlaneGetNorm(numpy.vstack((self.A0_hpol,self.A1_hpol,self.A2_hpol,self.A3_hpol)))
+                self.n_vpol     = self.fitPlaneGetNorm(numpy.vstack((self.A0_vpol,self.A1_vpol,self.A2_vpol,self.A3_vpol)))
+                self.n_all      = n_func((self.A0_hpol + self.A0_vpol),     (self.A2_hpol + self.A2_vpol),     ((self.A0_hpol + self.A0_vpol)     + (self.A3_hpol + self.A3_vpol))/2.0) #Might be janky to use.
+                
             self.generateNormalDotValues()
 
             if plot_map == True:
                 self.plotArrayNormalVector(mollweide=mollweide,pol=pol)
+
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -2899,6 +2943,199 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
+    def plotPointingResolution(self, pol, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[0,1,2,3,4,5]):
+        '''
+        This will use the equation dTheta ~ c/L*SNR*bw to estimate the bandwith of the array in various directions.
+        '''
+        try:
+            if pol == 'hpol':
+                baseline_vectors = numpy.array([    self.A0_hpol - self.A1_hpol,\
+                                                    self.A0_hpol - self.A2_hpol,\
+                                                    self.A0_hpol - self.A3_hpol,\
+                                                    self.A1_hpol - self.A2_hpol,\
+                                                    self.A1_hpol - self.A3_hpol,\
+                                                    self.A2_hpol - self.A3_hpol])
+            elif pol == 'vpol':
+                baseline_vectors = numpy.array([    self.A0_vpol - self.A1_vpol,\
+                                                    self.A0_vpol - self.A2_vpol,\
+                                                    self.A0_vpol - self.A3_vpol,\
+                                                    self.A1_vpol - self.A2_vpol,\
+                                                    self.A1_vpol - self.A3_vpol,\
+                                                    self.A2_vpol - self.A3_vpol])
+
+            pairs = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
+            baseline_cm = plt.cm.get_cmap('tab10', 10)
+            baseline_colors = baseline_cm(numpy.linspace(0, 1, 10))[0:6] #only want the first 6 colours in this list of 10 colors.
+
+            thetas  = numpy.tile(self.thetas_rad,(self.n_phi,1)).T  #Each row is a different theta (zenith)
+            phis    = numpy.tile(self.phis_rad,(self.n_theta,1))    #Each column is a different phi (azimuth)
+
+
+            #To get the resolution I need baseline in each perceived direction.  To get that I need to dot with the unit vectors.
+            theta_hat = numpy.zeros((self.n_theta, self.n_phi, 3))
+            theta_hat[:,:,0] = numpy.cos(thetas)*numpy.cos(phis)
+            theta_hat[:,:,1] = numpy.cos(thetas)*numpy.sin(phis)
+            theta_hat[:,:,2] = -numpy.sin(thetas)
+
+            phi_hat = numpy.zeros((self.n_theta, self.n_phi, 3))
+            phi_hat[:,:,0] = -numpy.sin(phis)
+            phi_hat[:,:,1] = numpy.cos(phis)
+            #phi_hat[:,:,2] = zeros
+
+            '''
+            Dot each baseline with the unit vector to get the percieved baseline in that direction.  Take max among baselines.
+            '''
+            max_theta_baseline = numpy.zeros_like(phis) #Just for shape
+            max_phi_baseline = numpy.zeros_like(phis) #Just for shape
+            for pair_index in include_baselines:
+                i = pairs[pair_index][0]
+                j = pairs[pair_index][1]
+
+                dot_values = numpy.abs(baseline_vectors[pair_index][0]*theta_hat[:,:,0] + baseline_vectors[pair_index][1]*theta_hat[:,:,1] + baseline_vectors[pair_index][2]*theta_hat[:,:,2]) #m
+                cut = dot_values > max_theta_baseline
+                max_theta_baseline[cut] = dot_values[cut]
+
+                #import pdb; pdb.set_trace()
+                dot_values = numpy.abs(baseline_vectors[pair_index][0]*phi_hat[:,:,0] + baseline_vectors[pair_index][1]*phi_hat[:,:,1] + baseline_vectors[pair_index][2]*phi_hat[:,:,2]) #m
+                cut = dot_values > max_phi_baseline
+                max_phi_baseline[cut] = dot_values[cut]
+
+
+            debug = False
+            if debug:
+                theta_resolution = max_theta_baseline
+                phi_resolution = max_phi_baseline
+            else:
+                theta_resolution = numpy.rad2deg(self.c / (snr * bw * max_theta_baseline)) #theta_hat[:,:,2]
+                phi_resolution = numpy.rad2deg(self.c / (snr * bw * max_phi_baseline)) #phi_hat[:,:,0]
+                reality_cut = phi_resolution > 10#360.0
+                phi_resolution[reality_cut] = 10#360.0
+                reality_cut = theta_resolution > 10#90.0
+                theta_resolution[reality_cut] = 10#90.0
+
+
+
+            if plot_map:
+                if ~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))):
+                    add_text = '\nIncluded baselines = ' + str(numpy.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])[include_baselines])
+                else:
+                    add_text = ''
+
+                if center_dir.upper() == 'E':
+                    center_dir_full = 'East'
+                    azimuth_offset_rad = 0 #This is subtracted from the xaxis to roll it effectively.
+                    azimuth_offset_deg = 0 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From East = 0 deg, North = 90 deg)' + add_text
+                    roll = 0
+                elif center_dir.upper() == 'N':
+                    center_dir_full = 'North'
+                    azimuth_offset_rad = numpy.pi/2 #This is subtracted from the xaxis to roll it effectively. 
+                    azimuth_offset_deg = 90 #This is subtracted from the xaxis to roll it effectively. 
+                    xlabel = 'Azimuth (From North = 0 deg, West = 90 deg)' + add_text
+                    roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+                elif center_dir.upper() == 'W':
+                    center_dir_full = 'West'
+                    azimuth_offset_rad = numpy.pi #This is subtracted from the xaxis to roll it effectively.
+                    azimuth_offset_deg = 180 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From West = 0 deg, South = 90 deg)' + add_text
+                    roll = len(self.phis_rad)//2
+                elif center_dir.upper() == 'S':
+                    center_dir_full = 'South'
+                    azimuth_offset_rad = -numpy.pi/2 #This is subtracted from the xaxis to roll it effectively.
+                    azimuth_offset_deg = -90 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)' + add_text
+                    roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+
+                rolled_values_theta = numpy.roll(theta_resolution,roll,axis=1)
+                rolled_values_phi = numpy.roll(phi_resolution,roll,axis=1)
+                same_colors = False
+
+                if same_colors:
+                    vmin = numpy.min((numpy.min(rolled_values_phi),numpy.min(rolled_values_theta)))
+                    vmax = numpy.max((numpy.max(rolled_values_phi),numpy.max(rolled_values_theta)))
+                else:
+                    #Just phi right now
+                    vmin = numpy.min(rolled_values_phi)
+                    vmax = numpy.max(rolled_values_phi)
+
+                #import pdb; pdb.set_trace()
+
+                fig = plt.figure()
+                if window_title is None:
+                    fig.canvas.set_window_title('%s Resolution Map'%(pol.title()))
+                else:
+                    fig.canvas.set_window_title(window_title)
+
+                plt.suptitle('%s Resolution Map\nBW = %0.2f MHz, SNR = %0.1f sigma'%(pol.title(),bw/1e6,snr))
+
+                if mollweide == True:
+                    ax = fig.add_subplot(1,2,1, projection='mollweide')
+                else:
+                    ax = fig.add_subplot(1,2,1)                    
+
+                if mollweide == True:
+                    #Automatically converts from rads to degs
+                    im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values_phi, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm)
+                else:
+                    im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values_phi, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm)
+
+                cbar = fig.colorbar(im)
+                cbar.set_label('Azimuthal Resolution (Deg)')
+                plt.xlabel(xlabel,fontsize=18)
+                plt.ylabel('Elevation Angle (Degrees)',fontsize=18)
+                plt.grid(True)
+
+                #Prepare center line and plot the map.  Prep cut lines as well.
+                if pol == 'hpol':
+                    selection_index = 1
+                elif pol == 'vpol':
+                    selection_index = 2 
+                plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
+
+
+                if mollweide == True:
+                    ax = fig.add_subplot(1,2,2, projection='mollweide')
+                else:
+                    ax = fig.add_subplot(1,2,2)                    
+
+                if same_colors == False:
+                    #Just theta right now
+                    vmin = numpy.min(rolled_values_theta)
+                    vmax = numpy.max(rolled_values_theta)
+
+
+
+                if mollweide == True:
+                    #Automatically converts from rads to degs
+                    im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values_theta, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm)
+                else:
+                    im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values_theta, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm)
+
+                cbar = fig.colorbar(im)
+                cbar.set_label('Elevation Resolution (Deg)')
+                plt.xlabel(xlabel,fontsize=18)
+                plt.ylabel('Elevation Angle (Degrees)',fontsize=18)
+                plt.grid(True)
+
+                plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
+
+
+
+            if plot_map == True:
+                return self.mesh_azimuth_deg, self.mesh_elevation_deg, phi_resolution, theta_resolution, im, ax
+            else:
+                return self.mesh_azimuth_deg, self.mesh_elevation_deg, phi_resolution, theta_resolution,
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
 
     def beamMap(self, eventid, pol, plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None):
         '''
@@ -3213,6 +3450,8 @@ if __name__=="__main__":
         reader = Reader(datapath,run)
 
         cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response)
+        
+
         if sine_subtract:
             cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
@@ -3220,6 +3459,10 @@ if __name__=="__main__":
             mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='W', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
             all_figs.append(fig)
             all_axs.append(ax)
+            if True:
+                cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[0,1,2,3,4,5])
+                # for baseline in [0,1,2,3,4,5]:
+                #     cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[baseline])
 
 
             
