@@ -136,7 +136,10 @@ class Correlator:
             self.c = 299792458.0/n #m/s
             self.min_elevation_linewidth = 0.5
             self.reader = reader
-            self.upsample = upsample
+            if upsample is None:
+                self.upsample = len(self.reader.t())
+            else:
+                self.upsample = upsample
 
             self.apply_tukey = tukey
             self.apply_sine_subtract = sine_subtract

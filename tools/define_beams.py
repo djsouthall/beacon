@@ -62,9 +62,9 @@ class BeamMaker(Correlator):
         The specified range of zenith angles to probe.
     
     '''
-    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6):
+    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None):
         try:
-            super().__init__(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, waveform_index_range=waveform_index_range, apply_phase_response=apply_phase_response, tukey=tukey, sine_subtract=sine_subtract, map_source_distance_m=map_source_distance_m)
+            super().__init__(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, waveform_index_range=waveform_index_range, apply_phase_response=apply_phase_response, tukey=tukey, sine_subtract=sine_subtract, map_source_distance_m=map_source_distance_m, deploy_index=deploy_index)
             self.prepInterpFunc()
 
 
@@ -75,28 +75,20 @@ class BeamMaker(Correlator):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-
-
     def prepInterpFunc(self):
         '''
-        When called this will generate the interpolation functions used by interpolateTimeGrid.  Should be called if positions change (or similar).
-        This will return arrival times (at board, including cable delays) for antennas 1,2,3 relative to antenna 0.  So if ant 1 signal arrives
-        later than ant 0 it will arive at a positive number of that many ns.   
+        When called this will generate the interpolation functions used by interpolateTimeGrid.  Should be called if 
+        positions change (or similar).  This will return arrival times (at board, including cable delays) for antennas 
+        1,2,3 relative to antenna 0.  
         '''
         try:
-            cable_delays = info.loadCableDelays()['hpol']
-            cable_delays = cable_delays - cable_delays[0] #Relative to antenna 0, how long it takes for the signal to arrive. 
-            #cable_delays = numpy.zeros(4)# THIS WILL IGNORE CABLE DELAYS AND SHOULD BE DONE FOR TESTING PURPOSES ONLY.
-            self.t_hpol_0subtract1_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , -self.t_hpol_0subtract1 + cable_delays[1])
-            self.t_hpol_0subtract2_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , -self.t_hpol_0subtract2 + cable_delays[2])
-            self.t_hpol_0subtract3_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , -self.t_hpol_0subtract3 + cable_delays[3])
+            self.t_hpol_0subtract1_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , self.t_hpol_0subtract1) #self.t_hpol_0subtract1 already includes cable delays.  Results in the expected measured time difference in signals from each direction.  
+            self.t_hpol_0subtract2_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , self.t_hpol_0subtract2) #self.t_hpol_0subtract2 already includes cable delays.  Results in the expected measured time difference in signals from each direction.  
+            self.t_hpol_0subtract3_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , self.t_hpol_0subtract3) #self.t_hpol_0subtract3 already includes cable delays.  Results in the expected measured time difference in signals from each direction.  
 
-            cable_delays = info.loadCableDelays()['vpol']
-            cable_delays = cable_delays - cable_delays[0] #Relative to antenna 0, how long it takes for the signal to arrive. 
-            #cable_delays = numpy.zeros(4)# THIS WILL IGNORE CABLE DELAYS AND SHOULD BE DONE FOR TESTING PURPOSES ONLY.
-            self.t_vpol_0subtract1_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , -self.t_vpol_0subtract1 + cable_delays[1])
-            self.t_vpol_0subtract2_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , -self.t_vpol_0subtract2 + cable_delays[2])
-            self.t_vpol_0subtract3_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , -self.t_vpol_0subtract3 + cable_delays[3])
+            self.t_vpol_0subtract1_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , self.t_vpol_0subtract1) #self.t_vpol_0subtract1 already includes cable delays.  Results in the expected measured time difference in signals from each direction.  
+            self.t_vpol_0subtract2_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , self.t_vpol_0subtract2) #self.t_vpol_0subtract2 already includes cable delays.  Results in the expected measured time difference in signals from each direction.  
+            self.t_vpol_0subtract3_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , self.t_vpol_0subtract3) #self.t_vpol_0subtract3 already includes cable delays.  Results in the expected measured time difference in signals from each direction.  
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -106,8 +98,8 @@ class BeamMaker(Correlator):
 
     def interpolateTimeGrid(self, mode, thetas ,phis):
         '''
-        Will determine appropriate time delays for the given thetas and phis using the predifined grid (created by generateTimeIndices).
-        Expects angles in radians. 
+        Will determine appropriate time delays for the given thetas and phis using the predifined grid (created by 
+        generateTimeIndices).  Expects angles in radians. 
         '''
         try:
             if mode == 'hpol':
@@ -144,15 +136,36 @@ class BeamMaker(Correlator):
 
     def makeFakeBeamMap(self, eventid, pol, beam_theta, beam_phi, plot_map=True, plot_corr=False, hilbert=False, normalize=False, savefig=False, savefig_text=None, turnoff_ants=None):
         '''
-        This will generate fake signals from each of the directions normally available in the correlation map.  It will then apply beamforming assuming 
-        the beam is centered on theta, phi. 
+        This will generate fake signals from each of the directions normally available in the correlation map.  It will 
+        then apply beamforming assuming the beam is centered on theta, phi. 
         '''
         try:
             t_1, t_2, t_3 = bm.interpolateTimeGrid(pol, beam_theta, beam_phi)
             t_0 = 0.0
             t_1, t_2, t_3 = bm.roundToNearestSample(numpy.array([t_1, t_2, t_3]))
             
-            rolls = numpy.array([0, -(t_1/self.dt_resampled).astype(int) , -(t_2/self.dt_resampled).astype(int) , -(t_3/self.dt_resampled).astype(int)]) #How much to roll a signal to account for arrival direction of beam.  (negative how many you expect them to be delayed)
+            '''
+            Prepare beam rolls.  These are the values that would actually be set in firmware, and have the roll of 
+            counteracting time delays.  So give the expected time delays from a source direction, they should
+            roll the signals back by that amount.  To roll "back" (to the left) requires a positive index value,
+            and is equivalent to pushing a signal back in time, or holding that signal while all other signals move
+            forward in time. 
+
+            t_i here represent the expected arrival time at antenna i relative to antenna 0.  t_i represents 
+            arrival_0 - arrival_i, so if it positive when arrival_i < arrival 0 (signal arrives at antenna i first).
+            
+            In the case that the signal arrives at i before 0, we want to hold it until 0 is expected to arrive.  This
+            is equivalent to rolling signal i forward in time by the expected time offset.  
+            
+            To roll signal i forward, a positive roll integer required.
+
+            In the above case where i arrives before 0, t_1 = arrival_0 - arrival_i is positive.
+
+            So in this case the beam roll values should be integer versions of the expected arrival time delays,
+            with the same sign.
+            '''
+
+            beam_rolls = numpy.array([0, (t_1/self.dt_resampled).astype(int) , (t_2/self.dt_resampled).astype(int) , (t_3/self.dt_resampled).astype(int)])
 
             #Prepare fake waveform.  Will be rolled into position (to appear to be coming from a particular direction) and then rolled back (assumed to be 
             #from the beam direction) before experiencing the power sum.  These rolls are done as one motion in the faster version of the code. 
@@ -192,16 +205,48 @@ class BeamMaker(Correlator):
                     temp_t_1, temp_t_2, temp_t_3 = bm.interpolateTimeGrid(pol, theta,phi)
                     temp_t_1, temp_t_2, temp_t_3 = bm.roundToNearestSample(numpy.array([temp_t_1, temp_t_2, temp_t_3]))
 
-                    temp_waveforms[1] = numpy.roll(padded_wf[1],numpy.round(temp_t_1/self.dt_resampled).astype(int) + rolls[1])
-                    temp_waveforms[2] = numpy.roll(padded_wf[2],numpy.round(temp_t_2/self.dt_resampled).astype(int) + rolls[2])
-                    temp_waveforms[3] = numpy.roll(padded_wf[3],numpy.round(temp_t_3/self.dt_resampled).astype(int) + rolls[3])
+                    '''
+                    If I want a signal to appear to be arriving at a later time, I need to roll it a positive integer.
+                    I would want a signal to appear later when temp_t_i < 0 (so that arrival time 1 > arrival time 0)
+
+                    So to simulate signals with arrival times temp_t_i, I roll signals from antenna 0 by an integer version
+                    of that time delay with the opposite sign.
+
+
+                    Here is the logic behind generating the fake signals using temp_t's:
+
+                    t1 = arrival_time0 - arrival_time1
+                    So if starting with signals at arrival_time0 and want to replicated to make one simulate arrival_time1
+                    "rolling" signal 1 by t1 (in indices) will push the peak to the right (forward in time) by t1 (or back if
+                    t1 is negative).  To roll a signal to the right requires a negative roll integer.  
+
+                    Behaviour I want:  if t1 is negative, then arrival_time1 > arrival_time0, so I want fake signal 1 pushed
+                    right, which occurs will roll with a positive integer roll.  So the roll I want is negative (integer) of the
+                    expected time delays.  
+                    '''
+                    roll_make_simulated_signal_1 = -numpy.round(temp_t_1/self.dt_resampled).astype(int)
+                    roll_make_simulated_signal_2 = -numpy.round(temp_t_2/self.dt_resampled).astype(int)
+                    roll_make_simulated_signal_3 = -numpy.round(temp_t_3/self.dt_resampled).astype(int)
+
+
+                    '''
+                    The signals here are rolled twice.  roll_make_simulated_signal_i rolling rolls the signal to make it 
+                    appear to be coming from the simulated direction theta, phi.  Then it is rolled by beam_rolls, which 
+                    are firmware roll values indicating how long to delay the signal for that beam such that a signal 
+                    from that beams intended direction would align perfectly. For a given direction roll and 
+                    roll_make_simulated_signal roll should be equal but opposite.
+                    '''
+
+                    temp_waveforms[1] = numpy.roll(padded_wf[1], roll_make_simulated_signal_1 + beam_rolls[1])
+                    temp_waveforms[2] = numpy.roll(padded_wf[2], roll_make_simulated_signal_2 + beam_rolls[2])
+                    temp_waveforms[3] = numpy.roll(padded_wf[3], roll_make_simulated_signal_3 + beam_rolls[3])
 
                     summed_waveforms = numpy.sum(temp_waveforms,axis=0)
                     power = summed_waveforms**2
                     power_sum = numpy.sum(power[binned_8_indices_A],axis=1) + numpy.sum(power[binned_8_indices_B],axis=1)
                     max_powers[theta_index,phi_index] = numpy.max(power_sum)
 
-            integer_delays = (rolls - min(rolls)).astype(int)
+            integer_delays = (beam_rolls - min(beam_rolls)).astype(int) #You can sanity check these: A signal from East would hit antenna 0 and 2 first, so those should be delayed the most (largest positive integer), a signal from north would need 0 and 1 to be delayed the most (so should be delayed largest integer number).
             
             if normalize == True:
                 max_powers /= numpy.max(max_powers)
@@ -354,11 +399,45 @@ class BeamMaker(Correlator):
 
 if __name__=="__main__":
     #plt.close('all')
+    '''
+    There are arguments here at the top that control how this script runs.  Additionally, to define the beams you want
+    set you must scroll to the DEFINE BEAMS HERE section below and ensure the correct scenario is being run.  Each
+    scenario has an associated 'mode' label.  If that mode label is included in 'modes' then it will be run.
+    '''
+    modes = ['hpol','vpol']#['vpol_no_ant01']:#['hpol','vpol','vpol_no_ant0','vpol_no_ant01']:
+
     use_pulser=False
     max_method = 0
-    normalize = True
+    
+    circle_beam_centers = True #Will add circles to the maps centered on the selected beams.
+    radius = 2.5 #Degrees I think?  Should eventually represent error. 
+    circle_color = 'lime'
+    circle_linewidth = 2
+    cmap = 'plasma'
+    
 
-    for hilbert in [False,True]:
+    #Normalize normalizes beams BEFORE they are comapared and in power units NOT linear.  EVERY beam peaks at 1.
+    normalize = False #IF TRUE This will result in the max value if 1, with all other values scaled in by that.  Puts each beam on portrayed equal footing, which may not be accurate. 
+    post_normalize = True #This normalizes AFTER beams are comared/summed.  So if some beams are worse, they should maintain that relative worseness.
+    display_type = 'power'#'linear' #'power' is default, and will plot the resulting power sum as would be output by the daq algorithm.  linear will take those power units (which may already be normalized) and 
+
+    '''
+    Recommended settings are linear, not normalized before, post_normalize = True.  This makes beam coverage scale in
+    linear units, and has relative coverage across beams be consistent rather than normalized per beam.  
+    '''
+
+    
+    if display_type == 'linear':
+        #The below list of conversion formulas can be used to determine how 'linear' is calculated from the power units.
+        # conversion_formula = lambda power_sum, n_summed_antennas : numpy.sqrt(power_sum) # n_summed_antenna not used, just here for consistent formatting.
+        # conversion_formula = lambda power_sum, n_summed_antennas : numpy.sqrt(power_sum/(16*n_summed_antennas)) #Below there is an option "turnoff_ants" that sets the signal in certain antennas to 0.  This lets you not divide by 4 if not all 4 antennas are being summed. 
+        conversion_formula = lambda power_sum, n_summed_antennas : numpy.sqrt(power_sum/(16*4)) #This assumes we should always say 4 summed antennas, even if some aren't working.  n_summed_antenna not used, just here for consistent formatting.
+
+
+    # BeamMaker is built on the Correlator class, and by default will use "default_deploy" as set in info.py as the calibration of choice. You can also set it as a kwarg here.  None will go to default deploy. 
+    deploy_index = None
+
+    for hilbert in [False, True]:
         datapath = os.environ['BEACON_DATA']
         if use_pulser == True:
             run = 1509
@@ -368,21 +447,36 @@ if __name__=="__main__":
             eventids['vpol'] = numpy.sort(known_pulser_ids['run%i'%run]['vpol'])
             waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
         else:
-            run = 1645
+            # run = 1645
+            # eventids = {}
+            # eventids['hpol'] = [45]
+            # eventids['vpol'] = [48]
+            run = 1650
             eventids = {}
-            eventids['hpol'] = [45]
-            eventids['vpol'] = [48]
+            eventids['hpol'] = [57507] #The 75th percentile in impulsivity_h event for events with impulsivity in BOTH h and v > 0.5 for run 1650
+            eventids['vpol'] = [72789] #The 75th percentile in impulsivity_v event for events with impulsivity in BOTH h and v > 0.5 for run 1650
+
             waveform_index_range = (None,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
 
         reader = Reader(datapath,run)
+        date = dt.datetime.today().strftime('%Y-%m-%d') #appended to file names.
+        # BeamMaker is built on the Correlator class, and by default will use "default_deploy" as set in info.py as the calibration of choice. You can also set it as a kwarg here.  None will go to default deploy. 
+        bm = BeamMaker(reader, n_phi=360,range_phi_deg=(-180,180), n_theta=180, range_theta_deg=(0,180), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,deploy_index=deploy_index)
+        print('Using calibration %i'%bm.deploy_index) #note that if you manually reset antenna positions this is no longer the case obviously.             
+
 
         all_fig = []
         all_ax = []
 
         sample_delays = {}
-        for mode in ['hpol']#['vpol_no_ant01']:#['hpol','vpol','vpol_no_ant0','vpol_no_ant01']:
+        for mode in modes:
             print('\nMode = %s\n'%mode)
             #beam_thetas_deg = numpy.linspace(5,110,4)
+
+            #########################
+            ### DEFINE BEAMS HERE ###
+            #########################
+
             if False:
                 n_beams_total = 48 #This is an aim (lower bound),not a guarentee
                 n_theta = 4
@@ -397,8 +491,9 @@ if __name__=="__main__":
                     phis_per_theta = numpy.array([1,5,7,9,12,2,15])#numpy.array([1,5,8,10,8,15])
                     phis_angular_ranges = numpy.array([[-48,48],[-45,45],[-47,47],[-48,48],[-49,49],[-48,48],[-42,42]])
                     turnoff_ants=None
-                    outfile_name = '%s_beam_sample_delays_hilbert-%s.csv'%(mode,str(hilbert))
-                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s.jpg'%(mode,sum(phis_per_theta),str(hilbert))
+
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
                     '''
                     thetas_deg = numpy.array([100])#
                     phis_per_theta = numpy.array([1])
@@ -409,23 +504,23 @@ if __name__=="__main__":
                     phis_per_theta = numpy.array([1,5,7,9,12,2,15])#numpy.array([1,5,8,10,8,15])
                     phis_angular_ranges = numpy.array([[-48,48],[-45,45],[-47,47],[-48,48],[-49,49],[-48,48],[-42,42]])
                     turnoff_ants=None
-                    outfile_name = '%s_beam_sample_delays_hilbert-%s.csv'%(mode,str(hilbert))
-                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s.jpg'%(mode,sum(phis_per_theta),str(hilbert))
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
                 elif mode == 'vpol_no_ant0':
                     thetas_deg = numpy.array([2,10,25,40,68,90,100])#numpy.array([2,15,30,50,80,100])
                     phis_per_theta = numpy.array([1,5,7,9,12,2,15])#numpy.array([1,5,8,10,8,15])
                     phis_angular_ranges = numpy.array([[-48,48],[-45,45],[-47,47],[-48,48],[-49,49],[-48,48],[-42,42]])
                     turnoff_ants=[0]
-                    outfile_name = '%s_beam_sample_delays_hilbert-%s.csv'%(mode,str(hilbert))
-                    savefig_text = '%s_coverage_map_%i_beams_no_ant0_hilbert-%s.jpg'%(mode,sum(phis_per_theta),str(hilbert))
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_no_ant0_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
                     mode = 'vpol'
                 elif mode == 'vpol_no_ant01':
                     thetas_deg = numpy.array([2,10,25,40,68,90,100])#numpy.array([2,15,30,50,80,100])
                     phis_per_theta = numpy.array([1,5,7,9,12,2,15])#numpy.array([1,5,8,10,8,15])
                     phis_angular_ranges = numpy.array([[-48,48],[-45,45],[-47,47],[-48,48],[-49,49],[-48,48],[-42,42]])
                     turnoff_ants=[0,1]
-                    outfile_name = '%s_beam_sample_delays_hilbert-%s.csv'%(mode,str(hilbert))
-                    savefig_text = '%s_coverage_map_%i_beams_no_ant01_hilbert-%s.jpg'%(mode,sum(phis_per_theta),str(hilbert))
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_no_ant01_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
                     mode = 'vpol'
 
             beam_thetas_deg = numpy.array([])#numpy.zeros(sum(phis_per_theta))
@@ -437,7 +532,6 @@ if __name__=="__main__":
                 else:
                     beam_phis_deg = numpy.append(beam_phis_deg,numpy.linspace(phis_angular_ranges[theta_index][0],phis_angular_ranges[theta_index][1],int(phis_per_theta[theta_index])))
 
-            bm = BeamMaker(reader, n_phi=360,range_phi_deg=(-180,180), n_theta=180, range_theta_deg=(0,180), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False)
             all_max_powers = numpy.zeros((len(beam_thetas_deg), bm.n_theta, bm.n_phi))
 
             sample_delays[mode] = numpy.zeros((len(beam_thetas_deg), 7))
@@ -458,28 +552,39 @@ if __name__=="__main__":
 
             coverage = numpy.max(all_max_powers,axis=0)
 
+            if display_type == 'linear':
+                if turnoff_ants is None:
+                    turnoff_ants = []
+                coverage = conversion_formula(coverage,4 - len(turnoff_ants)) #conversion formula can change, see definition above. 
+            if post_normalize:
+                coverage = coverage/numpy.max(coverage)
+
+
             fig = plt.figure(figsize=(16,9))
             fig.canvas.set_window_title('Beam Coverage Map')
             ax = fig.add_subplot(1,1,1)
-            if normalize == True:
-                im = ax.imshow(coverage, interpolation='none', extent=[min(bm.phis_deg),max(bm.phis_deg),max(bm.thetas_deg),min(bm.thetas_deg)],cmap='plasma',vmin=0,vmax=1) #cmap=plt.cm.jet)
+            if normalize == True or post_normalize == True:
+                im = ax.imshow(coverage, interpolation='none', extent=[min(bm.phis_deg),max(bm.phis_deg),max(bm.thetas_deg),min(bm.thetas_deg)],cmap=cmap,vmin=0,vmax=1) #cmap=plt.cm.jet)
             else:
-                im = ax.imshow(coverage, interpolation='none', extent=[min(bm.phis_deg),max(bm.phis_deg),max(bm.thetas_deg),min(bm.thetas_deg)],cmap='plasma') #cmap=plt.cm.jet)
+                im = ax.imshow(coverage, interpolation='none', extent=[min(bm.phis_deg),max(bm.phis_deg),max(bm.thetas_deg),min(bm.thetas_deg)],cmap=cmap) #cmap=plt.cm.jet)
             cbar = fig.colorbar(im)
             plt.title('Beam Coverage Map')
+            cbar_label = 'Max Beam Sensitivity'
+
             if normalize == True:
-                cbar.set_label('Max Beam Sensitivity (Each Beam Normalized In Advance)')
-            else:
-                cbar.set_label('Max Beam Sensitivity')
+                cbar_label += '\nEach Beam Normalized Before Combined'
+            if post_normalize == True:
+                cbar_label += 'Normalized After Beams Combined'
+            cbar.set_label(cbar_label)
+
             plt.xlabel('Azimuth Angle (Degrees)')
             plt.ylabel('Zenith Angle (Degrees)')
 
 
-            radius = 2.5 #Degrees I think?  Should eventually represent error. 
-
-            for beam_index in range(len(beam_thetas_deg)):
-                circle = plt.Circle((beam_phis_deg[beam_index], beam_thetas_deg[beam_index]), radius, edgecolor='lime',linewidth=2,fill=False)
-                ax.add_artist(circle)
+            if circle_beam_centers == True:
+                for beam_index in range(len(beam_thetas_deg)):
+                    circle = plt.Circle((beam_phis_deg[beam_index], beam_thetas_deg[beam_index]), radius, edgecolor=circle_color,linewidth=circle_linewidth,fill=False)
+                    ax.add_artist(circle)
 
                         
             fig.savefig(savefig_text)

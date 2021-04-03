@@ -418,6 +418,9 @@ class dataSlicerSingleRun():
         Given eventids, this will load and return array for parameters associated with string param.
         '''
         try:
+            if len(numpy.shape(eventids)) > 0:
+                print('WARNING!!! eventids is in the incorrect format.')
+
             if param_key in self.known_param_keys:
                 with h5py.File(self.analysis_filename, 'r') as file:
 

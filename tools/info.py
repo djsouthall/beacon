@@ -8,6 +8,11 @@ upon which deployment you are in.
 
 You can set what you want the default deployment to be by changing default_deploy at the top of this file.
 
+The produced ENU coordinates were double checked 3 ways: the method presented (pymap3d), an additional method
+using astropy EarthLocation to go from GPS to ECEF, and then using pyuvdata to go from ECEF to ENU, and finally it was 
+checked GeograpihcLib/CartConvert.  All agreed, so pymap3d stays.  This was done on 3/30/2021.
+
+
 deploy_index = 0:
     Before Oct 2019
 deploy_index = 1:
@@ -31,7 +36,9 @@ import pymap3d as pm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
+
 default_deploy = 13#19#15#The deployment calibration to use as the default.
+
 
 def returnDefaultDeploy():
     return default_deploy
@@ -506,8 +513,11 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                     'Tokop'                     :(37.300047, -117.261011, 7097 * 0.3048),\
                     'Beatty Airport Antenna'    :(36.868032, -116.784008, 3166 * 0.3048),\
                     'Palmetto Cell Tower'       :(37.462089, -117.573584, 5943 * 0.3048),\
+                    'South Dyer Town'           :(37.579375, -117.973822, 4928 * 0.3048),\
                     'Black Mountain'            :(37.283284, -116.646110, 7232 * 0.3048),\
                     'Cedar Peak'                :(37.706014, -116.335117, 8419 * 0.3048),\
+                    'Test Site A'               :(37.886176, -116.779117, 5362 * 0.3048),\
+                    'Concrete Substation'       :(37.709394, -117.720283, 5339 * 0.3048),\
                     'Dome Thing'                :(37.753476, -116.538488, 5666 * 0.3048),\
                     'Jack Rabbit Knob'          :(37.685060, -116.543169, 6058 * 0.3048),\
                     'Goldfield Hill Tower'      :(37.726953, -117.225670, 6092 * 0.3048),\
@@ -520,12 +530,13 @@ def loadValleySourcesENU(deploy_index=default_deploy):
 
 
     # 'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+    # 'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
     #Below are the cuts that were used in the data slicer class to isolate the above clusters.
     data_slicer_cut_dict = {    'Northern Cell Tower'       :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
                                 'Solar Plant'               :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
                                 'Quarry Substation'         :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
                                 'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
-                                'Booker Antenna'              :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                'Booker Antenna'            :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
                                 'Nye County Sherriff'       :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'Tonopah AFS GATR Site'     :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
                                 'KNKN223'                   :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
@@ -533,7 +544,7 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                                 'Miller Substation'         :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'Tonopah Vortac'            :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                 'Tonopah Airport Antenna'   :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
-                                'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
                                 'West Dyer Substation'      :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
                                 'East Dyer Substation'      :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
                                 'Beatty Mountain Cell Tower':{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
@@ -543,8 +554,11 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                                 'Tokop'                     :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
                                 'Beatty Airport Antenna'    :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
                                 'Palmetto Cell Tower'       :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
+                                'South Dyer Town'           :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
                                 'Black Mountain'            :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
                                 'Cedar Peak'                :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                'Test Site A'               :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                'Concrete Substation'       :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
                                 'Dome Thing'                :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
                                 'Jack Rabbit Knob'          :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
                                 'Goldfield Hill Tower'      :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
@@ -576,8 +590,15 @@ def loadValleySourcesENU(deploy_index=default_deploy):
     origin = loadAntennaZeroLocation(deploy_index = deploy_index)
     
     for key, location in source_dict.items():
-        source_ENU[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+        source_ENU[key] = numpy.array(pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2]))
+
     return source_ENU, data_slicer_cut_dict
+
+# def loadUniqueSourceDir():
+#     source_ENU, data_slicer_cut_dict = loadValleySourcesENU()
+
+#     [val for key, val in data_slicer_cut_dict.items()]
+#     s = list( set([str(val) for key, val in data_slicer_cut_dict.items()]) )
 
 
 def loadAntennaLocationsENU(deploy_index=default_deploy):

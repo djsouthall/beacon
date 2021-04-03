@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
 
         #### PULSERS ####
-        if True:
+        if False:
             included_pulsers =        [ 'run1507',\
                                         'run1509',\
                                         'run1511']
@@ -157,7 +157,7 @@ if __name__ == '__main__':
 
         #### AIRPLANES ####
         plot_animated_airplane = True #Otherwise plots first event from each plane.  
-        if True:
+        if False:
             included_airplanes =      [ '1728-62026',\
                                         '1773-14413',\
                                         '1773-63659',\
