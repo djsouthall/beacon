@@ -37,7 +37,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
 
-default_deploy = 13#19#15#The deployment calibration to use as the default.
+default_deploy = 2#13#19#15#The deployment calibration to use as the default.
 
 
 def returnDefaultDeploy():
@@ -490,84 +490,132 @@ def loadValleySourcesENU(deploy_index=default_deploy):
     for the clusters of background events visible in that run.  Some clusters identified had ambigious origin and thus
     are beholden to multiple entries in the below dictionary.  These all use Google Earth elevations ( WGS84 ).
     '''
-
-    source_dict = { 'Northern Cell Tower'       :(38.017045, -117.773122, 5525 * 0.3048),\
-                    'Solar Plant'               :(38.238904, -117.363661, 4922 * 0.3048),\
-                    'Quarry Substation'         :(38.323974, -117.335893, 5365 * 0.3048),\
-                    'Tonopah KTPH'              :(38.051701, -117.226212, 7104 * 0.3048),\
-                    'Booker Antenna'            :(38.094374, -117.186576, 6856 * 0.3048),\
-                    'Nye County Sherriff'       :(38.084554, -117.251408, 5866 * 0.3048),\
-                    'Tonopah AFS GATR Site'     :(38.1435,   -117.199212, 7140 * 0.3048),\
-                    'KNKN223'                   :(38.017091, -117.773029, 4887 * 0.3048),\
-                    'Dyer House Antenna A'      :(37.740821, -118.076144, 4855 * 0.3048),\
-                    'Miller Substation'         :(38.131173, -117.459208, 4853 * 0.3048),\
-                    'Tonopah Vortac'            :(38.030653, -117.033528, 5350 * 0.3048),\
-                    'Tonopah Airport Antenna'   :(38.063273, -117.096715, 5426 * 0.3048),\
-                    'Dyer Cell Tower'           :(37.665613, -118.065012, 4879 * 0.3048),\
-                    'West Dyer Substation'      :(37.599110, -118.000846, 4942 * 0.3048),\
-                    'East Dyer Substation'      :(37.494710, -117.860383, 5144 * 0.3048),\
-                    'Beatty Mountain Cell Tower':(36.935220, -116.850985, 5782 * 0.3048),\
-                    'Beatty Airport Vortac'     :(36.800590, -116.747633, 3928 * 0.3048),\
-                    'Beatty Substation'         :(36.902775, -116.767806, 3378 * 0.3048),\
-                    'Oasis'                     :(37.486695, -117.914865, 5057 * 0.3048),\
-                    'Tokop'                     :(37.300047, -117.261011, 7097 * 0.3048),\
-                    'Beatty Airport Antenna'    :(36.868032, -116.784008, 3166 * 0.3048),\
-                    'Palmetto Cell Tower'       :(37.462089, -117.573584, 5943 * 0.3048),\
-                    'South Dyer Town'           :(37.579375, -117.973822, 4928 * 0.3048),\
-                    'Black Mountain'            :(37.283284, -116.646110, 7232 * 0.3048),\
-                    'Cedar Peak'                :(37.706014, -116.335117, 8419 * 0.3048),\
-                    'Test Site A'               :(37.886176, -116.779117, 5362 * 0.3048),\
-                    'Concrete Substation'       :(37.709394, -117.720283, 5339 * 0.3048),\
-                    'Dome Thing'                :(37.753476, -116.538488, 5666 * 0.3048),\
-                    'Jack Rabbit Knob'          :(37.685060, -116.543169, 6058 * 0.3048),\
-                    'Goldfield Hill Tower'      :(37.726953, -117.225670, 6092 * 0.3048),\
-                    'Goldield Town Tower'       :(37.710925, -117.233411, 5670 * 0.3048),\
-                    'Goldfield KGFN-FM'         :(37.708384, -117.235265, 5696 * 0.3048),\
-                    'Silver Peak Town Antenna'  :(37.752345, -117.630208, 4296 * 0.3048),\
-                    'Silver Peak Lithium Mine'  :(37.766835, -117.591208, 4272 * 0.3048),\
-                    'Past SP Substation'        :(37.824025, -117.337428, 5034 * 0.3048),\
-                    'Silver Peak Substation'    :(37.754281, -117.632355, 4274 * 0.3048)}
+    if False:
+        #ONLY WORKS FOR HPOL WITH MAP KEY 
+        '''
+        map_direction_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_22-scope_belowhorizon' # 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_22-scope_allsky'
+        ds.addROI('-19',{'phi_best_h':[-21,-18],'elevation_best_h':[-0.5,0.5]})
+        ds.addROI('-10h',{'phi_best_h':[-11,-9],'elevation_best_h':[-1,0.5]})
+        ds.addROI('-10l',{'phi_best_h':[-11,-9],'elevation_best_h':[-6,-4]})
+        ds.addROI('-2',{'phi_best_h':[-3,-1],'elevation_best_h':[-3.5,-1.5]})
+        ds.addROI('8',{'phi_best_h':[7,9],'elevation_best_h':[-2,0]})
+        ds.addROI('19',{'phi_best_h':[18,20],'elevation_best_h':[-3,-1.5]})
+        ds.addROI('28h',{'phi_best_h':[27,29],'elevation_best_h':[-3,-1.5]})
+        ds.addROI('28l',{'phi_best_h':[27,29],'elevation_best_h':[-4,-3]})
+        ds.addROI('32',{'phi_best_h':[31,33],'elevation_best_h':[-2,0]})
+        '''
 
 
-    # 'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
-    # 'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
-    #Below are the cuts that were used in the data slicer class to isolate the above clusters.
-    data_slicer_cut_dict = {    'Northern Cell Tower'       :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
-                                'Solar Plant'               :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
-                                'Quarry Substation'         :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
-                                'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
-                                'Booker Antenna'            :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
-                                'Nye County Sherriff'       :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
-                                'Tonopah AFS GATR Site'     :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
-                                'KNKN223'                   :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
-                                'Dyer House Antenna A'      :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
-                                'Miller Substation'         :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
-                                'Tonopah Vortac'            :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
-                                'Tonopah Airport Antenna'   :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
-                                'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
-                                'West Dyer Substation'      :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
-                                'East Dyer Substation'      :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
-                                'Beatty Mountain Cell Tower':{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
-                                'Beatty Airport Vortac'     :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
-                                'Beatty Substation'         :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
-                                'Oasis'                     :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
-                                'Tokop'                     :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
-                                'Beatty Airport Antenna'    :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
-                                'Palmetto Cell Tower'       :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
-                                'South Dyer Town'           :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
-                                'Black Mountain'            :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
-                                'Cedar Peak'                :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
-                                'Test Site A'               :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
-                                'Concrete Substation'       :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
-                                'Dome Thing'                :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
-                                'Jack Rabbit Knob'          :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
-                                'Goldfield Hill Tower'      :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
-                                'Goldield Town Tower'       :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
-                                'Goldfield KGFN-FM'         :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
-                                'Silver Peak Town Antenna'  :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
-                                'Silver Peak Lithium Mine'  :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
-                                'Past SP Substation'        :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
-                                'Silver Peak Substation'    :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]}}
+        # 'Base Tower'                     :(37.310649, -116.804392, 5872 * 0.3048) #This or palmetto?
+        # 'Cross Road Site'                :(37.500680, -117.185470, 4700 * 0.3048) #This or palmetto?
+        # 'Complex Tower'                   :(37.711458, -116.447481, 5703 * 0.3048) #This or palmetto?
+
+        source_dict = { 'Tokop'                     :(37.300047, -117.261011, 7097 * 0.3048),\
+                        'Palmetto Cell Tower'       :(37.462089, -117.573584, 5943 * 0.3048),\
+                        'East Dyer Substation'      :(37.494710, -117.860383, 5144 * 0.3048),\
+                        'Cross Road Site'           :(37.500680, -117.185470, 4700 * 0.3048),\
+                        'Jack Rabbit Knob'          :(37.685060, -116.543169, 6058 * 0.3048),\
+                        'Tonopah Vortac'            :(38.030653, -117.033528, 5350 * 0.3048),\
+                        'Tonopah Airport Antenna'   :(38.063273, -117.096715, 5426 * 0.3048),\
+                        'Tonopah KTPH'              :(38.051701, -117.226212, 7104 * 0.3048),\
+                        'Dyer Cell Tower'           :(37.665613, -118.065012, 4879 * 0.3048),\
+                        'Tonopah AFS GATR Site'     :(38.1435,   -117.199212, 7140 * 0.3048)}
+
+
+        # 'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+        # 'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+        #Below are the cuts that were used in the data slicer class to isolate the above clusters.
+        data_slicer_cut_dict = {    'Tokop'                 :   {'phi_best_h':[-21,-18],'elevation_best_h':[-0.5,0.5]},\
+                                    'Palmetto Cell Tower'   :   {'phi_best_h':[-11,-9],'elevation_best_h':[-1,0.5]},\
+                                    'East Dyer Substation'   :   {'phi_best_h':[-11,-9],'elevation_best_h':[-1,0.5]},\
+                                    'Cross Road Site'       :   {'phi_best_h':[-3,-1],'elevation_best_h':[-3.5,-1.5]},\
+                                    'Jack Rabbit Knob'      :   {'phi_best_h':[7,9],'elevation_best_h':[-2,0]},\
+                                    'Tonopah Vortac'        :   {'phi_best_h':[18,20],'elevation_best_h':[-3,-1.5]},\
+                                    'Tonopah Airport Antenna':   {'phi_best_h':[18,20],'elevation_best_h':[-3,-1.5]},\
+                                    'Tonopah KTPH'          :   {'phi_best_h':[27,29],'elevation_best_h':[-3,-1.5]},\
+                                    'Dyer Cell Tower'       :   {'phi_best_h':[27,29],'elevation_best_h':[-3,-1.5]},\
+                                    'Tonopah AFS GATR Site' :   {'phi_best_h':[31,33],'elevation_best_h':[-2,0]}}
+
+    else:
+        source_dict = { 'Northern Cell Tower'       :(38.017045, -117.773122, 5525 * 0.3048),\
+                        'Solar Plant'               :(38.238904, -117.363661, 4922 * 0.3048),\
+                        'Quarry Substation'         :(38.323974, -117.335893, 5365 * 0.3048),\
+                        'Tonopah KTPH'              :(38.051701, -117.226212, 7104 * 0.3048),\
+                        'Booker Antenna'            :(38.094374, -117.186576, 6856 * 0.3048),\
+                        'Nye County Sherriff'       :(38.084554, -117.251408, 5866 * 0.3048),\
+                        'Tonopah AFS GATR Site'     :(38.1435,   -117.199212, 7140 * 0.3048),\
+                        'KNKN223'                   :(38.017091, -117.773029, 4887 * 0.3048),\
+                        'Dyer House Antenna A'      :(37.740821, -118.076144, 4855 * 0.3048),\
+                        'Miller Substation'         :(38.131173, -117.459208, 4853 * 0.3048),\
+                        'Tonopah Vortac'            :(38.030653, -117.033528, 5350 * 0.3048),\
+                        'Tonopah Airport Antenna'   :(38.063273, -117.096715, 5426 * 0.3048),\
+                        'Dyer Cell Tower'           :(37.665613, -118.065012, 4879 * 0.3048),\
+                        'West Dyer Substation'      :(37.599110, -118.000846, 4942 * 0.3048),\
+                        'East Dyer Substation'      :(37.494710, -117.860383, 5144 * 0.3048),\
+                        'Beatty Mountain Cell Tower':(36.935220, -116.850985, 5782 * 0.3048),\
+                        'Beatty Airport Vortac'     :(36.800590, -116.747633, 3928 * 0.3048),\
+                        'Beatty Substation'         :(36.902775, -116.767806, 3378 * 0.3048),\
+                        'Oasis'                     :(37.486695, -117.914865, 5057 * 0.3048),\
+                        'Tokop'                     :(37.300047, -117.261011, 7097 * 0.3048),\
+                        'Beatty Airport Antenna'    :(36.868032, -116.784008, 3166 * 0.3048),\
+                        'Palmetto Cell Tower'       :(37.462089, -117.573584, 5943 * 0.3048),\
+                        'South Dyer Town'           :(37.579375, -117.973822, 4928 * 0.3048),\
+                        'Black Mountain'            :(37.283284, -116.646110, 7232 * 0.3048),\
+                        'Cedar Peak'                :(37.706014, -116.335117, 8419 * 0.3048),\
+                        'Test Site A'               :(37.886176, -116.779117, 5362 * 0.3048),\
+                        'Concrete Substation'       :(37.709394, -117.720283, 5339 * 0.3048),\
+                        'Dome Thing'                :(37.753476, -116.538488, 5666 * 0.3048),\
+                        'Jack Rabbit Knob'          :(37.685060, -116.543169, 6058 * 0.3048),\
+                        'Goldfield Hill Tower'      :(37.726953, -117.225670, 6092 * 0.3048),\
+                        'Goldield Town Tower'       :(37.710925, -117.233411, 5670 * 0.3048),\
+                        'Goldfield KGFN-FM'         :(37.708384, -117.235265, 5696 * 0.3048),\
+                        'Silver Peak Town Antenna'  :(37.752345, -117.630208, 4296 * 0.3048),\
+                        'Silver Peak Lithium Mine'  :(37.766835, -117.591208, 4272 * 0.3048),\
+                        'Past SP Substation'        :(37.824025, -117.337428, 5034 * 0.3048),\
+                        'Silver Peak Substation'    :(37.754281, -117.632355, 4274 * 0.3048)}
+
+
+        # 'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+        # 'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+        #Below are the cuts that were used in the data slicer class to isolate the above clusters.
+        data_slicer_cut_dict = {    'Northern Cell Tower'       :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                    'Solar Plant'               :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                    'Quarry Substation'         :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                    'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                    'Booker Antenna'            :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                    'Nye County Sherriff'       :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                    'Tonopah AFS GATR Site'     :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                    'KNKN223'                   :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                    'Dyer House Antenna A'      :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                    'Miller Substation'         :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                    'Tonopah Vortac'            :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                    'Tonopah Airport Antenna'   :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                    'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                    'West Dyer Substation'      :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                    'East Dyer Substation'      :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
+                                    'Beatty Mountain Cell Tower':{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+                                    'Beatty Airport Vortac'     :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+                                    'Beatty Substation'         :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+                                    'Oasis'                     :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+                                    'Tokop'                     :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+                                    'Beatty Airport Antenna'    :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+                                    'Palmetto Cell Tower'       :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
+                                    'South Dyer Town'           :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
+                                    'Black Mountain'            :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
+                                    'Cedar Peak'                :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                    'Test Site A'               :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                    'Concrete Substation'       :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                    'Dome Thing'                :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                    'Jack Rabbit Knob'          :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                    'Goldfield Hill Tower'      :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                    'Goldield Town Tower'       :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                    'Goldfield KGFN-FM'         :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                    'Silver Peak Town Antenna'  :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                    'Silver Peak Lithium Mine'  :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                    'Past SP Substation'        :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                    'Silver Peak Substation'    :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]}}
+
+
     #Note the above ROI assumes you have already cut out events that are below a certain correlation with a template.
     # impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     # time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'

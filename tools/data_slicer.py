@@ -976,14 +976,10 @@ class dataSlicerSingleRun():
             
 
             _fig, _ax = plt.subplots()
-            temporary = False #temoporary override for making aps poster figure
-            if temporary:
-                pass #No title
+            if title is not None:
+                plt.title(title)
             else:
-                if title is not None:
-                    plt.title(title)
-                else:
-                    plt.title('%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types)))
+                plt.title('%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types)))
 
             if lognorm == True:
                 _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
@@ -1007,27 +1003,11 @@ class dataSlicerSingleRun():
                         if 'elevation_best_' in main_param_key_y:
                             plane_xy[1] = 90.0 - plane_xy[1]
 
-                        if temporary:
-                            x = plane_xy[0]
-                            y1 = plane_xy[1]
-                            y2 = -90*numpy.ones_like(plane_xy[1])
-                            _ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
-                            plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=6,color='#41719C')
-                            # y2 = y2*0
-                            # _ax.fill_between(x, y1, y2, where=y2 > y1,facecolor='#EEC6C7', interpolate=True)
-                        else:
-                            plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=1,color='k')
-                            plt.xlim([-180,180])
+                        plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=1,color='k')
+                        plt.xlim([-180,180])
             
-            if temporary:
-                print('TEMPORARY HACK FOR POSTER FIGURE')
-                plt.xlabel('Azimuth (Deg)\n0 Deg = East',fontsize=22)
-                plt.ylabel('Elevation (Deg)',fontsize=22)
-                plt.xlim(-90,90)
-                plt.ylim(-20,10)
-            else:
-                plt.xlabel(self.current_label_x)
-                plt.ylabel(self.current_label_y)
+            plt.xlabel(self.current_label_x)
+            plt.ylabel(self.current_label_y)
 
             plt.grid(which='both', axis='both')
             _ax.minorticks_on()
@@ -1037,10 +1017,7 @@ class dataSlicerSingleRun():
 
             try:
                 cbar = _fig.colorbar(_im)
-                if temporary:
-                    cbar.set_label('Counts', fontsize= 22)
-                else:
-                    cbar.set_label('Counts')
+                cbar.set_label('Counts')
             except Exception as e:
                 print('Error in colorbar, often caused by no events.')
                 print(e)

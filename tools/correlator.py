@@ -1755,7 +1755,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False,custom_overrride=False):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -1806,8 +1806,6 @@ class Correlator:
             will correspond to a list of floats with all of the time delays for that baseline you want plotted. 
         '''
         try:
-            if custom_overrride == True:
-                print('WARNING custom_overrride OVERRIDES PLOTTING CODE HAVE BEEN MADE FOR MAKING APS POSTER')
             if hilbert == True:
                 if verbose == True:
                     print('WARNING! Enabling Hilbert envelopes throws off correlation normalization.')
@@ -1974,24 +1972,18 @@ class Correlator:
                 elevation_best_deg = 90.0 - theta_best
 
                 fig = plt.figure()
-                if custom_overrride == False:
-                    if window_title is None:
-                        fig.canvas.set_window_title('r%i-e%i-%s Correlation Map'%(self.reader.run,eventid,pol.title()))
-                    else:
-                        fig.canvas.set_window_title(window_title)
-                    if mollweide == True:
-                        ax = fig.add_subplot(1,1,1, projection='mollweide')
-                    else:
-                        ax = fig.add_subplot(1,1,1)
-                    if True:
-                        ax.set_title('%i-%i-%s-Hilbert=%s\nSine Subtract %s\nSource Distance = %0.2f m'%(self.reader.run,eventid,pol,str(hilbert), ['Disabled','Enabled'][int(self.apply_sine_subtract)], self.map_source_distance_m)) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
-                    else:
-                        ax.set_title('%i-%i-%s-Hilbert=%s\nSource Distance = %0.2f m'%(self.reader.run,eventid,pol,str(hilbert), self.map_source_distance_m)) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
+                if window_title is None:
+                    fig.canvas.set_window_title('r%i-e%i-%s Correlation Map'%(self.reader.run,eventid,pol.title()))
                 else:
-                    if mollweide == True:
-                        ax = fig.add_subplot(1,1,1, projection='mollweide')
-                    else:
-                        ax = fig.add_subplot(1,1,1)
+                    fig.canvas.set_window_title(window_title)
+                if mollweide == True:
+                    ax = fig.add_subplot(1,1,1, projection='mollweide')
+                else:
+                    ax = fig.add_subplot(1,1,1)
+                if True:
+                    ax.set_title('%i-%i-%s-Hilbert=%s\nSine Subtract %s\nSource Distance = %0.2f m'%(self.reader.run,eventid,pol,str(hilbert), ['Disabled','Enabled'][int(self.apply_sine_subtract)], self.map_source_distance_m)) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
+                else:
+                    ax.set_title('%i-%i-%s-Hilbert=%s\nSource Distance = %0.2f m'%(self.reader.run,eventid,pol,str(hilbert), self.map_source_distance_m)) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
 
                 if mollweide == True:
                     #Automatically converts from rads to degs
@@ -2041,7 +2033,7 @@ class Correlator:
                 #Plot array plane 0 elevation curve.
                 im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
 
-                if custom_overrride:
+                if False:
                     ticks_deg = numpy.array([-60,-40,-30,-15,0,15,30,45,60,75])
                     if mollweide == True:
                         plt.yticks(numpy.deg2rad(ticks_deg))
@@ -2069,8 +2061,7 @@ class Correlator:
 
 
                 #Added circles as specified.
-                if custom_overrride == False:
-                    ax, peak_circle = self.addCircleToMap(ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+                ax, peak_circle = self.addCircleToMap(ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
 
                 if circle_az is not None:
                     if circle_zenith is not None:
@@ -2100,20 +2091,19 @@ class Correlator:
                         print('airplane_direction_dict:')
                         print(airplane_direction_dict)
                 if zenith_cut_ENU is not None:
-                    if custom_overrride == False:
-                        if mollweide == True:
-                            #Block out simple ENU zenith cut region. 
-                            plt.axhspan(numpy.deg2rad(90 - min(zenith_cut_ENU)),numpy.deg2rad(90.0),alpha=0.5)
-                            plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut_ENU)),alpha=0.5)
-                            # plt.ylim(numpy.deg2rad((90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg))  ))
-                            # plt.xlim(numpy.deg2rad(self.range_phi_deg))
+                    if mollweide == True:
+                        #Block out simple ENU zenith cut region. 
+                        plt.axhspan(numpy.deg2rad(90 - min(zenith_cut_ENU)),numpy.deg2rad(90.0),alpha=0.5)
+                        plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut_ENU)),alpha=0.5)
+                        # plt.ylim(numpy.deg2rad((90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg))  ))
+                        # plt.xlim(numpy.deg2rad(self.range_phi_deg))
 
-                        else:
-                            #Block out simple ENU zenith cut region. 
-                            plt.axhspan(90 - min(zenith_cut_ENU),90.0,alpha=0.5)
-                            plt.axhspan(-90 , 90 - max(zenith_cut_ENU),alpha=0.5)
-                            plt.ylim(90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg)  )
-                            plt.xlim(self.range_phi_deg)
+                    else:
+                        #Block out simple ENU zenith cut region. 
+                        plt.axhspan(90 - min(zenith_cut_ENU),90.0,alpha=0.5)
+                        plt.axhspan(-90 , 90 - max(zenith_cut_ENU),alpha=0.5)
+                        plt.ylim(90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg)  )
+                        plt.xlim(self.range_phi_deg)
 
                 #Enable Interactive Portion
                 if interactive == True:
