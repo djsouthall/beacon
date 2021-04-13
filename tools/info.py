@@ -1631,7 +1631,7 @@ def loadPulserEventids(remove_ignored=True):
     return known_pulser_ids
 
 
-def loadBeamDelays():
+def loadBeamDelays(finame_hpol_delays=None, finame_vpol_delays=None, reset_rel_to_ant0=False):
     '''
     This will load the beams and beam delays that are currently selected as the best selction.
     These were determined using the define_beams.py script.  The delays are given in integer
@@ -1639,11 +1639,35 @@ def loadBeamDelays():
     are all positive such that the antenna that has 0 delay is the antenna that you expect
     the signal to arrive at last (all others are delayed until it's arrival).
     '''
-    hpol_delays_file = os.environ['BEACON_ANALYSIS_DIR'] + 'tools/beam_definitions/hpol_beam_delays.csv'
-    vpol_delays_file = os.environ['BEACON_ANALYSIS_DIR'] + 'tools/beam_definitions/vpol_beam_delays.csv'
+    if finame_hpol_delays == None:
+        hpol_delays_file = os.environ['BEACON_ANALYSIS_DIR'] + 'tools/beam_definitions/hpol_beam_delays.csv'
+    else:
+        hpol_delays_file = finame_hpol_delays
+    if finame_hpol_delays == None:
+        vpol_delays_file = os.environ['BEACON_ANALYSIS_DIR'] + 'tools/beam_definitions/vpol_beam_delays.csv'
+    else:
+        vpol_delays_file = finame_vpol_delays
+        
     header = 1
     hpol_vals = numpy.loadtxt(hpol_delays_file,delimiter=',')
     vpol_vals = numpy.loadtxt(hpol_delays_file,delimiter=',')
+    
+    #print( numpy.shape(hpol_vals), numpy.shape(hpol_vals) )
+    nbeams = numpy.shape(hpol_vals)[0]
+    ncols = numpy.shape(hpol_vals)[1]
+    
+    if reset_rel_to_ant0 == True:
+        for i in range(nbeams):
+            # antenna 0
+            hpol_ant0_delay = hpol_vals[i][3]
+            hpol_vals[i][3] = 0
+            # antenna 1
+            hpol_vals[i][4] = hpol_vals[i][4]-hpol_ant0_delay
+            # antenna 2
+            hpol_vals[i][5] = hpol_vals[i][5]-hpol_ant0_delay
+            # antenna 3
+            hpol_vals[i][6] = hpol_vals[i][6]-hpol_ant0_delay
+            
     return hpol_vals, vpol_vals
 
 '''
