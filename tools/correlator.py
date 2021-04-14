@@ -1806,7 +1806,6 @@ class Correlator:
             will correspond to a list of floats with all of the time delays for that baseline you want plotted. 
         '''
         try:
-
             if hilbert == True:
                 if verbose == True:
                     print('WARNING! Enabling Hilbert envelopes throws off correlation normalization.')
@@ -1985,7 +1984,6 @@ class Correlator:
                     ax.set_title('%i-%i-%s-Hilbert=%s\nSine Subtract %s\nSource Distance = %0.2f m'%(self.reader.run,eventid,pol,str(hilbert), ['Disabled','Enabled'][int(self.apply_sine_subtract)], self.map_source_distance_m)) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
                 else:
                     ax.set_title('%i-%i-%s-Hilbert=%s\nSource Distance = %0.2f m'%(self.reader.run,eventid,pol,str(hilbert), self.map_source_distance_m)) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
-                    
 
                 if mollweide == True:
                     #Automatically converts from rads to degs
@@ -2035,11 +2033,27 @@ class Correlator:
                 #Plot array plane 0 elevation curve.
                 im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
 
+                if False:
+                    ticks_deg = numpy.array([-60,-40,-30,-15,0,15,30,45,60,75])
+                    if mollweide == True:
+                        plt.yticks(numpy.deg2rad(ticks_deg))
+                    else:
+                        plt.yticks(ticks_deg)
+                    x = plane_xy[0]
+                    y1 = plane_xy[1]
+                    if mollweide == True:
+                        y2 = -numpy.pi/2 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
+                    else:
+                        y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
+                    ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
+                    #plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=6,color='#41719C')
+                
                 if zenith_cut_array_plane is not None:
                     #Plot upper zenith array cut
                     im = self.addCurveToMap(im, upper_plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
                     #Plot lower zenith array cut
                     im = self.addCurveToMap(im, lower_plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
+
 
                 if pol != 'all':
                     #Add curves for time delays if present.

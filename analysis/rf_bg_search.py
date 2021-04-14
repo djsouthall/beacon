@@ -76,78 +76,91 @@ if __name__=="__main__":
     else:
         run = 1701
 
-    #hilbert=True
-    for hilbert in [True, False]:
-        datapath = os.environ['BEACON_DATA']
-        plot_filter=False
+    datapath = os.environ['BEACON_DATA']
+    plot_filter=False
 
-        crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
-        low_pass_filter_order = 8
+    crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
+    low_pass_filter_order = 8
 
-        crit_freq_high_pass_MHz = None
-        high_pass_filter_order = None
+    crit_freq_high_pass_MHz = None
+    high_pass_filter_order = None
 
-        sine_subtract = True
-        sine_subtract_min_freq_GHz = 0.03
-        sine_subtract_max_freq_GHz = 0.09
-        sine_subtract_percent = 0.05
+    sine_subtract = True
+    sine_subtract_min_freq_GHz = 0.03
+    sine_subtract_max_freq_GHz = 0.09
+    sine_subtract_percent = 0.05
 
-        zenith_cut_ENU = None
-        zenith_cut_array_plane = None
+    zenith_cut_ENU = None
+    zenith_cut_array_plane = None
 
 
-        apply_phase_response = True
+    apply_phase_response = True
 
-        upsample = 2**15 #Just upsample in this case
-        max_method = 0
+    upsample = 2**15 #Just upsample in this case
+    max_method = 0
 
-        filter_string = ''
 
-        if crit_freq_low_pass_MHz is None:
-            filter_string += 'LPf_%s-'%('None')
-        else:
-            filter_string += 'LPf_%0.1f-'%(crit_freq_low_pass_MHz)
+    mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky'] #This code will loop over all options included here, and they will be stored as seperate dsets.  Each of these applies different cuts to mapmax when it is attempting to select the best reconstruction direction.
+    polarizations = ['hpol']#['hpol','vpol'] #Will loop over both if hpol and vpol present
+    hilbert_modes = [False] #[True,False] #Will loop over both if True and False present
 
-        if low_pass_filter_order is None:
-            filter_string += 'LPo_%s-'%('None')
-        else:
-            filter_string += 'LPo_%i-'%(low_pass_filter_order)
 
-        if crit_freq_high_pass_MHz is None:
-            filter_string += 'HPf_%s-'%('None')
-        else:
-            filter_string += 'HPf_%0.1f-'%(crit_freq_high_pass_MHz)
+    for hilbert in hilbert_modes:
 
-        if high_pass_filter_order is None:
-            filter_string += 'HPo_%s-'%('None')
-        else:
-            filter_string += 'HPo_%i-'%(high_pass_filter_order)
+        filter_strings = []
+        for mapmax_cut_mode in mapmax_cut_modes:
 
-        if apply_phase_response is None:
-            filter_string += 'Phase_%s-'%('None')
-        else:
-            filter_string += 'Phase_%i-'%(apply_phase_response)
+            filter_string = ''
 
-        if hilbert is None:
-            filter_string += 'Hilb_%s-'%('None')
-        else:
-            filter_string += 'Hilb_%i-'%(hilbert)
+            if crit_freq_low_pass_MHz is None:
+                filter_string += 'LPf_%s-'%('None')
+            else:
+                filter_string += 'LPf_%0.1f-'%(crit_freq_low_pass_MHz)
 
-        if upsample is None:
-            filter_string += 'upsample_%s-'%('None')
-        else:
-            filter_string += 'upsample_%i-'%(upsample)
+            if low_pass_filter_order is None:
+                filter_string += 'LPo_%s-'%('None')
+            else:
+                filter_string += 'LPo_%i-'%(low_pass_filter_order)
 
-        if max_method is None:
-            filter_string += 'maxmethod_%s-'%('None')
-        else:
-            filter_string += 'maxmethod_%i-'%(max_method)
+            if crit_freq_high_pass_MHz is None:
+                filter_string += 'HPf_%s-'%('None')
+            else:
+                filter_string += 'HPf_%0.1f-'%(crit_freq_high_pass_MHz)
 
-        filter_string += 'sinesubtract_%i-'%(int(sine_subtract))
+            if high_pass_filter_order is None:
+                filter_string += 'HPo_%s-'%('None')
+            else:
+                filter_string += 'HPo_%i-'%(high_pass_filter_order)
 
-        filter_string += 'deploy_calibration_%i'%(info.returnDefaultDeploy())
+            if apply_phase_response is None:
+                filter_string += 'Phase_%s-'%('None')
+            else:
+                filter_string += 'Phase_%i-'%(apply_phase_response)
 
-        print(filter_string)
+            if hilbert is None:
+                filter_string += 'Hilb_%s-'%('None')
+            else:
+                filter_string += 'Hilb_%i-'%(hilbert)
+
+            if upsample is None:
+                filter_string += 'upsample_%s-'%('None')
+            else:
+                filter_string += 'upsample_%i-'%(upsample)
+
+            if max_method is None:
+                filter_string += 'maxmethod_%s-'%('None')
+            else:
+                filter_string += 'maxmethod_%i-'%(max_method)
+
+            filter_string += 'sinesubtract_%i-'%(int(sine_subtract))
+
+            filter_string += 'deploy_calibration_%i-'%(info.returnDefaultDeploy())
+
+            filter_string += 'scope_%s'%(mapmax_cut_mode)
+
+            print(filter_string)
+
+            filter_strings.append(filter_string)
 
 
         try:
@@ -181,117 +194,122 @@ if __name__=="__main__":
 
                         map_direction_dsets = list(file['map_direction'].keys())
 
-                        if not numpy.isin(filter_string,map_direction_dsets):
-                            file['map_direction'].create_group(filter_string)
-                        else:
-                            print('%s group already exists in file %s'%(filter_string,filename))
+                        for filter_string in filter_strings:
+                            '''
+                            Prepares output file for data.
+                            '''
 
-                        map_direction_subsets = list(file['map_direction'][filter_string].keys())
+                            if not numpy.isin(filter_string,map_direction_dsets):
+                                file['map_direction'].create_group(filter_string)
+                            else:
+                                print('%s group already exists in file %s'%(filter_string,filename))
 
-
-
-                        if not numpy.isin('map_times',dsets):
-                            file.create_group('map_times')
-                        else:
-                            print('map_times group already exists in file %s'%filename)
-
-                        map_times_dsets = list(file['map_times'].keys())
-
-                        if not numpy.isin(filter_string,map_times_dsets):
-                            file['map_times'].create_group(filter_string)
-                        else:
-                            print('%s group already exists in file %s'%(filter_string,filename))
-
-                        map_times_subsets = list(file['map_times'][filter_string].keys())
+                            map_direction_subsets = list(file['map_direction'][filter_string].keys())
 
 
-                        #Directions
-                        if not numpy.isin('hpol_ENU_azimuth',map_direction_subsets):
-                            file['map_direction'][filter_string].create_dataset('hpol_ENU_azimuth', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in hpol_ENU_azimuth of %s will be overwritten by this analysis script.'%filename)
 
-                        if not numpy.isin('hpol_ENU_zenith',map_direction_subsets):
-                            file['map_direction'][filter_string].create_dataset('hpol_ENU_zenith', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in hpol_ENU_zenith of %s will be overwritten by this analysis script.'%filename)
+                            if not numpy.isin('map_times',dsets):
+                                file.create_group('map_times')
+                            else:
+                                print('map_times group already exists in file %s'%filename)
 
-                        if not numpy.isin('vpol_ENU_azimuth',map_direction_subsets):
-                            file['map_direction'][filter_string].create_dataset('vpol_ENU_azimuth', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in vpol_ENU_azimuth of %s will be overwritten by this analysis script.'%filename)
+                            map_times_dsets = list(file['map_times'].keys())
 
-                        if not numpy.isin('vpol_ENU_zenith',map_direction_subsets):
-                            file['map_direction'][filter_string].create_dataset('vpol_ENU_zenith', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in vpol_ENU_zenith of %s will be overwritten by this analysis script.'%filename)
+                            if not numpy.isin(filter_string,map_times_dsets):
+                                file['map_times'].create_group(filter_string)
+                            else:
+                                print('%s group already exists in file %s'%(filter_string,filename))
 
-                        #Time Delays for directions
-                        #01
-                        if not numpy.isin('hpol_0subtract1',map_times_subsets):
-                            file['map_times'][filter_string].create_dataset('hpol_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in hpol_0subtract1 of %s will be overwritten by this analysis script.'%filename)
+                            map_times_subsets = list(file['map_times'][filter_string].keys())
 
-                        if not numpy.isin('vpol_0subtract1',map_times_subsets):
-                            file['map_times'][filter_string].create_dataset('vpol_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in vpol_0subtract1 of %s will be overwritten by this analysis script.'%filename)
 
-                        #02
-                        if not numpy.isin('hpol_0subtract2',map_times_subsets):
-                            file['map_times'][filter_string].create_dataset('hpol_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in hpol_0subtract2 of %s will be overwritten by this analysis script.'%filename)
+                            #Directions
+                            if not numpy.isin('hpol_ENU_azimuth',map_direction_subsets):
+                                file['map_direction'][filter_string].create_dataset('hpol_ENU_azimuth', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in hpol_ENU_azimuth of %s will be overwritten by this analysis script.'%filename)
 
-                        if not numpy.isin('vpol_0subtract2',map_times_subsets):
-                            file['map_times'][filter_string].create_dataset('vpol_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in vpol_0subtract2 of %s will be overwritten by this analysis script.'%filename)
+                            if not numpy.isin('hpol_ENU_zenith',map_direction_subsets):
+                                file['map_direction'][filter_string].create_dataset('hpol_ENU_zenith', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in hpol_ENU_zenith of %s will be overwritten by this analysis script.'%filename)
 
-                        #03
-                        if not numpy.isin('hpol_0subtract3',map_times_subsets):
-                            file['map_times'][filter_string].create_dataset('hpol_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in hpol_0subtract3 of %s will be overwritten by this analysis script.'%filename)
+                            if not numpy.isin('vpol_ENU_azimuth',map_direction_subsets):
+                                file['map_direction'][filter_string].create_dataset('vpol_ENU_azimuth', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in vpol_ENU_azimuth of %s will be overwritten by this analysis script.'%filename)
 
-                        if not numpy.isin('vpol_0subtract3',map_times_subsets):
-                            file['map_times'][filter_string].create_dataset('vpol_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in vpol_0subtract3 of %s will be overwritten by this analysis script.'%filename)
+                            if not numpy.isin('vpol_ENU_zenith',map_direction_subsets):
+                                file['map_direction'][filter_string].create_dataset('vpol_ENU_zenith', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in vpol_ENU_zenith of %s will be overwritten by this analysis script.'%filename)
 
-                        #12
-                        if not numpy.isin('hpol_1subtract2',map_times_subsets):
-                            file['map_times'][filter_string].create_dataset('hpol_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in hpol_1subtract2 of %s will be overwritten by this analysis script.'%filename)
+                            #Time Delays for directions
+                            #01
+                            if not numpy.isin('hpol_0subtract1',map_times_subsets):
+                                file['map_times'][filter_string].create_dataset('hpol_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in hpol_0subtract1 of %s will be overwritten by this analysis script.'%filename)
 
-                        if not numpy.isin('vpol_1subtract2',map_times_subsets):
-                            file['map_times'][filter_string].create_dataset('vpol_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in vpol_1subtract2 of %s will be overwritten by this analysis script.'%filename)
+                            if not numpy.isin('vpol_0subtract1',map_times_subsets):
+                                file['map_times'][filter_string].create_dataset('vpol_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in vpol_0subtract1 of %s will be overwritten by this analysis script.'%filename)
 
-                        #13
-                        if not numpy.isin('hpol_1subtract3',map_times_subsets):
-                            file['map_times'][filter_string].create_dataset('hpol_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in hpol_1subtract3 of %s will be overwritten by this analysis script.'%filename)
+                            #02
+                            if not numpy.isin('hpol_0subtract2',map_times_subsets):
+                                file['map_times'][filter_string].create_dataset('hpol_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in hpol_0subtract2 of %s will be overwritten by this analysis script.'%filename)
 
-                        if not numpy.isin('vpol_1subtract3',map_times_subsets):
-                            file['map_times'][filter_string].create_dataset('vpol_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in vpol_1subtract3 of %s will be overwritten by this analysis script.'%filename)
+                            if not numpy.isin('vpol_0subtract2',map_times_subsets):
+                                file['map_times'][filter_string].create_dataset('vpol_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in vpol_0subtract2 of %s will be overwritten by this analysis script.'%filename)
 
-                        #23
-                        if not numpy.isin('hpol_2subtract3',map_times_subsets):
-                            file['map_times'][filter_string].create_dataset('hpol_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in hpol_2subtract3 of %s will be overwritten by this analysis script.'%filename)
+                            #03
+                            if not numpy.isin('hpol_0subtract3',map_times_subsets):
+                                file['map_times'][filter_string].create_dataset('hpol_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in hpol_0subtract3 of %s will be overwritten by this analysis script.'%filename)
 
-                        if not numpy.isin('vpol_2subtract3',map_times_subsets):
-                            file['map_times'][filter_string].create_dataset('vpol_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
-                        else:
-                            print('Values in vpol_2subtract3 of %s will be overwritten by this analysis script.'%filename)
+                            if not numpy.isin('vpol_0subtract3',map_times_subsets):
+                                file['map_times'][filter_string].create_dataset('vpol_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in vpol_0subtract3 of %s will be overwritten by this analysis script.'%filename)
+
+                            #12
+                            if not numpy.isin('hpol_1subtract2',map_times_subsets):
+                                file['map_times'][filter_string].create_dataset('hpol_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in hpol_1subtract2 of %s will be overwritten by this analysis script.'%filename)
+
+                            if not numpy.isin('vpol_1subtract2',map_times_subsets):
+                                file['map_times'][filter_string].create_dataset('vpol_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in vpol_1subtract2 of %s will be overwritten by this analysis script.'%filename)
+
+                            #13
+                            if not numpy.isin('hpol_1subtract3',map_times_subsets):
+                                file['map_times'][filter_string].create_dataset('hpol_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in hpol_1subtract3 of %s will be overwritten by this analysis script.'%filename)
+
+                            if not numpy.isin('vpol_1subtract3',map_times_subsets):
+                                file['map_times'][filter_string].create_dataset('vpol_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in vpol_1subtract3 of %s will be overwritten by this analysis script.'%filename)
+
+                            #23
+                            if not numpy.isin('hpol_2subtract3',map_times_subsets):
+                                file['map_times'][filter_string].create_dataset('hpol_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in hpol_2subtract3 of %s will be overwritten by this analysis script.'%filename)
+
+                            if not numpy.isin('vpol_2subtract3',map_times_subsets):
+                                file['map_times'][filter_string].create_dataset('vpol_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in vpol_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                         file['map_direction'].attrs['sine_subtract_min_freq_GHz'] = sine_subtract_min_freq_GHz 
                         file['map_direction'].attrs['sine_subtract_max_freq_GHz'] = sine_subtract_max_freq_GHz 
@@ -341,25 +359,43 @@ if __name__=="__main__":
                         if sine_subtract:
                             cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-                        for mode in ['hpol','vpol']:
+                        for mode in polarizations:
                             print('Performing calculations for %s'%mode)
                             for event_index, eventid in enumerate(eventids):
                                 if (event_index + 1) % 1000 == 0:
                                     sys.stdout.write('(%i/%i)\t\t\t\n'%(event_index+1,len(eventids)))
                                     sys.stdout.flush()
                                 m = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert)
-                                if max_method is not None:
-                                    linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3 = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode)
-                                else:
-                                    linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3 = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode)        
-                                file['map_direction'][filter_string]['%s_ENU_zenith'%mode][eventid] = theta_best 
-                                file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][eventid] = phi_best 
-                                file['map_times'][filter_string]['%s_0subtract1'%mode][eventid] = t_0subtract1 
-                                file['map_times'][filter_string]['%s_0subtract2'%mode][eventid] = t_0subtract2 
-                                file['map_times'][filter_string]['%s_0subtract3'%mode][eventid] = t_0subtract3 
-                                file['map_times'][filter_string]['%s_1subtract2'%mode][eventid] = t_1subtract2 
-                                file['map_times'][filter_string]['%s_1subtract3'%mode][eventid] = t_1subtract3 
-                                file['map_times'][filter_string]['%s_2subtract3'%mode][eventid] = t_2subtract3 
+
+                                for filter_string_index, filter_string in enumerate(filter_strings):
+                                    if mapmax_cut_modes[filter_string_index] == 'abovehorizon':
+                                        # print('abovehorizon')
+                                        zenith_cut_ENU=[0,90] #leaving some tolerance
+                                        zenith_cut_array_plane=None
+                                    elif mapmax_cut_modes[filter_string_index] == 'belowhorizon':
+                                        # print('belowhorizon')
+                                        zenith_cut_ENU=[90,180]
+                                        zenith_cut_array_plane=[0,92] #Up to 2 degrees below projectd array plane.
+                                    elif mapmax_cut_modes[filter_string_index] == 'allsky':
+                                        # print('allsky')
+                                        zenith_cut_ENU=None
+                                        zenith_cut_array_plane=[0,100]
+                                    else:
+                                        zenith_cut_ENU=None
+                                        zenith_cut_array_plane=None
+
+                                    if max_method is not None:
+                                        linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3 = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode)
+                                    else:
+                                        linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3 = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode)        
+                                    file['map_direction'][filter_string]['%s_ENU_zenith'%mode][eventid] = theta_best 
+                                    file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][eventid] = phi_best 
+                                    file['map_times'][filter_string]['%s_0subtract1'%mode][eventid] = t_0subtract1 
+                                    file['map_times'][filter_string]['%s_0subtract2'%mode][eventid] = t_0subtract2 
+                                    file['map_times'][filter_string]['%s_0subtract3'%mode][eventid] = t_0subtract3 
+                                    file['map_times'][filter_string]['%s_1subtract2'%mode][eventid] = t_1subtract2 
+                                    file['map_times'][filter_string]['%s_1subtract3'%mode][eventid] = t_1subtract3 
+                                    file['map_times'][filter_string]['%s_2subtract3'%mode][eventid] = t_2subtract3 
 
                         file.close()
                     except Exception as e:

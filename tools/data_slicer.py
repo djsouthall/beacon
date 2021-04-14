@@ -144,7 +144,8 @@ class dataSlicerSingleRun():
             self.known_param_keys = [   'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
                                         'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
                                         'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',
-                                        'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','phi_best_h','phi_best_v']
+                                        'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','phi_best_h','phi_best_v',\
+                                        'calibrated_trigtime']
 
 
 
@@ -418,7 +419,7 @@ class dataSlicerSingleRun():
         Given eventids, this will load and return array for parameters associated with string param.
         '''
         try:
-            if len(numpy.shape(eventids)) > 0:
+            if len(numpy.shape(eventids)) > 1:
                 print('WARNING!!! eventids is in the incorrect format.')
 
             if param_key in self.known_param_keys:
@@ -506,7 +507,8 @@ class dataSlicerSingleRun():
                         param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_azimuth'][...][eventids]
                     elif 'hilbert_phi_best_v' == param_key:
                         param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_azimuth'][...][eventids]
-
+                    if 'calibrated_trigtime' == param_key:
+                        param = file['calibrated_trigtime'][...][eventids]
 
                     file.close()
             else:
@@ -930,6 +932,13 @@ class dataSlicerSingleRun():
                     x_n_bins = 360
                     x_max_val = 180
                     x_min_val = -180
+                elif 'calibrated_trigtime' == param_key:
+                    label = 'Calibrated Trigger Time (s)'
+                    with h5py.File(self.analysis_filename, 'r') as file:
+                        x_min_val = file['calibrated_trigtime'][...][0]
+                        x_max_val = file['calibrated_trigtime'][...][-1]
+
+                    x_n_bins = numpy.ceil((x_max_val - x_min_val)/60).astype(int) #bin into roughly 1 min chunks.
 
             if calculate_bins_from_min_max:
                 current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges
@@ -955,7 +964,7 @@ class dataSlicerSingleRun():
         self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
         
 
-    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids, title=None,cmap='coolwarm',load=False):
+    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids, title=None,cmap='coolwarm',load=False,lognorm=True):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
         (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
@@ -965,13 +974,17 @@ class dataSlicerSingleRun():
             #Should make eventids a self.eventids so I don't need to call this every time.
             counts = self.get2dHistCounts(main_param_key_x,main_param_key_y,eventids,load=load,set_bins=True) #set_bins should only be called on first call, not on contours.
             
+
             _fig, _ax = plt.subplots()
             if title is not None:
                 plt.title(title)
             else:
                 plt.title('%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types)))
 
-            _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+            if lognorm == True:
+                _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+            else:
+                _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,cmap=cmap)
             if 'theta_best_' in main_param_key_y:
                 _ax.invert_yaxis()
             if True:
@@ -989,10 +1002,13 @@ class dataSlicerSingleRun():
                     if plane_xy is not None:
                         if 'elevation_best_' in main_param_key_y:
                             plane_xy[1] = 90.0 - plane_xy[1]
+
                         plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=1,color='k')
                         plt.xlim([-180,180])
+            
             plt.xlabel(self.current_label_x)
             plt.ylabel(self.current_label_y)
+
             plt.grid(which='both', axis='both')
             _ax.minorticks_on()
             _ax.grid(b=True, which='major', color='k', linestyle='-')
@@ -1081,7 +1097,7 @@ class dataSlicerSingleRun():
             print(exc_type, fname, exc_tb.tb_lineno)
             
 
-    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids=None, cmap='coolwarm', include_roi=True, load=False):
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids=None, cmap='coolwarm', include_roi=True, load=False, lognorm=True):
         '''
         This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
         calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
@@ -1097,7 +1113,7 @@ class dataSlicerSingleRun():
                 title = '%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types))                
             else:
                 title = '%s, Run = %i'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run))
-            fig, ax = self.plot2dHist(main_param_key_x, main_param_key_y, eventids, title=title, cmap=cmap) #prepares binning, must be called early (before addContour)
+            fig, ax = self.plot2dHist(main_param_key_x, main_param_key_y, eventids, title=title, cmap=cmap,lognorm=lognorm) #prepares binning, must be called early (before addContour)
 
             #these few lines below this should be used for adding contours to the map. 
             if include_roi:
@@ -1565,7 +1581,7 @@ class dataSlicer():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids_dict, title=None,cmap='coolwarm'):
+    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids_dict, title=None,cmap='coolwarm', lognorm=True):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
         (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
@@ -1584,7 +1600,10 @@ class dataSlicer():
                 else:
                     plt.title('%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types)))
 
-            _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+            if lognorm == True:
+                _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+            else:
+                _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,cmap=cmap)#cmap=plt.cm.coolwarm
             if 'theta_best_' in main_param_key_y:
                 _ax.invert_yaxis()
             if True:
@@ -1691,7 +1710,7 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', include_roi=True):
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', include_roi=True, lognorm=True):
         '''
         This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
         calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
@@ -1715,7 +1734,7 @@ class dataSlicer():
                     title = '%s, Runs = %i-%i'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1])
                 else:
                     title = '%s, Runs = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())))
-            fig, ax = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap) #prepares binning, must be called early (before addContour)
+            fig, ax = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap, lognorm=lognorm) #prepares binning, must be called early (before addContour)
 
             #these few lines below this should be used for adding contours to the map. 
             if include_roi:
@@ -1790,6 +1809,69 @@ class dataSlicer():
                             c[3] = 0.7 #setting alpha for fill but not for edge.
                             plt.hist(param, bins = self.current_bin_edges_x,label = 'roi %i: %s'%(roi_index, roi_key), color = c, edgecolor='black', linewidth=1)
                     plt.legend(fontsize=10)
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+    def trackROICounts(self, roi_keys=None,time_bin_width_s=60,plot_run_start_times=True):
+        '''
+        This will loop over the given runs, and count the number of events in the given run.  These will be plotted
+        as a function of time.  If roi_keys is None then this will perform the calculation for ALL roi.  Otherwise
+        it will only include roi specified in a list given by roi_keys
+        '''
+        try:
+            if roi_keys is None:
+                roi_keys = list(self.roi.keys())
+            eventids_dict = {}
+            for run_index, run in enumerate(self.runs):
+                eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+            self.setCurrentPlotBins('calibrated_trigtime', 'calibrated_trigtime', eventids_dict)
+
+            bin_edges = numpy.arange(min(self.current_bin_edges_x),max(self.current_bin_edges_x)+time_bin_width_s,time_bin_width_s)
+            bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+            roi_eventids_dict = {}
+            for roi_index, roi_key in enumerate(list(self.roi.keys())):
+                if roi_key in roi_keys:
+                    roi_eventids_dict[roi_key] = self.getCutsFromROI(roi_key)
+
+            fig = plt.figure()
+            ax = plt.gca()
+            if plot_run_start_times:
+                max_counts = 0
+            for roi_index, roi_key in enumerate(list(roi_eventids_dict.keys())):
+                _eventids_dict = {}
+                for run_index, run in enumerate(self.runs):
+                    _eventids_dict[run] = roi_eventids_dict[roi_key][run][numpy.isin(roi_eventids_dict[roi_key][run],eventids_dict[run])] #Pull eventids in dict that are of the specified trigger types.
+                event_times_dict = self.getDataFromParam(_eventids_dict, 'calibrated_trigtime', verbose=False)
+                trigtimes_linear = numpy.array([])
+                #eventids_linear = numpy.array([])
+                for run_index, run in enumerate(self.runs):
+                    trigtimes_linear = numpy.append(trigtimes_linear,event_times_dict[run])
+                    #eventids_linear = numpy.append(eventids_linear,event_times_dict[run])
+
+                counts = numpy.histogram(trigtimes_linear,bins=bin_edges)[0]
+                if plot_run_start_times:
+                    max_counts = max(max_counts, max(counts))
+                plt.plot((bin_centers - min(bin_centers))/3600,counts,label=roi_key)
+
+            if plot_run_start_times:
+                for data_slicer in self.data_slicers:
+                    t = (data_slicer.getDataFromParam([0],'calibrated_trigtime')[0] - min(bin_centers))/3600
+                    plt.axvline(t,c='k',alpha=0.5)
+                    plt.text(t,0.9*max_counts,str(data_slicer.reader.run),c='k',alpha=0.5,rotation=90)
+
+
+            plt.legend()
+            plt.xlabel('Calibrated Trigger Time (h)\nFrom Timestamp %0.2f s'%min(bin_centers))
+            plt.ylabel('Binned Counts\n%0.2f s Bins'%time_bin_width_s)
+            plt.grid(which='both', axis='both')
+            ax.minorticks_on()
+            ax.grid(b=True, which='major', color='k', linestyle='-')
+            ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            return fig, ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)

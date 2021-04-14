@@ -131,7 +131,7 @@ def alg1(_calibrated_trig_time, atol=0.001):
     plt.grid(b=True, which='major', color='k', linestyle='-')
     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_period=1/60.0, normalize_by_window_index=False, plot_sample_hist=False):
+def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_period=1/60.0, normalize_by_window_index=False, plot_sample_hist=False, plot_test_plot_A=False):
     '''
     This is intended to cluster any 60 Hz noise by simply looping over events.
 
@@ -163,15 +163,44 @@ def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_pe
         l = len(_calibrated_trig_time)
         output_metric = numpy.zeros(l)
         bin_edges = numpy.linspace(0,expected_period/2,21) #21 posts = 20 bins = 5% of possible outcome space per bin.
-
+        bin_centers = 0.5*(bin_edges[1:]+bin_edges[:-1])
         half_index_window = int((window_s * (len(_calibrated_trig_time)/(_calibrated_trig_time[-1] - _calibrated_trig_time[0]) ))//2) #window_s * approximate events/s = event indices in approximate window second chunks.  Halved for half window.  This is rough.
+        #print('half_index_window = ',half_index_window)
         half_expected_period = expected_period/2.0
 
+        if plot_sample_hist == True:
+            total_hist_counts = numpy.zeros(len(bin_edges)-1)
+            
         for event_index, t in enumerate(_calibrated_trig_time):
             diff_from_period = numpy.abs((_calibrated_trig_time[max(event_index - half_index_window,0):int(min(event_index + half_index_window + 1,l))] - t + half_expected_period)%expected_period - half_expected_period)
             hist_counts,hist_edges = numpy.histogram(diff_from_period,bins=bin_edges)
             output_metric[event_index] = hist_counts[0] - numpy.mean(hist_counts[10:20])
+            if plot_sample_hist == True:
+                total_hist_counts += hist_counts
             
+        if plot_test_plot_A:
+            test_plot_A_bin_edges = numpy.linspace(-0.002,0.002,100)#numpy.linspace(-0.01,0.01,100)
+            test_plot_A_bin_centers = 0.5*(test_plot_A_bin_edges[1:]+test_plot_A_bin_edges[:-1])
+            test_plot_A_total_hist_counts = numpy.zeros(len(test_plot_A_bin_edges)-1)
+            cycle_count = 1 #How many future events to consider
+            expected_diffs = -(numpy.arange(cycle_count)+1)*expected_period
+            for event_index, t in enumerate(_calibrated_trig_time):
+                if event_index + cycle_count < len(_calibrated_trig_time):
+                    diffs = t - _calibrated_trig_time[event_index+1:event_index+1+cycle_count]
+                    hist_counts,hist_edges = numpy.histogram(diffs - expected_diffs,bins=test_plot_A_bin_edges)
+                    # if event_index == numpy.argmax(output_metric):
+                    #     import pdb; pdb.set_trace()
+                    test_plot_A_total_hist_counts += hist_counts
+
+            plt.figure()
+            plt.hist(test_plot_A_bin_centers,bins=test_plot_A_bin_edges,weights=test_plot_A_total_hist_counts, label='All Events')
+            plt.legend(loc='upper right')
+            plt.ylabel('Counts')
+            plt.xlabel('Remainder of Follow %i Events from %0.4f s Periodicity'%(cycle_count,expected_period))
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
         if plot_sample_hist == True:
             max_event_index = numpy.argmax(output_metric)
             median_event_index = numpy.argsort(output_metric)[l//2]
@@ -179,7 +208,7 @@ def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_pe
             max_diff_from_period = numpy.abs((_calibrated_trig_time[max(max_event_index - half_index_window,0):int(min(max_event_index + half_index_window + 1,l))] - _calibrated_trig_time[max_event_index] + half_expected_period)%expected_period - half_expected_period)
             median_diff_from_period = numpy.abs((_calibrated_trig_time[max(median_event_index - half_index_window,0):int(min(median_event_index + half_index_window + 1,l))] - _calibrated_trig_time[median_event_index] + half_expected_period)%expected_period - half_expected_period)
             plt.figure()
-            plt.subplot(1,2,1)
+            plt.subplot(2,2,1)
             plt.hist(max_diff_from_period,bins=bin_edges,label='High TS')
             plt.legend(loc='upper right')
             plt.ylabel('Counts')
@@ -188,7 +217,7 @@ def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_pe
             plt.grid(b=True, which='major', color='k', linestyle='-')
             plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-            plt.subplot(1,2,2)
+            plt.subplot(2,2,2)
             plt.hist(median_diff_from_period,bins=bin_edges,label='Median TS')
             plt.legend(loc='upper right')
             plt.ylabel('Counts')
@@ -196,6 +225,16 @@ def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_pe
             plt.minorticks_on()
             plt.grid(b=True, which='major', color='k', linestyle='-')
             plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            plt.subplot(2,1,2)
+            plt.hist(bin_centers,bins=bin_edges,weights=total_hist_counts, label='All Events')
+            plt.legend(loc='upper right')
+            plt.ylabel('Counts')
+            plt.xlabel('Remainder (Shifted)')
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
 
         if normalize_by_window_index == True:
             return output_metric/(2.0*half_index_window + 1.0)
@@ -211,7 +250,145 @@ def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_pe
         print(exc_type, fname, exc_tb.tb_lineno)
         sys.exit(1)
    
+def get60HzEvents2(file, n_cycles=10, expected_period=1/60.0, TS_cut_level=0.0005, plot=True):
+    '''
+    File should be a safely open readable hdf5 file.
+    '''
+    try:
+        load_cut = file['trigger_type'][...] == 2
+        loaded_eventids = numpy.where(load_cut)[0]
+        calibrated_trig_time = file['calibrated_trigtime'][load_cut]
+        bin_edges = numpy.linspace(-0.2,0.2,1000)#numpy.linspace(-0.002,0.002,100)#numpy.linspace(-0.01,0.01,100)
+        bin_centers = 0.5*(bin_edges[1:]+bin_edges[:-1])
+        total_hist_counts = numpy.zeros(len(bin_edges)-1)
+        expected_diffs = -(numpy.arange(n_cycles)+1)*expected_period
+        l = len(calibrated_trig_time)
+        flagged_eventids_cut = numpy.zeros_like(loaded_eventids,dtype=bool)
 
+
+        if plot:
+            randomized_times = numpy.sort(numpy.random.uniform(low=calibrated_trig_time[0],high=calibrated_trig_time[-1],size=(len(calibrated_trig_time),)))
+            # plt.figure()
+            # plt.hist(numpy.diff(randomized_times),bins=100)
+            random_hist_counts = numpy.zeros(len(bin_edges)-1)
+            flagged_counts = numpy.zeros(len(bin_edges)-1)
+            old_counts = numpy.zeros(len(bin_edges)-1)
+            old_flagged_events = get60HzEvents(file,window_s=20.0, TS_cut_level=0.1, normalize_by_window_index=True)
+            old_flagged_events_cut = numpy.isin(loaded_eventids,old_flagged_events)
+
+            for event_index, t in enumerate(randomized_times):
+                if event_index + 1 < l:
+                    #Single diff compared to many potential times. 
+                    diffs = t - randomized_times[event_index+1]
+                    vals = diffs - expected_diffs#(diffs - expected_diffs)[numpy.argmin(numpy.abs(diffs - expected_diffs))]
+                    hist_counts, hist_edges = numpy.histogram(vals,bins=bin_edges)
+                    random_hist_counts += hist_counts
+
+
+        for event_index, t in enumerate(calibrated_trig_time):
+            if event_index + 1 < l:
+                #Single diff compared to many potential times. 
+                diffs = t - calibrated_trig_time[event_index+1]#calibrated_trig_time[event_index+1:event_index+1+n_cycles]
+                vals = diffs - expected_diffs#(diffs - expected_diffs)[numpy.argmin(numpy.abs(diffs - expected_diffs))]
+                hist_counts, hist_edges = numpy.histogram(vals,bins=bin_edges)
+
+                flagged_eventids_cut[event_index] = numpy.any(numpy.abs(vals) <= TS_cut_level)
+
+                total_hist_counts += hist_counts
+                if plot and flagged_eventids_cut[event_index]:
+                    flagged_counts += hist_counts
+                if plot and old_flagged_events_cut[event_index]:
+                    old_counts += hist_counts
+
+
+        if plot:
+            plt.figure()
+            plt.hist(bin_centers,bins=bin_edges,weights=total_hist_counts, color='tab:blue' , label='All Events',alpha=0.8)
+            # plt.hist(bin_centers,bins=bin_edges,weights=flagged_counts, color='tab:orange', label='Flagged Events',alpha=0.8)
+            # plt.hist(bin_centers,bins=bin_edges,weights=old_counts, color='tab:red', label='Old Events',alpha=0.8)
+            plt.hist(bin_centers,bins=bin_edges,weights=random_hist_counts, color='tab:purple' , label='Randomized Time',alpha=0.8)
+            #plt.hist(bin_centers,bins=bin_edges,weights=random_hist_counts, label='Randomized Times',alpha=0.8)
+            # plt.axvline(TS_cut_level,linestyle='--',c='r',label='TS Cut')
+            # plt.axvline(-TS_cut_level,linestyle='--',c='r',label='TS Cut')
+            plt.legend(loc='upper right')
+            plt.ylabel('Counts')
+            plt.xlabel('Residual Difference from Each of %i Cycles with %0.4f s Periodicity'%(n_cycles,expected_period))
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+        flagged_eventids = loaded_eventids[flagged_eventids_cut]
+        return flagged_eventids
+    except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
+def get60HzEvents3(file, expected_period=1/60.0, TS_cut_level=0.0005, plot=True):
+    '''
+    File should be a safely open readable hdf5 file.
+    '''
+    try:
+        load_cut = file['trigger_type'][...] == 2
+        loaded_eventids = numpy.where(load_cut)[0]
+        calibrated_trig_time = file['calibrated_trigtime'][load_cut]
+        bin_edges = numpy.linspace(-expected_period/2,expected_period/2,1000)#numpy.linspace(-0.002,0.002,100)#numpy.linspace(-0.01,0.01,100)
+        bin_centers = 0.5*(bin_edges[1:]+bin_edges[:-1])
+        total_hist_counts = numpy.zeros(len(bin_edges)-1)
+        expected_diffs = -expected_period
+        l = len(calibrated_trig_time)
+        flagged_eventids_cut = numpy.zeros_like(loaded_eventids,dtype=bool)
+
+
+        dt = (numpy.diff(calibrated_trig_time) + expected_period/2)%expected_period - expected_period/2
+
+
+        if plot:
+            randomized_times = numpy.sort(numpy.random.uniform(low=calibrated_trig_time[0],high=calibrated_trig_time[-1],size=(len(calibrated_trig_time),)))
+            random_dt = (numpy.diff(randomized_times)  + expected_period/2 )%expected_period - expected_period/2
+
+            plt.figure()
+            plt.hist(dt, bins=bin_edges, color='tab:blue' , label='All Events',alpha=0.8)
+            plt.hist(random_dt, bins=bin_edges, color='tab:purple' , label='Randomized Time',alpha=0.8)
+            plt.legend(loc='upper right')
+            plt.ylabel('Counts')
+            plt.xlabel('mod(dt,%0.5f + %0.5f) - %0.5f'%(expected_period,expected_period/2,expected_period/2))
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+        # flagged_eventids = loaded_eventids[flagged_eventids_cut]
+        # return flagged_eventids
+    except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+def get60HzEvents(file,window_s=20.0, TS_cut_level=0.1, normalize_by_window_index=True):
+    '''
+    File should be a safely open readable hdf5 file.
+    '''
+    try:
+
+        load_cut = file['trigger_type'][...] == 2
+        loaded_eventids = numpy.where(load_cut)[0]
+        calibrated_trig_time = file['calibrated_trigtime'][load_cut]
+        randomized_times = numpy.sort(numpy.random.uniform(low=calibrated_trig_time[0],high=calibrated_trig_time[-1],size=(len(calibrated_trig_time),)))
+
+        #This was used in initial testing of diffFromPeriodic to demonstrate it can work.
+        metric = diffFromPeriodic(calibrated_trig_time,window_s=window_s, normalize_by_window_index=normalize_by_window_index, plot_sample_hist=False)
+        return loaded_eventids[metric >= TS_cut_level]
+    except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
 
 if __name__ == '__main__':
@@ -222,8 +399,8 @@ if __name__ == '__main__':
         run = 1700
     datapath = os.environ['BEACON_DATA']
     normalize_by_window_index = True
-
-    for run in [1721]:
+    #1721
+    for run in [run]:
         reader = Reader(datapath,run)
 
         try:
@@ -243,9 +420,10 @@ if __name__ == '__main__':
                     calibrated_trig_time = file['calibrated_trigtime'][load_cut]
                     randomized_times = numpy.sort(numpy.random.uniform(low=calibrated_trig_time[0],high=calibrated_trig_time[-1],size=(len(calibrated_trig_time),)))
 
-                    if False:
-                        for window_s in [1,5,10,20,60,120,360]:
-                            metric_true = diffFromPeriodic(calibrated_trig_time,window_s=window_s, atol=0.001, normalize_by_window_index=normalize_by_window_index)
+                    if True:
+                        #for window_s in [1,5,10,20,60,120,360]:
+                        for window_s in [1]:
+                            metric_true = diffFromPeriodic(calibrated_trig_time,window_s=window_s, atol=0.001, normalize_by_window_index=normalize_by_window_index, plot_sample_hist=True, plot_test_plot_A=True)
                             metric_rand = diffFromPeriodic(randomized_times,window_s=window_s, atol=0.001, normalize_by_window_index=normalize_by_window_index)
                             bins = numpy.linspace(min(min(metric_true),min(metric_rand)),max(max(metric_true),max(metric_rand)),100)
                             plt.figure()
@@ -253,8 +431,16 @@ if __name__ == '__main__':
                             plt.hist(metric_rand,alpha=0.8,label='Rand',bins=bins)
                             plt.legend()
                             plt.title('Window_s = %f'%window_s)
+                            plt.ylabel('Counts')
+                            plt.xlabel('TS')
 
-                    if True:
+                        flagged_eventids = get60HzEvents2(file, n_cycles=1, expected_period=1/60.0, TS_cut_level=0.0005, plot=True)
+                        # flagged_eventids = get60HzEvents2(file, n_cycles=2, expected_period=1/60.0, TS_cut_level=0.0005, plot=True)
+                        # flagged_eventids = get60HzEvents2(file, n_cycles=10, expected_period=1/60.0, TS_cut_level=0.0005, plot=True)
+
+                        get60HzEvents3(file, expected_period=1/60.0, TS_cut_level=0.0005, plot=True)
+
+                    if False:
                         #This was used in initial testing of diffFromPeriodic to demonstrate it can work.
                         window_s = 20.0
                         metric = diffFromPeriodic(calibrated_trig_time,window_s=window_s, normalize_by_window_index=normalize_by_window_index, plot_sample_hist=True)
@@ -285,9 +471,12 @@ if __name__ == '__main__':
                         plt.grid(b=True, which='major', color='k', linestyle='-')
                         plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
                         plt.subplot(1,2,2)
-                        scatter_2 = plt.plot(calibrated_trig_time-min(calibrated_trig_time),(calibrated_trig_time - numpy.floor(calibrated_trig_time))%(1/60.0),marker=',',linestyle='None',c='b',label='All RF Events')
+                        # scatter_2 = plt.plot(calibrated_trig_time-min(calibrated_trig_time),(calibrated_trig_time - numpy.floor(calibrated_trig_time))%(1/60.0),marker=',',linestyle='None',c='b',label='All RF Events')
+                        # plt.legend()
+                        # plt.ylabel('(Trigger Subsecond) % (1/60Hz)')
+                        scatter_2 = plt.plot(calibrated_trig_time-min(calibrated_trig_time),(calibrated_trig_time)%(1/60.0),marker=',',linestyle='None',c='b',label='All RF Events')
                         plt.legend()
-                        plt.ylabel('(Trigger Subsecond) % (1/60Hz)')
+                        plt.ylabel('(Trigger Time) % (1/60Hz)')
                         plt.xlabel('Trigger Time From Start of Run (s)')
                         plt.minorticks_on()
                         plt.grid(b=True, which='major', color='k', linestyle='-')
@@ -418,9 +607,12 @@ if __name__ == '__main__':
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
                 plt.subplot(1,2,2)
-                scatter_2 = plt.plot(calibrated_trig_time-min(calibrated_trig_time),(calibrated_trig_time - numpy.floor(calibrated_trig_time))%(1/60.0),marker=',',linestyle='None',c='b',label='All RF Events')
+                # scatter_2 = plt.plot(calibrated_trig_time-min(calibrated_trig_time),(calibrated_trig_time - numpy.floor(calibrated_trig_time))%(1/60.0),marker=',',linestyle='None',c='b',label='All RF Events')
+                # plt.legend()
+                # plt.ylabel('(Trigger Subsecond) % (1/60Hz)')
+                scatter_2 = plt.plot(calibrated_trig_time-min(calibrated_trig_time),(calibrated_trig_time)%(1/60.0),marker=',',linestyle='None',c='b',label='All RF Events')
                 plt.legend()
-                plt.ylabel('(Trigger Subsecond) % (1/60Hz)')
+                plt.ylabel('(Trigger Time) % (1/60Hz)')
                 plt.xlabel('Trigger Time From Start of Run (s)')
                 plt.minorticks_on()
                 plt.grid(b=True, which='major', color='k', linestyle='-')
