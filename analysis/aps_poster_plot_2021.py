@@ -204,7 +204,7 @@ if __name__=="__main__":
                 for key_x, key_y in plot_param_pairs:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
                     fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, include_roi=False, lognorm=lognorm)
-        if True:
+        if False:
             run = 1507
             reader = Reader(datapath,run)
             apply_phase_response = True
@@ -265,7 +265,7 @@ if __name__=="__main__":
             ax.set_ylim(ax.get_ylim()[::-1])
             fig.savefig('pulser_waveforms.svg', bbox_inches=0, transparent=True)
 
-        if False:
+        if True:
             run = 1773
             #[1774,178],[1774,381],[1774,1348],[1774,1485][178,381,1348,1485]
             center_dir = 'W'

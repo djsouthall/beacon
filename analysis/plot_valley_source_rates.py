@@ -1,5 +1,5 @@
 '''
-This is a script load waveforms using the sine subtraction method, and save any identified CW present in events.
+This will plot the event rates of events in specified ROI using the data slicer tool.
 '''
 
 import numpy
@@ -37,10 +37,8 @@ plt.ion()
 datapath = os.environ['BEACON_DATA']
 
 if __name__=="__main__":
-    #TODO: Add these parameters to the 2d data slicer.
     plt.close('all')
-    runs = numpy.arange(1650,1800)#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.arange(1650,1675)#numpy.array([1774])#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.array([1650])#
-    #run = 1774 #want run with airplane.  This has 1774-178 in it. 
+    runs = numpy.arange(1650,1760)#numpy.array([1728,1773])#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.arange(1650,2000)#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.arange(1650,1675)#numpy.array([1774])#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.array([1650])#
 
     include_sources = ['Northern Cell Tower','Tonopah KTPH','Nye County Sherriff','Tonopah AFS GATR Site','Miller Substation','Dyer Cell Tower','West Dyer Substation','East Dyer Substation','Beatty Mountain Cell Tower','Palmetto Cell Tower','Cedar Peak','Silver Peak Town Antenna'  ]
 
@@ -63,55 +61,155 @@ if __name__=="__main__":
 
     impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
-    map_direction_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_15'
-
-    crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = 8
-
-    crit_freq_high_pass_MHz = None
-    high_pass_filter_order = None
-
-    sine_subtract = True
-    sine_subtract_min_freq_GHz = 0.03
-    sine_subtract_max_freq_GHz = 0.09
-    sine_subtract_percent = 0.03
-
-    hilbert=False
-    final_corr_length = 2**10
+    map_direction_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_15'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_22-scope_belowhorizon'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_15'
 
     trigger_types = [2]#[2]
-    db_subset_plot_ranges = [[0,30],[30,40],[40,50]] #Used as bin edges.  
     plot_maps = True
 
-    sum_events = True #If true will add all plots together, if False will loop over runs in runs.
-    lognorm = True
-    cmap = 'YlOrRd'#'binary'#'coolwarm'
-    subset_cm = plt.cm.get_cmap('autumn', 10)
-    subset_colors = subset_cm(numpy.linspace(0, 1, len(db_subset_plot_ranges)))[0:len(db_subset_plot_ranges)]
 
     sources_ENU, data_slicer_cut_dict = info.loadValleySourcesENU() #Plot all potential sources
     try:
-        ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
-                curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
-                cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
-                impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
-                time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
-                std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
-                p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-                snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+        if False:
+            ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
+                    curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                    cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                    impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                    time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-140,max_time_delays_val=-90,\
+                    std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+                    p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                    snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+
+            for source_key, cut_dict in data_slicer_cut_dict.items():
+                if source_key in include_sources:
+                    ds.addROI(source_key,cut_dict)
+
+            ds.trackROICounts(roi_keys=None,time_bin_width_s=3600,plot_run_start_times=True)
+            ds.trackROICounts(roi_keys=None,time_bin_width_s=3600,plot_run_start_times=False)
 
 
-        # ds.addROI('Simple Template V > 0.7',{'cr_template_search_v':[0.7,1.0]})# Adding 2 ROI in different rows and appending as below allows for "OR" instead of "AND"
-        # ds.addROI('Simple Template H > 0.7',{'cr_template_search_h':[0.7,1.0]})
-        # #Done for OR condition
-        # _eventids = numpy.sort(numpy.unique(numpy.append(ds.getCutsFromROI('Simple Template H > 0.7',load=False,save=False),ds.getCutsFromROI('Simple Template V > 0.7',load=False,save=False))))
+            # plot_param_pairs = [['time_delay_0subtract1_h','time_delay_0subtract2_h'],['time_delay_0subtract3_h','time_delay_1subtract2_h'],['time_delay_1subtract3_h','time_delay_2subtract3_h']]#[['time_delay_0subtract1_h','time_delay_0subtract2_h'],['time_delay_0subtract3_h','time_delay_1subtract2_h'],['time_delay_1subtract3_h','time_delay_2subtract3_h']]#[['phi_best_h','elevation_best_h'],['time_delay_0subtract1_h','time_delay_0subtract2_h']]#[['impulsivity_h','impulsivity_v']]#[['impulsivity_h','impulsivity_v'],['phi_best_h','phi_best_v'], ['elevation_best_h','elevation_best_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v']]
+            
+            # if True:
+            #     for key_x, key_y in plot_param_pairs:
+            #         fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=False)
+            # else:
+            #     for slicer in ds.data_slicers:
+            #         for key_x, key_y in plot_param_pairs:
+            #             fig, ax = slicer.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=False)
 
-        for source_key, cut_dict in data_slicer_cut_dict.items():
-            if source_key in include_sources:
-                ds.addROI(source_key,cut_dict)
 
-        ds.trackROICounts()
 
+            runs_1 = numpy.arange(1720,1729)
+            runs_2 = numpy.arange(1732,1743)
+            runs_3 = numpy.arange(1743,1760)
+
+        if False:
+
+            ds_1 = dataSlicer(runs_1, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
+                    curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                    cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                    impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                    time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-140,max_time_delays_val=-90,\
+                    std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+                    p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                    snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+
+            ds_2 = dataSlicer(runs_2, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
+                    curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                    cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                    impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                    time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-140,max_time_delays_val=-90,\
+                    std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+                    p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                    snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+
+            ds_3 = dataSlicer(runs_3, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
+                    curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                    cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                    impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                    time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-140,max_time_delays_val=-90,\
+                    std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+                    p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                    snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+
+            ds_2.data_slicers[0].checkDataAvailability(verbose=True)
+            ds_2.data_slicers[-1].checkDataAvailability(verbose=True)
+            ds_1.plotROI2dHist('time_delay_0subtract1_h', 'time_delay_0subtract2_h', cmap='coolwarm', include_roi=False)
+            ds_2.plotROI2dHist('time_delay_0subtract1_h', 'time_delay_0subtract2_h', cmap='coolwarm', include_roi=False)
+            ds_3.plotROI2dHist('time_delay_0subtract1_h', 'time_delay_0subtract2_h', cmap='coolwarm', include_roi=False)
+
+        if False:
+            ds_1 = dataSlicer(runs_1, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
+                    curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                    cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                    impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                    time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-90,max_time_delays_val=0,\
+                    std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+                    p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                    snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+
+            ds_2 = dataSlicer(runs_2, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
+                    curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                    cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                    impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                    time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-90,max_time_delays_val=0,\
+                    std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+                    p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                    snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+
+            ds_3 = dataSlicer(runs_3, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
+                    curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                    cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                    impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                    time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-90,max_time_delays_val=0,\
+                    std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+                    p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                    snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+
+            ds_1.plotROI2dHist('time_delay_1subtract3_h', 'time_delay_2subtract3_h', cmap='coolwarm', include_roi=False)
+            ds_2.plotROI2dHist('time_delay_1subtract3_h', 'time_delay_2subtract3_h', cmap='coolwarm', include_roi=False)
+            ds_3.plotROI2dHist('time_delay_1subtract3_h', 'time_delay_2subtract3_h', cmap='coolwarm', include_roi=False)
+
+        if True:
+            runs = numpy.arange(1650,1700)#numpy.arange(1650,1651)#numpy.arange(1650,1700)#numpy.arange(1650,1700)
+            runs = runs[runs != 1663]
+            ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, remove_incomplete_runs=False,\
+                    curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                    cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                    impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                    time_delays_n_bins_h=2000,time_delays_n_bins_v=2000,min_time_delays_val=-200,max_time_delays_val=200,\
+                    std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+                    p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                    snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+
+            ds.addROI('Simple Template H > 0.7',{'cr_template_search_h':[0.7,1.0]})
+            ds.addROI('Simple Template V > 0.7',{'cr_template_search_v':[0.7,1.0]})# Adding 2 ROI in different rows and appending as below allows for "OR" instead of "AND"
+
+            #Done for OR condition
+            _eventids_dict_h = ds.getCutsFromROI('Simple Template H > 0.7',load=False,save=False)
+            _eventids_dict_v = ds.getCutsFromROI('Simple Template V > 0.7',load=False,save=False)
+            eventids_dict = {}
+            for key in list(_eventids_dict_h.keys()):
+                eventids_dict[key] = numpy.sort(numpy.unique(numpy.append(_eventids_dict_h[key],_eventids_dict_v[key])))
+            ds.resetAllROI()
+
+            ds.addROI('triple cluster A',{'time_delay_2subtract3_h':[-61,-59.4], 'time_delay_1subtract3_h':[-46,-44], 'snr_h':[15,24], 'snr_v':[14,20]})
+            ds.addROI('triple cluster B1',{'time_delay_2subtract3_h':[-60.5,-59.1], 'time_delay_1subtract3_h':[-46.8,-46], 'impulsivity_h':[0.38,0.64], 'impulsivity_v':[0.55,0.75]})
+            ds.addROI('triple cluster B2',{'time_delay_2subtract3_h':[-60.5,-59.1], 'time_delay_1subtract3_h':[-46.8,-46], 'snr_h':[20,27], 'snr_v':[11,15],'impulsivity_h':[0.4,0.6], 'impulsivity_v':[0.4,0.52]})
+            ds.addROI('triple cluster C',{'time_delay_2subtract3_h':[-59.5,-58.2], 'time_delay_1subtract3_h':[-48,-47], 'snr_h':[12,24], 'snr_v':[9,15]})
+            ds.addROI('between',{'time_delay_1subtract3_h':[0,60], 'time_delay_0subtract2_h':[-200,0]})
+            ds.plotROI2dHist('cr_template_search_h', 'cr_template_search_v', cmap='coolwarm', include_roi=True)
+
+            ds.data_slicers[0].plotROI2dHist('cr_template_search_h', 'cr_template_search_v', cmap='coolwarm', include_roi=True)
+            ds.plotROI2dHist('cr_template_search_h', 'cr_template_search_v', cmap='coolwarm', include_roi=True, eventids_dict=eventids_dict)
+            ds.plotROI2dHist('time_delay_0subtract2_h','time_delay_0subtract1_h', cmap='coolwarm', include_roi=True, eventids_dict=eventids_dict)
+            ds.plotROI2dHist('time_delay_1subtract3_h','time_delay_2subtract3_h', cmap='coolwarm', include_roi=True, eventids_dict=eventids_dict)
+
+
+            plot_param_pairs = [['impulsivity_h','impulsivity_v'],['phi_best_h','elevation_best_h']]#],['phi_best_h','elevation_best_h']]#, ['snr_h','snr_v']]#[['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v']]#[['phi_best_h','phi_best_v'], ['elevation_best_h','elevation_best_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v']]#[['phi_best_h','theta_best_h'], ['phi_best_v','theta_best_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v']]#,  ['std_h', 'std_v'], ['cw_freq_Mhz','cw_dbish'],['impulsivity_h','impulsivity_v']]#[['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v']]
+            for key_x, key_y in plot_param_pairs:
+                print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
 
     except Exception as e:
         print(e)

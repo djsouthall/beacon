@@ -196,6 +196,10 @@ class dataSlicerSingleRun():
 
             #Map Direction Params:
             self.map_dset_key = map_dset_key
+            if len(self.map_dset_key.split('deploy_calibration_')) > 1:
+                self.map_deploy_index = int(self.map_dset_key.split('deploy_calibration_')[-1].split('-')[0])
+            else:
+                self.map_deploy_index = None #Will use default
             self.checkForBothMapDatasets() #Will append to known param key and prepare for if hilber used or not.
 
             self.trigger_types = trigger_types
@@ -211,9 +215,53 @@ class dataSlicerSingleRun():
                 sample_ROI = self.printSampleROI(verbose=False)
                 self.roi['test'] = sample_ROI
 
+            self.checkDataAvailability()
+
             #self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, numpy.shape(roi)[0])]
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def checkDataAvailability(self,verbose=False):
+        '''
+        This will check whether the given datasets are actually available for the given run.
+        '''
+        try:
+            with h5py.File(self.analysis_filename, 'r') as file:
+                if numpy.all( numpy.isin(['map_direction','map_direction','time_delays'] ,list(file.keys()))):
+                    map_present = self.map_dset_key in list(file['map_direction'].keys())
+                    if verbose:
+                        print('map_present', map_present)
+                        print(list(file['map_direction'].keys()))
+                    impulsivity_present = self.impulsivity_dset_key in list(file['impulsivity'].keys())
+                    if verbose:
+                        print('impulsivity_present', impulsivity_present)
+                        print(list(file['impulsivity'].keys()))
+                    time_delays_present = self.time_delays_dset_key in list(file['time_delays'].keys())
+                    if verbose:
+                        print('time_delays_present', time_delays_present)
+                        print(list(file['time_delays'].keys()))
+
+                    self.dsets_present = numpy.all([map_present,impulsivity_present,time_delays_present])
+                    if False:
+                        print(self.map_dset_key in list(file['map_direction'].keys()))
+                        print(self.map_dset_key)
+                        print(list(file['map_direction'].keys()))
+                        print(self.reader.run)
+                        print([map_present,impulsivity_present,time_delays_present])
+                else:
+                    self.dsets_present = False
+
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
+            print('dsets_present set to False')
+            self.dsets_present = False
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -262,6 +310,7 @@ class dataSlicerSingleRun():
                 file.close()
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -292,6 +341,7 @@ class dataSlicerSingleRun():
                 file.close()
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -309,6 +359,7 @@ class dataSlicerSingleRun():
             except Exception as e:
                 print('Status Tree not present.  Returning Error.')
                 print('\nError in %s'%inspect.stack()[0][3])
+                print('Run: ',self.reader.run)
                 print(e)
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -316,6 +367,7 @@ class dataSlicerSingleRun():
                 sys.exit(1)
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -337,6 +389,7 @@ class dataSlicerSingleRun():
             return sample_ROI
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -376,6 +429,7 @@ class dataSlicerSingleRun():
             #Could add more checks here to ensure roi_dict is good.
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -392,6 +446,7 @@ class dataSlicerSingleRun():
             #Could add more checks here to ensure roi_dict is good.
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -409,6 +464,7 @@ class dataSlicerSingleRun():
             return eventids
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -516,6 +572,7 @@ class dataSlicerSingleRun():
             return param
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -601,6 +658,7 @@ class dataSlicerSingleRun():
                         file['ROI'][roi_key][...] = numpy.isin(numpy.arange(file.attrs['N']),eventids) #True for events in the cut list.  
                     except Exception as e:
                         print('\nError in %s'%inspect.stack()[0][3])
+                        print('Run: ',self.reader.run)
                         print(e)
                         exc_type, exc_obj, exc_tb = sys.exc_info()
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -612,6 +670,7 @@ class dataSlicerSingleRun():
             return eventids
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -664,6 +723,7 @@ class dataSlicerSingleRun():
                 except Exception as e:
                     load = False
                     print('\nError in %s'%inspect.stack()[0][3])
+                    print('Run: ',self.reader.run)
                     print(e)
                     exc_type, exc_obj, exc_tb = sys.exc_info()
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -684,6 +744,7 @@ class dataSlicerSingleRun():
 
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -946,6 +1007,7 @@ class dataSlicerSingleRun():
             return current_bin_edges, label
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -992,7 +1054,8 @@ class dataSlicerSingleRun():
                     plt.plot(self.current_bin_centers_mesh_y[:,0],self.current_bin_centers_mesh_y[:,0],linewidth=1,linestyle='--',color='tab:gray',alpha=0.5)
                 if numpy.logical_and('phi_best_' in main_param_key_x,numpy.logical_or('theta_best_' in main_param_key_y,'elevation_best_' in main_param_key_y)):
                     #Make cor to plot the array plane.
-                    cor = Correlator(self.reader,  upsample=2**10, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,apply_phase_response=False, tukey=False, sine_subtract=False) #only for array plane
+                            
+                    cor = Correlator(self.reader,  upsample=2**10, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,apply_phase_response=False, tukey=False, sine_subtract=False, deploy_index=self.map_deploy_index) #only for array plane
                     if numpy.logical_and(main_param_key_x.split('_')[-1] == 'h', main_param_key_y.split('_')[-1] == 'h'):
                         plane_xy = cor.getPlaneZenithCurves(cor.n_hpol.copy(), 'hpol', 90.0, azimuth_offset_deg=0.0)
                     elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'v', main_param_key_y.split('_')[-1] == 'v'):
@@ -1025,6 +1088,7 @@ class dataSlicerSingleRun():
             return _fig, _ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -1091,6 +1155,7 @@ class dataSlicerSingleRun():
             return ax, cs
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -1134,6 +1199,7 @@ class dataSlicerSingleRun():
             return fig, ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -1438,23 +1504,45 @@ class dataSlicer():
     include_test_roi :
         This will include test regions of interest that are more for testing the class itself. 
     '''
-    def __init__(self,  runs, impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs):
-        try:
-            self.runs = numpy.sort(runs).astype(int)
-            self.roi = {}
-            self.data_slicers = [dataSlicerSingleRun(Reader(datapath,run),impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs) for run in self.runs]
-            self.trigger_types = self.data_slicers[0].trigger_types
-        except:
-            import pdb; pdb.set_trace()
+    def __init__(self,  runs, impulsivity_dset_key, time_delays_dset_key, map_dset_key, remove_incomplete_runs=False, **kwargs):
+        self.runs = numpy.sort(runs).astype(int)
+        self.roi = {}
+        self.data_slicers = numpy.array([dataSlicerSingleRun(Reader(datapath,run),impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs) for run in self.runs])
+        self.trigger_types = self.data_slicers[0].trigger_types
+        if remove_incomplete_runs:
+            self.removeIncompleteDataSlicers()
+
+    def removeIncompleteDataSlicers(self):
+        '''
+        This will loop over the data slicers and remove any that do not have all required datasets.
+        '''
+        cut = numpy.array([ds.dsets_present for ds in self.data_slicers])
+        if sum(~cut) > 0:
+            print('Removing the following runs for not having all required datasets:')
+            print(self.runs[~cut])
+
+        self.runs = self.runs[cut]
+        self.data_slicers = self.data_slicers[cut]
+
     def concatenateParamDict(self, param_data_dict):
         '''
         Given a dictionary (keys indicating run number) for a parameter of data.  This will turn that into a 1d array.
         Useful for histogramming when run information is unimportant.
         '''
-        data = []
-        for key, _data in param_data_dict.items():
-            data.append(_data)
-        return numpy.concatenate(data)
+        try:
+            data = []
+            for key, _data in param_data_dict.items():
+                if _data is not None:
+                    data.append(_data)
+                else:
+                    print('Skipping %s, no data present for this key.'%(key))
+            return numpy.concatenate(data)
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
     def printKnownParamKeys(self):
         return self.data_slicers[0].printKnownParamKeys()
     def checkForBothMapDatasets(self, verbose=False):
@@ -1481,6 +1569,8 @@ class dataSlicer():
             if verbose:
                 print('Run %i'%run)
             self.data_slicers[run_index].resetAllROI()
+        self.roi = {}
+        self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, len(list(self.roi.keys())))]
     def getEventidsFromTriggerType(self, verbose=False):
         eventids_dict = {}
         for run_index, run in enumerate(self.runs):
@@ -1500,12 +1590,12 @@ class dataSlicer():
                 eventids = eventids_dict[run]
                 data[run] = self.data_slicers[run_index].getDataFromParam(eventids, param_key)
         return data
-    def getCutsFromROI(self,roi_key,verbose=False):
+    def getCutsFromROI(self,roi_key,load=False,save=False,verbose=False):
         eventids_dict = {}
         for run_index, run in enumerate(self.runs):
             if verbose:
                 print('Run %i'%run)
-            eventids_dict[run] = self.data_slicers[run_index].getCutsFromROI(roi_key)
+            eventids_dict[run] = self.data_slicers[run_index].getCutsFromROI(roi_key,load=load,save=save)
         return eventids_dict
     def setCurrentPlotBins(self, main_param_key_x, main_param_key_y, eventids_dict):
         '''
@@ -1611,7 +1701,7 @@ class dataSlicer():
                     plt.plot(self.current_bin_centers_mesh_y[:,0],self.current_bin_centers_mesh_y[:,0],linewidth=1,linestyle='--',color='tab:gray',alpha=0.5)
                 if numpy.logical_and('phi_best_' in main_param_key_x,numpy.logical_or('theta_best_' in main_param_key_y,'elevation_best_' in main_param_key_y)):
                     #Make cor to plot the array plane.
-                    cor = Correlator(self.data_slicers[0].reader,  upsample=2**10, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,apply_phase_response=False, tukey=False, sine_subtract=False) #only for array plane
+                    cor = Correlator(self.data_slicers[0].reader,  upsample=2**10, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,apply_phase_response=False, tukey=False, sine_subtract=False, deploy_index=self.data_slicers[0].map_deploy_index) #only for array plane
                     if numpy.logical_and(main_param_key_x.split('_')[-1] == 'h', main_param_key_y.split('_')[-1] == 'h'):
                         plane_xy = cor.getPlaneZenithCurves(cor.n_hpol.copy(), 'hpol', 90.0, azimuth_offset_deg=0.0)
                     elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'v', main_param_key_y.split('_')[-1] == 'v'):
@@ -1815,6 +1905,7 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+            
     def trackROICounts(self, roi_keys=None,time_bin_width_s=60,plot_run_start_times=True):
         '''
         This will loop over the given runs, and count the number of events in the given run.  These will be plotted
@@ -1845,13 +1936,11 @@ class dataSlicer():
                 for run_index, run in enumerate(self.runs):
                     _eventids_dict[run] = roi_eventids_dict[roi_key][run][numpy.isin(roi_eventids_dict[roi_key][run],eventids_dict[run])] #Pull eventids in dict that are of the specified trigger types.
                 event_times_dict = self.getDataFromParam(_eventids_dict, 'calibrated_trigtime', verbose=False)
-                trigtimes_linear = numpy.array([])
-                #eventids_linear = numpy.array([])
-                for run_index, run in enumerate(self.runs):
-                    trigtimes_linear = numpy.append(trigtimes_linear,event_times_dict[run])
-                    #eventids_linear = numpy.append(eventids_linear,event_times_dict[run])
 
-                counts = numpy.histogram(trigtimes_linear,bins=bin_edges)[0]
+                counts = numpy.zeros(len(bin_edges) - 1)
+                for run_index, run in enumerate(self.runs):
+                    counts += numpy.histogram(event_times_dict[run],bins=bin_edges)[0]
+
                 if plot_run_start_times:
                     max_counts = max(max_counts, max(counts))
                 plt.plot((bin_centers - min(bin_centers))/3600,counts,label=roi_key)

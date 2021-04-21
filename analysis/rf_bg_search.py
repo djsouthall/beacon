@@ -101,9 +101,12 @@ if __name__=="__main__":
 
 
     mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky'] #This code will loop over all options included here, and they will be stored as seperate dsets.  Each of these applies different cuts to mapmax when it is attempting to select the best reconstruction direction.
-    polarizations = ['hpol']#['hpol','vpol'] #Will loop over both if hpol and vpol present
-    hilbert_modes = [False] #[True,False] #Will loop over both if True and False present
+    polarizations = ['hpol','vpol'] #Will loop over both if hpol and vpol present
+    hilbert_modes = [True,False] #Will loop over both if True and False present
+    deploy_index = None
 
+    if deploy_index is None:
+        deploy_index = info.returnDefaultDeploy()
 
     for hilbert in hilbert_modes:
 
@@ -154,7 +157,7 @@ if __name__=="__main__":
 
             filter_string += 'sinesubtract_%i-'%(int(sine_subtract))
 
-            filter_string += 'deploy_calibration_%i-'%(info.returnDefaultDeploy())
+            filter_string += 'deploy_calibration_%i-'%(deploy_index)
 
             filter_string += 'scope_%s'%(mapmax_cut_mode)
 
@@ -354,7 +357,9 @@ if __name__=="__main__":
                             file['map_times'].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane 
 
 
-                        cor = Correlator(reader,  upsample=upsample, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract)
+                        cor = Correlator(reader,  upsample=upsample, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract, deploy_index=deploy_index)
+
+                        print('Cor setup to use deploy index %i'%cor.deploy_index)
 
                         if sine_subtract:
                             cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
