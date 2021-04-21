@@ -1,5 +1,5 @@
 '''
-This script is meant to be used to determine good beams for the BEACON trigger.
+This script is meant to be used to map the current beams for the BEACON trigger.
 '''
 import os
 import sys
@@ -62,9 +62,15 @@ class BeamMaker(Correlator):
         The specified range of zenith angles to probe.
     
     '''
-    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None):
+    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, 
+                    low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, 
+                    map_source_distance_m=1e6, deploy_index=None):
         try:
-            super().__init__(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, waveform_index_range=waveform_index_range, apply_phase_response=apply_phase_response, tukey=tukey, sine_subtract=sine_subtract, map_source_distance_m=map_source_distance_m, deploy_index=deploy_index)
+            super().__init__(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=range_phi_deg, 
+                                n_theta=n_theta, range_theta_deg=range_theta_deg, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, 
+                                low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, 
+                                waveform_index_range=waveform_index_range, apply_phase_response=apply_phase_response, tukey=tukey, sine_subtract=sine_subtract, 
+                                map_source_distance_m=map_source_distance_m, deploy_index=deploy_index)
             self.prepInterpFunc()
 
 
@@ -82,6 +88,11 @@ class BeamMaker(Correlator):
         1,2,3 relative to antenna 0.  
         '''
         try:
+        
+            print(self.t_hpol_0subtract1)
+            print(self.t_hpol_0subtract2)
+            print(self.t_hpol_0subtract3)
+            
             self.t_hpol_0subtract1_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , self.t_hpol_0subtract1) #self.t_hpol_0subtract1 already includes cable delays.  Results in the expected measured time difference in signals from each direction.  
             self.t_hpol_0subtract2_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , self.t_hpol_0subtract2) #self.t_hpol_0subtract2 already includes cable delays.  Results in the expected measured time difference in signals from each direction.  
             self.t_hpol_0subtract3_interp = scipy.interpolate.RectBivariateSpline( self.thetas_rad , self.phis_rad , self.t_hpol_0subtract3) #self.t_hpol_0subtract3 already includes cable delays.  Results in the expected measured time difference in signals from each direction.  
@@ -95,8 +106,25 @@ class BeamMaker(Correlator):
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-
-    def interpolateTimeGrid(self, mode, thetas ,phis):
+    
+    def overwriteDelays(self, pol, t_0subtract1, t_0subtract2, t_0subtract3):
+        '''
+        Overwrites the delays relative to antenna0 for either vpol or hpol. 
+        pol is 'hpol' or 'vpol'. 
+        '''
+        
+        if pol == 'hpol':
+            self.t_hpol0subtract1 = t_0subtract1
+            self.t_hpol0subtract2 = t_0subtract2
+            self.t_hpol0subtract3 = t_0subtract3
+        elif pol == 'vpol':
+            self.t_vpol0subtract1 = t_0subtract1
+            self.t_vpol0subtract2 = t_0subtract2
+            self.t_vpol0subtract3 = t_0subtract3
+        
+        self.prepInterpFunc()
+        
+    def interpolateTimeGrid(self, mode, thetas, phis):
         '''
         Will determine appropriate time delays for the given thetas and phis using the predifined grid (created by 
         generateTimeIndices).  Expects angles in radians. 
@@ -134,13 +162,17 @@ class BeamMaker(Correlator):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def makeFakeBeamMap(self, eventid, pol, beam_theta, beam_phi, plot_map=True, plot_corr=False, hilbert=False, normalize=False, savefig=False, savefig_text=None, turnoff_ants=None):
+    def makeFakeBeamMap(self, eventid, pol, beam_theta, beam_phi, plot_map=True, plot_corr=False, hilbert=False, normalize=False, 
+                                savefig=False, savefig_text=None, turnoff_ants=None, forced_deltats = None):
         '''
         This will generate fake signals from each of the directions normally available in the correlation map.  It will 
         then apply beamforming assuming the beam is centered on theta, phi. 
         '''
         try:
-            t_1, t_2, t_3 = bm.interpolateTimeGrid(pol, beam_theta, beam_phi)
+            if not (forced_deltats is None):
+                t_1, t_2, t_3 = forced_deltats
+            else:
+                t_1, t_2, t_3 = bm.interpolateTimeGrid(pol, beam_theta, beam_phi)
             t_0 = 0.0
             t_1, t_2, t_3 = bm.roundToNearestSample(numpy.array([t_1, t_2, t_3]))
             
@@ -306,12 +338,16 @@ class BeamMaker(Correlator):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateBeams(self,reader,eventid):
+    def calculateBeams(self,reader,eventid,mode='hpol',finame_hpol_delays=None):
         '''
         This is not a real function, really.  It is storing relevant code for calculating beams from an event
         using pre-saved beams.  This code was pulled from low_snr_search.py
         '''
-        hpol_beam_delays = info.loadBeamDelays()[0]
+        if mode == 'hpol':
+            pol = 0
+        elif mode == 'vpol':
+            pol = 1
+        hpol_beam_delays = info.loadBeamDelays(finame_hpol_delays=finame_hpol_delays, finame_vpol_delays=finame_hpol_delays)[pol]
         reader.setEntry(eventid)
         t = reader.t()
 
@@ -395,8 +431,10 @@ class BeamMaker(Correlator):
         plt.ylabel('Summed Power (adu^2)')
         plt.xlim(0,len(power_sum)* (1+extra_t_to_fit_legend/max(t)))
         plt.legend(loc='upper right')
+        
+        return fig
 
-
+        
 if __name__=="__main__":
     #plt.close('all')
     '''
@@ -404,12 +442,12 @@ if __name__=="__main__":
     set you must scroll to the DEFINE BEAMS HERE section below and ensure the correct scenario is being run.  Each
     scenario has an associated 'mode' label.  If that mode label is included in 'modes' then it will be run.
     '''
-    modes = ['hpol','vpol']#['vpol_no_ant01']:#['hpol','vpol','vpol_no_ant0','vpol_no_ant01']:
+    modes = ['hpol_2018','vpol_2018']#['vpol_no_ant01']:#['hpol','vpol','vpol_no_ant0','vpol_no_ant01']:
 
     use_pulser=False
     max_method = 0
     
-    circle_beam_centers = True #Will add circles to the maps centered on the selected beams.
+    circle_beam_centers = False #Will add circles to the maps centered on the selected beams.
     radius = 2.5 #Degrees I think?  Should eventually represent error. 
     circle_color = 'lime'
     circle_linewidth = 2
@@ -435,7 +473,7 @@ if __name__=="__main__":
 
 
     # BeamMaker is built on the Correlator class, and by default will use "default_deploy" as set in info.py as the calibration of choice. You can also set it as a kwarg here.  None will go to default deploy. 
-    deploy_index = None
+    deploy_index = 0#None
 
     for hilbert in [False, True]:
         datapath = os.environ['BEACON_DATA']
@@ -491,6 +529,7 @@ if __name__=="__main__":
                     phis_per_theta = numpy.array([1,5,7,9,12,2,15])#numpy.array([1,5,8,10,8,15])
                     phis_angular_ranges = numpy.array([[-48,48],[-45,45],[-47,47],[-48,48],[-49,49],[-48,48],[-42,42]])
                     turnoff_ants=None
+                    year = 'any'
 
                     outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
                     savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
@@ -504,6 +543,8 @@ if __name__=="__main__":
                     phis_per_theta = numpy.array([1,5,7,9,12,2,15])#numpy.array([1,5,8,10,8,15])
                     phis_angular_ranges = numpy.array([[-48,48],[-45,45],[-47,47],[-48,48],[-49,49],[-48,48],[-42,42]])
                     turnoff_ants=None
+                    year = 'any'
+                    
                     outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
                     savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
                 elif mode == 'vpol_no_ant0':
@@ -511,6 +552,8 @@ if __name__=="__main__":
                     phis_per_theta = numpy.array([1,5,7,9,12,2,15])#numpy.array([1,5,8,10,8,15])
                     phis_angular_ranges = numpy.array([[-48,48],[-45,45],[-47,47],[-48,48],[-49,49],[-48,48],[-42,42]])
                     turnoff_ants=[0]
+                    year = 'any'
+                    
                     outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
                     savefig_text = '%s_coverage_map_%i_beams_no_ant0_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
                     mode = 'vpol'
@@ -519,10 +562,67 @@ if __name__=="__main__":
                     phis_per_theta = numpy.array([1,5,7,9,12,2,15])#numpy.array([1,5,8,10,8,15])
                     phis_angular_ranges = numpy.array([[-48,48],[-45,45],[-47,47],[-48,48],[-49,49],[-48,48],[-42,42]])
                     turnoff_ants=[0,1]
+                    year = 'any'
+                    
                     outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
                     savefig_text = '%s_coverage_map_%i_beams_no_ant01_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
                     mode = 'vpol'
-
+                elif mode == 'hpol_2018':
+                    thetas_deg = numpy.array([-40,-20, 0, 20, 40]) + 90.
+                    phis_per_theta = numpy.array([4,4,4,4,4])
+                    phis_angular_ranges = numpy.array([[-40,40], [-40,40], [-40,40], [-40,40], [-40,40]])
+                    turnoff_ants = None
+                    year = 'any'
+                    
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    mode = 'hpol'
+                elif mode == 'vpol_2018':
+                    thetas_deg = numpy.array([-40,-20, 0, 20, 40]) + 90.
+                    phis_per_theta = numpy.array([4,4,4,4,4])
+                    phis_angular_ranges = numpy.array([[-40,40], [-40,40], [-40,40], [-40,40], [-40,40]])
+                    turnoff_ants = None
+                    year = 'any'
+                    
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    mode = 'vpol'
+                elif mode == 'hpol_2019':
+                    thetas_deg = numpy.array([-40,-20, 0, 20, 40])+ 90.
+                    phis_per_theta = numpy.array([4,4,4,4,4])
+                    phis_angular_ranges = numpy.array([[-40,40], [-40,40], [-40,40], [-40,40], [-40,40]])
+                    #thetas_deg = numpy.array([ 0])+90.
+                    #phis_per_theta = numpy.array([1])
+                    #phis_angular_ranges = numpy.array([[-40,40]])
+                    
+                    turnoff_ants = None
+                    
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
+                    savefig_text = '%s_coverage_wfs_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    savefig_text1 = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    
+                    mode = 'hpol'
+                    year = '2019'
+                    pol = 0
+                    
+                elif mode == 'vpol_2019':
+                    thetas_deg = numpy.array([-40,-20, 0, 20, 40])+ 90.
+                    phis_per_theta = numpy.array([4,4,4,4,4])
+                    phis_angular_ranges = numpy.array([[-40,40], [-40,40], [-40,40], [-40,40], [-40,40]])
+                    #thetas_deg = numpy.array([ 0])+90.
+                    #phis_per_theta = numpy.array([1])
+                    #phis_angular_ranges = numpy.array([[-40,40]])
+                    
+                    turnoff_ants = None
+                    
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
+                    savefig_text = '%s_coverage_wfs_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    savefig_text1 = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    
+                    mode = 'vpol'
+                    year = '2019'
+                    pol = 1
+                    
             beam_thetas_deg = numpy.array([])#numpy.zeros(sum(phis_per_theta))
             beam_phis_deg = numpy.array([])#numpy.zeros(sum(phis_per_theta))
             for theta_index, theta in enumerate(thetas_deg):
@@ -532,6 +632,9 @@ if __name__=="__main__":
                 else:
                     beam_phis_deg = numpy.append(beam_phis_deg,numpy.linspace(phis_angular_ranges[theta_index][0],phis_angular_ranges[theta_index][1],int(phis_per_theta[theta_index])))
 
+            print(beam_thetas_deg)
+            print(beam_phis_deg)
+            
             all_max_powers = numpy.zeros((len(beam_thetas_deg), bm.n_theta, bm.n_phi))
 
             sample_delays[mode] = numpy.zeros((len(beam_thetas_deg), 7))
@@ -541,12 +644,49 @@ if __name__=="__main__":
             
             
             eventid = eventids[mode][0]
+            
+            if year == '2019':
+                finame_beam_delays = os.environ['BEACON_ANALYSIS_DIR'] + 'tools/beam_definitions/delays_current.csv'
+                beam_delays = info.loadBeamDelays(finame_hpol_delays=finame_beam_delays, finame_vpol_delays=finame_beam_delays, reset_rel_to_ant0=True)[pol]
+                nbeams = numpy.shape(beam_delays)[0]
+                
+                figy = bm.calculateBeams(reader, eventid, mode=mode,finame_hpol_delays=finame_beam_delays)
+                figy.savefig(savefig_text)
+                
+                
+                for i in range(nbeams):
+                    bm.overwriteDelays(mode, beam_delays[i,4], beam_delays[i,5], beam_delays[i,6])
+                
+                    mean_corr_values, figy1, axy1 = bm.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), 
+                        plot_map=True, plot_corr=True, hilbert=False, interactive=False, 
+                        max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, 
+                        zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, 
+                        radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False)
+                    figy1.savefig(savefig_text1)
 
+                    all_fig.append(figy1)
+                    all_ax.append(axy1)
+            
             for beam_index in range(len(beam_thetas_deg)):
                 print('%i/%i               '%(beam_index + 1,len(beam_thetas_deg)))
-                all_max_powers[beam_index], sample_delays[mode][beam_index][3], sample_delays[mode][beam_index][4], sample_delays[mode][beam_index][5], sample_delays[mode][beam_index][6] = bm.makeFakeBeamMap(eventid, mode, numpy.deg2rad(beam_thetas_deg[beam_index]), numpy.deg2rad(beam_phis_deg[beam_index]), plot_map=False, plot_corr=False, hilbert=hilbert, normalize=normalize,savefig=True, savefig_text='beam%i'%beam_index,turnoff_ants=turnoff_ants)
-                #print('delay_ch0_by: %i\ndelay_ch1_by: %i\ndelay_ch2_by: %i\ndelay_ch3_by: %i'%(sample_delays[mode][beam_index][3], sample_delays[mode][beam_index][4], sample_delays[mode][beam_index][5], sample_delays[mode][beam_index][6]))
-            
+                forced_deltats = None 
+                if year == '2019':
+                    # this sends the time delays as read from the file (and adjusted to be 0 at ant0)
+                    # to the BeamMaker map
+                    forced_deltats = beam_delays[beam_index,4:]
+                
+                all_max_powers[beam_index], \
+                sample_delays[mode][beam_index][3], \
+                sample_delays[mode][beam_index][4], \
+                sample_delays[mode][beam_index][5], \
+                sample_delays[mode][beam_index][6] = bm.makeFakeBeamMap(eventid, mode, \
+                                                        numpy.deg2rad(beam_thetas_deg[beam_index]), numpy.deg2rad(beam_phis_deg[beam_index]), \
+                                                        plot_map=False, plot_corr=False, hilbert=hilbert, \
+                                                        normalize=normalize,savefig=True, \
+                                                        savefig_text='beam%i'%beam_index,turnoff_ants=turnoff_ants,
+                                                        forced_deltats = forced_deltats)
+                    #print('delay_ch0_by: %i\ndelay_ch1_by: %i\ndelay_ch2_by: %i\ndelay_ch3_by: %i'%(sample_delays[mode][beam_index][3], sample_delays[mode][beam_index][4], sample_delays[mode][beam_index][5], sample_delays[mode][beam_index][6]))
+        
 
             numpy.savetxt(outfile_name,sample_delays[mode], delimiter=',',fmt=['%i','%.3f','%.3f','%i','%i','%i','%i'],header='beam_index , zenith, azimuth, delay_ant0_by, delay_ant1_by, delay_ant2_by, delay_ant3_by')
 
@@ -586,7 +726,7 @@ if __name__=="__main__":
                     circle = plt.Circle((beam_phis_deg[beam_index], beam_thetas_deg[beam_index]), radius, edgecolor=circle_color,linewidth=circle_linewidth,fill=False)
                     ax.add_artist(circle)
 
-                        
+                    
             fig.savefig(savefig_text)
 
             all_fig.append(fig)
