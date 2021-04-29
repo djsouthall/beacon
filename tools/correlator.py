@@ -2126,7 +2126,7 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={}):
+    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={}):
         '''
         Does the same thing as map, but averages over all eventids given.  Mostly helpful for 
         repeated sources such as background sources or pulsers.
@@ -2290,7 +2290,7 @@ class Correlator:
             im = self.addTimeDelayCurves(im, time_delay_dict, pol, ax, mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg)
 
             #Added circles as specified.
-            ax, peak_circle = self.addCircleToMap(ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+            ax, peak_circle = self.addCircleToMap(ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
 
             if circle_az is not None:
                 if circle_zenith is not None:
@@ -2311,7 +2311,7 @@ class Correlator:
                     if len(_circle_zenith) == len(_circle_az):
                         additional_circles = []
                         for i in range(len(_circle_az)):
-                            ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
+                            ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=radius, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
                             additional_circles.append(_circ)
 
             #Block out simple ENU zenith cut region. 
@@ -2545,7 +2545,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None):
+    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False):
         '''
         This will loop over eventids and makes a histogram from of location of maximum correlation
         value in the corresponding correlation maps. 
@@ -2748,31 +2748,60 @@ class Correlator:
 
                     plt.subplot(2,2,3)
                     plt.ylabel('Counts (PDF)')
-                    plt.xlabel('Azimuth Distribution (Degrees)')
-                    #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
-                    plt.hist(all_phi_best - mean_phi, bins=self.phis_deg-mean_phi, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=True)
-                    x = numpy.linspace(min(self.phis_deg-mean_phi),max(self.phis_deg-mean_phi),200)
-                    plt.plot(x,scipy.stats.norm.pdf(x,0,sig_phi),label='Gaussian Fit')
+                    
+                    if shift_1d_hists == True:
+                        plt.xlabel('Azimuth Distribution (Degrees)\nCentered on Mean')
+                        #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
+                        plt.hist(all_phi_best - mean_phi, bins=self.phis_deg-mean_phi, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=True)
+                        x = numpy.linspace(min(self.phis_deg-mean_phi),max(self.phis_deg-mean_phi),200)
+                        plt.plot(x,scipy.stats.norm.pdf(x,0,sig_phi),label='Gaussian Fit')
+                        plt.xlim(min(all_phi_best - mean_phi) - 1.0,max(all_phi_best - mean_phi) + 1.0)
+                        if len(circle_az) == 1:
+                            plt.axvline(circle_az[0] - mean_phi,color='fuchsia',label='Highlighted Azimuth')
+
+                    else:
+                        plt.xlabel('Azimuth Distribution (Degrees)')
+                        #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
+                        plt.hist(all_phi_best, bins=self.phis_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=True)
+                        x = numpy.linspace(min(self.phis_deg),max(self.phis_deg),200)
+                        plt.plot(x,scipy.stats.norm.pdf(x,mean_phi,sig_phi),label='Gaussian Fit')
+                        plt.xlim(min(all_phi_best) - 1.0,max(all_phi_best) + 1.0)
+                        if len(circle_az) == 1:
+                            plt.axvline(circle_az[0],color='fuchsia',label='Highlighted Azimuth')
+
                     plt.legend(loc = 'upper right',fontsize=10)
                     plt.minorticks_on()
                     plt.grid(b=True, which='major', color='k', linestyle='-')
                     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.xlim(min(all_phi_best - mean_phi) - 1.0,max(all_phi_best - mean_phi) + 1.0)
 
 
                     plt.subplot(2,2,4)
                     #plt.ylabel('Counts (PDF)')
-                    plt.xlabel('Zenith Distribution (Degrees)')
-                    #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
-                    plt.hist(all_theta_best - mean_theta, bins=self.thetas_deg-mean_theta, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=True)
-                    x = numpy.linspace(min(self.thetas_deg-mean_theta),max(self.thetas_deg-mean_theta),200)
-                    plt.plot(x,scipy.stats.norm.pdf(x,0,sig_theta),label='Gaussian Fit')
+                    if shift_1d_hists == True:
+                        plt.xlabel('Zenith Distribution (Degrees)\nCentered on Mean')
+                        #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
+                        plt.hist(all_theta_best - mean_theta, bins=self.thetas_deg-mean_theta, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=True)
+                        x = numpy.linspace(min(self.thetas_deg-mean_theta),max(self.thetas_deg-mean_theta),200)
+                        plt.plot(x,scipy.stats.norm.pdf(x,0,sig_theta),label='Gaussian Fit')
+                        plt.xlim(min(all_theta_best - mean_theta) - 1.0,max(all_theta_best - mean_theta) + 1.0)
+                        if len(circle_zenith) == 1:
+                            plt.axvline(circle_zenith[0] - mean_theta,color='fuchsia',label='Highlighted Zenith')
+
+                    else:
+                        plt.xlabel('Zenith Distribution (Degrees)')
+                        #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
+                        plt.hist(all_theta_best, bins=self.thetas_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=True)
+                        x = numpy.linspace(min(self.thetas_deg),max(self.thetas_deg),200)
+                        plt.plot(x,scipy.stats.norm.pdf(x,mean_theta,sig_theta),label='Gaussian Fit')
+                        plt.xlim(min(all_theta_best) - 1.0,max(all_theta_best) + 1.0)
+                        if len(circle_zenith) == 1:
+                            plt.axvline(circle_zenith[0],color='fuchsia',label='Highlighted Zenith')
+
+                    
                     plt.legend(loc = 'upper right',fontsize=10)
                     plt.minorticks_on()
                     plt.grid(b=True, which='major', color='k', linestyle='-')
                     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.xlim(min(all_theta_best - mean_theta) - 1.0,max(all_theta_best - mean_theta) + 1.0)
-
                     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.25)
 
             return hist, all_phi_best, all_theta_best
@@ -2928,7 +2957,7 @@ class Correlator:
 
                 fig = plt.figure()
                 if window_title is None:
-                    fig.canvas.set_window_title('Overlap Map'%(self.reader.run,eventid,pol.title()))
+                    fig.canvas.set_window_title('Overlap Map')
                 else:
                     fig.canvas.set_window_title(window_title)
                 if mollweide == True:
