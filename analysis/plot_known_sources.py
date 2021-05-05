@@ -135,29 +135,41 @@ if __name__ == '__main__':
         time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
         map_direction_dset_key = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
 
-        if False:
-            included_valley_sources = [ 'Tonopah AFS GATR Site',\
+        if True:
+            included_valley_sources = [ 'Northern Cell Tower',\
+                                        'Tonopah KTPH',\
+                                        'Tonopah AFS GATR Site',\
+                                        'Miller Substation',\
                                         'Tonopah Vortac',\
-                                        'Tonopah Airport Antenna',\
                                         'Dyer Cell Tower',\
-                                        'West Dyer Substation',\
                                         'East Dyer Substation',\
-                                        'Oasis',\
-                                        'Beatty Substation',\
+                                        'Beatty Airport Antenna',\
                                         'Palmetto Cell Tower',\
                                         'Cedar Peak',\
-                                        'Dome Thing',\
-                                        'Goldfield Hill Tower',\
-                                        'Silver Peak Substation',\
-                                        'Silver Peak Town Antenna',\
-                                        'Silver Peak Lithium Mine',\
-                                        'Past SP Substation']
+                                        'Silver Peak Substation']
+
+            # [ 'Tonopah AFS GATR Site',\
+            #     'Tonopah Vortac',\
+            #     'Tonopah Airport Antenna',\
+            #     'Dyer Cell Tower',\
+            #     'West Dyer Substation',\
+            #     'East Dyer Substation',\
+            #     'Oasis',\
+            #     'Beatty Substation',\
+            #     'Palmetto Cell Tower',\
+            #     'Cedar Peak',\
+            #     'Dome Thing',\
+            #     'Goldfield Hill Tower',\
+            #     'Silver Peak Substation',\
+            #     'Silver Peak Town Antenna',\
+            #     'Silver Peak Lithium Mine',\
+            #     'Past SP Substation']
         else:
             included_valley_sources = []
 
         #### AIRPLANES ####
         plot_animated_airplane = False #Otherwise plots first event from each plane.  
-        if True:
+        if False:
             included_airplanes =      [ '1728-62026',\
                                         '1773-14413',\
                                         '1773-63659',\
@@ -168,7 +180,7 @@ if __name__ == '__main__':
 
 
         else:
-            included_airplanes =      ['1774-178','1728-62026']
+            included_airplanes =      ['1728-62026']
 
         plot_predicted_time_shifts = False
         plot_airplane_tracks = True
@@ -201,9 +213,19 @@ if __name__ == '__main__':
         apply_phase_response = True
         hilbert = False
 
-        included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
+        included_antennas_lumped = [0,1,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
         included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
         include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
+
+
+        #This math is to set the pairs to include in the calculation.  Typically it will be all of them, but if the option is enabled to remove some
+        #from the calculation then this will allow for that to be done.
+        pairs = numpy.array(list(itertools.combinations((0,1,2,3), 2)))
+        pairs_cut = []
+        for pair_index, pair in enumerate(numpy.array(list(itertools.combinations((0,1,2,3), 2)))):
+            pairs_cut.append(numpy.logical_and(numpy.all(numpy.isin(numpy.array(pair),included_antennas_lumped)), pair_index in include_baselines)) #include_baselines Overwritten when antennas removed.
+
+        include_baselines = numpy.where(pairs_cut)[0] #Effectively the same as the pairs_cut but index based for baselines.
 
         #### PULSERS ####
 
@@ -602,13 +624,19 @@ if __name__ == '__main__':
                 if plot_animated_airplane == True:
                     cor.animatedMap(eventids, mode, 'deploy_index_%i'%deploy_index,include_baselines=include_baselines,map_source_distance_m = source_distance_m,  plane_zenith=zenith_deg,plane_az=azimuth_deg,hilbert=False, max_method=None,center_dir='W',save=False,dpi=300)
                 else:
+                    plane_td_dict = {}
                     for event_index, eventid in enumerate(eventids):
-                        td_dict = {mode:{'[0, 1]' : [ measured_plane_time_delays[key][0][event_index]], '[0, 2]' : [measured_plane_time_delays[key][1][event_index]], '[0, 3]' : [measured_plane_time_delays[key][2][event_index]], '[1, 2]' : [measured_plane_time_delays[key][3][event_index]], '[1, 3]' : [measured_plane_time_delays[key][4][event_index]], '[2, 3]' : [measured_plane_time_delays[key][5][event_index]]}}
+                        plane_td_dict[mode] = {}
+                        pairs = numpy.array(list(itertools.combinations((0,1,2,3), 2)))
+                        for pair_index, pair in enumerate(pairs):
+                            if pair_cut[pair_index]:
+                                plane_td_dict[mode]['[%i, %i]'%(pair[0],pair[1])] = [measured_plane_time_delays[key][(numpy.cumsum(pair_cut) - 1)[pair_index]][event_index]]
+                        #plane_td_dict = {mode:{'[0, 1]' : [ measured_plane_time_delays[key][0][event_index]], '[0, 2]' : [measured_plane_time_delays[key][1][event_index]], '[0, 3]' : [measured_plane_time_delays[key][2][event_index]], '[1, 2]' : [measured_plane_time_delays[key][3][event_index]], '[1, 3]' : [measured_plane_time_delays[key][4][event_index]], '[2, 3]' : [measured_plane_time_delays[key][5][event_index]]}}
                         cor.overwriteSourceDistance(source_distance_m[event_index], verbose=False, suppress_time_delay_calculations=False)
                         if event_index == 0:
-                            mean_corr_values, fig, ax = cor.map(eventids[event_index], mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=td_dict,window_title=key)
+                            mean_corr_values, fig, ax = cor.map(eventids[event_index], mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=plane_td_dict,window_title=key)
                         else:
-                            mean_corr_values = cor.map(eventids[event_index], mode, include_baselines=include_baselines, plot_map=False, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=td_dict,window_title=key)
+                            mean_corr_values = cor.map(eventids[event_index], mode, include_baselines=include_baselines, plot_map=False, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=plane_td_dict,window_title=key)
 
                         linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = cor.mapMax(mean_corr_values,max_method=0,verbose=True,zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,90],pol=mode)
                         offset_az.append(azimuth_deg[event_index] - phi_best)
