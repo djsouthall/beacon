@@ -37,7 +37,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
 
-default_deploy = 25#2#13#19#15#The deployment calibration to use as the default.
+default_deploy = 26#2#13#19#15#The deployment calibration to use as the default.
 
 
 def returnDefaultDeploy():
@@ -535,6 +535,22 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                                     'Dyer Cell Tower'       :   {'phi_best_h':[27,29],'elevation_best_h':[-3,-1.5]},\
                                     'Tonopah AFS GATR Site' :   {'phi_best_h':[31,33],'elevation_best_h':[-2,0]}}
 
+    elif False:
+        source_dict = {}
+        source_dict['A'] = (37.759052, -118.097173, 4920 * 0.3048) # North Dyer Substation
+        source_dict['B'] = (38.238904, -117.363661, 4922 * 0.3048) # Solar
+        source_dict['C'] = (38.094374, -117.186576, 6856 * 0.3048) # Booker
+        source_dict['D'] = (37.754281, -117.632355, 4274 * 0.3048) # Silver Peak
+        source_dict['E'] = (37.462089, -117.573584, 5943 * 0.3048) # Palmetto
+
+        data_slicer_cut_dict = {}
+        data_slicer_cut_dict['A'] = {'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]} # North Dyer Substation
+        data_slicer_cut_dict['B'] = {'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]} # Solar
+        data_slicer_cut_dict['C'] = {'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]} # Booker
+        data_slicer_cut_dict['D'] = {'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]}  # Silver Peak
+        data_slicer_cut_dict['E'] = {'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]} # Palmetto
+        
+
     else:
         source_dict = { 'Northern Cell Tower'       :(38.017045, -117.773122, 5525 * 0.3048),\
                         'Solar Plant'               :(38.238904, -117.363661, 4922 * 0.3048),\
@@ -571,7 +587,12 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                         'Silver Peak Town Antenna'  :(37.752345, -117.630208, 4296 * 0.3048),\
                         'Silver Peak Lithium Mine'  :(37.766835, -117.591208, 4272 * 0.3048),\
                         'Past SP Substation'        :(37.824025, -117.337428, 5034 * 0.3048),\
-                        'Silver Peak Substation'    :(37.754281, -117.632355, 4274 * 0.3048)}
+                        'Silver Peak Substation'    :(37.754281, -117.632355, 4274 * 0.3048),\
+                        'A'                         :(37.759052, -118.097173, 4920 * 0.3048),\
+                        'B'                         :(38.238904, -117.363661, 4922 * 0.3048),\
+                        'C'                         :(38.094374, -117.186576, 6856 * 0.3048),\
+                        'D'                         :(37.754281, -117.632355, 4274 * 0.3048),\
+                        'E'                         :(37.529279, -117.905027, 5009 * 0.3048)}
 
 
         # 'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
@@ -616,9 +637,12 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                                     'Silver Peak Town Antenna'  :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
                                     'Silver Peak Lithium Mine'  :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
                                     'Past SP Substation'        :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
-                                    'Silver Peak Substation'    :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]}}
-
-
+                                    'Silver Peak Substation'    :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                    'A'                         :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+                                    'B'                         :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+                                    'C'                         :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+                                    'D'                         :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+                                    'E'                         :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]}}
     #Note the above ROI assumes you have already cut out events that are below a certain correlation with a template.
     # impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     # time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
@@ -1192,7 +1216,50 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
 
             antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.535249, -18.061861, 20.165817], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-29.909783, -43.007372, 12.424257]}
             antennas_phase_vpol_hesse = {0 : [0.500000, 0.500000, 0.500000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.500000, 0.500000, 0.500000], 3 : [0.000000, 0.000000, 0.000000]}
+        elif deploy_index == 27:
+            # From 26 using known sources A,B,C,D, and TV.  Using only antennas 0,1,3, hpol only.
+            # ------------------------------------------------------------------
+            # | FCN = 3.125                   |     Ncalls=607 (607 total)     |
+            # | EDM = 9.57e-08 (Goal: 0.0002) |            up = 1.0            |
+            # ------------------------------------------------------------------
+            # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
+            # ------------------------------------------------------------------
+            # |     True      |     True      |   False   |       False        |
+            # ------------------------------------------------------------------
+            # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
+            # ------------------------------------------------------------------
+            # |     False     |     True      |   True    |   True    | False  |
+            # ------------------------------------------------------------------
+            # --------------------------------------------------------------------------------------------------
+            # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
+            # --------------------------------------------------------------------------------------------------
+            # | 0 | ant0_x       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
+            # | 1 | ant0_y       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
+            # | 2 | ant0_z       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
+            # | 3 | ant1_x       |  -37.28   |   0.16    |   -0.16    |    0.33    |-37.5352 |-33.5352 |       |
+            # | 4 | ant1_y       |  -18.72   |   0.21    |   -0.22    |    0.22    |-20.0619 |-16.0619 |       |
+            # | 5 | ant1_z       |18.165817004|3.692450139|-0.000000004|2.472806550 | 18.1658 | 22.1658 |       |
+            # | 6 | ant2_x       |   -8.7    |    0.5    |            |            |-10.6606 |-6.66064 |  yes  |
+            # | 7 | ant2_y       |   -44.5   |    0.5    |            |            |-46.5335 |-42.5335 |  yes  |
+            # | 8 | ant2_z       |    5.5    |    0.5    |            |            | 3.48984 | 7.48984 |  yes  |
+            # | 9 | ant3_x       |   -30.0   |    0.8    |    -0.9    |    0.7     |-31.9098 |-27.9098 |       |
+            # | 10| ant3_y       |  -43.53   |   0.27    |   -0.27    |    0.27    |-45.0074 |-41.0074 |       |
+            # | 11| ant3_z       |   10.4    |    3.2    |    -3.2    |    2.4     | 10.4243 | 14.4243 |       |
+            # | 12| cable_delay0 |    7.9    |    0.1    |            |            | 4.90121 | 10.9012 |  yes  |
+            # | 13| cable_delay1 |    8.2    |    1.0    |    -1.0    |    0.9     | 8.15717 | 14.1572 |       |
+            # | 14| cable_delay2 |    0.0    |    0.1    |            |            |   -3    |    3    |  yes  |
+            # | 15| cable_delay3 |    9.6    |    2.1    |    -2.5    |    1.8     | 5.44492 | 11.4449 |       |
+            # --------------------------------------------------------------------------------------------------
 
+
+            # Copy-Paste Prints:
+            # ------------
+
+            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.032919, -43.530065, 10.424257]}
+            antennas_phase_hpol_hesse = {0 : [0.500000, 0.500000, 0.500000], 1 : [0.161029, 0.214942, 3.674703], 2 : [0.500000, 0.500000, 0.500000], 3 : [0.825754, 0.271855, 3.198833]}
+
+            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.032919, -43.530065, 10.424257]}
+            antennas_phase_vpol_hesse = {0 : [0.500000, 0.500000, 0.500000], 1 : [0.161029, 0.214942, 3.674703], 2 : [0.500000, 0.500000, 0.500000], 3 : [0.825754, 0.271855, 3.198833]}
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
 
@@ -1328,7 +1395,12 @@ def loadCableDelays(deploy_index=default_deploy,return_raw=False):
     elif deploy_index == 26:
         cable_delays =  {   'hpol':     numpy.array([7.901212,11.157171,0.000000,8.444916]), \
                             'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
-
+    elif deploy_index == 27:
+        cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,0.000000,9.591437]), \
+                            'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
+        
+        # cable_delays_hpol = 
+        # cable_delays_hpol_hesse = numpy.array([0.100000,0.951527,0.100000,2.137623])
 
     else:
         print('Using unmodified cable delays.')

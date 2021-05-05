@@ -394,7 +394,7 @@ if __name__ == '__main__':
             valley_weight = len(use_sources)
             airplane_weight = 5*len(included_airplanes)
 
-        elif True:
+        elif False:
             unknown_source_dir_valley = True #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             unknown_mode = 'gaus'#'strip'#'cor'#options are 'cor' or 'strip'.  If 'cor' ch,osen then the most impulsive event will be chosen and use to generate maps.
             if mode == 'hpol':
@@ -425,6 +425,26 @@ if __name__ == '__main__':
             valley_weight = 1.0#len(use_sources)
             airplane_weight = 1.0#5*len(included_airplanes)
 
+        elif True:
+            unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'gaus'#'strip'#'cor'#options are 'cor' or 'strip'.  If 'cor' ch,osen then the most impulsive event will be chosen and use to generate maps.
+            if mode == 'hpol':
+                #use_sources = ['Booker Antenna','Miller Substation','Tonopah KTPH','KNKN223','Beatty Airport Vortac']#['Tonopah AFS GATR Site','Beatty Airport Vortac']#['Miller Substation', 'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#,'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#['South Dyer Town','Quarry Substation']#['South Dyer Town','Quarry Substation']#,'Palmetto Cell Tower','Beatty Airport Vortac'#['Dyer Cell Tower', 'Test Site A']#,'Miller Substation','Dyer House Antenna A','Cedar Peak']#['Miller Substation']#['Dyer Cell Tower','Miller Substation','Dyer House Antenna A','Cedar Peak']
+                use_sources = [ 'A', 'B', 'C', 'D'] #'E' looks like it has particularly bad zenith, might be close and obstructed.
+                included_pulsers = []#['run1509']#,'run1507','run1511']#
+                included_airplanes = []#['1728-62026']#['1774-178']#['1728-62026','1773-14413','1773-63659','1774-178']##
+                included_cw_sources = ['khsv']
+            elif mode == 'vpol':
+                #Don't use palmetto for vpol
+                use_sources = ['Tonopah AFS GATR Site','Beatty Airport Vortac','KNKN223']#['Miller Substation']#['Miller Substation','Tonopah AFS GATR Site','Beatty Airport Vortac']#['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#'East Dyer Substation',
+                included_pulsers = []#['run1509']#,'run1507','run1511']#
+                included_airplanes = []
+                included_cw_sources = ['khsv']
+            
+            pulser_weight  = 1.0#len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 1.0
+            valley_weight = 1.0#len(use_sources)
+            airplane_weight = 1.0#5*len(included_airplanes)
             
         else:
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
@@ -440,8 +460,8 @@ if __name__ == '__main__':
 
         if unknown_source_dir_valley == True:
             print('USING UNKNOWN SOURCE DIR FOR VALLEY SOURCES IN MODE: %s'%unknown_mode)
-        only_plot = ['Booker Antenna','Miller Substation','Tonopah Airport Antenna','Tonopah KTPH','KNKN223','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna','Dyer House Antenna A','Beatty Airport Vortac']
-        #only_plot = use_sources
+        #only_plot = ['Booker Antenna','Miller Substation','Tonopah Airport Antenna','Tonopah KTPH','KNKN223','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna','Dyer House Antenna A','Beatty Airport Vortac']
+        only_plot = use_sources
         # only_plot.append('Concrete Substation')
         # only_plot.append('Dyer Cell Tower')
         # only_plot.append('Miller Substation')
@@ -1649,7 +1669,7 @@ if __name__ == '__main__':
                 azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU_new[1],sources_ENU_new[0]))
 
                 #Only used for map.  Hists use higher resolution on tighter area.
-                map_resolution = 0.5 #degrees
+                map_resolution = 0.1 #degrees
                 range_phi_deg=(-180, 180)
                 range_theta_deg=(0,180)
                 n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
@@ -1708,7 +1728,7 @@ if __name__ == '__main__':
                 eventid = roi_eventids[roi_impulsivity_sort[-1]]
                 
                 #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=original_zenith_deg, circle_az=original_azimuth_deg, time_delay_dict=td_dict)
-                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key, include_baselines=include_baselines)
+                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key, include_baselines=include_baselines)
                 #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
                 
                 if plot_histograms:
@@ -1941,7 +1961,7 @@ if __name__ == '__main__':
                     event_index = 0
                     td_dict = {mode:{'[0, 1]' : [ measured_plane_time_delays[key][0][event_index]], '[0, 2]' : [measured_plane_time_delays[key][1][event_index]], '[0, 3]' : [measured_plane_time_delays[key][2][event_index]], '[1, 2]' : [measured_plane_time_delays[key][3][event_index]], '[1, 3]' : [measured_plane_time_delays[key][4][event_index]], '[2, 3]' : [measured_plane_time_delays[key][5][event_index]]}}
                     adjusted_cor.overwriteSourceDistance(source_distance_m[event_index], verbose=False, suppress_time_delay_calculations=False)
-                    mean_corr_values, fig, ax = adjusted_cor.map(eventids[event_index], mode, include_baselines=airplane_include_baselines, plot_map=True, plot_corr=False, hilbert=False, center_dir=known_planes[key]['dir'], radius=1.0, zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=td_dict,window_title=key)
+                    mean_corr_values, fig, ax = adjusted_cor.map(eventids[event_index], mode, include_baselines=airplane_include_baselines, plot_map=True, plot_corr=False, hilbert=False, center_dir=known_planes[key]['dir'], radius=1.0, zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=td_dict,window_title=key)
 
                 cors.append(adjusted_cor)
 

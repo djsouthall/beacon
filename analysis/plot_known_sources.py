@@ -135,18 +135,15 @@ if __name__ == '__main__':
         time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
         map_direction_dset_key = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
 
-        if True:
+        if False:
             included_valley_sources = [ 'Northern Cell Tower',\
-                                        'Tonopah KTPH',\
+                                        'Booker Antenna',\
                                         'Tonopah AFS GATR Site',\
                                         'Miller Substation',\
-                                        'Tonopah Vortac',\
                                         'Dyer Cell Tower',\
-                                        'East Dyer Substation',\
                                         'Beatty Airport Antenna',\
                                         'Palmetto Cell Tower',\
-                                        'Cedar Peak',\
-                                        'Silver Peak Substation']
+                                        'Cedar Peak']
 
             # [ 'Tonopah AFS GATR Site',\
             #     'Tonopah Vortac',\
@@ -165,7 +162,7 @@ if __name__ == '__main__':
             #     'Silver Peak Lithium Mine',\
             #     'Past SP Substation']
         else:
-            included_valley_sources = []
+            included_valley_sources = ['A','B','C','D','E']
 
         #### AIRPLANES ####
         plot_animated_airplane = False #Otherwise plots first event from each plane.  
