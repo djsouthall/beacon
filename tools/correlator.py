@@ -2950,103 +2950,104 @@ class Correlator:
 
 
             for pair_key, pair_time_delay in time_delays.items():
-                time_delay = pair_time_delay[0]
+                for time_delay in pair_time_delay: 
+                    #time_delay = pair_time_delay[0]
 
-                pair = numpy.array(pair_key.replace('[','').replace(']','').split(','),dtype=int)
-                pair_index = numpy.where(numpy.sum(pair == pairs,axis=1) == 2)[0][0] #Used for consistent coloring.
+                    pair = numpy.array(pair_key.replace('[','').replace(']','').split(','),dtype=int)
+                    pair_index = numpy.where(numpy.sum(pair == pairs,axis=1) == 2)[0][0] #Used for consistent coloring.
 
-                if numpy.isin(pair_index ,include_baselines ):
-                    i = pair[0]
-                    j = pair[1]
+                    if numpy.isin(pair_index ,include_baselines ):
+                        i = pair[0]
+                        j = pair[1]
 
-                    #Attempting to use precalculate expected time delays per direction to derive theta here.
-                    if value_mode == 'box':
-                        if pol == 'hpol':
-                            if pair_index == 0:
-                                overlap_map +=  (numpy.abs(self.t_hpol_0subtract1 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 1:
-                                overlap_map +=  (numpy.abs(self.t_hpol_0subtract2 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 2:
-                                overlap_map +=  (numpy.abs(self.t_hpol_0subtract3 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 3:
-                                overlap_map +=  (numpy.abs(self.t_hpol_1subtract2 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 4:
-                                overlap_map +=  (numpy.abs(self.t_hpol_1subtract3 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 5:
-                                overlap_map +=  (numpy.abs(self.t_hpol_2subtract3 - time_delay) < window_ns).astype(int)
-                        else:
-                            if pair_index == 0:
-                                overlap_map +=  (numpy.abs(self.t_vpol_0subtract1 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 1:
-                                overlap_map +=  (numpy.abs(self.t_vpol_0subtract2 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 2:
-                                overlap_map +=  (numpy.abs(self.t_vpol_0subtract3 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 3:
-                                overlap_map +=  (numpy.abs(self.t_vpol_1subtract2 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 4:
-                                overlap_map +=  (numpy.abs(self.t_vpol_1subtract3 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 5:
-                                overlap_map +=  (numpy.abs(self.t_vpol_2subtract3 - time_delay) < window_ns).astype(int)
-                    elif value_mode == 'distance':
-                        if pol == 'hpol':
-                            if pair_index == 0:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract1 - time_delay), (numpy.abs(self.t_hpol_0subtract1 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 1:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract2 - time_delay), (numpy.abs(self.t_hpol_0subtract2 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 2:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract3 - time_delay), (numpy.abs(self.t_hpol_0subtract3 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 3:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_1subtract2 - time_delay), (numpy.abs(self.t_hpol_1subtract2 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 4:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_1subtract3 - time_delay), (numpy.abs(self.t_hpol_1subtract3 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 5:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_2subtract3 - time_delay), (numpy.abs(self.t_hpol_2subtract3 - time_delay) < window_ns).astype(int))
-                        else:
-                            if pair_index == 0:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract1 - time_delay), (numpy.abs(self.t_vpol_0subtract1 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 1:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract2 - time_delay), (numpy.abs(self.t_vpol_0subtract2 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 2:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract3 - time_delay), (numpy.abs(self.t_vpol_0subtract3 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 3:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_1subtract2 - time_delay), (numpy.abs(self.t_vpol_1subtract2 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 4:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_1subtract3 - time_delay), (numpy.abs(self.t_vpol_1subtract3 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 5:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_2subtract3 - time_delay), (numpy.abs(self.t_vpol_2subtract3 - time_delay) < window_ns).astype(int))
-                    elif value_mode == 'gaus':
-                        #Here window will be treated as FWHM
-                        sigma = window_ns / 2.355 #conversion to standard deviation.
-                        scale_factor = 1# Don't want normalized area, want normalized peak value.  #1/(sigma * numpy.sqrt(2*numpy.pi)) #So only compute once.
-                        denom = 2*(sigma**2)
-                        g = lambda x, x0 : scale_factor * numpy.exp(-((x-x0)**2)/denom)
+                        #Attempting to use precalculate expected time delays per direction to derive theta here.
+                        if value_mode == 'box':
+                            if pol == 'hpol':
+                                if pair_index == 0:
+                                    overlap_map +=  (numpy.abs(self.t_hpol_0subtract1 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 1:
+                                    overlap_map +=  (numpy.abs(self.t_hpol_0subtract2 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 2:
+                                    overlap_map +=  (numpy.abs(self.t_hpol_0subtract3 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 3:
+                                    overlap_map +=  (numpy.abs(self.t_hpol_1subtract2 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 4:
+                                    overlap_map +=  (numpy.abs(self.t_hpol_1subtract3 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 5:
+                                    overlap_map +=  (numpy.abs(self.t_hpol_2subtract3 - time_delay) < window_ns).astype(int)
+                            else:
+                                if pair_index == 0:
+                                    overlap_map +=  (numpy.abs(self.t_vpol_0subtract1 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 1:
+                                    overlap_map +=  (numpy.abs(self.t_vpol_0subtract2 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 2:
+                                    overlap_map +=  (numpy.abs(self.t_vpol_0subtract3 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 3:
+                                    overlap_map +=  (numpy.abs(self.t_vpol_1subtract2 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 4:
+                                    overlap_map +=  (numpy.abs(self.t_vpol_1subtract3 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 5:
+                                    overlap_map +=  (numpy.abs(self.t_vpol_2subtract3 - time_delay) < window_ns).astype(int)
+                        elif value_mode == 'distance':
+                            if pol == 'hpol':
+                                if pair_index == 0:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract1 - time_delay), (numpy.abs(self.t_hpol_0subtract1 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 1:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract2 - time_delay), (numpy.abs(self.t_hpol_0subtract2 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 2:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract3 - time_delay), (numpy.abs(self.t_hpol_0subtract3 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 3:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_1subtract2 - time_delay), (numpy.abs(self.t_hpol_1subtract2 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 4:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_1subtract3 - time_delay), (numpy.abs(self.t_hpol_1subtract3 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 5:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_2subtract3 - time_delay), (numpy.abs(self.t_hpol_2subtract3 - time_delay) < window_ns).astype(int))
+                            else:
+                                if pair_index == 0:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract1 - time_delay), (numpy.abs(self.t_vpol_0subtract1 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 1:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract2 - time_delay), (numpy.abs(self.t_vpol_0subtract2 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 2:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract3 - time_delay), (numpy.abs(self.t_vpol_0subtract3 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 3:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_1subtract2 - time_delay), (numpy.abs(self.t_vpol_1subtract2 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 4:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_1subtract3 - time_delay), (numpy.abs(self.t_vpol_1subtract3 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 5:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_2subtract3 - time_delay), (numpy.abs(self.t_vpol_2subtract3 - time_delay) < window_ns).astype(int))
+                        elif value_mode == 'gaus':
+                            #Here window will be treated as FWHM
+                            sigma = window_ns / 2.355 #conversion to standard deviation.
+                            scale_factor = 1# Don't want normalized area, want normalized peak value.  #1/(sigma * numpy.sqrt(2*numpy.pi)) #So only compute once.
+                            denom = 2*(sigma**2)
+                            g = lambda x, x0 : scale_factor * numpy.exp(-((x-x0)**2)/denom)
 
-                        if pol == 'hpol':
-                            if pair_index == 0:
-                                overlap_map +=  g(self.t_hpol_0subtract1, time_delay)
-                            elif pair_index == 1:
-                                overlap_map +=  g(self.t_hpol_0subtract2, time_delay)
-                            elif pair_index == 2:
-                                overlap_map +=  g(self.t_hpol_0subtract3, time_delay)
-                            elif pair_index == 3:
-                                overlap_map +=  g(self.t_hpol_1subtract2, time_delay)
-                            elif pair_index == 4:
-                                overlap_map +=  g(self.t_hpol_1subtract3, time_delay)
-                            elif pair_index == 5:
-                                overlap_map +=  g(self.t_hpol_2subtract3, time_delay)
-                        else:
-                            if pair_index == 0:
-                                overlap_map +=  g(self.t_vpol_0subtract1, time_delay)
-                            elif pair_index == 1:
-                                overlap_map +=  g(self.t_vpol_0subtract2, time_delay)
-                            elif pair_index == 2:
-                                overlap_map +=  g(self.t_vpol_0subtract3, time_delay)
-                            elif pair_index == 3:
-                                overlap_map +=  g(self.t_vpol_1subtract2, time_delay)
-                            elif pair_index == 4:
-                                overlap_map +=  g(self.t_vpol_1subtract3, time_delay)
-                            elif pair_index == 5:
-                                overlap_map +=  g(self.t_vpol_2subtract3, time_delay)
+                            if pol == 'hpol':
+                                if pair_index == 0:
+                                    overlap_map +=  g(self.t_hpol_0subtract1, time_delay)
+                                elif pair_index == 1:
+                                    overlap_map +=  g(self.t_hpol_0subtract2, time_delay)
+                                elif pair_index == 2:
+                                    overlap_map +=  g(self.t_hpol_0subtract3, time_delay)
+                                elif pair_index == 3:
+                                    overlap_map +=  g(self.t_hpol_1subtract2, time_delay)
+                                elif pair_index == 4:
+                                    overlap_map +=  g(self.t_hpol_1subtract3, time_delay)
+                                elif pair_index == 5:
+                                    overlap_map +=  g(self.t_hpol_2subtract3, time_delay)
+                            else:
+                                if pair_index == 0:
+                                    overlap_map +=  g(self.t_vpol_0subtract1, time_delay)
+                                elif pair_index == 1:
+                                    overlap_map +=  g(self.t_vpol_0subtract2, time_delay)
+                                elif pair_index == 2:
+                                    overlap_map +=  g(self.t_vpol_0subtract3, time_delay)
+                                elif pair_index == 3:
+                                    overlap_map +=  g(self.t_vpol_1subtract2, time_delay)
+                                elif pair_index == 4:
+                                    overlap_map +=  g(self.t_vpol_1subtract3, time_delay)
+                                elif pair_index == 5:
+                                    overlap_map +=  g(self.t_vpol_2subtract3, time_delay)
 
 
 

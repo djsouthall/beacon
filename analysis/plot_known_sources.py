@@ -90,6 +90,40 @@ site3_measured_time_delays_hilbert_errors_hpol =  [((0, 1), 0.052428389377522186
 site3_measured_time_delays_hilbert_vpol =  [((0, 1), -95.30265032203047), ((0, 2), -150.3612627337264), ((0, 3), -175.88155062409197), ((1, 2), -55.06965132126639), ((1, 3), -80.55266965411217), ((2, 3), -25.524379719980214)]
 site3_measured_time_delays_hilbert_errors_vpol =  [((0, 1), 0.03654878810011606), ((0, 2), 0.044076823274307404), ((0, 3), 0.04115323593715623), ((1, 2), 0.039281585194972476), ((1, 3), 0.04240838492773853), ((2, 3), 0.04449409255674249)]
 
+#CW
+cw_sources = {}
+
+time_delay_dict = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76], '[0, 3]': [-15.82], '[1, 2]': [173.4], '[1, 3]': [61.77], '[2, 3]': [-111.6]}}
+
+cw_sources['khsv'] = {}
+cw_sources['khsv']['latlonel'] = numpy.array([36.008611, -115.005556, 3316*0.3048 + 10])
+period = 17.54 #ns (57 MHz)
+#cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76 - period,  95.76 - 2*period], '[0, 3]': [-15.82], '[1, 2]': [173.4 - period,  173.4 - 2*period], '[1, 3]': [61.77], '[2, 3]': [-111.6 + 2*period]}}
+cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]'   :[ -77.6           ],\
+                                                 '[0, 2]'   :[ 95.76  - period ],\
+                                                 '[0, 3]'   :[ -15.82          ],\
+                                                 '[1, 2]'   :[ 173.4  - period ],\
+                                                 '[1, 3]'   :[ 61.77           ],\
+                                                 '[2, 3]'   :[ -111.6 + period ]}}
+# cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]'   : -77.6     + period*(numpy.arange(5) - 2),\
+#                                                  '[0, 2]'   : 95.76     + period*(numpy.arange(5) - 2),\
+#                                                  '[0, 3]'   : -15.82    + period*(numpy.arange(5) - 2),\
+#                                                  '[1, 2]'   : 173.4     + period*(numpy.arange(5) - 2),\
+#                                                  '[1, 3]'   : 61.77     + period*(numpy.arange(5) - 2),\
+#                                                  '[2, 3]'   : -111.6    + period*(numpy.arange(5) - 2)}}
+cw_sources['khsv']['data_slicer_dict'] = {'std_h':[0.5,1.5],'std_v':[0.5,0.9],'snr_v':[8.0,9.0]}
+cw_sources['khsv']['data_slicer_run'] = 1650
+
+cable_delays = info.loadCableDelays(return_raw=True)
+cable_delay_differences = cable_delays['hpol'] - cable_delays['vpol']
+
+#Assuming the hpol time delays are measured accurately and so are our cable delays, this will give what we would predict the measured (raw without accounting for cable delays) time delays of the vpol to be.  I do this to attempt to use the hpol time delays in a vpol calibration.
+cw_sources['khsv']['time_delay_dict']['vpol'] = {   '[0, 1]' : [-77.6   - (cable_delays['hpol'][0] - cable_delays['hpol'][1]) + (cable_delays['vpol'][0] - cable_delays['vpol'][1]) ],\
+                                                    '[0, 2]' : [95.76   - (cable_delays['hpol'][0] - cable_delays['hpol'][2]) + (cable_delays['vpol'][0] - cable_delays['vpol'][2]) ],\
+                                                    '[0, 3]' : [-15.82  - (cable_delays['hpol'][0] - cable_delays['hpol'][3]) + (cable_delays['vpol'][0] - cable_delays['vpol'][3]) ],\
+                                                    '[1, 2]' : [173.4   - (cable_delays['hpol'][1] - cable_delays['hpol'][2]) + (cable_delays['vpol'][1] - cable_delays['vpol'][2]) ],\
+                                                    '[1, 3]' : [61.77   - (cable_delays['hpol'][1] - cable_delays['hpol'][3]) + (cable_delays['vpol'][1] - cable_delays['vpol'][3]) ],\
+                                                    '[2, 3]' : [-111.6  - (cable_delays['hpol'][2] - cable_delays['hpol'][3]) + (cable_delays['vpol'][2] - cable_delays['vpol'][3]) ]}
 
 
 
@@ -123,11 +157,17 @@ if __name__ == '__main__':
 
         #### PULSERS ####
         if True:
-            included_pulsers =        [ 'run1507',\
-                                        'run1509',\
-                                        'run1511']
+            included_pulsers =    [ 'run1507',\
+                                    'run1509',\
+                                    'run1511']
         else:
-            included_pulsers = []                                    
+            included_pulsers = []  
+
+        #### CW ####
+        if True:
+            included_cw_sources = [ 'khsv']
+        else:
+            included_cw_sources = []                                    
 
         #### VALLEY SOURCES ####                      
         valley_source_run = 1650
@@ -196,7 +236,7 @@ if __name__ == '__main__':
 
 
         else:
-            included_airplanes =      ['1728-62026']
+            included_airplanes =      []#['1728-62026']
 
         plot_predicted_time_shifts = False
         plot_airplane_tracks = True
@@ -229,6 +269,10 @@ if __name__ == '__main__':
         apply_phase_response = True
         hilbert = False
 
+        # if deploy_index == 27:
+        #     included_antennas_lumped = [0,1,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
+        # else:
+        #     included_antennas_lumped = [0,1,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
         included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
         included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
         include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
@@ -483,11 +527,11 @@ if __name__ == '__main__':
                 elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(valley_source_ENU[2]/distance_m))
                 azimuth_deg = numpy.rad2deg(numpy.arctan2(valley_source_ENU[1],valley_source_ENU[0]))
                 
-                # if valley_source_key == 'E':
-                #     range_values = [100,500,1000,10000,100000]
-                # else:
-                #     range_values = [distance_m]
-                range_values = [distance_m]
+                if valley_source_key == 'E':
+                    range_values = [100,500,1000,10000,100000]
+                else:
+                    range_values = [distance_m]
+                #range_values = [distance_m]
 
                 for distance_m in range_values:
                     cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m, deploy_index=deploy_index)
@@ -705,7 +749,43 @@ if __name__ == '__main__':
                 plt.xlabel('Zen (deg)')
                 plt.ylabel('Reconstruction Offset')
 
+        #### VALLEY SOURCES ####
+
+        if len(included_cw_sources) > 0:
+            origin = info.loadAntennaZeroLocation()
+            for key in included_cw_sources:
+                cw_sources[key]['enu'] = numpy.array(pm.geodetic2enu(cw_sources['khsv']['latlonel'][0],cw_sources['khsv']['latlonel'][1],cw_sources['khsv']['latlonel'][2],origin[0],origin[1],origin[2]))
+
+            window_ns = 10.0
+            map_resolution = 0.25 #degrees
+            range_phi_deg = (-90, 90)
+            range_theta_deg = (0,180)
+            n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
+            n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
             
+            run = 1650
+            reader = Reader(datapath,run)
+
+            cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=1e6)
+            cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+            if mode == 'hpol':
+                ant0_ENU = cor.A0_hpol
+            elif mode == 'vpol':
+                ant0_ENU = cor.A0_vpol
+
+            for key in included_cw_sources:
+                source_distance_m = numpy.sqrt((cw_sources[key]['enu'][0] - ant0_ENU[0])**2 + (cw_sources[key]['enu'][1] - ant0_ENU[1])**2 + (cw_sources[key]['enu'][2] - ant0_ENU[2])**2)
+                azimuth_deg = numpy.rad2deg(numpy.arctan2(cw_sources[key]['enu'][1] - ant0_ENU[1],cw_sources[key]['enu'][0] - ant0_ENU[0]))
+                zenith_deg = numpy.rad2deg(numpy.arccos((cw_sources[key]['enu'][2] - ant0_ENU[2])/source_distance_m))
+
+                cor.overwriteSourceDistance(source_distance_m, verbose=False, suppress_time_delay_calculations=False)
+                overlap_value_mode = 'gaus'
+                for value_mode in [overlap_value_mode]:
+                    #['distance','gaus']:
+                    mesh_azimuth_deg, mesh_elevation_deg, overlap_map, im, ax = cor.generateTimeDelayOverlapMap(mode, cw_sources[key]['time_delay_dict'], window_ns, value_mode=value_mode, plot_map=True, mollweide=False,center_dir='E',window_title='Input %s'%key, include_baselines=include_baselines)
+                    ax.axvline(azimuth_deg,c='fuchsia',linewidth=1.0)
+                    ax.axhline(90.0 - zenith_deg,c='fuchsia',linewidth=1.0)
     except Exception as e:
         print('Error in main loop.')
         print(e)

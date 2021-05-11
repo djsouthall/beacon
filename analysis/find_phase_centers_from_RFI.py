@@ -191,7 +191,22 @@ time_delay_dict = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76], '[0, 3]': [-15
 
 cw_sources['khsv'] = {}
 cw_sources['khsv']['latlonel'] = numpy.array([36.008611, -115.005556, 3316*0.3048 + 10])
-cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76], '[0, 3]': [-15.82], '[1, 2]': [173.4], '[1, 3]': [61.77], '[2, 3]': [-111.6]}}
+period = 17.54 #ns (57 MHz)
+cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]'   :[ -77.6           ],\
+                                                 '[0, 2]'   :[ 95.76  - period ],\
+                                                 '[0, 3]'   :[ -15.82          ],\
+                                                 '[1, 2]'   :[ 173.4  - period ],\
+                                                 '[1, 3]'   :[ 61.77           ],\
+                                                 '[2, 3]'   :[ -111.6 + period ]}}
+# cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]'   : -77.6     + period*(numpy.arange(5) - 2),\
+#                                                  '[0, 2]'   : 95.76     + period*(numpy.arange(5) - 2),\
+#                                                  '[0, 3]'   : -15.82    + period*(numpy.arange(5) - 2),\
+#                                                  '[1, 2]'   : 173.4     + period*(numpy.arange(5) - 2),\
+#                                                  '[1, 3]'   : 61.77     + period*(numpy.arange(5) - 2),\
+#                                                  '[2, 3]'   : -111.6    + period*(numpy.arange(5) - 2)}}
+#cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76], '[0, 3]': [-15.82], '[1, 2]': [173.4], '[1, 3]': [61.77], '[2, 3]': [-111.6]}}
+#cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76 + period, 95.76, 95.76 - period,  95.76 - 2*period], '[0, 3]': [-15.82], '[1, 2]': [173.4 + period, 173.4, 173.4 - period,  173.4 - 2*period], '[1, 3]': [61.77], '[2, 3]': [-111.6 + 2*period, -111.6 + period, -111.6, -111.6 - period, -111.6 - 2*period]}}
+
 cw_sources['khsv']['data_slicer_dict'] = {'std_h':[0.5,1.5],'std_v':[0.5,0.9],'snr_v':[8.0,9.0]}
 cw_sources['khsv']['data_slicer_run'] = 1650
 
@@ -430,16 +445,16 @@ if __name__ == '__main__':
             unknown_mode = 'strip'#'cor'#options are 'cor' or 'strip'.  If 'cor' ch,osen then the most impulsive event will be chosen and use to generate maps.
             if mode == 'hpol':
                 #use_sources = ['Booker Antenna','Miller Substation','Tonopah KTPH','KNKN223','Beatty Airport Vortac']#['Tonopah AFS GATR Site','Beatty Airport Vortac']#['Miller Substation', 'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#,'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#['South Dyer Town','Quarry Substation']#['South Dyer Town','Quarry Substation']#,'Palmetto Cell Tower','Beatty Airport Vortac'#['Dyer Cell Tower', 'Test Site A']#,'Miller Substation','Dyer House Antenna A','Cedar Peak']#['Miller Substation']#['Dyer Cell Tower','Miller Substation','Dyer House Antenna A','Cedar Peak']
-                use_sources = [ 'A', 'B', 'C', 'D','F'] #'E' looks like it has particularly bad zenith, might be close and obstructed.
+                use_sources = [ 'A', 'B', 'C', 'D', 'E', 'F'] #'E' looks like it has particularly bad zenith, might be close and obstructed.
                 included_pulsers = []#['run1509']#,'run1507','run1511']#
                 included_airplanes = []#['1728-62026']#['1774-178']#['1728-62026','1773-14413','1773-63659','1774-178']##
-                included_cw_sources = []#['khsv']
+                included_cw_sources = ['khsv']
             elif mode == 'vpol':
                 #Don't use palmetto for vpol
                 use_sources = [ 'A', 'B',  'D']#['Miller Substation']#['Miller Substation','Tonopah AFS GATR Site','Beatty Airport Vortac']#['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#'East Dyer Substation',
                 included_pulsers = []#['run1509']#,'run1507','run1511']#
                 included_airplanes = []
-                included_cw_sources = []#['khsv']
+                included_cw_sources = ['khsv']
             
             pulser_weight  = 1.0#len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
@@ -657,10 +672,10 @@ if __name__ == '__main__':
         initial_step_y = 1#2.0 #m
         initial_step_z = 1#0.75 #m
         initial_step_cable_delay = 0.5 #ns
-        cable_delay_guess_range = 10 #ns
-        antenna_position_guess_range_x = 3#20#10#3#5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_y = 3#20#10#3#5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_z = 3#20#5#4#3#2#3 #Limit to how far from input phase locations to limit the parameter space to
+        cable_delay_guess_range = 100 #ns
+        antenna_position_guess_range_x = 1#20#10#3#5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = 1#20#10#3#5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_z = 1#20#5#4#3#2#3 #Limit to how far from input phase locations to limit the parameter space to
 
         #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
         manual_offset_ant0_x = 0#0#0#14
@@ -1321,7 +1336,7 @@ if __name__ == '__main__':
                                  #Single time delay value.
 
                                 geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
-                                chi_2 += cw_weight*((geometric_time_delay - cw_sources[key]['time_delay_dict'][mode]['[%i, %i]'%(pair[0],pair[1])][0])**2) #Assumes time delays are accurate
+                                chi_2 += numpy.min(cw_weight*((geometric_time_delay - cw_sources[key]['time_delay_dict'][mode]['[%i, %i]'%(pair[0],pair[1])])**2)) #Assumes time delays are accurate, uses only best minimized time delay from each baseline (min)
 
 
 
