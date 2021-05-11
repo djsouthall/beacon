@@ -107,10 +107,12 @@ if __name__=="__main__":
             #ds.addROI('C',{'std_h':[1.8,2.4],'std_v':[2,2.5]}) #Trig types 1 and 3 # 48 Mhz with TV in hpol band
             #ds.addROI('D',{'std_h':[1.8,2.4],'std_v':[1.7,1.9]}) #Trig types 1 and 3 # 42 MHz crosspol with TV in hpol
             #ds.addROI('E',{'std_h':[0.9,1.5],'std_v':[1.05,1.3],'snr_v':[6,6.8]}) #Trig types 1 and 3 #Only Hpol TV signals with strong 53 MHz voik
-            ds.addROI('F',{'std_h':[0.5,1.5],'std_v':[0.5,0.9],'snr_v':[5.3,6.25]}) #Trig types 1 and 3 #Only Hpol TV signals
-            ds.addROI('G',{'std_h':[0.5,1.5],'std_v':[0.5,0.9],'snr_v':[6.3,7.8]}) #Trig types 1 and 3 #Only Hpol TV signals
-            ds.addROI('H',{'std_h':[0.5,1.5],'std_v':[0.5,0.9],'snr_v':[8.0,9.0]}) #Trig types 1 and 3 #Only Hpol TV signals
+            # ds.addROI('F',{'std_h':[0.5,1.5],'std_v':[0.5,0.9],'snr_v':[5.3,6.25]}) #Trig types 1 and 3 #Only Hpol TV signals
+            # ds.addROI('G',{'std_h':[0.5,1.5],'std_v':[0.5,0.9],'snr_v':[6.3,7.8]}) #Trig types 1 and 3 #Only Hpol TV signals
+            # ds.addROI('H',{'std_h':[0.5,1.5],'std_v':[0.5,0.9],'snr_v':[8.0,9.0]}) #Trig types 1 and 3 #Only Hpol TV signals
             
+            ds.addROI('TV',{'std_h':[0.5,1.5],'std_v':[0.5,0.9],'snr_v':[5.3,9.0]}) #Only Hpol TV signals
+
             if False:
 
                 plot_param_pairs = [['phi_best_h','elevation_best_h'],['impulsivity_h','impulsivity_v'],['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v']]
@@ -126,11 +128,11 @@ if __name__=="__main__":
             else:
                 window_ns = 10
                 time_delay_dict = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76], '[0, 3]': [-15.82], '[1, 2]': [173.4], '[1, 3]': [61.77], '[2, 3]': [-111.6]}}
-                cor.generateTimeDelayOverlapMap('hpol', time_delay_dict, window_ns, value_mode='distance', plot_map=True, mollweide=False,center_dir='E',window_title=None, include_baselines=[0,1,2,3,4,5])
-                
+                mesh_azimuth_deg, mesh_elevation_deg, overlap_map, im, ax = cor.generateTimeDelayOverlapMap('hpol', time_delay_dict, window_ns/2.355, value_mode='gaus', plot_map=True, mollweide=False,center_dir='E',window_title=None, include_baselines=[0,1,2,3,4,5])
+                cor.addCircleToMap(ax, azimuth_deg, 90.0-zenith_deg, azimuth_offset_deg=0.0, mollweide=False, radius = 1.0, crosshair=True, return_circle=False, color='fuchsia', linewidth=0.5,fill=False)
                 for roi_key in list(ds.roi.keys()):
                     #ds.plotROIWaveforms(roi_key='H', final_corr_length=2**15, crit_freq_low_pass_MHz=70, low_pass_filter_order=8, crit_freq_high_pass_MHz=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filter=False, apply_phase_response=True, save=False, plot_saved_templates=False, sine_subtract=False)
-                    eventids = ds.getCutsFromROI('H')#[0:10] #Limited for testing
+                    eventids = ds.getCutsFromROI('TV')#[0:10] #Limited for testing
                     for hilbert in [True,False]:
                         cor.histMapPeak(eventids, 'hpol', initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, hilbert=hilbert, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=[85,180], zenith_cut_array_plane=[0,91], circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title=None,radius=1.0,iterate_sub_baselines=None)
                         cor.averagedMap(eventids, 'hpol', plot_map=True, hilbert=hilbert, max_method=None, mollweide=False, zenith_cut_ENU=[85,180],zenith_cut_array_plane=[0,91], center_dir='E', circle_zenith=zenith_deg, circle_az=azimuth_deg, radius=1.0, time_delay_dict={})

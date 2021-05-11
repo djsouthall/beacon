@@ -135,15 +135,34 @@ if __name__ == '__main__':
         time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
         map_direction_dset_key = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
 
+
+        # 'Solar Plant'               :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+        # # 'A'                         :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+        # 'Booker Antenna'            :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+        # # 'C'                         :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+        # 'Tonopah AFS GATR Site'     :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+        # # 'B'                         :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+        # 'KNKN223'                   :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+        # 'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+        # 'Beatty Airport Antenna'    :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+        # # 'E'                         :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]}
+        # 'Palmetto Cell Tower'       :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
+        # 'Cedar Peak'                :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+        # # 'D'                         :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+        # 'Silver Peak Substation'    :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+
+
         if False:
-            included_valley_sources = [ 'Northern Cell Tower',\
-                                        'Booker Antenna',\
-                                        'Tonopah AFS GATR Site',\
-                                        'Miller Substation',\
-                                        'Dyer Cell Tower',\
-                                        'Beatty Airport Antenna',\
-                                        'Palmetto Cell Tower',\
-                                        'Cedar Peak']
+            included_valley_sources = ['Solar Plant','Booker Antenna','Tonopah AFS GATR Site','KNKN223','Dyer Cell Tower','Beatty Airport Antenna','Palmetto Cell Tower','Cedar Peak','Silver Peak Substation']
+            included_valley_sources = ['Northern Cell Tower','Solar Plant','Quarry Substation','Tonopah KTPH','Booker Antenna','Nye County Sherriff','Tonopah AFS GATR Site','KNKN223','Dyer House Antenna A','Miller Substation','Tonopah Vortac','Tonopah Airport Antenna','Dyer Cell Tower','West Dyer Substation','East Dyer Substation','Beatty Mountain Cell Tower','Beatty Airport Vortac','Beatty Substation','Oasis','Tokop','Beatty Airport Antenna','Palmetto Cell Tower','South Dyer Town','Black Mountain','Cedar Peak','Test Site A','Concrete Substation','Dome Thing','Jack Rabbit Knob','Goldfield Hill Tower','Goldield Town Tower','Goldfield KGFN-FM','Silver Peak Town Antenna','Silver Peak Lithium Mine','Past SP Substation','Silver Peak Substation']
+            # included_valley_sources = [ 'Northern Cell Tower',\
+            #                             'Booker Antenna',\
+            #                             'Tonopah AFS GATR Site',\
+            #                             'Miller Substation',\
+            #                             'Dyer Cell Tower',\
+            #                             'Beatty Airport Antenna',\
+            #                             'Palmetto Cell Tower',\
+            #                             'Cedar Peak']
 
             # [ 'Tonopah AFS GATR Site',\
             #     'Tonopah Vortac',\
@@ -162,7 +181,7 @@ if __name__ == '__main__':
             #     'Silver Peak Lithium Mine',\
             #     'Past SP Substation']
         else:
-            included_valley_sources = ['A','B','C','D','E']
+            included_valley_sources = ['A','B','C','D','E','F']
 
         #### AIRPLANES ####
         plot_animated_airplane = False #Otherwise plots first event from each plane.  
@@ -177,14 +196,14 @@ if __name__ == '__main__':
 
 
         else:
-            included_airplanes =      ['1728-62026']
+            included_airplanes =      []#['1728-62026']
 
         plot_predicted_time_shifts = False
         plot_airplane_tracks = True
         plot_time_delay_calculations = False
         plot_time_delays_on_maps = True
         plot_expected_direction = True
-        limit_events = 10 #Number of events use for time delay calculation
+        limit_events = 1 #Number of events use for time delay calculation
 
 
         plot_residuals = False
@@ -194,11 +213,11 @@ if __name__ == '__main__':
         final_corr_length = 2**17
         cor_upsample = final_corr_length
 
-        crit_freq_low_pass_MHz = None#[80,70,70,70,70,70,60,70]#90#
-        low_pass_filter_order = None#[0,8,8,8,10,8,3,8]#8#
+        crit_freq_low_pass_MHz = 85#None#[80,70,70,70,70,70,60,70]#90#
+        low_pass_filter_order = 6#None#[0,8,8,8,10,8,3,8]#8#
 
-        crit_freq_high_pass_MHz = None#70#None#60
-        high_pass_filter_order = None#6#None#8
+        crit_freq_high_pass_MHz = 25#70#None#60
+        high_pass_filter_order = 8#6#None#8
 
         sine_subtract = False
         sine_subtract_min_freq_GHz = 0.03
@@ -336,7 +355,7 @@ if __name__ == '__main__':
                     n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
                     n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
                     
-                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tupulser_key=False, sine_subtract=True,map_source_distance_m=distance_m)
+                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, pulser_key=False, sine_subtract=True,map_source_distance_m=distance_m)
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                     eventids = numpy.sort(numpy.random.choice(known_pulser_ids[pulser_key][mode],min(limit_events,len(known_pulser_ids[pulser_key][mode])))) #For plotting multiple events in a histogram
@@ -464,27 +483,37 @@ if __name__ == '__main__':
                 elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(valley_source_ENU[2]/distance_m))
                 azimuth_deg = numpy.rad2deg(numpy.arctan2(valley_source_ENU[1],valley_source_ENU[0]))
                 
-                cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m, deploy_index=deploy_index)
-                cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+                # if valley_source_key == 'E':
+                #     range_values = [100,500,1000,10000,100000]
+                # else:
+                #     range_values = [distance_m]
+                range_values = [distance_m]
 
-                if plot_expected_direction == False:
-                    zenith_deg = None
-                    azimuth_deg = None
-                
-                mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=valley_source_key)
-
-                if plot_histograms:
-                    map_resolution = 0.1 #degrees
-                    range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
-                    range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
-                    n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
-                    n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
-                    
-                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tuvalley_source_key=False, sine_subtract=True,map_source_distance_m=distance_m)
+                for distance_m in range_values:
+                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m, deploy_index=deploy_index)
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-                    eventids = numpy.sort(numpy.random.choice(roi_eventids,min(limit_events,len(roi_eventids)))) #For plotting multiple events in a histogram
-                    hist = cor.histMapPeak(eventids, mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + valley_source_key, include_baselines=include_baselines,iterate_sub_baselines=iterate_sub_baselines)
+                    if plot_expected_direction == False:
+                        zenith_deg = None
+                        azimuth_deg = None
+                    
+                    mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=valley_source_key + ' %.1f m'%distance_m)
+
+                    if plot_histograms:
+                        map_resolution = 0.1 #degrees
+                        range_phi_deg=[-90,90]#(azimuth_deg - 10, azimuth_deg + 10)
+                        range_theta_deg=[70,130]#(zenith_deg - 10,zenith_deg + 10)
+                        zenith_deg = None
+                        elevation_deg = None
+                        azimuth_deg = None
+                        n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
+                        n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
+                        
+                        cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
+                        cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+                        eventids = numpy.sort(numpy.random.choice(roi_eventids,min(limit_events,len(roi_eventids)))) #For plotting multiple events in a histogram
+                        hist = cor.histMapPeak(eventids, mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + valley_source_key, include_baselines=include_baselines,iterate_sub_baselines=iterate_sub_baselines)
 
 
         #### AIRPLANES ####

@@ -195,7 +195,7 @@ cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [
 cw_sources['khsv']['data_slicer_dict'] = {'std_h':[0.5,1.5],'std_v':[0.5,0.9],'snr_v':[8.0,9.0]}
 cw_sources['khsv']['data_slicer_run'] = 1650
 
-cable_delays = info.loadCableDelays()
+cable_delays = info.loadCableDelays(return_raw=True)
 cable_delay_differences = cable_delays['hpol'] - cable_delays['vpol']
 
 #Assuming the hpol time delays are measured accurately and so are our cable delays, this will give what we would predict the measured (raw without accounting for cable delays) time delays of the vpol to be.  I do this to attempt to use the hpol time delays in a vpol calibration.
@@ -427,7 +427,7 @@ if __name__ == '__main__':
 
         elif True:
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
-            unknown_mode = 'gaus'#'strip'#'cor'#options are 'cor' or 'strip'.  If 'cor' ch,osen then the most impulsive event will be chosen and use to generate maps.
+            unknown_mode = 'strip'#'cor'#options are 'cor' or 'strip'.  If 'cor' ch,osen then the most impulsive event will be chosen and use to generate maps.
             if mode == 'hpol':
                 #use_sources = ['Booker Antenna','Miller Substation','Tonopah KTPH','KNKN223','Beatty Airport Vortac']#['Tonopah AFS GATR Site','Beatty Airport Vortac']#['Miller Substation', 'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#,'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#['South Dyer Town','Quarry Substation']#['South Dyer Town','Quarry Substation']#,'Palmetto Cell Tower','Beatty Airport Vortac'#['Dyer Cell Tower', 'Test Site A']#,'Miller Substation','Dyer House Antenna A','Cedar Peak']#['Miller Substation']#['Dyer Cell Tower','Miller Substation','Dyer House Antenna A','Cedar Peak']
                 use_sources = [ 'A', 'B', 'C', 'D'] #'E' looks like it has particularly bad zenith, might be close and obstructed.
@@ -642,10 +642,10 @@ if __name__ == '__main__':
         time_delay_measurement_uncertainty_ns = 1 #ns, The time window used to as error in chi^2 for time delay.  If you are assuming that the time delays are 100% accurate then this is usually sub ns.  But if you think it is slipping cycles you could give this a larger value. 
         include_sanity = False #Slow
         plot_predicted_time_shifts = False
-        random_offset_amount = 0.1#0.25 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
-        included_antennas_lumped = [0,1,3]#[0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
+        random_offset_amount = 1#0.25 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
+        included_antennas_lumped = [0,1,2,3]#[0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
         included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
-        include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
+        include_baselines = [0,1,2,3,4,5]#[1,3,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
         plot_overlap = False #Will plot the overlap map for time delays from each source.
         overlap_window_ns = 10 #ns The time window used to define sufficient overlap. 
         overlap_value_mode = 'gaus' #'distance'
@@ -653,14 +653,14 @@ if __name__ == '__main__':
         allowed_array_plane_azimuth_range = 20 #plus or minus this from East is not impacted by weighting. 
 
         #Limits 
-        initial_step_x = 0.5#2.0 #m
-        initial_step_y = 0.5#2.0 #m
-        initial_step_z = 0.5#0.75 #m
-        initial_step_cable_delay = 0.1 #ns
-        cable_delay_guess_range = 3 #ns
-        antenna_position_guess_range_x = 2#10#3#5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_y = 2#10#3#5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_z = 2#5#4#3#2#3 #Limit to how far from input phase locations to limit the parameter space to
+        initial_step_x = 1#2.0 #m
+        initial_step_y = 1#2.0 #m
+        initial_step_z = 1#0.75 #m
+        initial_step_cable_delay = 0.5 #ns
+        cable_delay_guess_range = 50 #ns
+        antenna_position_guess_range_x = 20#10#3#5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = 20#10#3#5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_z = 10#5#4#3#2#3 #Limit to how far from input phase locations to limit the parameter space to
 
         #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
         manual_offset_ant0_x = 0#0#0#14
@@ -671,8 +671,8 @@ if __name__ == '__main__':
         manual_offset_ant1_y = 0#0#5#0#-0.54016485 #-1#-2   + manual_offset_ant0_y
         manual_offset_ant1_z = 0#-5#0#-5.  #-1#0    + manual_offset_ant0_z
 
-        manual_offset_ant2_x = 0#0#0#0#5. #8#0    + manual_offset_ant0_x
-        manual_offset_ant2_y = 0#0#-5#0#-6.59619457 #-5#-4   + manual_offset_ant0_y
+        manual_offset_ant2_x = 3#0#0#0#5. #8#0    + manual_offset_ant0_x
+        manual_offset_ant2_y = 10#0#-5#0#-6.59619457 #-5#-4   + manual_offset_ant0_y
         manual_offset_ant2_z = 0#0#-5#12#0#9. #5#0    + manual_offset_ant0_z
 
         manual_offset_ant3_x = 0#0#-3#0#-3#0    + manual_offset_ant0_x
@@ -683,19 +683,19 @@ if __name__ == '__main__':
         fix_ant0_x = True
         fix_ant0_y = True
         fix_ant0_z = True
-        fix_ant1_x = False
-        fix_ant1_y = False
-        fix_ant1_z = False
-        fix_ant2_x = True
-        fix_ant2_y = True
-        fix_ant2_z = True
-        fix_ant3_x = False
-        fix_ant3_y = False
-        fix_ant3_z = False
+        fix_ant1_x = True
+        fix_ant1_y = True
+        fix_ant1_z = True
+        fix_ant2_x = False
+        fix_ant2_y = False
+        fix_ant2_z = False
+        fix_ant3_x = True
+        fix_ant3_y = True
+        fix_ant3_z = True
         fix_cable_delay0 = True
-        fix_cable_delay1 = False
-        fix_cable_delay2 = True
-        fix_cable_delay3 = False
+        fix_cable_delay1 = True
+        fix_cable_delay2 = False
+        fix_cable_delay3 = True
 
         #Force antennas not to be included to be fixed.  
         if not(0 in included_antennas_lumped):
@@ -726,7 +726,6 @@ if __name__ == '__main__':
         pairs_cut = []
         for pair_index, pair in enumerate(numpy.array(list(itertools.combinations((0,1,2,3), 2)))):
             pairs_cut.append(numpy.logical_and(numpy.all(numpy.isin(numpy.array(pair),included_antennas_lumped)), pair_index in include_baselines)) #include_baselines Overwritten when antennas removed.
-
         include_baselines = numpy.where(pairs_cut)[0] #Effectively the same as the pairs_cut but index based for baselines.
         print('Including baseline pairs:')
         print(pairs[pairs_cut])
@@ -740,7 +739,7 @@ if __name__ == '__main__':
 
 
         #I think adding an absolute time offset for each antenna and letting that vary could be interesting.  It could be used to adjust the cable delays.
-        cable_delays = info.loadCableDelays()[mode]
+        cable_delays = info.loadCableDelays(return_raw=True)[mode]
         print('Potential RFI Source Locations.')
         sources_ENU, data_slicer_cut_dict = info.loadValleySourcesENU()
 
@@ -1218,14 +1217,26 @@ if __name__ == '__main__':
 
                                     vals = ((geometric_time_delay - time_delay_dict[key][pair_index])**2)/time_delay_measurement_uncertainty_ns**2 #Assumes time delays are accurate
                                     chi_2 += valley_weight*numpy.sum(vals)
+                            #import pdb; pdb.set_trace()
                 else:
                     #Assuming you DON'T know the source, and using the precalculated time delays with the existing geometry to determine if the array points ANYWHERE for that source.
                     for key in use_sources:
+                        # if key == 'E':
+                        #     distance_m = 2300
+                        #     zenith_cut_array_plane=[0,130]
+                        # else:
+                        #     distance_m = 1e6
+                        #     zenith_cut_array_plane=[0,92]
+
+                        # chi_2_cor.overwriteSourceDistance(distance_m, verbose=False, suppress_time_delay_calculations=False, debug=False)
+
+                        zenith_cut_array_plane=[0,92]
+
                         if unknown_mode == 'strip':
                             td_dict = td_dicts[key]
 
                             mesh_azimuth_deg, mesh_elevation_deg, overlap_map = chi_2_cor.generateTimeDelayOverlapMap(mode, td_dict, overlap_window_ns, value_mode=overlap_value_mode, plot_map=False, mollweide=False,center_dir='E',window_title=None, include_baselines=include_baselines)
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = chi_2_cor.mapMax(overlap_map, max_method=0, verbose=False, zenith_cut_ENU=[89,115], zenith_cut_array_plane=[0,92], pol=mode) #This is used so that max value must be in reasonable window.
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = chi_2_cor.mapMax(overlap_map, max_method=0, verbose=False, zenith_cut_ENU=[89,180], zenith_cut_array_plane=zenith_cut_array_plane, pol=mode) #This is used so that max value must be in reasonable window.
                             max_value = overlap_map.flatten()[linear_max_index]
                             #print('%0.4f / %0.4f = %0.3f'%(max_value, overlap_goal,max_value/overlap_goal))
                             chi_2 += valley_weight*((max_value - overlap_goal)**2)/(overlap_error**2) 
@@ -1233,8 +1244,8 @@ if __name__ == '__main__':
                             eventid = time_delay_dict_eventids[key][0]
                             
                             #DON'T SWITCH TO HILBERT< IT CHANGES THE NORMALIZATION, AND I AM MATCHING THIS TO AN EXPECTED PEAK VALUE OF 1.
-                            mean_corr_values, max_possible_map_value = chi_2_cor.map(eventid, mode, include_baselines=include_baselines, plot_map=False, plot_corr=False, hilbert=False, interactive=False, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=[90,180], zenith_cut_array_plane=[0,92], center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=True)
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = chi_2_cor.mapMax(mean_corr_values, max_method=0, verbose=False, zenith_cut_ENU=[89,115], zenith_cut_array_plane=[0,92], pol=mode) #This is used so that max value must be in reasonable window.
+                            mean_corr_values, max_possible_map_value = chi_2_cor.map(eventid, mode, include_baselines=include_baselines, plot_map=False, plot_corr=False, hilbert=False, interactive=False, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=[90,180], zenith_cut_array_plane=zenith_cut_array_plane, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=True)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = chi_2_cor.mapMax(mean_corr_values, max_method=0, verbose=False, zenith_cut_ENU=[89,180], zenith_cut_array_plane=zenith_cut_array_plane, pol=mode) #This is used so that max value must be in reasonable window.
                             max_value = mean_corr_values.flatten()[linear_max_index]
                             #print('%0.4f / %0.4f = %0.3f'%(max_value, max_possible_map_value,max_value/max_possible_map_value))
                             chi_2 += valley_weight*((max_value - max_possible_map_value)**2)/(0.2**2) 
@@ -1647,10 +1658,6 @@ if __name__ == '__main__':
         chi2_ax.dist = 10
         plt.legend()
 
-
-        
-        
-
         sources_ENU, data_slicer_cut_dict = info.loadValleySourcesENU() #Plot all potential sources
         reader = Reader(datapath,valley_source_run)
         for source_key, cut_dict in data_slicer_cut_dict.items():
@@ -1669,7 +1676,7 @@ if __name__ == '__main__':
                 azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU_new[1],sources_ENU_new[0]))
 
                 #Only used for map.  Hists use higher resolution on tighter area.
-                map_resolution = 0.1 #degrees
+                map_resolution = 0.25 #degrees
                 range_phi_deg=(-180, 180)
                 range_theta_deg=(0,180)
                 n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)

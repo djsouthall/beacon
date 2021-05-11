@@ -37,7 +37,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
 
-default_deploy = 26#2#13#19#15#The deployment calibration to use as the default.
+default_deploy = 28#2#13#19#15#The deployment calibration to use as the default.
 
 
 def returnDefaultDeploy():
@@ -592,7 +592,14 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                         'B'                         :(38.238904, -117.363661, 4922 * 0.3048),\
                         'C'                         :(38.094374, -117.186576, 6856 * 0.3048),\
                         'D'                         :(37.754281, -117.632355, 4274 * 0.3048),\
-                        'E'                         :(37.529279, -117.905027, 5009 * 0.3048)}
+                        'E'                         :(37.529279, -117.905027, 5009 * 0.3048),\
+                        'F'                         :(37.583882, -117.975084, 4911 * 0.3048)}
+        # 'E'                         :(37.529279, -117.905027, 5009 * 0.3048) #old 
+        # 'E'                         :(37.585789, -118.225969, 3852.842222 - (12717 - 12227)*0.3048) #close 1
+        # 'E'                         :(37.583756, -118.213022, 3852.842222 - (12717 - 12232)*0.3048) #close 2
+        # 'E'                         :(37.588091, -118.231342, 3852.842222 - (12717 - 12143)*0.3048) #close 3
+
+        #37.588091,-118.231342, 12143
 
 
         # 'Tonopah KTPH'              :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
@@ -642,7 +649,8 @@ def loadValleySourcesENU(deploy_index=default_deploy):
                                     'B'                         :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
                                     'C'                         :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
                                     'D'                         :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
-                                    'E'                         :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]}}
+                                    'E'                         :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+                                    'F'                         :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]}}
     #Note the above ROI assumes you have already cut out events that are below a certain correlation with a template.
     # impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     # time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
@@ -1260,6 +1268,53 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
 
             antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.032919, -43.530065, 10.424257]}
             antennas_phase_vpol_hesse = {0 : [0.500000, 0.500000, 0.500000], 1 : [0.161029, 0.214942, 3.674703], 2 : [0.500000, 0.500000, 0.500000], 3 : [0.825754, 0.271855, 3.198833]}
+        elif deploy_index == 28:
+            #Starting with 27, letting only antenna 2 float.  I had to let the cable delay float a lot and I am not sure why.  Using known source locations ABCD.  Large freedom of movement allowed for antenna 2.
+            #Still no vpol
+            
+            # ------------------------------------------------------------------
+            # | FCN = 4.576                   |     Ncalls=147 (147 total)     |
+            # | EDM = 9.57e-09 (Goal: 0.0002) |            up = 1.0            |
+            # ------------------------------------------------------------------
+            # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
+            # ------------------------------------------------------------------
+            # |     True      |     True      |   False   |       False        |
+            # ------------------------------------------------------------------
+            # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
+            # ------------------------------------------------------------------
+            # |     False     |     True      |   True    |   True    | False  |
+            # ------------------------------------------------------------------
+            # --------------------------------------------------------------------------------------------------
+            # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
+            # --------------------------------------------------------------------------------------------------
+            # | 0 | ant0_x       |     0     |     1     |            |            |   -20   |   20    |  yes  |
+            # | 1 | ant0_y       |     0     |     1     |            |            |   -20   |   20    |  yes  |
+            # | 2 | ant0_z       |     0     |     1     |            |            |   -5    |    5    |  yes  |
+            # | 3 | ant1_x       |   -37.3   |    1.0    |            |            |-57.2814 |-17.2814 |  yes  |
+            # | 4 | ant1_y       |   -18.7   |    1.0    |            |            |-38.7206 | 1.27945 |  yes  |
+            # | 5 | ant1_z       |   18.2    |    1.0    |            |            | 13.1658 | 23.1658 |  yes  |
+            # | 6 | ant2_x       |   -17.3   |    0.9    |    -0.9    |    0.9     |-28.6606 | 11.3394 |       |
+            # | 7 | ant2_y       |  -53.74   |   0.20    |   -0.20    |    0.20    |-64.5335 |-24.5335 |       |
+            # | 8 | ant2_z       |    6.2    |    3.4    |    -2.7    |    3.9     | 3.48984 | 13.4898 |       |
+            # | 9 | ant3_x       |    -30    |     1     |            |            |-50.0329 |-10.0329 |  yes  |
+            # | 10| ant3_y       |   -43.5   |    1.0    |            |            |-63.5301 |-23.5301 |  yes  |
+            # | 11| ant3_z       |   10.4    |    1.0    |            |            | 5.42426 | 15.4243 |  yes  |
+            # | 12| cable_delay0 |    7.9    |    0.5    |            |            |-992.099 | 1007.9  |  yes  |
+            # | 13| cable_delay1 |    8.2    |    0.5    |            |            |-991.843 | 1008.16 |  yes  |
+            # | 14| cable_delay2 |   -47.7   |    3.0    |    -3.0    |    3.0     |  -1000  |  1000   |       |
+            # | 15| cable_delay3 |    9.6    |    0.5    |            |            |-990.409 | 1009.59 |  yes  |
+            # --------------------------------------------------------------------------------------------------
+
+
+            # Copy-Paste Prints:
+            # ------------
+
+            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-17.337033, -53.740481, 6.177357], 3 : [-30.032919, -43.530065, 10.424257]}
+            antennas_phase_hpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [1.000000, 1.000000, 1.000000], 2 : [0.928322, 0.204631, 3.417158], 3 : [1.000000, 1.000000, 1.000000]}
+
+            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-17.337033, -53.740481, 6.177357], 3 : [-30.032919, -43.530065, 10.424257]}
+            antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [1.000000, 1.000000, 1.000000], 2 : [0.928322, 0.204631, 3.417158], 3 : [1.000000, 1.000000, 1.000000]}
+
 
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
 
@@ -1398,9 +1453,12 @@ def loadCableDelays(deploy_index=default_deploy,return_raw=False):
     elif deploy_index == 27:
         cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,0.000000,9.591437]), \
                             'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
-        
+
         # cable_delays_hpol = 
         # cable_delays_hpol_hesse = numpy.array([0.100000,0.951527,0.100000,2.137623])
+    elif deploy_index == 28:
+        cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,-47.749751,9.591437]), \
+                            'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
 
     else:
         print('Using unmodified cable delays.')
