@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
 
         #### PULSERS ####
-        if False:
+        if True:
             included_pulsers =        [ 'run1507',\
                                         'run1509',\
                                         'run1511']
@@ -196,7 +196,7 @@ if __name__ == '__main__':
 
 
         else:
-            included_airplanes =      []#['1728-62026']
+            included_airplanes =      ['1728-62026']
 
         plot_predicted_time_shifts = False
         plot_airplane_tracks = True
@@ -229,7 +229,7 @@ if __name__ == '__main__':
         apply_phase_response = True
         hilbert = False
 
-        included_antennas_lumped = [0,1,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
+        included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
         included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
         include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
 

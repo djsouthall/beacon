@@ -430,16 +430,16 @@ if __name__ == '__main__':
             unknown_mode = 'strip'#'cor'#options are 'cor' or 'strip'.  If 'cor' ch,osen then the most impulsive event will be chosen and use to generate maps.
             if mode == 'hpol':
                 #use_sources = ['Booker Antenna','Miller Substation','Tonopah KTPH','KNKN223','Beatty Airport Vortac']#['Tonopah AFS GATR Site','Beatty Airport Vortac']#['Miller Substation', 'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#,'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#['South Dyer Town','Quarry Substation']#['South Dyer Town','Quarry Substation']#,'Palmetto Cell Tower','Beatty Airport Vortac'#['Dyer Cell Tower', 'Test Site A']#,'Miller Substation','Dyer House Antenna A','Cedar Peak']#['Miller Substation']#['Dyer Cell Tower','Miller Substation','Dyer House Antenna A','Cedar Peak']
-                use_sources = [ 'A', 'B', 'C', 'D'] #'E' looks like it has particularly bad zenith, might be close and obstructed.
+                use_sources = [ 'A', 'B', 'C', 'D','F'] #'E' looks like it has particularly bad zenith, might be close and obstructed.
                 included_pulsers = []#['run1509']#,'run1507','run1511']#
                 included_airplanes = []#['1728-62026']#['1774-178']#['1728-62026','1773-14413','1773-63659','1774-178']##
-                included_cw_sources = ['khsv']
+                included_cw_sources = []#['khsv']
             elif mode == 'vpol':
                 #Don't use palmetto for vpol
-                use_sources = ['Tonopah AFS GATR Site','Beatty Airport Vortac','KNKN223']#['Miller Substation']#['Miller Substation','Tonopah AFS GATR Site','Beatty Airport Vortac']#['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#'East Dyer Substation',
+                use_sources = [ 'A', 'B',  'D']#['Miller Substation']#['Miller Substation','Tonopah AFS GATR Site','Beatty Airport Vortac']#['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#'East Dyer Substation',
                 included_pulsers = []#['run1509']#,'run1507','run1511']#
                 included_airplanes = []
-                included_cw_sources = ['khsv']
+                included_cw_sources = []#['khsv']
             
             pulser_weight  = 1.0#len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
@@ -657,10 +657,10 @@ if __name__ == '__main__':
         initial_step_y = 1#2.0 #m
         initial_step_z = 1#0.75 #m
         initial_step_cable_delay = 0.5 #ns
-        cable_delay_guess_range = 50 #ns
-        antenna_position_guess_range_x = 20#10#3#5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_y = 20#10#3#5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_z = 10#5#4#3#2#3 #Limit to how far from input phase locations to limit the parameter space to
+        cable_delay_guess_range = 10 #ns
+        antenna_position_guess_range_x = 3#20#10#3#5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = 3#20#10#3#5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_z = 3#20#5#4#3#2#3 #Limit to how far from input phase locations to limit the parameter space to
 
         #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
         manual_offset_ant0_x = 0#0#0#14
@@ -671,9 +671,9 @@ if __name__ == '__main__':
         manual_offset_ant1_y = 0#0#5#0#-0.54016485 #-1#-2   + manual_offset_ant0_y
         manual_offset_ant1_z = 0#-5#0#-5.  #-1#0    + manual_offset_ant0_z
 
-        manual_offset_ant2_x = 3#0#0#0#5. #8#0    + manual_offset_ant0_x
-        manual_offset_ant2_y = 10#0#-5#0#-6.59619457 #-5#-4   + manual_offset_ant0_y
-        manual_offset_ant2_z = 0#0#-5#12#0#9. #5#0    + manual_offset_ant0_z
+        manual_offset_ant2_x = 0#3#0#0#0#5. #8#0    + manual_offset_ant0_x
+        manual_offset_ant2_y = 0#10#0#-5#0#-6.59619457 #-5#-4   + manual_offset_ant0_y
+        manual_offset_ant2_z = 0#0#0#-5#12#0#9. #5#0    + manual_offset_ant0_z
 
         manual_offset_ant3_x = 0#0#-3#0#-3#0    + manual_offset_ant0_x
         manual_offset_ant3_y = 0#0#0#0#0#0    + manual_offset_ant0_y
@@ -683,19 +683,19 @@ if __name__ == '__main__':
         fix_ant0_x = True
         fix_ant0_y = True
         fix_ant0_z = True
-        fix_ant1_x = True
-        fix_ant1_y = True
-        fix_ant1_z = True
+        fix_ant1_x = False
+        fix_ant1_y = False
+        fix_ant1_z = False
         fix_ant2_x = False
         fix_ant2_y = False
         fix_ant2_z = False
-        fix_ant3_x = True
-        fix_ant3_y = True
-        fix_ant3_z = True
+        fix_ant3_x = False
+        fix_ant3_y = False
+        fix_ant3_z = False
         fix_cable_delay0 = True
-        fix_cable_delay1 = True
+        fix_cable_delay1 = False
         fix_cable_delay2 = False
-        fix_cable_delay3 = True
+        fix_cable_delay3 = False
 
         #Force antennas not to be included to be fixed.  
         if not(0 in included_antennas_lumped):
