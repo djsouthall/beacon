@@ -40,16 +40,26 @@ datapath = os.environ['BEACON_DATA']
 if __name__=="__main__":
     #TODO: Add these parameters to the 2d data slicer.
     plt.close('all')
-    runs = numpy.array([1650])#numpy.arange(1650,1750)#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.arange(1650,1675)#numpy.array([1774])#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.array([1650])#
+    runs = numpy.array([1657])#numpy.array([1650])#numpy.arange(1650,1750)#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.arange(1650,1675)#numpy.array([1774])#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.array([1650])#
     #run = 1774 #want run with airplane.  This has 1774-178 in it. 
 
     datapath = os.environ['BEACON_DATA']
+
+    '''
+    #These are the ones actually used for APS
 
     impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     #map_direction_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_15'
     map_direction_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_22-scope_belowhorizon'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_22-scope_belowhorizon' # 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_22-scope_allsky'
-    
+    '''
+
+    #Deploy 30
+
+    time_delays_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+    impulsivity_dset_key = time_delays_dset_key
+    map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_65536-maxmethod_0-sinesubtract_1-deploy_calibration_30-scope_allsky'
+
     '''
     'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_22-scope_abovehorizon'
     'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_22-scope_allsky'
@@ -82,6 +92,10 @@ if __name__=="__main__":
     trigger_types = [2]#[2]
     db_subset_plot_ranges = [[0,30],[30,40],[40,50]] #Used as bin edges.  
     plot_maps = True
+    n_phi = 901 #Used in dataSlicer
+    range_phi_deg = (-90,90) #Used in dataSlicer
+    n_theta = 901 #Used in dataSlicer
+    range_theta_deg = (0,180) #Used in dataSlicer
 
     sum_events = False #If true will add all plots together, if False will loop over runs in runs.
     lognorm = True
@@ -90,7 +104,7 @@ if __name__=="__main__":
     subset_colors = subset_cm(numpy.linspace(0, 1, len(db_subset_plot_ranges)))[0:len(db_subset_plot_ranges)]
 
     try:
-        if False:
+        if True:
             if len(runs) == 1 or sum_events == False:
                 for run in runs:
                     run = int(run)
@@ -117,13 +131,16 @@ if __name__=="__main__":
                             dsets = list(file.keys()) #Existing datasets
 
                             print('Time delay keys')
-                            print(list(file['time_delays'].keys()))
+                            for d in list(file['time_delays'].keys()):
+                                print('\t' + d)
 
                             print('Impulsivity keys')
-                            print(list(file['impulsivity'].keys()))
+                            for d in list(file['impulsivity'].keys()):
+                                print('\t' + d)
 
                             print('Map keys')
-                            print(list(file['map_direction'].keys()))
+                            for d in list(file['map_direction'].keys()):
+                                print('\t' + d)
 
                             file.close()
                     
@@ -134,7 +151,8 @@ if __name__=="__main__":
                             time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
                             std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
                             p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-                            snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+                            snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,\
+                            n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg)
                     
                     known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks(ignore_planes=[])
                     if run == 1774:
@@ -188,7 +206,7 @@ if __name__=="__main__":
                             fig, ax = ds.plotROI2dHist(key_x, key_y, eventids=eventids_airplane, cmap=cmap, include_roi=False, lognorm=lognorm)
                         #fig.savefig(key_x + key_y + '.svg', bbox_inches=0, transparent=False)
                         fig.savefig('run%i_'%run + key_x + key_y + '.svg', bbox_inches=0, transparent=False)
-                        import pdb; pdb.set_trace()
+                        #import pdb; pdb.set_trace()
             else:
                 ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
                         curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
@@ -197,7 +215,8 @@ if __name__=="__main__":
                         time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
                         std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
                         p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35)
+                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,\
+                        n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg)
 
                 plot_param_pairs = [['phi_best_h','elevation_best_h'],['impulsivity_h','impulsivity_v']]
                 
@@ -265,7 +284,7 @@ if __name__=="__main__":
             ax.set_ylim(ax.get_ylim()[::-1])
             fig.savefig('pulser_waveforms.svg', bbox_inches=0, transparent=True)
 
-        if True:
+        if False:
             run = 1773
             #[1774,178],[1774,381],[1774,1348],[1774,1485][178,381,1348,1485]
             center_dir = 'W'

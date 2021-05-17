@@ -79,16 +79,16 @@ if __name__=="__main__":
     datapath = os.environ['BEACON_DATA']
     plot_filter=False
 
-    crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = 8
+    crit_freq_low_pass_MHz = 85#None#[80,70,70,70,70,70,60,70]#90#
+    low_pass_filter_order = 6#None#[0,8,8,8,10,8,3,8]#8#
 
-    crit_freq_high_pass_MHz = None
-    high_pass_filter_order = None
+    crit_freq_high_pass_MHz = 25#70#None#60
+    high_pass_filter_order = 8#6#None#8
 
     sine_subtract = True
     sine_subtract_min_freq_GHz = 0.03
-    sine_subtract_max_freq_GHz = 0.09
-    sine_subtract_percent = 0.05
+    sine_subtract_max_freq_GHz = 0.13
+    sine_subtract_percent = 0.03
 
     zenith_cut_ENU = None
     zenith_cut_array_plane = None
@@ -96,7 +96,7 @@ if __name__=="__main__":
 
     apply_phase_response = True
 
-    upsample = 2**15 #Just upsample in this case
+    upsample = 2**16 #Just upsample in this case
     max_method = 0
 
 
