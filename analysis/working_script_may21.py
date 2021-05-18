@@ -40,7 +40,7 @@ datapath = os.environ['BEACON_DATA']
 if __name__=="__main__":
     #TODO: Add these parameters to the 2d data slicer.
     plt.close('all')
-    runs = numpy.array([1657])#numpy.array([1650])#numpy.arange(1650,1750)#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.arange(1650,1675)#numpy.array([1774])#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.array([1650])#
+    runs = numpy.arange(1600,1729)#numpy.array([1657])#numpy.array([1650])#numpy.arange(1650,1750)#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.arange(1650,1675)#numpy.array([1774])#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.array([1650])#
     #run = 1774 #want run with airplane.  This has 1774-178 in it. 
 
     datapath = os.environ['BEACON_DATA']
@@ -67,14 +67,14 @@ if __name__=="__main__":
 
     trigger_types = [2]#[2]
     plot_maps = True
-    n_phi = 451 #Used in dataSlicer
-    range_phi_deg = (-90,90) #Used in dataSlicer
-    n_theta = 451 #Used in dataSlicer
+    n_phi = 720 #Used in dataSlicer
+    range_phi_deg = (-180,180) #Used in dataSlicer
+    n_theta = 720 #Used in dataSlicer
     range_theta_deg = (0,180) #Used in dataSlicer
 
-    sum_events = False #If true will add all plots together, if False will loop over runs in runs.
+    sum_events = True #If true will add all plots together, if False will loop over runs in runs.
     lognorm = True
-    cmap = 'viridis'#'YlOrRd'#'binary'#'coolwarm'
+    cmap = 'binary'#'YlOrRd'#'binary'#'coolwarm'
     subset_cm = plt.cm.get_cmap('autumn', 10)
 
     try:
@@ -83,6 +83,9 @@ if __name__=="__main__":
                 run = int(run)
 
                 reader = Reader(datapath,run)
+                if reader.failed_setup == True:
+                    print('Error for run %i, skipping.'%run)
+                    continue
                 cor = Correlator(reader,  upsample=2**16, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=True, tukey=False, sine_subtract=True)
                 if sine_subtract:
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
@@ -97,6 +100,17 @@ if __name__=="__main__":
                     sys.exit(1)
             
                 filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.
+                
+                ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
+                        curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
+                        impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                        time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
+                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
+                        p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,\
+                        n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg)
+
                 if filename is not None:
                     with h5py.File(filename, 'r') as file:
                         eventids = file['eventids'][...]
@@ -118,17 +132,6 @@ if __name__=="__main__":
                             print('\t' + d)
 
                         file.close()
-                
-                ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
-                        curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
-                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
-                        impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
-                        time_delays_n_bins_h=150,time_delays_n_bins_v=150,min_time_delays_val=-200,max_time_delays_val=200,\
-                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=9,\
-                        p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,\
-                        n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg)
-
                 #This set of plots aims to compare high impulsivity events across a few plots.  
                 if False:
                     min_imp = 0.3
@@ -174,7 +177,7 @@ if __name__=="__main__":
 
 
         else:
-            ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key,\
+            ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, remove_incomplete_runs=True,\
                     curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
                     cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
                     impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
@@ -183,12 +186,33 @@ if __name__=="__main__":
                     p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
                     snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,\
                     n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg)
-
-            plot_param_pairs = [['phi_best_h','elevation_best_h'],['impulsivity_h','impulsivity_v']]
             
-            for key_x, key_y in plot_param_pairs:
-                print('Generating %s plot'%(key_x + ' vs ' + key_y))
-                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, include_roi=False, lognorm=lognorm)
+
+            ds.addROI('A',{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]})
+            ds.addROI('B',{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]})
+            ds.addROI('C',{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]})
+            ds.addROI('D',{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]})
+            ds.addROI('E',{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]})
+            ds.addROI('F',{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]})
+
+
+
+            for cut in [False, True]:
+                if cut == True:
+                    min_imp = 0.68
+                    ds.addROI('Both Impulsivity > %s'%str(min_imp),{'impulsivity_h':[min_imp,1.0],'impulsivity_v':[min_imp,1.0]})
+                    eventids_dict = ds.getCutsFromROI('Both Impulsivity > %s'%str(min_imp),load=False,save=False,verbose=False)
+                    # cmap = 'gray'
+                else:
+                    # cmap = 'binary'
+                    eventids_dict = None
+
+
+                plot_param_pairs = [['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['impulsivity_h','impulsivity_v']]
+                
+                for key_x, key_y in plot_param_pairs:
+                    print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                    fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=eventids_dict,include_roi=True, lognorm=lognorm)
 
 
 

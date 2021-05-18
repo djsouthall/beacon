@@ -143,95 +143,96 @@ class dataSlicerSingleRun():
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=None,\
                         n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180)):
         try:
-            self.included_antennas = included_antennas#[0,1,2,3,4,5,6,7]
-            self.included_hpol_antennas = numpy.array([0,2,4,6])[numpy.isin([0,2,4,6],self.included_antennas)]
-            self.included_vpol_antennas = numpy.array([1,3,5,7])[numpy.isin([1,3,5,7],self.included_antennas)]
-
-            #I want to work on adding: 'std', 'p2p', and 'snr', where snr is p2p/std.  I think these could be interesting, and are already available by default per signal. 
-            #self.known_param_keys = ['impulsivity_hv', 'cr_template_search', 'std', 'p2p', 'snr'] #If it is not listed in here then it cannot be used.
-            #Should add triggered beam to this list of params. 
-            self.known_param_keys = [   'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
-                                        'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
-                                        'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',
-                                        'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','phi_best_h','phi_best_v',\
-                                        'calibrated_trigtime']
-
-
-
             self.updateReader(reader)
-            self.tct = None #This will be defined when necessary by functions below. 
+            if self.reader.failed_setup == False:
+                self.included_antennas = included_antennas#[0,1,2,3,4,5,6,7]
+                self.included_hpol_antennas = numpy.array([0,2,4,6])[numpy.isin([0,2,4,6],self.included_antennas)]
+                self.included_vpol_antennas = numpy.array([1,3,5,7])[numpy.isin([1,3,5,7],self.included_antennas)]
+
+                #I want to work on adding: 'std', 'p2p', and 'snr', where snr is p2p/std.  I think these could be interesting, and are already available by default per signal. 
+                #self.known_param_keys = ['impulsivity_hv', 'cr_template_search', 'std', 'p2p', 'snr'] #If it is not listed in here then it cannot be used.
+                #Should add triggered beam to this list of params. 
+                self.known_param_keys = [   'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
+                                            'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
+                                            'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',
+                                            'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','phi_best_h','phi_best_v',\
+                                            'calibrated_trigtime']
+
+                self.tct = None #This will be defined when necessary by functions below. 
 
 
 
-            #Parameters:
-            #General Params:
+                #Parameters:
+                #General Params:
 
-            #Histogram preparations
-            #These will be used for plotting each parameter against eachother. 
+                #Histogram preparations
+                #These will be used for plotting each parameter against eachother. 
 
-            #2dhist Params:
-            #plot_2dhists = True
-            self.cr_template_curve_choice = curve_choice #Which curve to select from correlation data.
-            self.cr_template_n_bins_h = cr_template_n_bins_h
-            self.cr_template_n_bins_v = cr_template_n_bins_v
-            
-            #Impulsivity Plot Params:
-            self.impulsivity_dset_key = impulsivity_dset_key
-            self.impulsivity_n_bins_h = impulsivity_n_bins_h
-            self.impulsivity_n_bins_v = impulsivity_n_bins_v
+                #2dhist Params:
+                #plot_2dhists = True
+                self.cr_template_curve_choice = curve_choice #Which curve to select from correlation data.
+                self.cr_template_n_bins_h = cr_template_n_bins_h
+                self.cr_template_n_bins_v = cr_template_n_bins_v
+                
+                #Impulsivity Plot Params:
+                self.impulsivity_dset_key = impulsivity_dset_key
+                self.impulsivity_n_bins_h = impulsivity_n_bins_h
+                self.impulsivity_n_bins_v = impulsivity_n_bins_v
 
-            #Time Delay Plot Params:
-            self.time_delays_dset_key = time_delays_dset_key
-            self.time_delays_n_bins_h = time_delays_n_bins_h
-            self.time_delays_n_bins_v = time_delays_n_bins_v
-            self.min_time_delays_val = min_time_delays_val
-            self.max_time_delays_val = max_time_delays_val            
+                #Time Delay Plot Params:
+                self.time_delays_dset_key = time_delays_dset_key
+                self.time_delays_n_bins_h = time_delays_n_bins_h
+                self.time_delays_n_bins_v = time_delays_n_bins_v
+                self.min_time_delays_val = min_time_delays_val
+                self.max_time_delays_val = max_time_delays_val            
 
-            #std Plot Params:
-            self.min_std_val = 1.0 #To be rewritten, setting a reasonable lower bound for when max_std_val is given. 
-            self.max_std_val = max_std_val
-            self.std_n_bins_h = std_n_bins_h
-            self.std_n_bins_v = std_n_bins_v
+                #std Plot Params:
+                self.min_std_val = 1.0 #To be rewritten, setting a reasonable lower bound for when max_std_val is given. 
+                self.max_std_val = max_std_val
+                self.std_n_bins_h = std_n_bins_h
+                self.std_n_bins_v = std_n_bins_v
 
-            #p2p Plot Params:
-            self.max_p2p_val = max_p2p_val
-            self.p2p_n_bins_h = p2p_n_bins_h
-            self.p2p_n_bins_v = p2p_n_bins_v
+                #p2p Plot Params:
+                self.max_p2p_val = max_p2p_val
+                self.p2p_n_bins_h = p2p_n_bins_h
+                self.p2p_n_bins_v = p2p_n_bins_v
 
-            #snr Plot Params:
-            self.max_snr_val = max_snr_val
-            self.snr_n_bins_h = snr_n_bins_h
-            self.snr_n_bins_v = snr_n_bins_v
+                #snr Plot Params:
+                self.max_snr_val = max_snr_val
+                self.snr_n_bins_h = snr_n_bins_h
+                self.snr_n_bins_v = snr_n_bins_v
 
-            #Map Direction Params:
-            self.map_dset_key = map_dset_key
-            if len(self.map_dset_key.split('deploy_calibration_')) > 1:
-                self.map_deploy_index = int(self.map_dset_key.split('deploy_calibration_')[-1].split('-')[0])
+                #Map Direction Params:
+                self.map_dset_key = map_dset_key
+                if len(self.map_dset_key.split('deploy_calibration_')) > 1:
+                    self.map_deploy_index = int(self.map_dset_key.split('deploy_calibration_')[-1].split('-')[0])
+                else:
+                    self.map_deploy_index = None #Will use default
+                self.checkForBothMapDatasets() #Will append to known param key and prepare for if hilber used or not.
+                
+                self.n_phi = n_phi
+                self.range_phi_deg = numpy.asarray(range_phi_deg)
+                self.n_theta = n_theta
+                self.range_theta_deg = numpy.asarray(range_theta_deg)
+
+                self.trigger_types = trigger_types
+
+                self.eventids_matching_trig = self.getEventidsFromTriggerType() #Opens file, so has to be called outside of with statement.
+                
+                #In progress.
+                #ROI  List
+                #This should be a list with coords x1,x2, y1, y2 for each row.  These will be used to produce plots pertaining to 
+                #these specific regions of interest.  x and y should be correlation values, and ordered.
+                self.roi = {}
+                if include_test_roi:
+                    sample_ROI = self.printSampleROI(verbose=False)
+                    self.roi['test'] = sample_ROI
+
+                self.checkDataAvailability()
+
+                #self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, numpy.shape(roi)[0])]
             else:
-                self.map_deploy_index = None #Will use default
-            self.checkForBothMapDatasets() #Will append to known param key and prepare for if hilber used or not.
-            
-            self.n_phi = n_phi
-            self.range_phi_deg = numpy.asarray(range_phi_deg)
-            self.n_theta = n_theta
-            self.range_theta_deg = numpy.asarray(range_theta_deg)
-
-            self.trigger_types = trigger_types
-
-            self.eventids_matching_trig = self.getEventidsFromTriggerType() #Opens file, so has to be called outside of with statement.
-            
-            #In progress.
-            #ROI  List
-            #This should be a list with coords x1,x2, y1, y2 for each row.  These will be used to produce plots pertaining to 
-            #these specific regions of interest.  x and y should be correlation values, and ordered.
-            self.roi = {}
-            if include_test_roi:
-                sample_ROI = self.printSampleROI(verbose=False)
-                self.roi['test'] = sample_ROI
-
-            self.checkDataAvailability()
-
-            #self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, numpy.shape(roi)[0])]
+                print('Reader failed setup in dataSlicerSingleRun')
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print('Run: ',self.reader.run)
@@ -239,6 +240,25 @@ class dataSlicerSingleRun():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+    def openSuccess(self):
+        '''
+        Will attempt to read the file.  Will return False is a problem arises.  
+        '''
+        try:
+            with h5py.File(self.analysis_filename, 'r') as file:
+                success = True
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
+            print('dsets_present set to False')
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+            success = False
+        return success
 
     def checkDataAvailability(self,verbose=False):
         '''
@@ -630,11 +650,20 @@ class dataSlicerSingleRun():
 
             if load_failed == True:
                 if roi_key in list(self.roi.keys()):
-                    eventids = self.eventids_matching_trig.copy()
-                    for param_key in list(self.roi[roi_key].keys()):
-                        param = self.getDataFromParam(eventids, param_key)
-                        #Reduce eventids by box cut
-                        eventids = eventids[numpy.logical_and(param >= self.roi[roi_key][param_key][0], param < self.roi[roi_key][param_key][1])]  #Should get smaller/faster with every param cut.
+                    try:
+                        if self.eventids_matching_trig is None:
+                            eventids = numpy.array([])
+                        else:
+                            eventids = numpy.asarray(self.eventids_matching_trig).copy()
+                    except Exception as e:
+                        import pdb; pdb.set_trace()
+
+
+                    if len(eventids) > 0:
+                        for param_key in list(self.roi[roi_key].keys()):
+                            param = self.getDataFromParam(eventids, param_key)
+                            #Reduce eventids by box cut
+                            eventids = eventids[numpy.logical_and(param >= self.roi[roi_key][param_key][0], param < self.roi[roi_key][param_key][1])]  #Should get smaller/faster with every param cut.
                 else:
                     print('WARNING!!!')
                     print('Requested ROI [%s] is not specified in self.roi list:\n%s'%(roi_key,str(list(self.roi.keys()))))
@@ -1543,13 +1572,51 @@ class dataSlicer():
     include_test_roi :
         This will include test regions of interest that are more for testing the class itself. 
     '''
-    def __init__(self,  runs, impulsivity_dset_key, time_delays_dset_key, map_dset_key, remove_incomplete_runs=False, **kwargs):
-        self.runs = numpy.sort(runs).astype(int)
-        self.roi = {}
-        self.data_slicers = numpy.array([dataSlicerSingleRun(Reader(datapath,run),impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs) for run in self.runs])
-        self.trigger_types = self.data_slicers[0].trigger_types
-        if remove_incomplete_runs:
-            self.removeIncompleteDataSlicers()
+    def __init__(self,  runs, impulsivity_dset_key, time_delays_dset_key, map_dset_key, remove_incomplete_runs=True, **kwargs):
+        try:
+            self.roi = {}
+            self.data_slicers = []
+            self.runs = []#numpy.sort(runs).astype(int)
+
+            for run in numpy.sort(runs).astype(int):
+                try:
+                    reader = Reader(datapath,run)
+                    if reader.failed_setup == False:
+                        ds = dataSlicerSingleRun(reader,impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs)
+                        can_open = ds.openSuccess()
+                        if can_open == True:
+                            #If above fails then it won't be appended to either runs or data slicers.
+                            self.data_slicers.append(ds)
+                            self.runs.append(run)
+                except Exception as e:
+                    print('Error loading dataSlicer for run %i, excluding.  Error:'%run)
+                    print(e)
+
+            self.data_slicers = numpy.array(self.data_slicers)
+            self.runs = numpy.asarray(self.runs)
+            cut = numpy.array([ds.dsets_present*ds.openSuccess() for ds in self.data_slicers])
+
+            #self.data_slicers = numpy.array([dataSlicerSingleRun(Reader(datapath,run),impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs) for run in self.runs])
+            if len(self.runs) > 0:
+                self.trigger_types = self.data_slicers[0].trigger_types
+            else:
+                self.trigger_types = [1,2,3] #just a place holder, not runs loaded. 
+
+            if remove_incomplete_runs:
+                self.removeIncompleteDataSlicers()
+
+            if len(self.runs) == 0:
+                print('\nWARNING!!! No runs worked on dataSlicer preperations.\n')
+
+            print('\ndataSlicer Peparations Complete.  Excluding Runs:')
+            print(runs[~numpy.isin(runs,self.runs)])
+            print('\n')
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def removeIncompleteDataSlicers(self):
         '''

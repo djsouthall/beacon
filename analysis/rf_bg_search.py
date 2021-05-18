@@ -96,14 +96,25 @@ if __name__=="__main__":
 
     apply_phase_response = True
 
-    upsample = 2**16 #Just upsample in this case
+    upsample = 2**14 #Just upsample in this case
     max_method = 0
 
 
     mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky'] #This code will loop over all options included here, and they will be stored as seperate dsets.  Each of these applies different cuts to mapmax when it is attempting to select the best reconstruction direction.
     polarizations = ['hpol','vpol'] #Will loop over both if hpol and vpol present
-    hilbert_modes = [True,False] #Will loop over both if True and False present
+    hilbert_modes = [False]#[True,False] #Will loop over both if True and False present
     deploy_index = None
+    
+    #Note that the below values set the angular resolution of the plot, while the presets from mapmax_cut_modes limit where in the generated plots will be considered for max values.
+    n_phi       = 720
+    min_phi     = -180
+    max_phi     = 180
+
+    n_theta     = 720
+    min_theta   = 0
+    max_theta   = 180
+
+
 
     if deploy_index is None:
         deploy_index = info.returnDefaultDeploy()
@@ -158,6 +169,12 @@ if __name__=="__main__":
             filter_string += 'sinesubtract_%i-'%(int(sine_subtract))
 
             filter_string += 'deploy_calibration_%i-'%(deploy_index)
+
+            phi_str = 'n_phi_%i-min_phi_%s-max_phi_%s-'%(n_phi, str(min_phi).replace('-','neg'),str(max_phi).replace('-','neg'))
+            filter_string += phi_str
+
+            theta_str = 'n_theta_%i-min_theta_%s-max_theta_%s-'%(n_theta, str(min_theta).replace('-','neg'),str(max_theta).replace('-','neg'))
+            filter_string += theta_str
 
             filter_string += 'scope_%s'%(mapmax_cut_mode)
 
@@ -321,6 +338,14 @@ if __name__=="__main__":
                         file['map_times'].attrs['sine_subtract_max_freq_GHz'] = sine_subtract_max_freq_GHz 
                         file['map_times'].attrs['sine_subtract_percent'] = sine_subtract_percent
 
+                        file['map_direction'].attrs['n_phi']        = n_phi
+                        file['map_direction'].attrs['min_phi']      = min_phi
+                        file['map_direction'].attrs['max_phi']      = max_phi
+
+                        file['map_direction'].attrs['n_theta']      = n_theta
+                        file['map_direction'].attrs['min_theta']    = min_theta
+                        file['map_direction'].attrs['max_theta']    = max_theta
+
                         if zenith_cut_ENU is None:
                             file['map_direction'].attrs['zenith_cut_ENU'] = 'None' 
                             file['map_times'].attrs['zenith_cut_ENU'] = 'None' 
@@ -357,7 +382,9 @@ if __name__=="__main__":
                             file['map_times'].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane 
 
 
-                        cor = Correlator(reader,  upsample=upsample, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract, deploy_index=deploy_index)
+
+
+                        cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract, deploy_index=deploy_index)
 
                         print('Cor setup to use deploy index %i'%cor.deploy_index)
 

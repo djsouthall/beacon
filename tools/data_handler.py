@@ -353,9 +353,7 @@ def createFile(reader,redo_defaults=False):
 
             if os.path.exists(filename):
                 print('%s already exists, checking if setup is up to date.'%filename )
-
                 with h5py.File(filename, 'a') as file:
-                    
                     try:
                         remove_list = outdated_datasets_to_remove[numpy.isin(outdated_datasets_to_remove,list(file.keys()))]
                         for key in remove_list:
