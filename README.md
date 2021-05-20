@@ -280,8 +280,8 @@ If it is not already installed I would recommend getting and using it.  It is a 
 ## 0.5.0 Testing Setup
 
 Attempt running both test analysis scripts to check if the code is functioning correctly:
-    * [analysis/sample_script_A.py](https://github.com/djsouthall/beacon/blob/master/analysis/sample_script_A.py) 
-    * [analysis/sample_script_B.py](https://github.com/djsouthall/beacon/blob/master/analysis/sample_script_B.py) 
+* [analysis/sample_script_A.py](https://github.com/djsouthall/beacon/blob/master/analysis/sample_script_A.py) 
+* [analysis/sample_script_B.py](https://github.com/djsouthall/beacon/blob/master/analysis/sample_script_B.py) 
 
 ## 1.0.0 Calibration
 
