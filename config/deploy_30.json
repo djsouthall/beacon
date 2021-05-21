@@ -1,0 +1,85 @@
+{
+    "description" : "This was the best calibration as of May 2021.  Likely a slightly different solution for vpol and hpol, but both reconstruct Eastern sources well and static sources are below the horizon with obvious potential sources.",
+    
+    "origin" : {
+        "latlonel"          : [37.589310, -118.237621, 3852.842222]
+    },
+    "antennas" : {
+        
+        "ant0" : {
+            "physical" : {
+                "latlonel"      : [37.58931, -118.237621, 3852.842222],
+                "enu"           : []
+            },
+            "hpol" : {
+                "latlonel"      : [],
+                "enu"           : [0.000000, 0.000000, 0.000000],
+                "cable_delay"   : 7.901212,
+                "channel"       : 0
+            },
+            "vpol" : {
+                "latlonel"      : [],
+                "enu"           : [0.000000, 0.000000, 0.000000],
+                "cable_delay"   : 13.115628,
+                "channel"       : 1
+            }
+        },
+
+        "ant1" : {
+            "physical" : {
+                "latlonel"      : [37.58931, -118.237621, 3852.842222],
+                "enu"           : []
+            },
+            "hpol" : {
+                "latlonel"      : [],
+                "enu"           : [-41.695157, -19.022663, 33.383186],
+                "cable_delay"   : -6.188353,
+                "channel"       : 2
+            },
+            "vpol" : {
+                "latlonel"      : [],
+                "enu"           : [-38.695157, -16.320563, 30.383186],
+                "cable_delay"   : 9.321441,
+                "channel"       : 3
+            }
+        },
+
+        "ant2" : {
+            "physical" : {
+                "latlonel"      : [37.58931, -118.237621, 3852.842222],
+                "enu"           : []
+            },
+            "hpol" : {
+                "latlonel"      : [],
+                "enu"           : [-11.053909, -48.549442, 1.749655],
+                "cable_delay"   : -20.544049,
+                "channel"       : 4
+            },
+            "vpol" : {
+                "latlonel"      : [],
+                "enu"           : [-10.124559, -47.491375, 2.875563],
+                "cable_delay"   : -8.072655,
+                "channel"       : 5
+            }
+        },
+
+        "ant3" : {
+            "physical" : {
+                "latlonel"      : [37.58931, -118.237621, 3852.842222],
+                "enu"           : []
+            },
+            "hpol" : {
+                "latlonel"      : [],
+                "enu"           : [-31.956005, -43.680061, 15.806712],
+                "cable_delay"   : 3.551777,
+                "channel"       : 6
+            },
+            "vpol" : {
+                "latlonel"      : [],
+                "enu"           : [-30.465630, -43.425621, 12.857971],
+                "cable_delay"   : 8.535294,
+                "channel"       : 7
+            }
+        }
+    }
+}
