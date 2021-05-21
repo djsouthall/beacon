@@ -189,13 +189,13 @@ def updateENUFromLatlonel(data):
 
     for mast in range(4):
         for key in ['physical', 'hpol', 'vpol']:
-            if numpy.asarray(data['antennas']['ant%i'%mast][key]['enu']).size > 0:
+            if numpy.asarray(data['antennas']['ant%i'%mast][key]['latlonel']).size > 0:
                 data['antennas']['ant%i'%mast][key]['enu'] = numpy.asarray(pm.geodetic2enu(data['antennas']['ant%i'%mast][key]['latlonel'][0],data['antennas']['ant%i'%mast][key]['latlonel'][1],data['antennas']['ant%i'%mast][key]['latlonel'][2],origin[0],origin[1],origin[2]))
             else:
                 print(key + 'Does not contain ENU data for mast %i %s.'%(mast, key))
     return data
 
-def configReader(json_path, return_mode='enu'):
+def configReader(json_path, return_mode='enu', check=False):
     '''
     This will read in the custom config files and return them in a usable format that allows the json files to
     interface readily with existing analysis code.
@@ -235,6 +235,8 @@ def configReader(json_path, return_mode='enu'):
         antennas_physical, antennas_phase_hpol, and antennas_phase_vpol, or their lat/lon/el coordinates.  Origin is
         always given in lat/lon/el.  The default behaviour is for ENU, as this is what is used throughout the code.
         Only return lat/lon/el if you know what you are doing. 
+    check : bool
+        If True then this will run checkConfigConsistency.  Default is False.
     '''
     with open(json_path) as json_file:
         data = json.load(json_file)
@@ -242,7 +244,8 @@ def configReader(json_path, return_mode='enu'):
     print('Calibration Description:')
     print(data['description'])
 
-    checkConfigConsistency(data)
+    if check:
+        checkConfigConsistency(data)
 
     origin = data['origin']['latlonel'] #Lat Lon Elevation, use for generating ENU from other latlonel values.     
     antennas_physical = {}
@@ -250,13 +253,17 @@ def configReader(json_path, return_mode='enu'):
     antennas_phase_vpol = {}
     cable_delays = {'hpol' : [0.0 , 0.0 , 0.0 , 0.0],'vpol' : [0.0 , 0.0 , 0.0 , 0.0]}
 
+    if return_mode == 'latlonel':
+        print('WARNING!!! Loading antenna positions as latlonel, which is not the default behaviour and should be done with caution.')
+        print('Done using the ENU data.')
+        data = updateLatlonelFromENU(data)
     for mast in range(4):
-        antennas_physical[mast] = data['antennas']['ant%i'%mast]['physical']['enu']
-        antennas_phase_hpol[mast] = data['antennas']['ant%i'%mast]['hpol']['enu']
-        antennas_phase_vpol[mast] = data['antennas']['ant%i'%mast]['vpol']['enu']
+        antennas_physical[mast] = data['antennas']['ant%i'%mast]['physical']['latlonel']
+        antennas_phase_hpol[mast] = data['antennas']['ant%i'%mast]['hpol'][return_mode]
+        antennas_phase_vpol[mast] = data['antennas']['ant%i'%mast]['vpol'][return_mode]
         cable_delays['hpol'][mast] = data['antennas']['ant%i'%mast]['hpol']['cable_delay']
         cable_delays['vpol'][mast] = data['antennas']['ant%i'%mast]['vpol']['cable_delay']
-
+    
     return origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays
 
 

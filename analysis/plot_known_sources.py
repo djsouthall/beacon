@@ -147,12 +147,15 @@ if __name__ == '__main__':
                 print('Given mode not in options.  Defaulting to hpol')
                 mode = 'hpol'
 
-            deploy_index = int(sys.argv[2])
+            deploy_index = sys.argv[2]
         else:
             print('No mode given.  Defaulting to hpol')
             mode = 'hpol'
             deploy_index = info.returnDefaultDeploy()
-        print('Plotting for Deploy Index %i '%deploy_index)
+        if type(deploy_index) == str:
+            if deploy_index.isdigit():
+                deploy_index = int(deploy_index)
+        print('Plotting for Deploy Index %s '%str(deploy_index))
 
 
         #### PULSERS ####

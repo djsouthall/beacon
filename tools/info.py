@@ -30,6 +30,7 @@ sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 from tools.data_handler import getEventTimes, createFile
 import tools.field_fox as ff
+from tools.config_reader import configReader
 
 import h5py
 import pymap3d as pm
@@ -445,9 +446,11 @@ def pulserRuns():
 def loadAntennaZeroLocation(deploy_index=default_deploy):
     '''
     Loads antenna 0's location (which use used as the station location).
-    Loads both the latitude, longtidue, elevation
+    Loads the latitude, longtidue, elevation
     '''
-    if deploy_index == 0:
+    if type(deploy_index) == str:
+        A0Location = configReader(deploy_index, return_mode='enu')[0]
+    elif deploy_index == 0:
         A0Location = (37.5893,-118.2381,3894.12)#latitude,longtidue,elevation  #ELEVATION GIVEN FROM GOOGLE EARTH given in m
     elif deploy_index > 0 and deploy_index <= 9:
         A0Location = (37.589310, -118.237621, 3875.53)#latitude,longtidue,elevation #ELEVATION FROM GOOGLE EARTH given in m  
@@ -692,7 +695,9 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
     Loads the antenna locations and phase locations as best they are known.
     These are given in ENU relative to Antenna 0.
     '''
-    if deploy_index == 0:
+    if type(deploy_index) == str:
+        ignored_origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, ignored_cable_delays = configReader(deploy_index, return_mode='enu')
+    elif deploy_index == 0:
         antennas_physical   = {0:(0.0,0.0,0.0),1:(-6.039,-1.618,2.275),2:(-1.272,-10.362,1.282),3:(3.411,-11.897,-0.432)} #ORIGINAL
         '''
         #These were determined using only run 793
@@ -1484,177 +1489,187 @@ def loadCableDelays(deploy_index=default_deploy,return_raw=False):
     cable that extends from the observatory to the antennas and accounts for the majority of systematic delay
     between signals.  This should be accounted for in interferometric uses.
     '''
+    try:
+        if type(deploy_index) == str:
+            ignored_origin, ignored_antennas_physical, ignored_antennas_phase_hpol, ignored_antennas_phase_vpol, cable_delays = configReader(deploy_index, return_mode='enu')
+        elif deploy_index == 0:
+            cable_delays =  {'hpol': numpy.array([0.0, 0.0, 0.0, 0.0]), \
+                             'vpol': numpy.array([0.0, 0.0, 0.0, 0.0])}
+        elif deploy_index == 1:
+            cable_delays =  {'hpol': numpy.array([423.37836156, 428.43979143, 415.47714969, 423.58803498]), \
+                             'vpol': numpy.array([428.59277751, 430.16685915, 423.56765695, 423.50469285])}
+        elif deploy_index == 2:
+            cable_delays =  {'hpol': numpy.array([423.37836156, 428.43979143, 415.47714969, 423.58803498]), \
+                             'vpol': numpy.array([428.59277751, 430.16685915, 423.56765695, 423.50469285])}
 
-    if deploy_index == 0:
-        cable_delays =  {'hpol': numpy.array([0.0, 0.0, 0.0, 0.0]), \
-                         'vpol': numpy.array([0.0, 0.0, 0.0, 0.0])}
-    elif deploy_index == 1:
-        cable_delays =  {'hpol': numpy.array([423.37836156, 428.43979143, 415.47714969, 423.58803498]), \
-                         'vpol': numpy.array([428.59277751, 430.16685915, 423.56765695, 423.50469285])}
-    elif deploy_index == 2:
-        cable_delays =  {'hpol': numpy.array([423.37836156, 428.43979143, 415.47714969, 423.58803498]), \
-                         'vpol': numpy.array([428.59277751, 430.16685915, 423.56765695, 423.50469285])}
-
-    elif deploy_index == 3:
-        #Here I am just rerunning the time delays from the pulser, and also letting the cable delays vary.  I am only doing a simple chi^2 (Just the adjustedChi^2)
-        cable_delays =  {'hpol' : numpy.array([ 9.716096686691788 , 6.557263164293925 , 1.338560237462631 , 7.988215967106549 ]) + 415.47714969, \
-                         'vpol' : numpy.array([ 15.427099049222033 , 12.16895487865136 , 9.310628362153283 , 8.630112284474672 ]) + 423.56765695}
-
-
-
-
-
-        # pulser_locations_ENU['hpol'] = {'run1507':[259.417378, -353.989882, -88.125921], 'run1509':[1129.874543, -528.948053, -160.527267], 'run1511':[189.018118, 338.618832, -44.960478]}
-        # pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[0.010000, 0.010000, 0.010000], 'run1509':[0.010000, 0.010000, 0.010000], 'run1511':[0.010000, 0.010000, 0.010000]}
-    elif deploy_index == 11:
-        cable_delays =  {'hpol' : numpy.array([7.901212,12.248939,10.000000,18.110885]) + 415.47714969, \
-                         'vpol' : numpy.array([13.115628,8.986282,12.530756,12.041758]) + 423.56765695}
-
-        #cable_delays_vpol_hesse = numpy.array([0.500000,3.390690,0.407566,2.505386])
-        #cable_delays_hpol_hesse = numpy.array([0.500000,5.916741,0.885048,1.197699])
-
-    elif deploy_index == 14:
-        cable_delays =  {   'hpol':     numpy.array([3.451618,7.826725,8.083331,7.546091]), \
-                            'vpol':     numpy.array([10.914086,7.477607,16.681922,7.471445])}
-    elif deploy_index == 15:
-        # cable_delays_hpol = numpy.array([17.809761,3.103724,9.518142,7.911402])
-        # cable_delays_hpol_hesse = numpy.array([17.980015,17.603312,15.514188,4.179351])
-        # cable_delays_vpol = numpy.array([21.671835,4.689877,17.031305,7.945473])
-        # cable_delays_vpol_hesse = numpy.array([0.746272,19.473516,0.748978,0.742503])
-
-        cable_delays =  {   'hpol':     numpy.array([17.809761,3.103724,9.518142,7.911402]), \
-                            'vpol':     numpy.array([21.671835,4.689877,17.031305,7.945473])}
-    elif deploy_index == 17:
-        cable_delays =  {   'hpol':     numpy.array([2.901715,11.148590,3.695444,13.082649]), \
-                            'vpol':     numpy.array([8.324117,19.208286,12.596147,12.946409])}
-
-    elif deploy_index == 19:
-        cable_delays =  {   'hpol':     numpy.array([12.890893,7.962642,5.000000,6.202864]), \
-                            'vpol':     numpy.array([15.835665,9.689739,13.090459,5.637693])}
-    elif deploy_index == 20:
-        cable_delays =  {   'hpol':     numpy.array([12.094088,3.168013,9.118150,7.905168]), \
-                            'vpol':     numpy.array([18.743829,4.867362,16.899300,8.054707])}
-
-    elif deploy_index == 22:
-        cable_delays =  {   'hpol':     numpy.array([7.901212,15.961225,2.999975,11.110831]), \
-                            'vpol':     numpy.array([13.115628,17.688231,11.090487,11.027541])}
-        #cable_delays_hpol_hesse = numpy.array([0.250000,3.177605,4.465699,4.766975])
-        #cable_delays_vpol_hesse = numpy.array([0.250000,5.576029,4.727528,5.035706])
-    elif deploy_index == 23:
-        #Made based of of khsv signal + 'Miller Substation','Tonopah AFS GATR Site' with unkown source directions.  Only works for antennas 0,1,3
-        cable_delays =  {   'hpol':     numpy.array([7.901212,12.009911,0.000000,7.520476]), \
-                            'vpol':     numpy.array([13.115628,16.688239,11.090487,10.646654])}
-        # antennas_phase_vpol = {0 : [0.000000, 0.000000, -5.000000], 1 : [-32.735165, -13.434077, 20.239900], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.927869, -44.407966, 15.259098]}
-        # antennas_phase_vpol_hesse = {0 : [2.000000, 2.000000, 0.376409], 1 : [0.040986, 0.049558, 0.314455], 2 : [2.000000, 2.000000, 0.750000], 3 : [0.096819, 0.165549, 2.221534]}
-
-        # cable_delays_hpol = numpy.array([7.901212,12.009911,0.000000,7.520476])
-        # cable_delays_hpol_hesse = numpy.array([0.500000,0.000000,0.000000,0.000000])
-    elif deploy_index == 24:
-        cable_delays =  {   'hpol':     numpy.array([7.901212,11.040073,0.000000,6.786517]), \
-                            'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
-        # cable_delays_vpol_hesse = numpy.array([0.500000,0.000000,0.500000,0.000000])
-        # cable_delays_hpol_hesse = numpy.array([0.500000,0.000796,0.500000,0.249012])
-
-    elif deploy_index == 25:
-        #Starting from 24, but with more sources.  Still limited to 3 antennas. 
-        '''
-        ------------------------------------------------------------------
-        | FCN = 0.0003234               |     Ncalls=931 (931 total)     |
-        | EDM = 8.84e-05 (Goal: 0.0002) |            up = 1.0            |
-        ------------------------------------------------------------------
-        |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
-        ------------------------------------------------------------------
-        |     True      |     True      |   False   |       False        |
-        ------------------------------------------------------------------
-        | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
-        ------------------------------------------------------------------
-        |     False     |     True      |   False   |   False   |  True  |
-        ------------------------------------------------------------------
-        --------------------------------------------------------------------------------------------------
-        |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
-        --------------------------------------------------------------------------------------------------
-        | 0 | ant0_x       |     0     |     2     |            |            |   -10   |   10    |  yes  |
-        | 1 | ant0_y       |     0     |     2     |            |            |   -10   |   10    |  yes  |
-        | 2 | ant0_z       |    0.0    |    0.8    |            |            |   -5    |    5    |  yes  |
-        | 3 | ant1_x       |   -35.6   |    2.6    |    -3.7    |    13.1    |-43.4936 |-23.4936 |       |
-        | 4 | ant1_y       |    -18    |     4     |     -4     |     16     |-22.2161 |-2.21612 |       |
-        | 5 | ant1_z       |    20     |     6     |    -10     |     5      | 10.2399 | 20.2399 |       |
-        | 6 | ant2_x       |   -8.7    |    2.0    |            |            |-18.6606 | 1.33936 |  yes  |
-        | 7 | ant2_y       |   -44.5   |    2.0    |            |            |-54.5335 |-34.5335 |  yes  |
-        | 8 | ant2_z       |    5.5    |    0.8    |            |            |0.489838 | 10.4898 |  yes  |
-        | 9 | ant3_x       |   -30.0   |    2.6    |    -7.8    |    10.9    |-42.1681 |-22.1681 |       |
-        | 10| ant3_y       |    -43    |     4     |    -10     |     10     |-53.2008 |-33.2008 |       |
-        | 11| ant3_z       |    13     |     5     |     -7     |     4      | 6.88977 | 16.8898 |       |
-        | 12| cable_delay0 |    7.9    |    0.1    |            |            | 4.90121 | 10.9012 |  yes  |
-        | 13| cable_delay1 |   11.2    |    3.0    |    -3.7    |    3.7     | 9.00991 | 15.0099 |       |
-        | 14| cable_delay2 |    0.0    |    0.1    |            |            |   -3    |    3    |  yes  |
-        | 15| cable_delay3 |    8.4    |    4.5    |    -3.9    |    2.1     | 4.52048 | 10.5205 |       |
-        --------------------------------------------------------------------------------------------------
+        elif deploy_index == 3:
+            #Here I am just rerunning the time delays from the pulser, and also letting the cable delays vary.  I am only doing a simple chi^2 (Just the adjustedChi^2)
+            cable_delays =  {'hpol' : numpy.array([ 9.716096686691788 , 6.557263164293925 , 1.338560237462631 , 7.988215967106549 ]) + 415.47714969, \
+                             'vpol' : numpy.array([ 15.427099049222033 , 12.16895487865136 , 9.310628362153283 , 8.630112284474672 ]) + 423.56765695}
 
 
-        Copy-Paste Prints:
-        ------------
-
-        antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.627008, -18.143051, 20.169783], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.001992, -43.078926, 12.520058]}
-        antennas_phase_hpol_hesse = {0 : [2.000000, 2.000000, 0.750000], 1 : [13.102980, 14.054989, 5.158160], 2 : [2.000000, 2.000000, 0.750000], 3 : [10.944684, 15.051348, 6.694572]}
-
-        cable_delays_hpol = numpy.array([7.901212,11.157171,0.000000,8.444916])
-        cable_delays_hpol_hesse = numpy.array([0.100000,3.663444,0.100000,3.264144])
-        Code completed.
-        '''
-
-        #Vpol taken from 24
-
-        cable_delays =  {   'hpol':      numpy.array([7.901212,11.157171,0.000000,8.444916]), \
-                            'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
-    elif deploy_index == 26:
-        cable_delays =  {   'hpol':     numpy.array([7.901212,11.157171,0.000000,8.444916]), \
-                            'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
-    elif deploy_index == 27:
-        cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,0.000000,9.591437]), \
-                            'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
-
-        # cable_delays_hpol = 
-        # cable_delays_hpol_hesse = numpy.array([0.100000,0.951527,0.100000,2.137623])
-    elif deploy_index == 28:
-        cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,0,9.591437]), \
-                            'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
-        # cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,-47.749751,9.591437]), \
-        #                     'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
-    elif deploy_index == 29:
-        cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,0.000000,9.591437]), \
-                            'vpol':     numpy.array([13.115628,5.782146,9.134935,4.791166])}
-        # cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,-47.749751,9.591437]), \
-        #                     'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
-        # cable_delays_hpol = numpy.array([7.901212,8.157171,0.000000,9.591437])
-        # cable_delays_hpol_hesse = numpy.array([0.500000,0.500000,0.500000,0.500000])
-        # cable_delays_vpol = numpy.array([13.115628,5.782146,9.134935,4.791166])
-        # cable_delays_vpol_hesse = numpy.array([0.500000,0.000000,0.000000,0.000000])
-    elif deploy_index == 30:
-        cable_delays =  {   'hpol':     numpy.array([7.901212,-6.188353,-20.544049,3.551777]), \
-                            'vpol':     numpy.array([13.115628,9.321441,-8.072655,8.535294])}
-
-        # cable_delays_hpol = numpy.array([7.901212,-6.188353,-20.544049,3.551777])
-        # cable_delays_hpol_hesse = numpy.array([0.500000,2.571836,2.490392,2.693619])
-
-        # cable_delays_hpol = numpy.array([7.901212,-5.937433,-19.999884,3.821820])
-        # cable_delays_hpol_hesse = numpy.array([0.500000,2.179866,3.926540,2.118012])
-
-        # cable_delays_hpol = numpy.array([7.901212,-0.804752,-10.000000,8.866679])
-        # cable_delays_hpol_hesse = numpy.array([0.500000,1.955870,0.302548,2.080929])
 
 
-    else:
-        print('Using unmodified cable delays.')
-        cable_delays =  {'hpol': numpy.array([423.37836156, 428.43979143, 415.47714969, 423.58803498]), \
-                         'vpol': numpy.array([428.59277751, 430.16685915, 423.56765695, 423.50469285])}
 
-    if return_raw == False:
-        min_delay = min((min(cable_delays['hpol']),min(cable_delays['vpol'])))
-        cable_delays['hpol'] -= min_delay
-        cable_delays['vpol'] -= min_delay
+            # pulser_locations_ENU['hpol'] = {'run1507':[259.417378, -353.989882, -88.125921], 'run1509':[1129.874543, -528.948053, -160.527267], 'run1511':[189.018118, 338.618832, -44.960478]}
+            # pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[0.010000, 0.010000, 0.010000], 'run1509':[0.010000, 0.010000, 0.010000], 'run1511':[0.010000, 0.010000, 0.010000]}
+        elif deploy_index == 11:
+            cable_delays =  {'hpol' : numpy.array([7.901212,12.248939,10.000000,18.110885]) + 415.47714969, \
+                             'vpol' : numpy.array([13.115628,8.986282,12.530756,12.041758]) + 423.56765695}
 
-    return cable_delays
+            #cable_delays_vpol_hesse = numpy.array([0.500000,3.390690,0.407566,2.505386])
+            #cable_delays_hpol_hesse = numpy.array([0.500000,5.916741,0.885048,1.197699])
+
+        elif deploy_index == 14:
+            cable_delays =  {   'hpol':     numpy.array([3.451618,7.826725,8.083331,7.546091]), \
+                                'vpol':     numpy.array([10.914086,7.477607,16.681922,7.471445])}
+        elif deploy_index == 15:
+            # cable_delays_hpol = numpy.array([17.809761,3.103724,9.518142,7.911402])
+            # cable_delays_hpol_hesse = numpy.array([17.980015,17.603312,15.514188,4.179351])
+            # cable_delays_vpol = numpy.array([21.671835,4.689877,17.031305,7.945473])
+            # cable_delays_vpol_hesse = numpy.array([0.746272,19.473516,0.748978,0.742503])
+
+            cable_delays =  {   'hpol':     numpy.array([17.809761,3.103724,9.518142,7.911402]), \
+                                'vpol':     numpy.array([21.671835,4.689877,17.031305,7.945473])}
+        elif deploy_index == 17:
+            cable_delays =  {   'hpol':     numpy.array([2.901715,11.148590,3.695444,13.082649]), \
+                                'vpol':     numpy.array([8.324117,19.208286,12.596147,12.946409])}
+
+        elif deploy_index == 19:
+            cable_delays =  {   'hpol':     numpy.array([12.890893,7.962642,5.000000,6.202864]), \
+                                'vpol':     numpy.array([15.835665,9.689739,13.090459,5.637693])}
+        elif deploy_index == 20:
+            cable_delays =  {   'hpol':     numpy.array([12.094088,3.168013,9.118150,7.905168]), \
+                                'vpol':     numpy.array([18.743829,4.867362,16.899300,8.054707])}
+
+        elif deploy_index == 22:
+            cable_delays =  {   'hpol':     numpy.array([7.901212,15.961225,2.999975,11.110831]), \
+                                'vpol':     numpy.array([13.115628,17.688231,11.090487,11.027541])}
+            #cable_delays_hpol_hesse = numpy.array([0.250000,3.177605,4.465699,4.766975])
+            #cable_delays_vpol_hesse = numpy.array([0.250000,5.576029,4.727528,5.035706])
+        elif deploy_index == 23:
+            #Made based of of khsv signal + 'Miller Substation','Tonopah AFS GATR Site' with unkown source directions.  Only works for antennas 0,1,3
+            cable_delays =  {   'hpol':     numpy.array([7.901212,12.009911,0.000000,7.520476]), \
+                                'vpol':     numpy.array([13.115628,16.688239,11.090487,10.646654])}
+            # antennas_phase_vpol = {0 : [0.000000, 0.000000, -5.000000], 1 : [-32.735165, -13.434077, 20.239900], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.927869, -44.407966, 15.259098]}
+            # antennas_phase_vpol_hesse = {0 : [2.000000, 2.000000, 0.376409], 1 : [0.040986, 0.049558, 0.314455], 2 : [2.000000, 2.000000, 0.750000], 3 : [0.096819, 0.165549, 2.221534]}
+
+            # cable_delays_hpol = numpy.array([7.901212,12.009911,0.000000,7.520476])
+            # cable_delays_hpol_hesse = numpy.array([0.500000,0.000000,0.000000,0.000000])
+        elif deploy_index == 24:
+            cable_delays =  {   'hpol':     numpy.array([7.901212,11.040073,0.000000,6.786517]), \
+                                'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
+            # cable_delays_vpol_hesse = numpy.array([0.500000,0.000000,0.500000,0.000000])
+            # cable_delays_hpol_hesse = numpy.array([0.500000,0.000796,0.500000,0.249012])
+
+        elif deploy_index == 25:
+            #Starting from 24, but with more sources.  Still limited to 3 antennas. 
+            '''
+            ------------------------------------------------------------------
+            | FCN = 0.0003234               |     Ncalls=931 (931 total)     |
+            | EDM = 8.84e-05 (Goal: 0.0002) |            up = 1.0            |
+            ------------------------------------------------------------------
+            |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
+            ------------------------------------------------------------------
+            |     True      |     True      |   False   |       False        |
+            ------------------------------------------------------------------
+            | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
+            ------------------------------------------------------------------
+            |     False     |     True      |   False   |   False   |  True  |
+            ------------------------------------------------------------------
+            --------------------------------------------------------------------------------------------------
+            |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
+            --------------------------------------------------------------------------------------------------
+            | 0 | ant0_x       |     0     |     2     |            |            |   -10   |   10    |  yes  |
+            | 1 | ant0_y       |     0     |     2     |            |            |   -10   |   10    |  yes  |
+            | 2 | ant0_z       |    0.0    |    0.8    |            |            |   -5    |    5    |  yes  |
+            | 3 | ant1_x       |   -35.6   |    2.6    |    -3.7    |    13.1    |-43.4936 |-23.4936 |       |
+            | 4 | ant1_y       |    -18    |     4     |     -4     |     16     |-22.2161 |-2.21612 |       |
+            | 5 | ant1_z       |    20     |     6     |    -10     |     5      | 10.2399 | 20.2399 |       |
+            | 6 | ant2_x       |   -8.7    |    2.0    |            |            |-18.6606 | 1.33936 |  yes  |
+            | 7 | ant2_y       |   -44.5   |    2.0    |            |            |-54.5335 |-34.5335 |  yes  |
+            | 8 | ant2_z       |    5.5    |    0.8    |            |            |0.489838 | 10.4898 |  yes  |
+            | 9 | ant3_x       |   -30.0   |    2.6    |    -7.8    |    10.9    |-42.1681 |-22.1681 |       |
+            | 10| ant3_y       |    -43    |     4     |    -10     |     10     |-53.2008 |-33.2008 |       |
+            | 11| ant3_z       |    13     |     5     |     -7     |     4      | 6.88977 | 16.8898 |       |
+            | 12| cable_delay0 |    7.9    |    0.1    |            |            | 4.90121 | 10.9012 |  yes  |
+            | 13| cable_delay1 |   11.2    |    3.0    |    -3.7    |    3.7     | 9.00991 | 15.0099 |       |
+            | 14| cable_delay2 |    0.0    |    0.1    |            |            |   -3    |    3    |  yes  |
+            | 15| cable_delay3 |    8.4    |    4.5    |    -3.9    |    2.1     | 4.52048 | 10.5205 |       |
+            --------------------------------------------------------------------------------------------------
+
+
+            Copy-Paste Prints:
+            ------------
+
+            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.627008, -18.143051, 20.169783], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.001992, -43.078926, 12.520058]}
+            antennas_phase_hpol_hesse = {0 : [2.000000, 2.000000, 0.750000], 1 : [13.102980, 14.054989, 5.158160], 2 : [2.000000, 2.000000, 0.750000], 3 : [10.944684, 15.051348, 6.694572]}
+
+            cable_delays_hpol = numpy.array([7.901212,11.157171,0.000000,8.444916])
+            cable_delays_hpol_hesse = numpy.array([0.100000,3.663444,0.100000,3.264144])
+            Code completed.
+            '''
+
+            #Vpol taken from 24
+
+            cable_delays =  {   'hpol':      numpy.array([7.901212,11.157171,0.000000,8.444916]), \
+                                'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
+        elif deploy_index == 26:
+            cable_delays =  {   'hpol':     numpy.array([7.901212,11.157171,0.000000,8.444916]), \
+                                'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
+        elif deploy_index == 27:
+            cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,0.000000,9.591437]), \
+                                'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
+
+            # cable_delays_hpol = 
+            # cable_delays_hpol_hesse = numpy.array([0.100000,0.951527,0.100000,2.137623])
+        elif deploy_index == 28:
+            cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,0,9.591437]), \
+                                'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
+            # cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,-47.749751,9.591437]), \
+            #                     'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
+        elif deploy_index == 29:
+            cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,0.000000,9.591437]), \
+                                'vpol':     numpy.array([13.115628,5.782146,9.134935,4.791166])}
+            # cable_delays =  {   'hpol':     numpy.array([7.901212,8.157171,-47.749751,9.591437]), \
+            #                     'vpol':     numpy.array([13.115628,15.781942,11.090487,10.848566])}
+            # cable_delays_hpol = numpy.array([7.901212,8.157171,0.000000,9.591437])
+            # cable_delays_hpol_hesse = numpy.array([0.500000,0.500000,0.500000,0.500000])
+            # cable_delays_vpol = numpy.array([13.115628,5.782146,9.134935,4.791166])
+            # cable_delays_vpol_hesse = numpy.array([0.500000,0.000000,0.000000,0.000000])
+        elif deploy_index == 30:
+            cable_delays =  {   'hpol':     numpy.array([7.901212,-6.188353,-20.544049,3.551777]), \
+                                'vpol':     numpy.array([13.115628,9.321441,-8.072655,8.535294])}
+
+            # cable_delays_hpol = numpy.array([7.901212,-6.188353,-20.544049,3.551777])
+            # cable_delays_hpol_hesse = numpy.array([0.500000,2.571836,2.490392,2.693619])
+
+            # cable_delays_hpol = numpy.array([7.901212,-5.937433,-19.999884,3.821820])
+            # cable_delays_hpol_hesse = numpy.array([0.500000,2.179866,3.926540,2.118012])
+
+            # cable_delays_hpol = numpy.array([7.901212,-0.804752,-10.000000,8.866679])
+            # cable_delays_hpol_hesse = numpy.array([0.500000,1.955870,0.302548,2.080929])
+
+
+        else:
+            print('Using unmodified cable delays.')
+            cable_delays =  {'hpol': numpy.array([423.37836156, 428.43979143, 415.47714969, 423.58803498]), \
+                             'vpol': numpy.array([428.59277751, 430.16685915, 423.56765695, 423.50469285])}
+
+        cable_delays['hpol'] = numpy.asarray(cable_delays['hpol'])
+        cable_delays['vpol'] = numpy.asarray(cable_delays['vpol'])
+        if return_raw == False:
+            min_delay = min((min(cable_delays['hpol']),min(cable_delays['vpol'])))
+            cable_delays['hpol'] -= min_delay
+            cable_delays['vpol'] -= min_delay
+
+        return cable_delays
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
 
 
 def loadPulserPolarizations():
@@ -1786,28 +1801,51 @@ def loadPulserLocations(deploy_index=default_deploy):
     pulser_locations['run792'] = (37.5861,-118.2332,3779.52)
     pulser_locations['run793'] = (37.5861,-118.2332,3779.52)
 
-    if deploy_index <= 9:
-        print('Pulser location elevations from Google Earth (approximate WGS84)')
-        #Trip 2
-        #Site 1  37.5859361 N 118.233918056 W  (37.5859361, -118.233918056)
-        #Alt: 3762.9m (GPS)  3789.32 m (MSL) Google Earth: Alt: 3796.284
-        pulser_locations['run1504'] = (37.5859361, -118.233918056,3796.284)
+    
 
-        #Site 1a 37.58595472° N 118.233841 W 
-        #Alt: 3763.1m (GPS)  3789.53 m (MSL) Google Earth: 3794.76
-        pulser_locations['run1506'] = (37.58595472, -118.233841,3794.76)
-        pulser_locations['run1507'] = (37.58595472, -118.233841,3794.76)
+    if type(deploy_index) == int:
+        if deploy_index <= 9:
+            print('Pulser location elevations from Google Earth (approximate WGS84)')
+            #Trip 2
+            #Site 1  37.5859361 N 118.233918056 W  (37.5859361, -118.233918056)
+            #Alt: 3762.9m (GPS)  3789.32 m (MSL) Google Earth: Alt: 3796.284
+            pulser_locations['run1504'] = (37.5859361, -118.233918056,3796.284)
 
-        #Site 2 37.58568583° N 118.225942 W 
-        #Alt: 3690.70m (GPS)  3717.04m (MSL) Google Earth: 3729.228
-        pulser_locations['run1508'] = (37.58568583, -118.225942,3729.228)
-        pulser_locations['run1509'] = (37.58568583, -118.225942,3729.228)
+            #Site 1a 37.58595472° N 118.233841 W 
+            #Alt: 3763.1m (GPS)  3789.53 m (MSL) Google Earth: 3794.76
+            pulser_locations['run1506'] = (37.58595472, -118.233841,3794.76)
+            pulser_locations['run1507'] = (37.58595472, -118.233841,3794.76)
 
-        #Site 3 37.592001861° N 118.2354480278 W 
-        #Alt: 3806.25m (GPS)  3832.55m (MSL) Google Earth: 3827.6784
-        pulser_locations['run1511'] = (37.592001861, -118.2354480278,3827.6784)
-    elif deploy_index > 9:
-        print('Pulser location elevations from GPS (measured WGS84)')
+            #Site 2 37.58568583° N 118.225942 W 
+            #Alt: 3690.70m (GPS)  3717.04m (MSL) Google Earth: 3729.228
+            pulser_locations['run1508'] = (37.58568583, -118.225942,3729.228)
+            pulser_locations['run1509'] = (37.58568583, -118.225942,3729.228)
+
+            #Site 3 37.592001861° N 118.2354480278 W 
+            #Alt: 3806.25m (GPS)  3832.55m (MSL) Google Earth: 3827.6784
+            pulser_locations['run1511'] = (37.592001861, -118.2354480278,3827.6784)
+        elif deploy_index > 9:
+            print('Pulser location elevations from GPS (measured WGS84)')
+            #Trip 2
+            #Site 1  37.5859361 N 118.233918056 W  (37.5859361, -118.233918056)
+            #Alt: 3762.9m (GPS)  3789.32 m (MSL) Google Earth: Alt: 3796.284
+            pulser_locations['run1504'] = (37.5859361, -118.233918056,3762.9)
+
+            #Site 1a 37.58595472° N 118.233841 W 
+            #Alt: 3763.1m (GPS)  3789.53 m (MSL) Google Earth: 3794.76
+            pulser_locations['run1506'] = (37.58595472, -118.233841,3763.1)
+            pulser_locations['run1507'] = (37.58595472, -118.233841,3763.1)
+
+            #Site 2 37.58568583° N 118.225942 W 
+            #Alt: 3690.70m (GPS)  3717.04m (MSL) Google Earth: 3729.228
+            pulser_locations['run1508'] = (37.58568583, -118.225942,3690.7)
+            pulser_locations['run1509'] = (37.58568583, -118.225942,3690.7)
+
+            #Site 3 37.592001861° N 118.2354480278 W 
+            #Alt: 3806.25m (GPS)  3832.55m (MSL) Google Earth: 3827.6784
+            pulser_locations['run1511'] = (37.592001861, -118.2354480278,3806.25)
+    elif type(deploy_index) == str:
+        print('Interpreting deploy index as str and assuming most recent pulsing locations.')
         #Trip 2
         #Site 1  37.5859361 N 118.233918056 W  (37.5859361, -118.233918056)
         #Alt: 3762.9m (GPS)  3789.32 m (MSL) Google Earth: Alt: 3796.284
@@ -1827,7 +1865,6 @@ def loadPulserLocations(deploy_index=default_deploy):
         #Alt: 3806.25m (GPS)  3832.55m (MSL) Google Earth: 3827.6784
         pulser_locations['run1511'] = (37.592001861, -118.2354480278,3806.25)
 
-
     return pulser_locations    
 
 def loadPulserLocationsENU(deploy_index=default_deploy):
@@ -1840,14 +1877,21 @@ def loadPulserLocationsENU(deploy_index=default_deploy):
     This is depricated and does not all for the antennas to have different 
     phase centers. loadPulserPhaseLocationsENU is better.
     '''
-    pulser_locations_ENU = {}
-    pulser_locations = loadPulserLocations(deploy_index=deploy_index)
+    try:
+        pulser_locations_ENU = {}
+        pulser_locations = loadPulserLocations(deploy_index=deploy_index)
 
-    origin = loadAntennaZeroLocation(deploy_index=deploy_index)
-    print(origin)
-    for key, location in pulser_locations.items():
-        pulser_locations_ENU[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
-    return pulser_locations_ENU
+        origin = loadAntennaZeroLocation(deploy_index=deploy_index)
+        print(origin)
+        for key, location in pulser_locations.items():
+            pulser_locations_ENU[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+        return pulser_locations_ENU
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
 
 def loadPulserPhaseLocationsENU(deploy_index=default_deploy):
     '''

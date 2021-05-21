@@ -219,10 +219,16 @@ class Correlator:
         reference to the original input lat lon el) to the shifted lat lon el.  This can be used as the origin for
         calculated direction to airplanes etc.  
         '''
-        self.A0_latlonel_physical = pm.enu2geodetic(self.A0_physical[0],self.A0_physical[1],self.A0_physical[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
-        self.A0_latlonel_hpol = pm.enu2geodetic(self.A0_hpol[0],self.A0_hpol[1],self.A0_hpol[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
-        self.A0_latlonel_vpol = pm.enu2geodetic(self.A0_vpol[0],self.A0_vpol[1],self.A0_vpol[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
-
+        try:
+            self.A0_latlonel_physical   = pm.enu2geodetic(self.A0_physical[0],self.A0_physical[1],self.A0_physical[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
+            self.A0_latlonel_hpol       = pm.enu2geodetic(self.A0_hpol[0],self.A0_hpol[1],self.A0_hpol[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
+            self.A0_latlonel_vpol       = pm.enu2geodetic(self.A0_vpol[0],self.A0_vpol[1],self.A0_vpol[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)        
 
     def overwriteAntennaLocations(self, A0_physical,A1_physical,A2_physical,A3_physical,A0_hpol,A1_hpol,A2_hpol,A3_hpol,A0_vpol,A1_vpol,A2_vpol,A3_vpol, verbose=True, suppress_time_delay_calculations=False):
         '''

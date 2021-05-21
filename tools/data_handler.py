@@ -27,7 +27,7 @@ import tools.interpret as interpret #Must be imported before matplotlib or else 
 import pdb
 
 
-analysis_data_dir = '/home/dsouthall/scratch-midway2/beacon_jan17_2020/'
+analysis_data_dir = os.environ['BEACON_PROCESSED_DATA']#'/home/dsouthall/scratch-midway2/beacon_jan17_2020/'
 #os.environ['BEACON_ANALYSIS_DIR'] + 'data/'
 
 
