@@ -1,9 +1,9 @@
 import json
 import sys
 import os
-
-sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
-config_file_dir = os.environ['BEACON_ANALYSIS_DIR'] + 'config/'
+import copy
+import pymap3d as pm
+import numpy
 
 def loadSampleData():
     '''
@@ -18,7 +18,12 @@ def loadSampleData():
                         'vpol': [428.59277751, 430.16685915, 423.56765695, 423.50469285]}
     return origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays
 
-def configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description="",force_write=True):
+def default(obj):
+    if isinstance(obj, numpy.ndarray):
+        return obj.tolist()
+    raise TypeError('Not serializable')
+
+def configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description="",update_latlonel=False,force_write=True):
     '''
     The counterpart to configReader, given the normal calibration dictionaries, this will write a calibration file
     that can be loaded for later analysis.
@@ -48,6 +53,9 @@ def configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, ante
                             'vpol': [428.59277751, 430.16685915, 423.56765695, 423.50469285]}
     description : str
         A string that can be used to describe the calibration.  Will be included at the top of the json file.
+    update_latlonel : bool
+        If True, then latlonel information will be calculated and stored based on the input enu coordinates.  Default
+        behaviour is False.  
     force_write : bool
         If True then then this will alter the filename by appending it with _# until it reaches a number/filename
         that does not already exist.  This is intended to avoid overwriting existing calibration files.  If False
@@ -104,11 +112,88 @@ def configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, ante
             data["antennas"]["ant%i"%mast]["vpol"]["cable_delay"] = cable_delays["vpol"][mast]
             data["antennas"]["ant%i"%mast]["vpol"]["channel"] = 2*mast + 1
 
+
+        if update_latlonel == True:
+            print('Updated latlonel data.')
+            data = updateLatlonelFromENU(data)
+
         with open(json_path, 'w') as outfile:
-            outfile.write(json.dumps(data, indent=4, sort_keys=False))
+            outfile.write(json.dumps(data, indent=4, sort_keys=False, default=default))
         return json_path
     else:
         print('No output file created.')
+
+def checkConfigConsistency(data, decimals=6):
+    '''
+    Given the data loaded from the configuration data file, this will check for defined ENU and latlonel coordinates, 
+    and confirm if they agree with eachother.
+
+    Parameters
+    ----------
+    data : dict
+        The dict generated when loading a configuration from a json file.
+    decimals : int
+        Values are rounded before compared.  This chooses the precision using the numpy.around funciton.
+    '''
+    data = copy.deepcopy(data) #So as to not edit the original.
+    origin = data['origin']['latlonel'] #Lat Lon Elevation, use for generating ENU from other latlonel values.     
+
+    for mast in range(4):
+        for key in ['hpol', 'vpol']:
+            if numpy.asarray(data['antennas']['ant%i'%mast][key]['enu']).size > 0 and numpy.asarray(data['antennas']['ant%i'%mast][key]['latlonel']).size > 0:
+                enu_from_latlonel = numpy.asarray(pm.geodetic2enu(data['antennas']['ant%i'%mast][key]['latlonel'][0],data['antennas']['ant%i'%mast][key]['latlonel'][1],data['antennas']['ant%i'%mast][key]['latlonel'][2],origin[0],origin[1],origin[2]))
+                enu_from_json = numpy.asarray(data['antennas']['ant%i'%mast][key]['enu'])
+
+                match = numpy.all(numpy.around(enu_from_latlonel,decimals=decimals) == numpy.around(enu_from_json,decimals=decimals))
+                
+                max_precision_to_check = 10
+                decimals = max_precision_to_check
+                while numpy.all(numpy.around(enu_from_latlonel,decimals=decimals) != numpy.around(enu_from_json,decimals=decimals)) or decimals == 0:
+                    decimals -= 1
+
+                print('Checking mast %i %s coordinates:  Match up to %i decimals'%(mast,key, decimals) + ['',' (Max precision checked)'][decimals == max_precision_to_check])
+            else:
+                print(key + 'Does not contain both latlonel and ENU data.')
+
+def updateLatlonelFromENU(data):
+    '''
+    Given data, this will take the ENU data and use it to update the latlonel data in a deep copy of the original dict.
+
+    Parameters
+    ----------
+    data : dict
+        The dict generated when loading a configuration from a json file.
+    '''
+    data = copy.deepcopy(data) #So as to not edit the original.
+    origin = data['origin']['latlonel'] #Lat Lon Elevation, use for generating ENU from other latlonel values.     
+
+    for mast in range(4):
+        for key in ['physical', 'hpol', 'vpol']:
+            if numpy.asarray(data['antennas']['ant%i'%mast][key]['enu']).size > 0:
+                data['antennas']['ant%i'%mast][key]['latlonel'] = numpy.asarray(pm.enu2geodetic(data['antennas']['ant%i'%mast][key]['enu'][0],data['antennas']['ant%i'%mast][key]['enu'][1],data['antennas']['ant%i'%mast][key]['enu'][2],origin[0],origin[1],origin[2]))
+            else:
+                print(key + 'Does not contain ENU data for mast %i %s.'%(mast, key))
+    return data
+
+def updateENUFromLatlonel(data):
+    '''
+    Given data, this will take the latlonel data and use it to update the ENU data in a deep copy of the original dict.
+
+    Parameters
+    ----------
+    data : dict
+        The dict generated when loading a configuration from a json file.
+    '''
+    data = copy.deepcopy(data) #So as to not edit the original.
+    origin = data['origin']['latlonel'] #Lat Lon Elevation, use for generating ENU from other latlonel values.     
+
+    for mast in range(4):
+        for key in ['physical', 'hpol', 'vpol']:
+            if numpy.asarray(data['antennas']['ant%i'%mast][key]['enu']).size > 0:
+                data['antennas']['ant%i'%mast][key]['enu'] = numpy.asarray(pm.geodetic2enu(data['antennas']['ant%i'%mast][key]['latlonel'][0],data['antennas']['ant%i'%mast][key]['latlonel'][1],data['antennas']['ant%i'%mast][key]['latlonel'][2],origin[0],origin[1],origin[2]))
+            else:
+                print(key + 'Does not contain ENU data for mast %i %s.'%(mast, key))
+    return data
 
 def configReader(json_path, return_mode='enu'):
     '''
@@ -156,6 +241,9 @@ def configReader(json_path, return_mode='enu'):
 
     print('Calibration Description:')
     print(data['description'])
+
+    checkConfigConsistency(data)
+
     origin = data['origin']['latlonel'] #Lat Lon Elevation, use for generating ENU from other latlonel values.     
     antennas_physical = {}
     antennas_phase_hpol = {}
@@ -174,12 +262,22 @@ def configReader(json_path, return_mode='enu'):
 
 
 if __name__ == '__main__':
+    sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
+    config_file_dir = os.environ['BEACON_ANALYSIS_DIR'] + 'config/'
+
+
     print('Running config_reader.py in debug mode:') #As apposed to loading functions for use elsewhere. 
     test_file = config_file_dir + 'deploy_30.json'
-    manual_data = configReader(test_file)
+    origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays = configReader(test_file)
+    
+    #The below was meant to update a calibration file generated with only enu data.     
+    #configWriter(config_file_dir + 'deploy_30_updated.json', origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, update_latlonel=True, description="deploy_index=30 with updated coordinates.",force_write=True)
 
-    origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays = loadSampleData()
+    if False:
+        origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays = loadSampleData()
 
-    test_write_file = config_file_dir + 'deploy_A.json'
-    output_filename = configWriter(test_write_file, origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description="Testing the configuration writer.",force_write=True)
-    auto_data = configReader(output_filename)
+        test_write_file = config_file_dir + 'deploy_test_A.json'
+        output_filename = configWriter(test_write_file, origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description="Testing the configuration writer.",force_write=True)
+        auto_data = configReader(output_filename)
+    else:
+        print('Testing of configWriter disabled.')
