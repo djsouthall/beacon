@@ -10,7 +10,6 @@ import os
 import sys
 import gc
 import pymap3d as pm
-import latex
 import itertools
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
