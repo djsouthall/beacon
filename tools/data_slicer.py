@@ -36,7 +36,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore")
 
-datapath = os.environ['BEACON_DATA']
+datapath = os.environ['BEACON_PROCESSED_DATA']
 
 class dataSlicerSingleRun():
     '''
@@ -514,7 +514,6 @@ class dataSlicerSingleRun():
 
             if param_key in self.known_param_keys:
                 with h5py.File(self.analysis_filename, 'r') as file:
-
                     if param_key == 'impulsivity_h':
                         param = file['impulsivity'][self.impulsivity_dset_key]['hpol'][...][eventids]
                     elif param_key == 'impulsivity_v':
