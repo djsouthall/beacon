@@ -161,7 +161,8 @@ With the appropriate version of python loaded.
 
 Many of the scripts in this beacon analysis git will expect some system variables to be set:
   - *BEACON_INSTALL_DIR* : This is the location of where beaconroot is installed (see the beaconroot guide).  Note that the examples folder has typically been copied to this directory such that the script defining the reader is easily found.
-  - *BEACON_DATA* : This is the location of the BEACON data.  This will be the folder than contins myriad of run folders you will want to examine with this code. 
+  - *BEACON_DATA* : This is the location of the BEACON data.  Each run will have a folder containing the header, event, and status files.
+  - *BEACON_PROCESSED_DATA* : This is the location of generated hdf5 analysis files for BEACON.  Any computations like time delays or reconstruction directions are stored here.
   - *BEACON_ANALYSIS_DIR* : This is the location of this package (the folder that contains the .git file).
 
 I am also moving towards using package-like import, which will require you to add the relevant paths to your PYTHONPATH.  An example of the lines I have in my bashrc for BEACON can be found below:
@@ -190,6 +191,7 @@ Getting setup with Windows Subsystem for Linux - Most of this section can be ign
 6. You can now test that the graphical elements are working by running something like xeyes
     * `sudo apt-get install x11-apps`
     * `xeyes` - A pair of eyes should pop up that track mouse movement.  You can close this with ctrl-c
+    * If this did not work then try double checking your firewall settings.  Additionally hover over the xming app in the tray of our windows toolbar.  Ensure that it reads the same port number that you have set in your bashrc.  Above you were instructed to use Display number 0, but it may autoset to 0.0.  In which case it may be easier to update your bash script to match what xming wants to do: `export DISPLAY=$(grep -m 1 nameserver /etc/resolv.conf | awk '{print $2}'):0.0`
 7. You can see where your WSL files are stored by executing `explorer.exe .`, which will open Windows Explorer in the current directory.  You can then copy and past the path from above.  This is where you should direct any code editor, if you want to run windows programs to edit the code on your linux subsystem.
 
 ## 0.4.0 Installing on Ubuntu
@@ -247,6 +249,7 @@ Do this if you plan on using git commits and pushes.
             export BEACON_INSTALL_DIR=/home/username/beacon/beaconroot/
             export BEACON_ANALYSIS_DIR=/home/username/beacon/beacon/
             export BEACON_DATA=/home/username/beacon/data/
+            export BEACON_PROCESSED_DATA=/home/username/beacon/data/processed/
             export LIB_ROOT_FFTW_WRAPPER_DIR=/home/username/beacon/libRootFftwWrapper/
             export BEACON_ANALYSIS_DIR=/home/username/beacon/beacon/
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$BEACON_INSTALL_DIR/lib:$ANITA_INSTALL_DIR/lib
@@ -277,6 +280,7 @@ If it is not already installed I would recommend getting and using it.  It is a 
 1. `sudo apt-get install ipython3`
 2. `ipython`
 3. `%run ~/beacon/beacon/analysis/sample_script_B.py` - This or any other script can be used to test running.  By using the %run shortcut in the CLI, you will stay in the namespace of the executed script, which lets you play around with plots, variables, and also helps in debugging.
+4. Create an ipython profile and enable the autoreload function following this post: https://stackoverflow.com/a/43020072
 
 ## 0.5.0 Testing Setup
 
