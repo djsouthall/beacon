@@ -36,7 +36,8 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore")
 
-datapath = os.environ['BEACON_PROCESSED_DATA']
+raw_datapath = os.environ['BEACON_DATA']
+processed_datapath = os.environ['BEACON_PROCESSED_DATA']
 
 class dataSlicerSingleRun():
     '''
@@ -1579,7 +1580,7 @@ class dataSlicer():
 
             for run in numpy.sort(runs).astype(int):
                 try:
-                    reader = Reader(datapath,run)
+                    reader = Reader(raw_datapath,run)
                     if reader.failed_setup == False:
                         ds = dataSlicerSingleRun(reader,impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs)
                         can_open = ds.openSuccess()
@@ -1595,7 +1596,7 @@ class dataSlicer():
             self.runs = numpy.asarray(self.runs)
             cut = numpy.array([ds.dsets_present*ds.openSuccess() for ds in self.data_slicers])
 
-            #self.data_slicers = numpy.array([dataSlicerSingleRun(Reader(datapath,run),impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs) for run in self.runs])
+            #self.data_slicers = numpy.array([dataSlicerSingleRun(Reader(raw_datapath,run),impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs) for run in self.runs])
             if len(self.runs) > 0:
                 self.trigger_types = self.data_slicers[0].trigger_types
             else:
@@ -2110,7 +2111,7 @@ if __name__ == '__main__':
 
     if False:
         for run in runs:
-            reader = Reader(datapath,run)
+            reader = Reader(raw_datapath,run)
             #.replace('-sinesubtract','sinesubtract') #catches one-off case misnaming dset
             impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00-sinesubtract_1'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_0-Hilb_0-corlen_262144-align_0'
             time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_32768-align_0-shorten_signals-1-shorten_thresh-0.70-shorten_delay-10.00-shorten_length-90.00-sinesubtract_1'#'LPf_None-LPo_None-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_262144-align_0'

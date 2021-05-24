@@ -174,8 +174,10 @@ if __name__ == '__main__':
 
         #### VALLEY SOURCES ####                      
         valley_source_run = 1650
-        impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
-        time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+        time_delays_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+        impulsivity_dset_key = time_delays_dset_key
+        # #CORRUPTED FILES DATASETS THINK -> impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+        # #CORRUPTED FILES DATASETS THINK -> time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
         map_direction_dset_key = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
 
 
@@ -531,7 +533,7 @@ if __name__ == '__main__':
                 azimuth_deg = numpy.rad2deg(numpy.arctan2(valley_source_ENU[1],valley_source_ENU[0]))
                 
                 if valley_source_key == 'E':
-                    range_values = [100,500,1000,10000,100000]
+                    range_values = [distance_m]#[100,500,1000,10000,100000]
                 else:
                     range_values = [distance_m]
                 #range_values = [distance_m]

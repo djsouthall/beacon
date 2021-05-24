@@ -40,10 +40,9 @@ datapath = os.environ['BEACON_DATA']
 if __name__=="__main__":
     #TODO: Add these parameters to the 2d data slicer.
     plt.close('all')
-    runs = numpy.arange(1600,1729)#numpy.array([1657])#numpy.array([1650])#numpy.arange(1650,1750)#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.arange(1650,1675)#numpy.array([1774])#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.array([1650])#
+    runs = numpy.array([1651,1652])#numpy.arange(1600,1729)#numpy.array([1657])#numpy.array([1650])#numpy.arange(1650,1750)#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.arange(1650,1675)#numpy.array([1774])#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.array([1650])#
+    #failed_runs = [1637 1638 1639 1640 1641 1663 1665 1667 1682 1690]
     #run = 1774 #want run with airplane.  This has 1774-178 in it. 
-
-    datapath = os.environ['BEACON_DATA']
 
     #Deploy 30
 
@@ -81,7 +80,6 @@ if __name__=="__main__":
         if len(runs) == 1 or sum_events == False:
             for run in runs:
                 run = int(run)
-
                 reader = Reader(datapath,run)
                 if reader.failed_setup == True:
                     print('Error for run %i, skipping.'%run)
