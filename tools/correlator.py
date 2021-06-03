@@ -2849,7 +2849,7 @@ class Correlator:
                         plt.xlabel('Azimuth Distribution (Degrees)\nCentered on Mean')
                         #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         plt.hist(all_phi_best - mean_phi, bins=self.phis_deg-mean_phi, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
-                        x = numpy.linspace(min(self.phis_deg-mean_phi),max(self.phis_deg-mean_phi),200)
+                        x = numpy.linspace(min(self.phis_deg-mean_phi),max(self.phis_deg-mean_phi),10*self.n_phi)
                         plt.plot(x,scipy.stats.norm.pdf(x,0,sig_phi),label='Gaussian Fit')
                         plt.xlim(min(all_phi_best - mean_phi) - 1.0,max(all_phi_best - mean_phi) + 1.0)
                         if len(circle_az) == 1:
@@ -2859,11 +2859,12 @@ class Correlator:
                         plt.xlabel('Azimuth Distribution (Degrees)')
                         #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         plt.hist(all_phi_best, bins=self.phis_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
-                        x = numpy.linspace(min(self.phis_deg),max(self.phis_deg),200)
+                        x = numpy.linspace(min(self.phis_deg),max(self.phis_deg),10*self.n_phi)
                         plt.plot(x,scipy.stats.norm.pdf(x,mean_phi,sig_phi),label='Gaussian Fit')
                         plt.xlim(min(all_phi_best) - 1.0,max(all_phi_best) + 1.0)
-                        if len(circle_az) == 1:
-                            plt.axvline(circle_az[0],color='fuchsia',label='Highlighted Azimuth')
+                        if circle_az is not None:
+                            if len(circle_az) == 1:
+                                plt.axvline(circle_az[0],color='fuchsia',label='Highlighted Azimuth')
 
                     plt.legend(loc = 'upper right',fontsize=10)
                     plt.minorticks_on()
@@ -2880,8 +2881,9 @@ class Correlator:
                         x = numpy.linspace(min(self.thetas_deg-mean_theta),max(self.thetas_deg-mean_theta),200)
                         plt.plot(x,scipy.stats.norm.pdf(x,0,sig_theta),label='Gaussian Fit')
                         plt.xlim(min(all_theta_best - mean_theta) - 1.0,max(all_theta_best - mean_theta) + 1.0)
-                        if len(circle_zenith) == 1:
-                            plt.axvline(circle_zenith[0] - mean_theta,color='fuchsia',label='Highlighted Zenith')
+                        if circle_zenith is not None:
+                            if len(circle_zenith) == 1:
+                                plt.axvline(circle_zenith[0] - mean_theta,color='fuchsia',label='Highlighted Zenith')
 
                     else:
                         plt.xlabel('Zenith Distribution (Degrees)')
@@ -2890,8 +2892,9 @@ class Correlator:
                         x = numpy.linspace(min(self.thetas_deg),max(self.thetas_deg),200)
                         plt.plot(x,scipy.stats.norm.pdf(x,mean_theta,sig_theta),label='Gaussian Fit')
                         plt.xlim(min(all_theta_best) - 1.0,max(all_theta_best) + 1.0)
-                        if len(circle_zenith) == 1:
-                            plt.axvline(circle_zenith[0],color='fuchsia',label='Highlighted Zenith')
+                        if circle_zenith is not None:
+                            if len(circle_zenith) == 1:
+                                plt.axvline(circle_zenith[0],color='fuchsia',label='Highlighted Zenith')
 
                     
                     plt.legend(loc = 'upper right',fontsize=10)
