@@ -79,20 +79,16 @@ if __name__=="__main__":
     datapath = os.environ['BEACON_DATA']
     plot_filter=False
 
-    crit_freq_low_pass_MHz = 85#None#[80,70,70,70,70,70,60,70]#90#
-    low_pass_filter_order = 6#None#[0,8,8,8,10,8,3,8]#8#
+    crit_freq_low_pass_MHz = 85
+    low_pass_filter_order = 6
 
-    crit_freq_high_pass_MHz = 25#70#None#60
-    high_pass_filter_order = 8#6#None#8
+    crit_freq_high_pass_MHz = 25
+    high_pass_filter_order = 8
 
     sine_subtract = True
     sine_subtract_min_freq_GHz = 0.03
     sine_subtract_max_freq_GHz = 0.13
     sine_subtract_percent = 0.03
-
-    zenith_cut_ENU = None
-    zenith_cut_array_plane = None
-
 
     apply_phase_response = True
 
@@ -100,13 +96,14 @@ if __name__=="__main__":
     max_method = 0
 
 
-    mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky'] #This code will loop over all options included here, and they will be stored as seperate dsets.  Each of these applies different cuts to mapmax when it is attempting to select the best reconstruction direction.
+    #This code will loop over all options included here, and they will be stored as seperate dsets.  Each of these applies different cuts to mapmax when it is attempting to select the best reconstruction direction.
+    mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky'] 
     polarizations = ['hpol','vpol'] #Will loop over both if hpol and vpol present
     hilbert_modes = [False]#[True,False] #Will loop over both if True and False present
-    deploy_index = None
+    deploy_index = None #None results in default_deploy
     
     #Note that the below values set the angular resolution of the plot, while the presets from mapmax_cut_modes limit where in the generated plots will be considered for max values.
-    n_phi       = 720
+    n_phi       = 1440
     min_phi     = -180
     max_phi     = 180
 
@@ -168,7 +165,7 @@ if __name__=="__main__":
 
             filter_string += 'sinesubtract_%i-'%(int(sine_subtract))
 
-            filter_string += 'deploy_calibration_%i-'%(deploy_index)
+            filter_string += 'deploy_calibration_%s-'%(str(deploy_index))
 
             phi_str = 'n_phi_%i-min_phi_%s-max_phi_%s-'%(n_phi, str(min_phi).replace('-','neg'),str(max_phi).replace('-','neg'))
             filter_string += phi_str
@@ -331,12 +328,12 @@ if __name__=="__main__":
                             else:
                                 print('Values in vpol_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
-                        file['map_direction'].attrs['sine_subtract_min_freq_GHz'] = sine_subtract_min_freq_GHz 
-                        file['map_direction'].attrs['sine_subtract_max_freq_GHz'] = sine_subtract_max_freq_GHz 
-                        file['map_direction'].attrs['sine_subtract_percent'] = sine_subtract_percent
-                        file['map_times'].attrs['sine_subtract_min_freq_GHz'] = sine_subtract_min_freq_GHz 
-                        file['map_times'].attrs['sine_subtract_max_freq_GHz'] = sine_subtract_max_freq_GHz 
-                        file['map_times'].attrs['sine_subtract_percent'] = sine_subtract_percent
+                        file['map_direction'].attrs['sine_subtract_min_freq_GHz']   = sine_subtract_min_freq_GHz 
+                        file['map_direction'].attrs['sine_subtract_max_freq_GHz']   = sine_subtract_max_freq_GHz 
+                        file['map_direction'].attrs['sine_subtract_percent']        = sine_subtract_percent
+                        file['map_times'].attrs['sine_subtract_min_freq_GHz']       = sine_subtract_min_freq_GHz 
+                        file['map_times'].attrs['sine_subtract_max_freq_GHz']       = sine_subtract_max_freq_GHz 
+                        file['map_times'].attrs['sine_subtract_percent']            = sine_subtract_percent
 
                         file['map_direction'].attrs['n_phi']        = n_phi
                         file['map_direction'].attrs['min_phi']      = min_phi
@@ -345,43 +342,6 @@ if __name__=="__main__":
                         file['map_direction'].attrs['n_theta']      = n_theta
                         file['map_direction'].attrs['min_theta']    = min_theta
                         file['map_direction'].attrs['max_theta']    = max_theta
-
-                        if zenith_cut_ENU is None:
-                            file['map_direction'].attrs['zenith_cut_ENU'] = 'None' 
-                            file['map_times'].attrs['zenith_cut_ENU'] = 'None' 
-                        else:
-                            _zenith_cut_ENU = []
-                            if zenith_cut_ENU[0] is None:
-                                _zenith_cut_ENU.append('None')
-                            else:
-                                _zenith_cut_ENU.append(zenith_cut_ENU[0])
-                            if zenith_cut_ENU[1] is None:
-                                _zenith_cut_ENU.append('None')
-                            else:
-                                _zenith_cut_ENU.append(zenith_cut_ENU[1])
-
-                            file['map_direction'].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
-                            file['map_times'].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
-
-                        if zenith_cut_array_plane is None:
-                            file['map_direction'].attrs['zenith_cut_array_plane'] = 'None'
-                            file['map_times'].attrs['zenith_cut_array_plane'] = 'None' 
-                        else:
-                            _zenith_cut_array_plane = []
-                            if zenith_cut_array_plane[0] is None:
-                                _zenith_cut_array_plane.append('None')
-                            else:
-                                _zenith_cut_array_plane.append(zenith_cut_array_plane[0])
-                            if zenith_cut_array_plane[1] is None:
-                                _zenith_cut_array_plane.append('None')
-                            else:
-                                _zenith_cut_array_plane.append(zenith_cut_array_plane[1])
-
-
-                            file['map_direction'].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane
-                            file['map_times'].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane 
-
-
 
 
                         cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract, deploy_index=deploy_index)
@@ -400,6 +360,8 @@ if __name__=="__main__":
                                 m = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert)
 
                                 for filter_string_index, filter_string in enumerate(filter_strings):
+
+                                    #Determine cut values
                                     if mapmax_cut_modes[filter_string_index] == 'abovehorizon':
                                         # print('abovehorizon')
                                         zenith_cut_ENU=[0,90] #leaving some tolerance
@@ -416,6 +378,43 @@ if __name__=="__main__":
                                         zenith_cut_ENU=None
                                         zenith_cut_array_plane=None
 
+                                    #Record cut values                                    
+                                    if zenith_cut_ENU is None:
+                                        file['map_direction'][filter_string].attrs['zenith_cut_ENU'] = 'None' 
+                                        file['map_times'][filter_string].attrs['zenith_cut_ENU'] = 'None' 
+                                    else:
+                                        _zenith_cut_ENU = []
+                                        if zenith_cut_ENU[0] is None:
+                                            _zenith_cut_ENU.append('None')
+                                        else:
+                                            _zenith_cut_ENU.append(zenith_cut_ENU[0])
+                                        if zenith_cut_ENU[1] is None:
+                                            _zenith_cut_ENU.append('None')
+                                        else:
+                                            _zenith_cut_ENU.append(zenith_cut_ENU[1])
+
+                                        file['map_direction'][filter_string].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
+                                        file['map_times'][filter_string].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
+
+                                    if zenith_cut_array_plane is None:
+                                        file['map_direction'][filter_string].attrs['zenith_cut_array_plane'] = 'None'
+                                        file['map_times'][filter_string].attrs['zenith_cut_array_plane'] = 'None' 
+                                    else:
+                                        _zenith_cut_array_plane = []
+                                        if zenith_cut_array_plane[0] is None:
+                                            _zenith_cut_array_plane.append('None')
+                                        else:
+                                            _zenith_cut_array_plane.append(zenith_cut_array_plane[0])
+                                        if zenith_cut_array_plane[1] is None:
+                                            _zenith_cut_array_plane.append('None')
+                                        else:
+                                            _zenith_cut_array_plane.append(zenith_cut_array_plane[1])
+
+
+                                        file['map_direction'][filter_string].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane
+                                        file['map_times'][filter_string].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane 
+
+                                    #Calculate best reconstruction direction
                                     if max_method is not None:
                                         linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3 = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode)
                                     else:
