@@ -566,12 +566,17 @@ class dataSlicerSingleRun():
                         if not numpy.isin('dbish',cw_dsets):
                             print('No stored dbish data from cw dataset, attempting to calculate from linear magnitude.')
                             if not hasattr(self, 'cw_prep'):
+                                print('Creating FFTPrepper class to prepare CW bins.')
                                 self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
                                 self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
+
                             linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
                             param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
                         else:
-                            param = file['cw']['dbish'][...][eventids]
+                            #param = file['cw']['dbish'][...][eventids] #Should work, but I messed it up.  Bodging it for now.
+                            #print('dbish not correctly setup in flag_cw.py.  Converting linear to dbish now.')
+                            linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
+                            param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
                     elif 'theta_best_h' == param_key:
                         param = file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
                     elif 'theta_best_v' == param_key:
@@ -933,11 +938,12 @@ class dataSlicerSingleRun():
                         x_max_val = 1000*float(file['cw'].attrs['sine_subtract_min_freq_GHz'])
                         x_min_val = 1000*float(file['cw'].attrs['sine_subtract_max_freq_GHz'])
                         cw_dsets = list(file['cw'].keys())
-                        if not numpy.isin('dbish',cw_dsets):
-                            print('Creating FFTPrepper class to prepare CW bins.')
-                            if not hasattr(self, 'cw_prep'):
-                                self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
-                                self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
+                        if not hasattr(self, 'cw_prep'):
+                            if verbose:
+                                print('Creating FFTPrepper class to prepare CW bins.')
+                            self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
+                            self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
+
                     label = 'Identified CW Freq (MHz)'
                     
                     raw_freqs = self.cw_prep.rfftWrapper(self.cw_prep.t(), numpy.ones_like(self.cw_prep.t()))[0]
@@ -957,17 +963,10 @@ class dataSlicerSingleRun():
                     x_max_val = 60
                     x_min_val = 0
 
-
-
-
                     # self.n_phi = n_phi
                     # self.range_phi_deg = range_phi_deg
                     # self.n_theta = n_theta
                     # self.range_theta_deg = range_theta_deg
-
-
-
-
 
                 elif 'theta_best_h' == param_key:
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):

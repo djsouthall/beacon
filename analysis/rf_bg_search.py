@@ -211,6 +211,13 @@ if __name__=="__main__":
 
                         map_direction_dsets = list(file['map_direction'].keys())
 
+                        if not numpy.isin('map_times',dsets):
+                            file.create_group('map_times')
+                        else:
+                            print('map_times group already exists in file %s'%filename)
+
+                        map_times_dsets = list(file['map_times'].keys())
+                        
                         for filter_string in filter_strings:
                             '''
                             Prepares output file for data.
@@ -223,14 +230,6 @@ if __name__=="__main__":
 
                             map_direction_subsets = list(file['map_direction'][filter_string].keys())
 
-
-
-                            if not numpy.isin('map_times',dsets):
-                                file.create_group('map_times')
-                            else:
-                                print('map_times group already exists in file %s'%filename)
-
-                            map_times_dsets = list(file['map_times'].keys())
 
                             if not numpy.isin(filter_string,map_times_dsets):
                                 file['map_times'].create_group(filter_string)
