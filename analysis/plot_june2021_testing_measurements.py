@@ -12,9 +12,10 @@ import sys
 import csv
 import inspect
 import glob
+import datetime
 
 import beacon.tools.field_fox as ff
-
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import lines
 
@@ -75,7 +76,7 @@ def gainFromS21LikeLike(filename_logmag, distance_m,header=17):
     except Exception as e:
             print(e)
 
-def plotGainLikeLike(distance_m,datapath):
+def plotGainLikeLike(distance_m,datapath,figsize=(16,9),dpi=108*10,outpath=None):
     '''
     This will plot the gain assuming that both ends of the s21 measurement are similar antennas.
     '''
@@ -92,8 +93,8 @@ def plotGainLikeLike(distance_m,datapath):
     alpha = 0.8
     thickness = 4
     #PLOT Gain
-    gain_plot = plt.figure()
-    gain_ax = plt.subplot(1,1,1)
+    fig = plt.figure()
+    ax = plt.subplot(1,1,1)
     plt.ylabel('dBi')
     plt.xlabel('MHz')
     plt.minorticks_on()
@@ -112,18 +113,23 @@ def plotGainLikeLike(distance_m,datapath):
 
             linestyle = '-'
 
-            gain_ax.plot(freqs[plot_cut]/1e6, gain[plot_cut],linewidth=thickness,label=label,alpha=alpha,linestyle=linestyle)#,color=color)
+            ax.plot(freqs[plot_cut]/1e6, gain[plot_cut],linewidth=thickness,label=label,alpha=alpha,linestyle=linestyle)#,color=color)
 
 
         except Exception as e:
             print(e)
 
     plt.axhline(2.0,linewidth=thickness,linestyle='--',c=(112/256,173/256,71/256),label='2 dBi Line')
-    gain_ax.legend()
-    gain_ax.set_xlim([0,plot_cut_ul])
+    ax.legend()
+    ax.set_xlim([0,plot_cut_ul])
+
+    if outpath is not None:
+        fig.set_size_inches(figsize[0], figsize[1])
+        plt.tight_layout()
+        fig.savefig(os.path.join(outpath,'gain_likelike.png'),dpi=dpi)
 
 
-def plotGainLikeUnlike(distance_m,datapath):
+def plotGainLikeUnlike(distance_m,datapath,figsize=(16,9),dpi=108*10,outpath=None):
     '''
     This will plot the gain assuming that both ends of the s21 measurement are similar antennas.
     '''
@@ -141,8 +147,8 @@ def plotGainLikeUnlike(distance_m,datapath):
     alpha = 0.8
     thickness = 4
     #PLOT Gain
-    gain_plot = plt.figure()
-    gain_ax = plt.subplot(1,1,1)
+    fig = plt.figure()
+    ax = plt.subplot(1,1,1)
     plt.ylabel('dBi')
     plt.xlabel('MHz')
     plt.minorticks_on()
@@ -162,20 +168,25 @@ def plotGainLikeUnlike(distance_m,datapath):
 
         linestyle = '-'
 
-        gain_ax.plot(freqs[plot_cut]/1e6, gain_tx[plot_cut],linewidth=thickness,label='Hpol Gain for BEACON Tx Antenna',alpha=alpha,linestyle=linestyle)
-        gain_ax.plot(freqs[plot_cut]/1e6, gain_rx[plot_cut],linewidth=thickness,label='Hpol Gain for BEACON Rx Antenna',alpha=alpha,linestyle=linestyle)
+        ax.plot(freqs[plot_cut]/1e6, gain_tx[plot_cut],linewidth=thickness,label='Hpol Gain for BEACON Tx Antenna',alpha=alpha,linestyle=linestyle)
+        ax.plot(freqs[plot_cut]/1e6, gain_rx[plot_cut],linewidth=thickness,label='Hpol Gain for BEACON Rx Antenna',alpha=alpha,linestyle=linestyle)
 
 
     except Exception as e:
         print(e)
 
-    gain_ax.axvspan(30,80,color='y',alpha=0.5)
+    ax.axvspan(30,80,color='y',alpha=0.5)
 
     plt.axhline(2.0,linewidth=thickness,linestyle='--',c=(112/256,173/256,71/256),label='2 dBi Line')
-    gain_ax.legend()
-    gain_ax.set_xlim([0,plot_cut_ul])
+    ax.legend()
+    ax.set_xlim([0,plot_cut_ul])
 
-def plotS21LikeUnlike(distance_m,datapath,header=17):
+    if outpath is not None:
+        fig.set_size_inches(figsize[0], figsize[1])
+        plt.tight_layout()
+        fig.savefig(os.path.join(outpath,'gain_likeunlike.png'),dpi=dpi)
+
+def plotS21LikeUnlike(distance_m,datapath,header=17,figsize=(16,9),dpi=108*10,outpath=None):
     '''
     This will plot the gain assuming that both ends of the s21 measurement are similar antennas.
     '''
@@ -193,8 +204,8 @@ def plotS21LikeUnlike(distance_m,datapath,header=17):
     alpha = 0.8
     thickness = 4
     #PLOT Gain
-    gain_plot = plt.figure()
-    gain_ax = plt.subplot(1,1,1)
+    fig = plt.figure()
+    ax = plt.subplot(1,1,1)
     plt.ylabel('dB')
     plt.xlabel('MHz')
     plt.minorticks_on()
@@ -215,21 +226,36 @@ def plotS21LikeUnlike(distance_m,datapath,header=17):
 
         linestyle = '-'
 
-        gain_ax.plot(freqs_Hz[plot_cut]/1e6, s21_tx_logmag_vals[plot_cut],linewidth=thickness,label='Hpol S21 for BEACON Tx Antenna',alpha=alpha,linestyle=linestyle)
-        gain_ax.plot(freqs_Hz[plot_cut]/1e6, s21_rx_logmag_vals[plot_cut],linewidth=thickness,label='Hpol S21 for BEACON Rx Antenna',alpha=alpha,linestyle=linestyle)
+        ax.plot(freqs_Hz[plot_cut]/1e6, s21_tx_logmag_vals[plot_cut],linewidth=thickness,label='Hpol S21 for BEACON Tx Antenna',alpha=alpha,linestyle=linestyle)
+        ax.plot(freqs_Hz[plot_cut]/1e6, s21_rx_logmag_vals[plot_cut],linewidth=thickness,label='Hpol S21 for BEACON Rx Antenna',alpha=alpha,linestyle=linestyle)
 
 
     except Exception as e:
         print(e)
 
-    gain_ax.legend()
-    gain_ax.set_xlim([0,plot_cut_ul])
+    ax.legend()
+    ax.set_xlim([0,plot_cut_ul])
 
-def plotS11(distance_m,datapath,header=17):
+    if outpath is not None:
+        fig.set_size_inches(figsize[0], figsize[1])
+        plt.tight_layout()
+        fig.savefig(os.path.join(outpath,'s21_likelike.png'),dpi=dpi)
+
+def plotS11(distance_m,header=17,figsize=(16,9),dpi=108*10,outpath=None):
     '''
     This will plot the gain assuming that both ends of the s21 measurement are similar antennas.
     '''
-    infiles = numpy.append(numpy.array(glob.glob(os.path.join(datapath , '*s11*logmag*.csv'))),numpy.array(glob.glob(os.path.join(datapath , '*s22*logmag*.csv'))))
+    datapath1 = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'data','beacon_s21_june6_2021')
+    #infiles = numpy.append(numpy.array(glob.glob(os.path.join(datapath1 , '*s11*logmag*.csv'))),numpy.array(glob.glob(os.path.join(datapath1 , '*s22*logmag*.csv'))))
+    infiles = numpy.array(glob.glob(os.path.join(datapath1 , '*s11*logmag*.csv')))
+    
+    if True:
+        datapath2 = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'data','beacon_tx_s11_june7_2021')
+        new_infiles = numpy.array(glob.glob(os.path.join(datapath2 , '*s11*logmag*.csv')))
+        new_infiles = new_infiles[numpy.argsort([int(i.split('bowtie')[-1][0]) for i in new_infiles])]
+
+        infiles = numpy.append(infiles, new_infiles)
+
 
     plt.rcParams['axes.prop_cycle'].by_key()['color']
 
@@ -241,18 +267,23 @@ def plotS11(distance_m,datapath,header=17):
     leg_fontsize=14
     alpha = 0.8
     thickness = 4
-    #PLOT Gain
-    gain_plot = plt.figure()
-    gain_ax = plt.subplot(1,1,1)
+    #S11 plot
+    fig = plt.figure()
+    ax = plt.subplot(1,1,1)
     plt.ylabel('dB')
     plt.xlabel('MHz')
     plt.minorticks_on()
     plt.grid(b=True, which='major', color='k', linestyle='-')
     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
     
+    plt.title('Comparing BEACON Tx Antennas')
+
     for infile in infiles:
 
         label = os.path.split(infile)[-1].replace('.csv','').replace('_', ' ')
+        if 'tx1' in label:
+            label = 'beacon s11 dipole 0'
+        label = label.replace(' logmag','').replace('bowtie','bowtie ')
 
         try:
             freqs_Hz, logmag_vals = ff.readerFieldFox(infile,header=header)
@@ -262,20 +293,76 @@ def plotS11(distance_m,datapath,header=17):
 
             linestyle = '-'
 
-            gain_ax.plot(freqs_Hz[plot_cut]/1e6, logmag_vals[plot_cut],linewidth=thickness,label=label,alpha=alpha,linestyle=linestyle)
+            ax.plot(freqs_Hz[plot_cut]/1e6, logmag_vals[plot_cut],linewidth=thickness,label=label,alpha=alpha,linestyle=linestyle)
 
 
         except Exception as e:
             print(e)
 
-    gain_ax.legend()
-    gain_ax.set_xlim([0,plot_cut_ul])
+    ax.legend()
+    ax.set_xlim([0,plot_cut_ul])
+
+    if outpath is not None:
+        fig.set_size_inches(figsize[0], figsize[1])
+        plt.tight_layout()
+        fig.savefig(os.path.join(outpath,'all_s11.png'),dpi=dpi)
+
+
+    #Highlighted S11 plot
+    for index in range(len(infiles)):
+        fig = plt.figure()
+        ax = plt.subplot(1,1,1)
+        plt.ylabel('dB')
+        plt.xlabel('MHz')
+        plt.minorticks_on()
+        plt.grid(b=True, which='major', color='k', linestyle='-')
+        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+        
+        plt.title('Comparing BEACON Tx Antennas')
+        for i, infile in enumerate(infiles):
+            if i == index:
+                label = os.path.split(infile)[-1].replace('.csv','').replace('_', ' ')
+                if 'tx1' in label:
+                    label = 'beacon s11 dipole 0'
+                label = label.replace(' logmag','').replace('bowtie','bowtie ')
+            try:
+                freqs_Hz, logmag_vals = ff.readerFieldFox(infile,header=header)
+                
+                plot_cut_ul = 250            
+                plot_cut = freqs_Hz/1e6 < plot_cut_ul
+
+                linestyle = '-'
+
+                if i == index:
+                    ax.plot(freqs_Hz[plot_cut]/1e6, logmag_vals[plot_cut],linewidth=thickness,label=label,alpha=alpha,linestyle=linestyle, color = 'r')
+                else:
+                    ax.plot(freqs_Hz[plot_cut]/1e6, logmag_vals[plot_cut],linewidth=thickness/2,alpha=alpha*.66,linestyle=linestyle, color = 'k')
+
+
+            except Exception as e:
+                print(e)
+
+        ax.legend()
+        ax.set_xlim([0,plot_cut_ul])
+        if outpath is not None:
+            fig.set_size_inches(figsize[0], figsize[1])
+            plt.tight_layout()
+            fig.savefig(os.path.join(outpath,label.replace(' ','_') + '.png'),dpi=dpi)
 
 if __name__ == '__main__':
+    if True:
+        outpath = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'figures', 's11_testing_' + str(datetime.datetime.now()).replace(' ', '_').replace('.','p').replace(':','-'))
+        
+        matplotlib.use('Agg')
+    else:
+        outpath = None
+        plt.ion()
+
     plt.close('all')
+    os.mkdir(outpath)
     datapath = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'data','beacon_s21_june6_2021')
     distance_m = 0.3048*50
-    plotGainLikeLike(distance_m,datapath)
-    plotGainLikeUnlike(distance_m,datapath)
-    plotS21LikeUnlike(distance_m,datapath)
-    plotS11(distance_m,datapath,header=17)
+    plotGainLikeLike(distance_m,datapath,outpath=outpath)
+    plotGainLikeUnlike(distance_m,datapath,outpath=outpath)
+    plotS21LikeUnlike(distance_m,datapath,outpath=outpath)
+    plotS11(distance_m,header=17,outpath=outpath)
