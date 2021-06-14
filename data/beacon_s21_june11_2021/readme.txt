@@ -1,0 +1,1 @@
+All data (tx and rx) taken on June 11th using -45dbm output power on the field fox (compared to the "high" setting used yesterday).  Otherwise the measurement is nominally identical.  
