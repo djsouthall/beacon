@@ -19,6 +19,7 @@ warnings.filterwarnings("ignore")
 
 datapath = os.environ['BEACON_DATA']
 
+
 if __name__=="__main__":
     plt.close('all')
 
@@ -42,9 +43,20 @@ if __name__=="__main__":
         ['phi_best_h', 'elevation_best_h'],\
         ['phi_best_v', 'elevation_best_v'],\
         ]
+
+    # plot_param_pairs = [\
+    #     ['phi_best_h', 'elevation_best_h'],\
+    #     ['phi_best_v', 'elevation_best_v'],\
+    #     ['phi_best_h_allsky', 'elevation_best_h_allsky'],\
+    #     ['phi_best_v_allsky', 'elevation_best_v_allsky'],\
+    #     ['phi_best_h_abovehorizon', 'elevation_best_h_abovehorizon'],\
+    #     ['phi_best_v_abovehorizon', 'elevation_best_v_abovehorizon'],\
+    #     ['phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon'],\
+    #     ['phi_best_v_belowhorizon', 'elevation_best_v_belowhorizon'],\
+    #     ]
     outpath = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'figures', 'parameter_plots_' + str(datetime.datetime.now()).replace(' ', '_').replace('.','p').replace(':','-'))
     figsize = (16,9)
-    dpi = 108*10
+    dpi = 108*1
 
 
     # Other Parameters

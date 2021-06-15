@@ -11,6 +11,7 @@ import sys
 import os
 import inspect
 import h5py
+import copy
 
 import numpy
 import scipy
@@ -209,7 +210,7 @@ class dataSlicerSingleRun():
                     self.map_deploy_index = int(self.map_dset_key.split('deploy_calibration_')[-1].split('-')[0])
                 else:
                     self.map_deploy_index = None #Will use default
-                self.checkForBothMapDatasets() #Will append to known param key and prepare for if hilber used or not.
+                self.checkForComplementaryBothMapDatasets() #Will append to known param key and prepare for if hilber used or not.
                 
                 self.n_phi = n_phi
                 self.range_phi_deg = numpy.asarray(range_phi_deg)
@@ -308,19 +309,58 @@ class dataSlicerSingleRun():
         '''
         return print(self.known_param_keys)
 
-    def checkForBothMapDatasets(self):
+    def checkForComplementaryBothMapDatasets(self, verbose=True):
         '''
         This will use the given dset key for map data, and determine whether it is using hilbert envelopes or not.
-        It will then check for the presence of the counterpart dataset, and make the appropriate preperations.  
+        It will then check for the presence of the counterpart dataset (no hilbert enbelopes), and make the appropriate 
+        preperations to allow both datasets to be available.
+
+        Similarly for each, it will attempt to determine the "scope" of the dataset (abovehorizon, belowhorizon, 
+        allsky), and then identify if the other options are available. 
         '''
+
+
         # 'hilbert_theta_best_h','hilbert_theta_best_v','hilbert_elevation_best_h','hilbert_elevation_best_v','hilbert_phi_best_h','hilbert_phi_best_v'
         #'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1'
-        self.hilbert_map = bool(self.map_dset_key.lower().split('hilb')[1][1]) #split by hilbert, choosing string to right, the first digit after the underscore should be the bool
-        self.normal_map = not self.hilbert_map #Default before checking if both dsets exist is that only the one given exists. 
-        self.map_dset_key_hilbert = self.map_dset_key  #Fallback
+
         try:
+            self.hilbert_map = bool(self.map_dset_key.lower().split('hilb')[1][1]) #split by hilbert, choosing string to right, the first digit after the underscore should be the bool
+            self.normal_map = not self.hilbert_map #Default before checking if both dsets exist is that only the one given exists.
+
+            self.map_dset_key_hilbert = self.map_dset_key  #Fallback
+
+            #map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_16384-maxmethod_0-sinesubtract_1-deploy_calibration_30-n_phi_1440-min_phi_neg180-max_phi_180-n_theta_720-min_theta_0-max_theta_180-scope_allsky'
+
+            self.allsky_normal_map = self.normal_map and 'scope_allsky' in self.map_dset_key
+            self.belowhorizon_normal_map = self.normal_map and 'scope_belowhorizon' in self.map_dset_key
+            self.abovehorizon_normal_map = self.normal_map and 'scope_abovehorizon' in self.map_dset_key
+
+            self.allsky_hilbert_map = self.hilbert_map and 'scope_allsky' in self.map_dset_key
+            self.belowhorizon_hilbert_map = self.hilbert_map and 'scope_belowhorizon' in self.map_dset_key
+            self.abovehorizon_hilbert_map = self.hilbert_map and 'scope_abovehorizon' in self.map_dset_key
+
+            if 'Hilb_' in self.map_dset_key:
+                initial_hilbert_value = int(bool(self.map_dset_key.lower().split('hilb')[1][1]))
+                initial_hilbert = 'Hilb_%i'%initial_hilbert_value
+            else:
+                initial_hilbert = None
+
+
+            if self.allsky_normal_map or self.allsky_hilbert_map:
+                initial_scope = 'scope_allsky'
+            elif self.belowhorizon_normal_map or self.belowhorizon_hilbert_map:
+                initial_scope = 'scope_belowhorizon'
+            elif self.abovehorizon_normal_map or self.abovehorizon_hilbert_map:
+                initial_scope = 'scope_abovehorizon'
+            else:
+                initial_scope = None
+
             with h5py.File(self.analysis_filename, 'r') as file:
-                if numpy.logical_and(self.map_dset_key in list(file['map_direction'].keys()),self.map_dset_key.replace('Hilb_%i'%(self.hilbert_map),'Hilb_%i'%(not self.hilbert_map)) in list(file['map_direction'].keys())):
+                map_direction_keys = list(file['map_direction'].keys())
+
+                #Check for map counterpart not assuming any premade scope.  This will be self.hilbert_map and self.normal_map
+                
+                if numpy.logical_and(self.map_dset_key in map_direction_keys,self.map_dset_key.replace('Hilb_%i'%(self.hilbert_map),'Hilb_%i'%(not self.hilbert_map)) in map_direction_keys):
                     if self.hilbert_map == True:
                         self.map_dset_key_hilbert = self.map_dset_key
                         self.map_dset_key = self.map_dset_key.replace('Hilb_%i'%(self.hilbert_map),'Hilb_%i'%(not self.hilbert_map))
@@ -333,13 +373,74 @@ class dataSlicerSingleRun():
                     for k in added_keys:
                         self.known_param_keys.append(k)
 
-                    print('NOTE: Both version of map data (normal v.s. Hilbert) are available in this run for the given map dataset key.')
-                    print('Use the same map keys prepended with "hilbert_" to use them.  For instance "hilbert_elevation_best_h"')
+                    if verbose:
+                        print('NOTE: Both version of map data (normal v.s. Hilbert) are available in this run for the given map dataset key.')
+                        print('Use the same map keys prepended with "hilbert_" to use them.  For instance "hilbert_elevation_best_h"')
 
 
-                print('Map Direction datasets in file:')
-                for d in list(file['map_direction'].keys()): 
-                    print('\t' + d)
+                if initial_hilbert is not None and initial_scope is not None:
+                    #check for specific predefined horizon-based cut versions of the map
+                    _map_dset_key = self.map_dset_key.replace(initial_hilbert, 'Hilb_0')
+
+                    #Checking allsky
+                    _map_dset_key = _map_dset_key.replace(initial_scope,'scope_allsky')
+                    if _map_dset_key in map_direction_keys:
+                        self.allsky_normal_map = True
+                        self.map_dset_key_normal_allsky = copy.copy(_map_dset_key)
+                        added_keys = ['theta_best_h_allsky','theta_best_v_allsky','elevation_best_h_allsky','elevation_best_v_allsky','phi_best_h_allsky','phi_best_v_allsky']
+                        for k in added_keys:
+                            self.known_param_keys.append(k)
+                    
+                    _map_dset_key = _map_dset_key.replace('scope_allsky','scope_abovehorizon')
+                    if _map_dset_key in map_direction_keys:
+                        self.abovehorizon_normal_map = True
+                        self.map_dset_key_normal_abovehorizon = copy.copy(_map_dset_key)
+                        added_keys = ['theta_best_h_allsky','theta_best_v_abovehorizon','elevation_best_h_abovehorizon','elevation_best_v_abovehorizon','phi_best_h_abovehorizon','phi_best_v_abovehorizon']
+                        for k in added_keys:
+                            self.known_param_keys.append(k)
+                    
+                    _map_dset_key = _map_dset_key.replace('scope_abovehorizon','scope_belowhorizon')
+                    if _map_dset_key in map_direction_keys:
+                        self.belowhorizon_normal_map = True
+                        self.map_dset_key_normal_belowhorizon = copy.copy(_map_dset_key)
+                        added_keys = ['theta_best_h_belowhorizon','theta_best_v_belowhorizon','elevation_best_h_belowhorizon','elevation_best_v_belowhorizon','phi_best_h_belowhorizon','phi_best_v_belowhorizon']
+                        for k in added_keys:
+                            self.known_param_keys.append(k)
+
+
+                    #check for specific predefined horizon-based cut versions of the map
+                    _map_dset_key = self.map_dset_key.replace(initial_hilbert, 'Hilb_1')
+
+                    #Checking allsky
+                    _map_dset_key = _map_dset_key.replace(initial_scope,'scope_allsky')
+                    if _map_dset_key in map_direction_keys:
+                        self.allsky_hilbert_map = True
+                        self.map_dset_key_hilbert_allsky = copy.copy(_map_dset_key)
+                        added_keys = ['hilbert_theta_best_h_allsky','hilbert_theta_best_v_allsky','hilbert_elevation_best_h_allsky','hilbert_elevation_best_v_allsky','hilbert_phi_best_h_allsky','hilbert_phi_best_v_allsky']
+                        for k in added_keys:
+                            self.known_param_keys.append(k)
+                    
+                    _map_dset_key = _map_dset_key.replace('scope_allsky','scope_abovehorizon')
+                    if _map_dset_key in map_direction_keys:
+                        self.abovehorizon_hilbert_map = True
+                        self.map_dset_key_hilbert_abovehorizon = copy.copy(_map_dset_key)
+                        added_keys = ['hilbert_theta_best_h_abovehorizon','hilbert_theta_best_v_abovehorizon','hilbert_elevation_best_h_abovehorizon','hilbert_elevation_best_v_abovehorizon','hilbert_phi_best_h_abovehorizon','hilbert_phi_best_v_abovehorizon']
+                        for k in added_keys:
+                            self.known_param_keys.append(k)
+                    
+                    _map_dset_key = _map_dset_key.replace('scope_abovehorizon','scope_belowhorizon')
+                    if _map_dset_key in map_direction_keys:
+                        self.below_hilbert_map = True
+                        self.map_dset_key_hilbert_below = copy.copy(_map_dset_key)
+                        added_keys = ['hilbert_theta_best_h_belowhorizon','hilbert_theta_best_v_belowhorizon','hilbert_elevation_best_h_belowhorizon','hilbert_elevation_best_v_belowhorizon','hilbert_phi_best_h_belowhorizon','hilbert_phi_best_v_belowhorizon']
+                        for k in added_keys:
+                            self.known_param_keys.append(k)
+
+
+                if verbose:
+                    print('Map Direction datasets in file:')
+                    for d in map_direction_keys: 
+                        print('\t' + d)
 
 
                 file.close()
@@ -577,32 +678,113 @@ class dataSlicerSingleRun():
                             #print('dbish not correctly setup in flag_cw.py.  Converting linear to dbish now.')
                             linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
                             param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
-                    elif 'theta_best_h' == param_key:
+                    
+                    elif 'hilbert' not in param_key and 'theta_best_h_allsky' in param_key:
+                        param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' not in param_key and 'theta_best_v_allsky' in param_key:
+                        param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' not in param_key and 'elevation_best_h_allsky' in param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' not in param_key and 'elevation_best_v_allsky' in param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' not in param_key and 'phi_best_h_allsky' in param_key:
+                        param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_azimuth'][...][eventids]
+                    elif 'hilbert' not in param_key and 'phi_best_v_allsky' in param_key:
+                        param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_azimuth'][...][eventids]
+
+                    elif 'hilbert' not in param_key and 'theta_best_h_abovehorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' not in param_key and 'theta_best_v_abovehorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' not in param_key and 'elevation_best_h_abovehorizon' in param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' not in param_key and 'elevation_best_v_abovehorizon' in param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' not in param_key and 'phi_best_h_abovehorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_azimuth'][...][eventids]
+                    elif 'hilbert' not in param_key and 'phi_best_v_abovehorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_azimuth'][...][eventids]
+
+                    elif 'hilbert' not in param_key and 'theta_best_h_belowhorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' not in param_key and 'theta_best_v_belowhorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' not in param_key and 'elevation_best_h_belowhorizon' in param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' not in param_key and 'elevation_best_v_belowhorizon' in param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' not in param_key and 'phi_best_h_belowhorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_azimuth'][...][eventids]
+                    elif 'hilbert' not in param_key and 'phi_best_v_belowhorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_azimuth'][...][eventids]
+
+                    elif 'hilbert' not in param_key and 'theta_best_h' in param_key:
                         param = file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
-                    elif 'theta_best_v' == param_key:
+                    elif 'hilbert' not in param_key and 'theta_best_v' in param_key:
                         param = file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
-                    elif 'elevation_best_h' == param_key:
+                    elif 'hilbert' not in param_key and 'elevation_best_h' in param_key:
                         param = 90.0 - file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
-                    elif 'elevation_best_v' == param_key:
+                    elif 'hilbert' not in param_key and 'elevation_best_v' in param_key:
                         param = 90.0 - file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
-                    elif 'phi_best_h' == param_key:
+                    elif 'hilbert' not in param_key and 'phi_best_h' in param_key:
                         param = file['map_direction'][self.map_dset_key]['hpol_ENU_azimuth'][...][eventids]
-                    elif 'phi_best_v' == param_key:
+                    elif 'hilbert' not in param_key and 'phi_best_v' in param_key:
                         param = file['map_direction'][self.map_dset_key]['vpol_ENU_azimuth'][...][eventids]
 
-                    elif 'hilbert_theta_best_h' == param_key:
+                    elif 'hilbert' in param_key and 'theta_best_h_allsky' in param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' in param_key and 'theta_best_v_allsky' in param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' in param_key and 'elevation_best_h_allsky' in param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' in param_key and 'elevation_best_v_allsky' in param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' in param_key and 'phi_best_h_allsky' in param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_azimuth'][...][eventids]
+                    elif 'hilbert' in param_key and 'phi_best_v_allsky' in param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_azimuth'][...][eventids]
+
+                    elif 'hilbert' in param_key and 'theta_best_h_abovehorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' in param_key and 'theta_best_v_abovehorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' in param_key and 'elevation_best_h_abovehorizon' in param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' in param_key and 'elevation_best_v_abovehorizon' in param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' in param_key and 'phi_best_h_abovehorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_azimuth'][...][eventids]
+                    elif 'hilbert' in param_key and 'phi_best_v_abovehorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_azimuth'][...][eventids]
+
+                    elif 'hilbert' in param_key and 'theta_best_h_belowhorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' in param_key and 'theta_best_v_belowhorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' in param_key and 'elevation_best_h_belowhorizon' in param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' in param_key and 'elevation_best_v_belowhorizon' in param_key:
+                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                    elif 'hilbert' in param_key and 'phi_best_h_belowhorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_azimuth'][...][eventids]
+                    elif 'hilbert' in param_key and 'phi_best_v_belowhorizon' in param_key:
+                        param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_azimuth'][...][eventids]
+
+                    elif 'hilbert' in param_key and 'theta_best_h' in param_key:
                         param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert_theta_best_v' == param_key:
+                    elif 'hilbert' in param_key and 'theta_best_v' in param_key:
                         param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert_elevation_best_h' == param_key:
+                    elif 'hilbert' in param_key and 'elevation_best_h' in param_key:
                         param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert_elevation_best_v' == param_key:
+                    elif 'hilbert' in param_key and 'elevation_best_v' in param_key:
                         param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert_phi_best_h' == param_key:
+                    elif 'hilbert' in param_key and 'phi_best_h' in param_key:
                         param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_azimuth'][...][eventids]
-                    elif 'hilbert_phi_best_v' == param_key:
+                    elif 'hilbert' in param_key and 'phi_best_v' in param_key:
                         param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_azimuth'][...][eventids]
-                    if 'calibrated_trigtime' == param_key:
+
+
+                    elif 'calibrated_trigtime' == param_key:
                         param = file['calibrated_trigtime'][...][eventids]
 
                     file.close()
@@ -968,93 +1150,105 @@ class dataSlicerSingleRun():
                     # self.n_theta = n_theta
                     # self.range_theta_deg = range_theta_deg
 
-                elif 'theta_best_h' == param_key:
+                elif 'hilbert_' not in param_key and 'theta_best_h' in param_key:
+                    scope = param_key.replace('theta_best_h','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only'
+                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
                     else:
-                        label = 'Best Reconstructed Zenith (Deg)\nHpol Antennas Only'
+                        label = 'Best Reconstructed Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_theta_deg)
                     x_min_val = numpy.min(self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'theta_best_v' == param_key:
+                elif 'hilbert_' not in param_key and 'theta_best_v' in param_key:
+                    scope = param_key.replace('theta_best_v','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only'
+                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
                     else:
-                        label = 'Best Reconstructed Zenith (Deg)\nVpol Antennas Only'
+                        label = 'Best Reconstructed Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_theta_deg)
                     x_min_val = numpy.min(self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'elevation_best_h' == param_key:
+                elif 'hilbert_' not in param_key and 'elevation_best_h' in param_key:
+                    scope = param_key.replace('elevation_best_h','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only'
+                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
                     else:
-                        label = 'Best Reconstructed Elevation (Deg)\nHpol Antennas Only'
+                        label = 'Best Reconstructed Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(90.0 - self.range_theta_deg)
                     x_min_val = numpy.min(90.0 - self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'elevation_best_v' == param_key:
+                elif 'hilbert_' not in param_key and 'elevation_best_v' in param_key:
+                    scope = param_key.replace('elevation_best_v','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only'
+                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
                     else:
-                        label = 'Best Reconstructed Elevation (Deg)\nVpol Antennas Only'
+                        label = 'Best Reconstructed Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(90.0 - self.range_theta_deg)
                     x_min_val = numpy.min(90.0 - self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'phi_best_h' == param_key:
+                elif 'hilbert_' not in param_key and 'phi_best_h' in param_key:
+                    scope = param_key.replace('phi_best_h','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only'
+                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
                     else:
-                        label = 'Best Reconstructed Azimuth (Deg)\nHpol Antennas Only'
+                        label = 'Best Reconstructed Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_phi_deg)
                     x_min_val = numpy.min(self.range_phi_deg)
                     x_n_bins = self.n_phi
-                elif 'phi_best_v' == param_key:
+                elif 'hilbert_' not in param_key and 'phi_best_v' in param_key:
+                    scope = param_key.replace('phi_best_v','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only'
+                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
                     else:
-                        label = 'Best Reconstructed Azimuth (Deg)\nVpol Antennas Only'
+                        label = 'Best Reconstructed Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_phi_deg)
                     x_min_val = numpy.min(self.range_phi_deg)
                     x_n_bins = self.n_phi
 
-                elif 'hilbert_theta_best_h' == param_key:
-                    label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only'
+                elif 'hilbert_' in param_key and 'theta_best_h' in param_key:
+                    scope = param_key.replace('hilbert_theta_best_h','')
+                    label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_theta_deg)
                     x_min_val = numpy.min(self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'hilbert_theta_best_v' == param_key:
-                    label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only'
+                elif 'hilbert_' in param_key and 'theta_best_v' in param_key:
+                    scope = param_key.replace('hilbert_theta_best_v','')
+                    label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_theta_deg)
                     x_min_val = numpy.min(self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'hilbert_elevation_best_h' == param_key:
-                    label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only'
+                elif 'hilbert_' in param_key and 'elevation_best_h' in param_key:
+                    scope = param_key.replace('hilbert_elevation_best_h','')
+                    label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(90.0 - self.range_theta_deg)
                     x_min_val = numpy.min(90.0 - self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'hilbert_elevation_best_v' == param_key:
-                    label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only'
+                elif 'hilbert_' in param_key and 'elevation_best_v' in param_key:
+                    scope = param_key.replace('hilbert_elevation_best_v','')
+                    label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(90.0 - self.range_theta_deg)
                     x_min_val = numpy.min(90.0 - self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'hilbert_phi_best_h' == param_key:
-                    label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only'
+                elif 'hilbert_' in param_key and 'phi_best_h' in param_key:
+                    scope = param_key.replace('hilbert_phi_best_h','')
+                    label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_phi_deg)
                     x_min_val = numpy.min(self.range_phi_deg)
                     x_n_bins = self.n_phi
-                elif 'hilbert_phi_best_v' == param_key:
-                    label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only'
+                elif 'hilbert_' in param_key and 'phi_best_v' in param_key:
+                    scope = param_key.replace('hilbert_phi_best_v','')
+                    label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_phi_deg)
                     x_min_val = numpy.min(self.range_phi_deg)
@@ -1650,11 +1844,11 @@ class dataSlicer():
             print(exc_type, fname, exc_tb.tb_lineno)
     def printKnownParamKeys(self):
         return self.data_slicers[0].printKnownParamKeys()
-    def checkForBothMapDatasets(self, verbose=False):
+    def checkForComplementaryBothMapDatasets(self, verbose=False):
         for run_index, run in enumerate(self.runs):
             if verbose:
                 print('Run %i'%run)
-            self.data_slicers[run_index].checkForBothMapDatasets()
+            self.data_slicers[run_index].checkForComplementaryBothMapDatasets()
     def printDatasets(self, verbose=False):
         for run_index, run in enumerate(self.runs):
             if verbose:
