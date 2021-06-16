@@ -8,9 +8,10 @@ import inspect
 import warnings
 import datetime
 import numpy
-sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
-from tools.data_slicer import dataSlicer
+from beacon.tools.data_slicer import dataSlicer
+from beacon.tools.correlator import Correlator
+from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+
 import matplotlib
 import matplotlib.pyplot as plt
 #matplotlib.use('Agg')
@@ -48,8 +49,11 @@ if __name__=="__main__":
     plot_param_pairs = [\
         ['impulsivity_h', 'impulsivity_v'],\
         ['phi_best_h_allsky', 'elevation_best_h_allsky'],\
+        ['phi_best_v_allsky', 'elevation_best_v_allsky'],\
         ['phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon'],\
         ['phi_best_v_belowhorizon', 'elevation_best_v_belowhorizon'],\
+        ['p2p_h', 'p2p_v'],\
+        ['cr_template_search_h', 'cr_template_search_v'],\
         ]
 
     # plot_param_pairs = [\
@@ -75,10 +79,29 @@ if __name__=="__main__":
     range_phi_deg = (float(map_direction_dset_key.split('-min_phi_')[-1].split('-')[0].replace('neg','-')) , float(map_direction_dset_key.split('max_phi_')[-1].split('-')[0].replace('neg','-')))
     n_theta = int(map_direction_dset_key.split('-n_theta_')[-1].split('-')[0])
     range_theta_deg = (float(map_direction_dset_key.split('-min_theta_')[-1].split('-')[0].replace('neg','-')) , float(map_direction_dset_key.split('max_theta_')[-1].split('-')[0].replace('neg','-')))
+    upsample = int(map_direction_dset_key.split('-upsample_')[-1].split('-')[0])
+    max_method = int(map_direction_dset_key.split('-maxmethod_')[-1].split('-')[0])
+    crit_freq_low_pass_MHz = float(map_direction_dset_key.split('LPf_')[-1].split('-')[0])
+    low_pass_filter_order = int(map_direction_dset_key.split('-LPo_')[-1].split('-')[0])
+    crit_freq_high_pass_MHz = float(map_direction_dset_key.split('-HPf_')[-1].split('-')[0])
+    high_pass_filter_order = int(map_direction_dset_key.split('-HPo_')[-1].split('-')[0])
+
 
     lognorm = True
     cmap = 'binary'#'YlOrRd'#'binary'#'coolwarm'
 
+    #Correlation Map Settings
+
+    plot_filter=False
+
+    apply_phase_response=True
+    sine_subtract = bool(map_direction_dset_key.split('-sinesubtract_')[-1].split('-')[0])
+    deploy_index = map_direction_dset_key.replace('deploy_calibration','deploycalibration').split('-deploycalibration_')[-1].split('-')[0]
+    if deploy_index.isdigit():
+        deploy_index = int(deploy_index)
+    sine_subtract_min_freq_GHz = 0.03
+    sine_subtract_max_freq_GHz = 0.09
+    sine_subtract_percent = 0.05
     try:
         ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, remove_incomplete_runs=True,\
                 curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
@@ -90,9 +113,9 @@ if __name__=="__main__":
                 snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=None,\
                 n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg)
 
+        #INITIAL CUTS!  THESE SET THE EVENTS THAT WILL BE CONSIDERED BY FURTHER RFI EVENTS
         min_impulsivity_h = 0.5
         min_impulsivity_v = 0.0
-
 
         ds.addROI('above horizon',{'elevation_best_h_allsky':[0,90], 'impulsivity_h': [min_impulsivity_h,1],'impulsivity_v': [min_impulsivity_v,1]})
         ds.addROI('below horizon',{'elevation_best_h_allsky':[-90,numpy.nextafter(0.0,-90)], 'impulsivity_h': [min_impulsivity_h,1],'impulsivity_v': [min_impulsivity_v,1]}) #nextafter just makes this 0 but not including 0 basically
@@ -145,7 +168,49 @@ if __name__=="__main__":
                     counts = ds.get2dHistCounts('phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon', {run:[eventid]}, set_bins=False)
                     if int(numpy.sum(numpy.multiply(counts,background_cut))) == 1:
                         passed_eventids_dict[run].append(eventid)
+        elif True:
+            #This aims to cut out sub horizon RFI using many pointed source cuts.
+            #define in hpol, automate duplicate dicts in vpol for OR condition
+
+            rfi_box_index = 0
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[54,61],'elevation_best_h_belowhorizon':[-11,-2]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[46.5,54],'elevation_best_h_belowhorizon':[-6,0.5]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[41.5,45.5],'elevation_best_h_belowhorizon':[-3.5,0.5]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[30.5,35],'elevation_best_h_belowhorizon':[-4,0]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[25,29],'elevation_best_h_belowhorizon':[-2.5,-0.5]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[22.5,24.5],'elevation_best_h_belowhorizon':[-2.5,-0.5]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[16.5,20.5],'elevation_best_h_belowhorizon':[-3.5,-0.5]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[6.5,10.5],'elevation_best_h_belowhorizon':[-6.5,-3.5]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[2,4],'elevation_best_h_belowhorizon':[-7,-4.5]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[-3,0],'elevation_best_h_belowhorizon':[-9,-4]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[-5.5,-4],'elevation_best_h_belowhorizon':[-8,-5.5]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[-13,-10],'elevation_best_h_belowhorizon':[-9.5,-5.5]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[-5.5,-4],'elevation_best_h_belowhorizon':[-8,-5.5]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[-15.5,-12.5],'elevation_best_h_belowhorizon':[-5,-1]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[-17,-15.5],'elevation_best_h_belowhorizon':[-5.5,-2]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[7.5,9],'elevation_best_h_belowhorizon':[-14,-12]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[13,15],'elevation_best_h_belowhorizon':[-23,-21]}); rfi_box_index += 1
+            ds.addROI('rfi box %i hpol'%rfi_box_index,{'phi_best_h_belowhorizon':[22,24],'elevation_best_h_belowhorizon':[-10,-7.5]}); rfi_box_index += 1
+
+            roi_dict = dict(ds.roi)
+            for cut_key, cut_dict in roi_dict.items():
+                cut_key_vpol = cut_key.replace('hpol','vpol')
+                cut_dict_vpol = {}
+                for sub_dict_key, cut_list in cut_dict.items():
+                    cut_dict_vpol[sub_dict_key.replace('_h','_v')] = cut_list
+                ds.addROI(cut_key_vpol,cut_dict_vpol)
+
+            rfi_dict = {} #Eventids flagged as RFI
+            for key, item in ds.roi.items():
+                if 'rfi' in key:
+                    rfi_dict_i = ds.getCutsFromROI(key)
+                    rfi_dict = ds.returnUniqueEvents(rfi_dict, rfi_dict_i)
+
+            passed_eventids_dict = ds.returnEventsAWithoutB(eventids_dict, rfi_dict)
+            passed_eventids_dict = ds.removeEmptyRunsFromDict(passed_eventids_dict)
+
         else:
+            #This applies an extremely generous box cut.
             ds.addROI('rfi box 1',{'phi_best_h_belowhorizon':[-15,60],'elevation_best_h_belowhorizon':[-25,0]})
             ds.addROI('rfi box 2',{'phi_best_v_belowhorizon':[-15,60],'elevation_best_v_belowhorizon':[-25,0]})
             rfi_dict_1 = ds.getCutsFromROI('rfi box 1')
@@ -154,7 +219,7 @@ if __name__=="__main__":
             passed_eventids_dict = ds.returnEventsAWithoutB(eventids_dict, rfi_dict)
             passed_eventids_dict = ds.removeEmptyRunsFromDict(passed_eventids_dict)
 
-        passed_count = len(ds.concatenateParamDict(eventids_dict))
+        passed_count = len(ds.concatenateParamDict(passed_eventids_dict))
         print(passed_eventids_dict)
         print('total passed_count = ',passed_count)
 
@@ -179,16 +244,16 @@ if __name__=="__main__":
             if passed_count > 0:
                 for key_x, key_y in plot_param_pairs:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
-                    fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=passed_eventids_dict,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm)
+                    fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=passed_eventids_dict,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm, suppress_legend=True)
                     fig.set_size_inches(figsize[0], figsize[1])
                     plt.tight_layout()
             else:
                 print('No events passed the specified cuts.')
 
-        else:
+        if False:
             for key_x, key_y in plot_param_pairs:
                 print('Generating %s plot'%(key_x + ' vs ' + key_y))
-                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm, mask_top_N_bins=0, fill_value=0)
+                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm, mask_top_N_bins=0, fill_value=0, suppress_legend=True)
                 fig.set_size_inches(figsize[0], figsize[1])
                 plt.tight_layout()
 
@@ -198,6 +263,30 @@ if __name__=="__main__":
 
         print(passed_eventids_dict)
         print('total passed_count = ',passed_count)
+
+        
+        if passed_count < 10:
+            datapath = os.environ['BEACON_DATA']
+            all_figs = []
+            all_axs = []
+            all_cors = []
+            for run, eventids in passed_eventids_dict.items():
+                reader = Reader(datapath,run)
+                waveform_index_range = (None,None)
+                cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response, deploy_index=deploy_index)
+                if sine_subtract:
+                    cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+                for eventid in eventids:
+                    for mode in ['hpol','vpol']:
+                        mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
+                        all_figs.append(fig)
+                        all_axs.append(ax)
+                        if False:
+                            cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[0,1,2,3,4,5])                    
+                all_cors.append(cor)
+        else:
+            print('Passed count greater than set limit, maps not plotted.')
 
 
     except Exception as e:

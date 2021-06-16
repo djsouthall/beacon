@@ -56,7 +56,7 @@ if __name__=="__main__":
     #     ]
     outpath = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'figures', 'parameter_plots_' + str(datetime.datetime.now()).replace(' ', '_').replace('.','p').replace(':','-'))
     figsize = (16,9)
-    dpi = 108*1
+    dpi = 108*4
 
 
     # Other Parameters

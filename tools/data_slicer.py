@@ -1513,7 +1513,7 @@ class dataSlicerSingleRun():
             print(exc_type, fname, exc_tb.tb_lineno)
             
 
-    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids=None, cmap='coolwarm', include_roi=True, load=False, lognorm=True, mask_top_N_bins=0, fill_value=0):
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids=None, cmap='coolwarm', include_roi=True, load=False, lognorm=True, mask_top_N_bins=0, fill_value=0, suppress_legend=False):
         '''
         This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
         calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
@@ -1545,7 +1545,8 @@ class dataSlicerSingleRun():
                     legend_properties.append(cs.legend_elements()[0][0])
                     legend_labels.append('roi %i: %s'%(roi_index, roi_key))
 
-                plt.legend(legend_properties,legend_labels,loc='upper left')
+                if suppress_legend == False:
+                    plt.legend(legend_properties,legend_labels,loc='upper left')
 
             return fig, ax
         except Exception as e:
@@ -2293,7 +2294,7 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', include_roi=True, lognorm=True, mask_top_N_bins=0, fill_value=0):
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', include_roi=True, lognorm=True, mask_top_N_bins=0, fill_value=0, suppress_legend=False):
         '''
         This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
         calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
@@ -2337,7 +2338,8 @@ class dataSlicer():
                     legend_properties.append(cs.legend_elements()[0][0])
                     legend_labels.append('roi %i: %s'%(roi_index, roi_key))
 
-                plt.legend(legend_properties,legend_labels,loc='upper left')
+                if suppress_legend == False:
+                    plt.legend(legend_properties,legend_labels,loc='upper left')
 
             return fig, ax
         except Exception as e:
