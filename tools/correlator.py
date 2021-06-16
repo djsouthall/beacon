@@ -3639,10 +3639,10 @@ if __name__=="__main__":
             cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
         for mode in ['hpol','vpol']:
-            mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='W', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
+            mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
             all_figs.append(fig)
             all_axs.append(ax)
-            if True:
+            if False:
                 cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[0,1,2,3,4,5])
                 # for baseline in [0,1,2,3,4,5]:
                 #     cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[baseline])

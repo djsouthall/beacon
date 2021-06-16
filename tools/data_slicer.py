@@ -232,6 +232,8 @@ class dataSlicerSingleRun():
 
                 self.checkDataAvailability()
 
+                self.masked_fallback_mode = 1
+
                 #self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, numpy.shape(roi)[0])]
             else:
                 print('Reader failed setup in dataSlicerSingleRun')
@@ -907,7 +909,7 @@ class dataSlicerSingleRun():
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def get2dHistCounts(self, main_param_key_x, main_param_key_y, eventids, set_bins=True, load=False):
+    def get2dHistCounts(self, main_param_key_x, main_param_key_y, eventids, set_bins=True, load=False,mask_top_N_bins=0,fill_value=0):
         '''
         Given the set of requested eventids, this will calculate the counts for the plot corresponding to 
         main_param_key, and will return the counts matrix. 
@@ -969,7 +971,8 @@ class dataSlicerSingleRun():
                 print('\tGetting counts from 2dhist')
 
                 counts = numpy.histogram2d(param_x, param_y, bins = [self.current_bin_edges_x,self.current_bin_edges_y])[0].T #Outside of file being open 
-
+            if mask_top_N_bins > 0:
+                counts = self.returnMaskedArray(counts,mask_top_N_bins,fill_value=fill_value)    
             return counts
 
         except Exception as e:
@@ -1286,22 +1289,99 @@ class dataSlicerSingleRun():
         self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
         
 
-    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids, title=None,cmap='coolwarm',load=False,lognorm=True):
+    def returnMaskedArray(self,data,mask_top_N_bins,fill_value=None,fallback_mode=None):
+        '''
+        The input number of bins with the highest counts will be masked, and a masked array of the same shape will be
+        returned.  Because multiple bins may have the same content, more than mask_top_N_bins may actually be removed.
+
+        If the given number of bins to mask is too much (more than the number of bins with meaningful content), then
+        the code will execute based on fallback_mode.  fallback_mode == 0 will return the original data, with no mask,
+        while fallback_mode == 1 will return the data masked for everything not equal to the minimum non-zero bin count.
+        If None then it will use the default defined by the class.
+        '''
+        try:
+            if fallback_mode is None:
+                fallback_mode = self.masked_fallback_mode
+            if fill_value is None:
+                fill_value = numpy.ma.default_fill_value(data.flat[0])
+            if mask_top_N_bins == 0:
+                output = numpy.ma.masked_array(data,fill_value=fill_value)
+            elif numpy.sum(data) == 0:
+                print('DATA GIVEN IS 0. RETURNING.')
+                output = numpy.ma.masked_array(data,fill_value=fill_value)
+            elif mask_top_N_bins > numpy.size(data):
+                print('WARNING!!! NUMBER OF BINS TO MASK [%i] GREATER THAN NUMBER OF BINS.'%mask_top_N_bins)
+                print('RETURNING ORIGINAL DATA UNMASKED')
+                output = numpy.ma.masked_array(data,fill_value=fill_value)
+
+            elif mask_top_N_bins >= numpy.sum(data > 0):
+                print('WARNING!!! NUMBER OF BINS TO MASK [%i] GREATER THAN OR EQUAL TO THE NUMBER OF BINS WITH CONTENT [%i].'%(mask_top_N_bins,numpy.sum(data > 0)))
+                if fallback_mode == 0:
+                    print('RETURNING ORIGINAL DATA UNMASKED')
+                    output = numpy.ma.masked_array(data,fill_value=fill_value)
+                else:
+                    sorted_bin_contents = numpy.unique(numpy.sort(numpy.concatenate(data))[::-1])
+                    maximum_accepted_bin_content = numpy.min(sorted_bin_contents[sorted_bin_contents > 0])
+                    output = numpy.ma.masked_array(data,mask=data > maximum_accepted_bin_content,fill_value=fill_value) #fallback, no longer >=, just >
+                    if numpy.sum(output) == 0:
+                        print('RETURNING DATA WITHOUT MASK DUE TO EMPTY COUNT ATTEMPT')
+                        output = numpy.ma.masked_array(data,fill_value=fill_value)   
+                    else:
+                        print('RETURNING DATA WITH MASK NOT INCLUDING MINIMUM NON-ZERO BINS')
+            else:
+                minimum_denied_bin_content = numpy.sort(numpy.concatenate(data))[::-1][mask_top_N_bins] #Anything greater than or equal to this will be masked.
+
+                if minimum_denied_bin_content <= 1:
+                    minimum_denied_bin_content = 1
+                    print('WARNING!!! THE MINIMUM DENIED BIN CONTENT FOR MASK IS <= 1 (RESULTING IN NO COUNTS).')
+                    #print('WARNING!!! NUMBER OF BINS TO MASK [%i] GREATER THAN OR EQUAL TO THE NUMBER OF BINS WITH CONTENT GREATER THAN OR EQUAL TO MINIMUM DENIED BIN CONTENT [%i]. , IGNORING.'%(mask_top_N_bins,numpy.sum(data >= minimum_denied_bin_content)))
+                    if fallback_mode == 0:
+                        print('RETURNING ORIGINAL DATA UNMASKED')
+                        output = numpy.ma.masked_array(data,fill_value=fill_value)
+                    else:
+                        output = numpy.ma.masked_array(data,mask=data > minimum_denied_bin_content,fill_value=fill_value) #fallback, no longer >=, just >
+                        if numpy.sum(output) == 0:
+                            print('RETURNING DATA WITHOUT MASK DUE TO EMPTY COUNT ATTEMPT')
+                            output = numpy.ma.masked_array(data,fill_value=fill_value)   
+                        else:
+                            print('RETURNING DATA WITH MASK NOT INCLUDING MINIMUM NON-ZERO BINS')
+                else:
+                    output = numpy.ma.masked_array(data,mask=data >= minimum_denied_bin_content,fill_value=fill_value) #default behaviour, should be >=
+            return output
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
+    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids, title=None,cmap='coolwarm', return_counts=False, load=False,lognorm=True, mask_top_N_bins=0, fill_value=None):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
         (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
         up as a contour on the plot.  
+
+        Parameters
+        ----------
+        mask_top_N_bins : int
+            Given a value here, the map will be converted to a masked array, where the most populaated N bins will be
+            masked.
         '''
         try:
             #Should make eventids a self.eventids so I don't need to call this every time.
-            counts = self.get2dHistCounts(main_param_key_x,main_param_key_y,eventids,load=load,set_bins=True) #set_bins should only be called on first call, not on contours.
-            
+            counts = self.get2dHistCounts(main_param_key_x,main_param_key_y,eventids,load=load,set_bins=True,mask_top_N_bins=mask_top_N_bins0, fill_value=fill_value) #set_bins should only be called on first call, not on contours.
+            if mask_top_N_bins > 0:
+                masked_bins = numpy.sum(counts.mask())
+
 
             _fig, _ax = plt.subplots()
-            if title is not None:
-                plt.title(title)
-            else:
-                plt.title('%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types)))
+            if title is None:
+                title = '%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types))
+                if mask_top_N_bins > 0:
+                    title += ', masked_bins = %i'%masked_bins
+            plt.title(title)
 
             if lognorm == True:
                 _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
@@ -1346,7 +1426,10 @@ class dataSlicerSingleRun():
                 print('Error in colorbar, often caused by no events.')
                 print(e)
 
-            return _fig, _ax
+            if return_counts:
+                return _fig, _ax, counts
+            else:
+                return _fig, _ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print('Run: ',self.reader.run)
@@ -1355,7 +1438,7 @@ class dataSlicerSingleRun():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def addContour(self, ax, main_param_key_x, main_param_key_y, contour_eventids, contour_color, load=False, n_contour=5, alpha=0.85, log_contour=True):
+    def addContour(self, ax, main_param_key_x, main_param_key_y, contour_eventids, contour_color, load=False, n_contour=5, alpha=0.85, log_contour=True,mask=None,fill_value=None):
         '''
         Given the plot made from plot2dHist, this will add contours to it for the events specified by contour_eventids.
         This assumes that setCurrentPlotBins has already been called by plot2dHist. 
@@ -1388,6 +1471,11 @@ class dataSlicerSingleRun():
         '''
         try:
             counts = self.get2dHistCounts(main_param_key_x, main_param_key_y, contour_eventids, load=load, set_bins=False)
+            if mask is not None:
+                #Want mask to be applied on top N bins of original data, not the countoured data.  So mask is given.
+                if fill_value is not None:
+                    fill_value = numpy.ma.default_fill_value(counts.flat[0])
+                counts = numpy.ma.masked_array(counts, mask=mask, fill_value=fill_value)
 
             if log_contour:
                 #Log?
@@ -1423,7 +1511,7 @@ class dataSlicerSingleRun():
             print(exc_type, fname, exc_tb.tb_lineno)
             
 
-    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids=None, cmap='coolwarm', include_roi=True, load=False, lognorm=True):
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids=None, cmap='coolwarm', include_roi=True, load=False, lognorm=True, mask_top_N_bins=0, fill_value=0):
         '''
         This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
         calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
@@ -1439,7 +1527,7 @@ class dataSlicerSingleRun():
                 title = '%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types))                
             else:
                 title = '%s, Run = %i'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run))
-            fig, ax = self.plot2dHist(main_param_key_x, main_param_key_y, eventids, title=title, cmap=cmap,lognorm=lognorm) #prepares binning, must be called early (before addContour)
+            fig, ax, counts = self.plot2dHist(main_param_key_x, main_param_key_y, eventids, title=title, cmap=cmap,lognorm=lognorm, return_counts=True, mask_top_N_bins=mask_top_N_bins, fill_value=fill_value) #prepares binning, must be called early (before addContour)
 
             #these few lines below this should be used for adding contours to the map. 
             if include_roi:
@@ -1451,7 +1539,7 @@ class dataSlicerSingleRun():
                     contour_eventids = numpy.intersect1d(contour_eventids,eventids) #getCutsFromROI doesn't account for eventids, this makes it only those that are in ROI and given.
                     # print(len(contour_eventids))
                     #import pdb; pdb.set_trace()
-                    ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids, self.roi_colors[roi_index], n_contour=6)
+                    ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids, self.roi_colors[roi_index], n_contour=6,mask=counts.mask, fill_value=fill_value)
                     legend_properties.append(cs.legend_elements()[0][0])
                     legend_labels.append('roi %i: %s'%(roi_index, roi_key))
 
@@ -1823,6 +1911,84 @@ class dataSlicer():
         self.runs = self.runs[cut]
         self.data_slicers = self.data_slicers[cut]
 
+    def returnMaskedArray(self,*args,**kwargs):
+        '''
+        Uses the returnMaskedArray function from the dataSlicerSingleRun class.
+        '''
+        return self.data_slicers[0].returnMaskedArray(*args,**kwargs)
+
+    def returnEventsAWithoutB(self, eventids_dict_A, eventids_dict_B):
+        '''
+        Given 2 eventid dictionaries, this will return a third dictionary containing all eventids in A that are not
+        contained in B.
+
+        INCOMPLETE
+        '''
+        try:
+            runs_A = numpy.asarray(list(eventids_dict_A.keys()))
+            runs_B = numpy.asarray(list(eventids_dict_A.keys()))
+            eventids_dict_C = {}
+            for run in runs_A:
+                eventids_dict_C[run] = numpy.array([])
+                if run in runs_B:
+                    eventids_dict_C[run] = numpy.append(eventids_dict_C[run],eventids_dict_A[run][~numpy.isin(eventids_dict_A[run],eventids_dict_B[run])]) #return events from A that are not in B
+                else:
+                    eventids_dict_C[run] = numpy.append(eventids_dict_C[run],eventids_dict_A[run]) #Return all from A
+                eventids_dict_C[run] = numpy.sort(numpy.unique(eventids_dict_C[run])) 
+            return eventids_dict_C
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
+    def returnCommonEvents(self, eventids_dict_A, eventids_dict_B):
+        '''
+        Given 2 eventid dictionaries, this will return a third dictionary containing all eventids that exist in  both 
+        sets.
+        '''
+        try:
+            runs_A = numpy.asarray(list(eventids_dict_A.keys()))
+            runs_B = numpy.asarray(list(eventids_dict_A.keys()))
+            eventids_dict_C = {}
+            for run in runs_A:
+                if run in runs_B:
+                    eventids_dict_C[run] = numpy.sort(numpy.unique(eventids_dict_A[run][numpy.isin(eventids_dict_A[run],eventids_dict_B[run])])) #Add events from A that are in B.               
+            return eventids_dict_C
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def returnUniqueEvents(self, eventids_dict_A, eventids_dict_B):
+        '''
+        Given 2 eventid dictionaries, this will return a third dictionary containing all eventids from both sets, but
+        with no duplicates.
+        '''
+        try:
+            runs_A = numpy.asarray(list(eventids_dict_A.keys()))
+            runs_B = numpy.asarray(list(eventids_dict_A.keys()))
+            runs = numpy.unique(numpy.append(runs_A,runs_B))
+            eventids_dict_C = {}
+            for run in runs:
+                eventids_dict_C[run] = numpy.array([])
+                if run in runs_A:
+                    eventids_dict_C[run] = numpy.append(eventids_dict_C[run],eventids_dict_A[run])
+                if run in runs_B:
+                    eventids_dict_C[run] = numpy.append(eventids_dict_C[run],eventids_dict_B[run])
+                eventids_dict_C[run] = numpy.sort(numpy.unique(eventids_dict_C[run]))
+            return eventids_dict_C
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
     def concatenateParamDict(self, param_data_dict):
         '''
         Given a dictionary (keys indicating run number) for a parameter of data.  This will turn that into a 1d array.
@@ -1950,7 +2116,7 @@ class dataSlicer():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def get2dHistCounts(self, main_param_key_x, main_param_key_y, eventids_dict, set_bins=True):
+    def get2dHistCounts(self, main_param_key_x, main_param_key_y, eventids_dict, set_bins=True,mask_top_N_bins=0,fill_value=0):
         try:
             if set_bins == True:
                 self.setCurrentPlotBins(main_param_key_x,main_param_key_y,eventids_dict)
@@ -1961,7 +2127,8 @@ class dataSlicer():
             param_y = self.getDataFromParam(eventids_dict, main_param_key_y)
             print('\tGetting counts from 2dhist')
             counts = numpy.histogram2d(self.concatenateParamDict(param_x), self.concatenateParamDict(param_y), bins = [self.current_bin_edges_x,self.current_bin_edges_y])[0].T #Outside of file being open 
-
+            if mask_top_N_bins > 0:
+                counts = self.returnMaskedArray(counts,mask_top_N_bins,fill_value=fill_value)
             return counts
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -1970,7 +2137,7 @@ class dataSlicer():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids_dict, title=None,cmap='coolwarm', lognorm=True):
+    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids_dict, title=None,cmap='coolwarm', lognorm=True, return_counts=False, mask_top_N_bins=0, fill_value=0):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
         (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
@@ -1978,16 +2145,17 @@ class dataSlicer():
         '''
         try:
             #Should make eventids a self.eventids so I don't need to call this every time.
-            counts = self.get2dHistCounts(main_param_key_x,main_param_key_y,eventids_dict,set_bins=True) #set_bins should only be called on first call, not on contours.
-            
+            counts = self.get2dHistCounts(main_param_key_x,main_param_key_y,eventids_dict,set_bins=True,mask_top_N_bins=mask_top_N_bins, fill_value=fill_value) #set_bins should only be called on first call, not on contours.
             _fig, _ax = plt.subplots()
-            if title is not None:
-                plt.title(title)
-            else:
+
+            if title is None:
                 if numpy.all(numpy.diff(list(eventids_dict.keys()))) == 1:
-                    plt.title('%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types)))
+                    title = '%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types))
                 else:
-                    plt.title('%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types)))
+                    title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types))
+                if mask_top_N_bins > 0:
+                    title += ', masked_bins = %i'%masked_bins
+            plt.title(title)
 
             if lognorm == True:
                 _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
@@ -2027,14 +2195,17 @@ class dataSlicer():
                 print('Error in colorbar, often caused by no events.')
                 print(e)
 
-            return _fig, _ax
+            if return_counts:
+                return _fig, _ax, counts
+            else:
+                return _fig, _ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-    def addContour(self, ax, main_param_key_x, main_param_key_y, contour_eventids_dict, contour_color, n_contour=5, alpha=0.85, log_contour=True):
+    def addContour(self, ax, main_param_key_x, main_param_key_y, contour_eventids_dict, contour_color, n_contour=5, alpha=0.85, log_contour=True, mask=None, fill_value=None):
         '''
         Given the plot made from plot2dHist, this will add contours to it for the events specified by contour_eventids.
         This assumes that setCurrentPlotBins has already been called by plot2dHist. 
@@ -2068,6 +2239,12 @@ class dataSlicer():
         try:
             counts = self.get2dHistCounts(main_param_key_x, main_param_key_y, contour_eventids_dict, set_bins=False)
 
+            if mask is not None:
+                #Want mask to be applied on top N bins of original data, not the countoured data.  So mask is given.
+                if fill_value is not None:
+                    fill_value = numpy.ma.default_fill_value(counts.flat[0])
+                counts = numpy.ma.masked_array(counts, mask=mask, fill_value=fill_value)
+
             if log_contour:
                 #Log?
                 #locator = ticker.LogLocator()
@@ -2099,7 +2276,7 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', include_roi=True, lognorm=True):
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', include_roi=True, lognorm=True, mask_top_N_bins=0, fill_value=0):
         '''
         This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
         calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
@@ -2123,7 +2300,7 @@ class dataSlicer():
                     title = '%s, Runs = %i-%i'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1])
                 else:
                     title = '%s, Runs = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())))
-            fig, ax = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap, lognorm=lognorm) #prepares binning, must be called early (before addContour)
+            fig, ax, counts = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap, lognorm=lognorm, return_counts=True, mask_top_N_bins=mask_top_N_bins, fill_value=fill_value) #prepares binning, must be called early (before addContour)
 
             #these few lines below this should be used for adding contours to the map. 
             if include_roi:
@@ -2137,7 +2314,7 @@ class dataSlicer():
                             contour_eventids_dict[run] = numpy.intersect1d(contour_eventids_dict[run],eventids_dict[run]) #getCutsFromROI doesn't account for eventids, this makes it only those that are in ROI and given.
                         else:
                             del contour_eventids_dict[run]
-                    ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids_dict, self.roi_colors[roi_index], n_contour=6)
+                    ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids_dict, self.roi_colors[roi_index], n_contour=6, mask=counts.mask, fill_value=fill_value)
                     legend_properties.append(cs.legend_elements()[0][0])
                     legend_labels.append('roi %i: %s'%(roi_index, roi_key))
 
@@ -2266,6 +2443,7 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
 
 
 
