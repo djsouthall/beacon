@@ -25,7 +25,7 @@ if __name__=="__main__":
     plt.close('all')#
 
     #Main Control Parameters
-    runs = numpy.arange(1643,1646)#numpy.arange(1643,1729)#numpy.arange(1643,1646)
+    runs = numpy.arange(1643,1729)#numpy.arange(1643,1646)
     # plot_param_pairs = [\
     #     ['impulsivity_h', 'impulsivity_v'],\
     #     ['cr_template_search_h', 'cr_template_search_v'],\
@@ -46,9 +46,10 @@ if __name__=="__main__":
     #     ]
 
     plot_param_pairs = [\
-        ['phi_best_v_allsky', 'elevation_best_v_allsky'],\
         ['impulsivity_h', 'impulsivity_v'],\
         ['phi_best_h_allsky', 'elevation_best_h_allsky'],\
+        ['phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon'],\
+        ['phi_best_v_belowhorizon', 'elevation_best_v_belowhorizon'],\
         ]
 
     # plot_param_pairs = [\
@@ -89,7 +90,7 @@ if __name__=="__main__":
                 snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=None,\
                 n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg)
 
-        min_impulsivity_h = 0.6
+        min_impulsivity_h = 0.5
         min_impulsivity_v = 0.0
 
 
@@ -101,48 +102,61 @@ if __name__=="__main__":
 
         ds.resetAllROI()#Already selected the subset of events, don't need to continue to consider it an "ROI" when passing eventids_dict
 
-        
-        #counts = ds.get2dHistCounts('phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon', eventids_dict, set_bins=True)
-        
-        background_counts = ds.get2dHistCounts('phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon', background_eventids_dict, set_bins=True)
-        background_percent = background_counts/numpy.sum(background_counts)
 
-        #This all needs to be explored based on cuts in both vpol and hpol, OR at least an hpol impulsivity cut must be made.
 
-        background_cut_threshs = numpy.linspace(0,0.01,101)
-        final_counts = []
+        if False:       
+            #Attempts to generate passed_eventids_dict based on a range of event count thresholds.  
+            #counts = ds.get2dHistCounts('phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon', eventids_dict, set_bins=True)
+            
+            background_counts = ds.get2dHistCounts('phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon', background_eventids_dict, set_bins=True)
+            background_percent = background_counts/numpy.sum(background_counts)
 
-        for thresh_index, background_cut_thresh in enumerate(background_cut_threshs):
-            print(thresh_index/len(background_cut_threshs))
+            #This all needs to be explored based on cuts in both vpol and hpol, OR at least an hpol impulsivity cut must be made.
+
+            background_cut_threshs = numpy.linspace(0,0.01,101)
+            final_counts = []
+
+            for thresh_index, background_cut_thresh in enumerate(background_cut_threshs):
+                print(thresh_index/len(background_cut_threshs))
+                background_cut = background_counts/numpy.sum(background_counts) < background_cut_thresh  #True if less than this percent of background events are in that bin.  Hard to know what is reasonable without plotting.
+
+                counts = ds.get2dHistCounts('phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon', eventids_dict, set_bins=False)
+                final_count = numpy.sum(numpy.multiply(counts,background_cut))
+                final_counts.append(final_count)
+
+            final_counts = numpy.asarray(final_counts)
+
+            if True:
+                plt.figure()
+                plt.plot(background_cut_threshs,final_counts)
+                plt.ylabel('Counts Passing Cut')
+                plt.xlabel('Bin Prominence Cut Threshold')
+                plt.axhline(initial_count,label='Initial Count',linestyle='--',c='k')
+
+            passed_eventids_dict = {}
+            if len(background_cut_threshs[final_counts > 1]) > 0:
+                background_cut_thresh = background_cut_threshs[final_counts > 1][0]#background_cut_threshs[final_counts > initial_count*.50][0] #Choosing the first cut where 50% of events pass. 
+            else:
+                background_cut_thresh = background_cut_threshs[-1]
             background_cut = background_counts/numpy.sum(background_counts) < background_cut_thresh  #True if less than this percent of background events are in that bin.  Hard to know what is reasonable without plotting.
-
-            counts = ds.get2dHistCounts('phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon', eventids_dict, set_bins=False)
-            final_count = numpy.sum(numpy.multiply(counts,background_cut))
-            final_counts.append(final_count)
-
-        final_counts = numpy.asarray(final_counts)
-
-        if False:
-            plt.figure()
-            plt.plot(background_cut_threshs,final_counts)
-            plt.ylabel('Counts Passing Cut')
-            plt.xlabel('Bin Prominence Cut Threshold')
-            plt.axhline(initial_count,label='Initial Count',linestyle='--',c='k')
-
-        passed_eventids_dict = {}
-        if len(background_cut_threshs[final_counts > 1]) > 0:
-            background_cut_thresh = background_cut_threshs[final_counts > 1][0]#background_cut_threshs[final_counts > initial_count*.50][0] #Choosing the first cut where 50% of events pass. 
+            for run in list(eventids_dict.keys()):
+                passed_eventids_dict[run] = []
+                for eventid in eventids_dict[run]:
+                    counts = ds.get2dHistCounts('phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon', {run:[eventid]}, set_bins=False)
+                    if int(numpy.sum(numpy.multiply(counts,background_cut))) == 1:
+                        passed_eventids_dict[run].append(eventid)
         else:
-            background_cut_thresh = background_cut_threshs[-1]
-        background_cut = background_counts/numpy.sum(background_counts) < background_cut_thresh  #True if less than this percent of background events are in that bin.  Hard to know what is reasonable without plotting.
-        for run in list(eventids_dict.keys()):
-            passed_eventids_dict[run] = []
-            for eventid in eventids_dict[run]:
-                counts = ds.get2dHistCounts('phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon', {run:[eventid]}, set_bins=False)
-                if int(numpy.sum(numpy.multiply(counts,background_cut))) == 1:
-                    passed_eventids_dict[run].append(eventid)
+            ds.addROI('rfi box 1',{'phi_best_h_belowhorizon':[-15,60],'elevation_best_h_belowhorizon':[-25,0]})
+            ds.addROI('rfi box 2',{'phi_best_v_belowhorizon':[-15,60],'elevation_best_v_belowhorizon':[-25,0]})
+            rfi_dict_1 = ds.getCutsFromROI('rfi box 1')
+            rfi_dict_2 = ds.getCutsFromROI('rfi box 2')
+            rfi_dict = ds.returnUniqueEvents(rfi_dict_1, rfi_dict_2)
+            passed_eventids_dict = ds.returnEventsAWithoutB(eventids_dict, rfi_dict)
+            passed_eventids_dict = ds.removeEmptyRunsFromDict(passed_eventids_dict)
 
-
+        passed_count = len(ds.concatenateParamDict(eventids_dict))
+        print(passed_eventids_dict)
+        print('total passed_count = ',passed_count)
 
         if False:
             ds.setCurrentPlotBins('elevation_best_h_belowhorizon', 'elevation_best_h_belowhorizon', background_eventids_dict) #to be used for 1d hist below
@@ -161,12 +175,15 @@ if __name__=="__main__":
                 all_counts, all_bin_edges = numpy.histogram(below_horizon_background_vals,bins = bin_edges_x)
                 secondary_counts, secondary_bin_edges = numpy.histogram(below_horizon_background_vals,bins = bin_edges_x)
 
-        if False:
-            for key_x, key_y in plot_param_pairs:
-                print('Generating %s plot'%(key_x + ' vs ' + key_y))
-                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=passed_eventids_dict,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm)
-                fig.set_size_inches(figsize[0], figsize[1])
-                plt.tight_layout()
+        if True:
+            if passed_count > 0:
+                for key_x, key_y in plot_param_pairs:
+                    print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                    fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=passed_eventids_dict,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm)
+                    fig.set_size_inches(figsize[0], figsize[1])
+                    plt.tight_layout()
+            else:
+                print('No events passed the specified cuts.')
 
         else:
             for key_x, key_y in plot_param_pairs:
@@ -175,9 +192,13 @@ if __name__=="__main__":
                 fig.set_size_inches(figsize[0], figsize[1])
                 plt.tight_layout()
 
-                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm, mask_top_N_bins=1000, fill_value=0)
-                fig.set_size_inches(figsize[0], figsize[1])
-                plt.tight_layout()
+                # fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm, mask_top_N_bins=1000, fill_value=0)
+                # fig.set_size_inches(figsize[0], figsize[1])
+                # plt.tight_layout()
+
+        print(passed_eventids_dict)
+        print('total passed_count = ',passed_count)
+
 
     except Exception as e:
         print(e)

@@ -615,184 +615,186 @@ class dataSlicerSingleRun():
         try:
             if len(numpy.shape(eventids)) > 1:
                 print('WARNING!!! eventids is in the incorrect format.')
+            if len(eventids) > 0:
+                if param_key in self.known_param_keys:
+                    with h5py.File(self.analysis_filename, 'r') as file:
+                        if param_key == 'impulsivity_h':
+                            param = file['impulsivity'][self.impulsivity_dset_key]['hpol'][...][eventids]
+                        elif param_key == 'impulsivity_v':
+                            param = file['impulsivity'][self.impulsivity_dset_key]['vpol'][...][eventids]
+                        elif param_key == 'cr_template_search_h':
+                            this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
+                            output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
+                            param = numpy.max(output_correlation_values[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD 
+                        elif param_key == 'cr_template_search_v':
+                            this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
+                            output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
+                            param = numpy.max(output_correlation_values[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                        elif param_key == 'std_h':
+                            std = file['std'][...][eventids]
+                            param = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                        elif param_key == 'std_v':
+                            std = file['std'][...][eventids]
+                            param = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                        elif param_key == 'p2p_h': 
+                            p2p = file['p2p'][...][eventids]
+                            param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                        elif param_key == 'p2p_v': 
+                            p2p = file['p2p'][...][eventids]
+                            param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                        elif param_key == 'snr_h':
+                            std = file['std'][...][eventids]
+                            param_1 = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                            p2p = file['p2p'][...][eventids]
+                            param_2 = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                            param = numpy.divide(param_2, param_1)
+                        elif param_key == 'snr_v':
+                            std = file['std'][...][eventids]
+                            param_1 = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                            p2p = file['p2p'][...][eventids]
+                            param_2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                            param = numpy.divide(param_2, param_1)
+                        elif 'time_delay_' in param_key:
+                            split_param_key = param_key.split('_')
+                            dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
+                            param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
+                        elif 'cw_present' == param_key:
+                            param = file['cw']['has_cw'][...][eventids].astype(int)
+                        elif 'cw_freq_Mhz' == param_key:
+                            param = file['cw']['freq_hz'][...][eventids]/1e6 #MHz
+                        elif 'cw_linear_magnitude' == param_key:
+                            param = file['cw']['linear_magnitude'][...][eventids]
+                        elif 'cw_dbish' == param_key:
+                            cw_dsets = list(file['cw'].keys())
+                            if not numpy.isin('dbish',cw_dsets):
+                                print('No stored dbish data from cw dataset, attempting to calculate from linear magnitude.')
+                                if not hasattr(self, 'cw_prep'):
+                                    print('Creating FFTPrepper class to prepare CW bins.')
+                                    self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
+                                    self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
 
-            if param_key in self.known_param_keys:
-                with h5py.File(self.analysis_filename, 'r') as file:
-                    if param_key == 'impulsivity_h':
-                        param = file['impulsivity'][self.impulsivity_dset_key]['hpol'][...][eventids]
-                    elif param_key == 'impulsivity_v':
-                        param = file['impulsivity'][self.impulsivity_dset_key]['vpol'][...][eventids]
-                    elif param_key == 'cr_template_search_h':
-                        this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
-                        output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
-                        param = numpy.max(output_correlation_values[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD 
-                    elif param_key == 'cr_template_search_v':
-                        this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
-                        output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
-                        param = numpy.max(output_correlation_values[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                    elif param_key == 'std_h':
-                        std = file['std'][...][eventids]
-                        param = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                    elif param_key == 'std_v':
-                        std = file['std'][...][eventids]
-                        param = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                    elif param_key == 'p2p_h': 
-                        p2p = file['p2p'][...][eventids]
-                        param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                    elif param_key == 'p2p_v': 
-                        p2p = file['p2p'][...][eventids]
-                        param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                    elif param_key == 'snr_h':
-                        std = file['std'][...][eventids]
-                        param_1 = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                        p2p = file['p2p'][...][eventids]
-                        param_2 = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                        param = numpy.divide(param_2, param_1)
-                    elif param_key == 'snr_v':
-                        std = file['std'][...][eventids]
-                        param_1 = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                        p2p = file['p2p'][...][eventids]
-                        param_2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                        param = numpy.divide(param_2, param_1)
-                    elif 'time_delay_' in param_key:
-                        split_param_key = param_key.split('_')
-                        dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
-                        param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
-                    elif 'cw_present' == param_key:
-                        param = file['cw']['has_cw'][...][eventids].astype(int)
-                    elif 'cw_freq_Mhz' == param_key:
-                        param = file['cw']['freq_hz'][...][eventids]/1e6 #MHz
-                    elif 'cw_linear_magnitude' == param_key:
-                        param = file['cw']['linear_magnitude'][...][eventids]
-                    elif 'cw_dbish' == param_key:
-                        cw_dsets = list(file['cw'].keys())
-                        if not numpy.isin('dbish',cw_dsets):
-                            print('No stored dbish data from cw dataset, attempting to calculate from linear magnitude.')
-                            if not hasattr(self, 'cw_prep'):
-                                print('Creating FFTPrepper class to prepare CW bins.')
-                                self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
-                                self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
+                                linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
+                                param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
+                            else:
+                                #param = file['cw']['dbish'][...][eventids] #Should work, but I messed it up.  Bodging it for now.
+                                #print('dbish not correctly setup in flag_cw.py.  Converting linear to dbish now.')
+                                linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
+                                param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
+                        
+                        elif 'hilbert' not in param_key and 'theta_best_h_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'theta_best_v_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_h_allsky' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_v_allsky' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_h_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_v_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_azimuth'][...][eventids]
 
-                            linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
-                            param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
-                        else:
-                            #param = file['cw']['dbish'][...][eventids] #Should work, but I messed it up.  Bodging it for now.
-                            #print('dbish not correctly setup in flag_cw.py.  Converting linear to dbish now.')
-                            linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
-                            param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
-                    
-                    elif 'hilbert' not in param_key and 'theta_best_h_allsky' in param_key:
-                        param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'theta_best_v_allsky' in param_key:
-                        param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'elevation_best_h_allsky' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'elevation_best_v_allsky' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'phi_best_h_allsky' in param_key:
-                        param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_azimuth'][...][eventids]
-                    elif 'hilbert' not in param_key and 'phi_best_v_allsky' in param_key:
-                        param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' not in param_key and 'theta_best_h_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'theta_best_v_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_h_abovehorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_v_abovehorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_h_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_v_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_azimuth'][...][eventids]
 
-                    elif 'hilbert' not in param_key and 'theta_best_h_abovehorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'theta_best_v_abovehorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'elevation_best_h_abovehorizon' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'elevation_best_v_abovehorizon' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'phi_best_h_abovehorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_azimuth'][...][eventids]
-                    elif 'hilbert' not in param_key and 'phi_best_v_abovehorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' not in param_key and 'theta_best_h_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'theta_best_v_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_h_belowhorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_v_belowhorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_h_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_v_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_azimuth'][...][eventids]
 
-                    elif 'hilbert' not in param_key and 'theta_best_h_belowhorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'theta_best_v_belowhorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'elevation_best_h_belowhorizon' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'elevation_best_v_belowhorizon' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'phi_best_h_belowhorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_azimuth'][...][eventids]
-                    elif 'hilbert' not in param_key and 'phi_best_v_belowhorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' not in param_key and 'theta_best_h' in param_key:
+                            param = file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'theta_best_v' in param_key:
+                            param = file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_h' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_v' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_h' in param_key:
+                            param = file['map_direction'][self.map_dset_key]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_v' in param_key:
+                            param = file['map_direction'][self.map_dset_key]['vpol_ENU_azimuth'][...][eventids]
 
-                    elif 'hilbert' not in param_key and 'theta_best_h' in param_key:
-                        param = file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'theta_best_v' in param_key:
-                        param = file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'elevation_best_h' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'elevation_best_v' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' not in param_key and 'phi_best_h' in param_key:
-                        param = file['map_direction'][self.map_dset_key]['hpol_ENU_azimuth'][...][eventids]
-                    elif 'hilbert' not in param_key and 'phi_best_v' in param_key:
-                        param = file['map_direction'][self.map_dset_key]['vpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' in param_key and 'theta_best_h_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'theta_best_v_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_h_allsky' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_v_allsky' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_h_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_v_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_azimuth'][...][eventids]
 
-                    elif 'hilbert' in param_key and 'theta_best_h_allsky' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'theta_best_v_allsky' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'elevation_best_h_allsky' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'elevation_best_v_allsky' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'phi_best_h_allsky' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_azimuth'][...][eventids]
-                    elif 'hilbert' in param_key and 'phi_best_v_allsky' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' in param_key and 'theta_best_h_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'theta_best_v_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_h_abovehorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_v_abovehorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_h_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_v_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_azimuth'][...][eventids]
 
-                    elif 'hilbert' in param_key and 'theta_best_h_abovehorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'theta_best_v_abovehorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'elevation_best_h_abovehorizon' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'elevation_best_v_abovehorizon' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'phi_best_h_abovehorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_azimuth'][...][eventids]
-                    elif 'hilbert' in param_key and 'phi_best_v_abovehorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' in param_key and 'theta_best_h_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'theta_best_v_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_h_belowhorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_v_belowhorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_h_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_v_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_azimuth'][...][eventids]
 
-                    elif 'hilbert' in param_key and 'theta_best_h_belowhorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'theta_best_v_belowhorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'elevation_best_h_belowhorizon' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'elevation_best_v_belowhorizon' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'phi_best_h_belowhorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_azimuth'][...][eventids]
-                    elif 'hilbert' in param_key and 'phi_best_v_belowhorizon' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_azimuth'][...][eventids]
-
-                    elif 'hilbert' in param_key and 'theta_best_h' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'theta_best_v' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'elevation_best_h' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'elevation_best_v' in param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert' in param_key and 'phi_best_h' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_azimuth'][...][eventids]
-                    elif 'hilbert' in param_key and 'phi_best_v' in param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' in param_key and 'theta_best_h' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'theta_best_v' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_h' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_v' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_h' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_v' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_azimuth'][...][eventids]
 
 
-                    elif 'calibrated_trigtime' == param_key:
-                        param = file['calibrated_trigtime'][...][eventids]
+                        elif 'calibrated_trigtime' == param_key:
+                            param = file['calibrated_trigtime'][...][eventids]
 
-                    file.close()
+                        file.close()
+                else:
+                    print('\nWARNING!!!\nOther parameters have not been accounted for yet.\n%s'%(param_key))
+                return param
             else:
-                print('\nWARNING!!!\nOther parameters have not been accounted for yet.\n%s'%(param_key))
-            return param
+                return numpy.array([])
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print('Run: ',self.reader.run)
@@ -1922,20 +1924,35 @@ class dataSlicer():
         Given 2 eventid dictionaries, this will return a third dictionary containing all eventids in A that are not
         contained in B.
 
-        INCOMPLETE
         '''
         try:
             runs_A = numpy.asarray(list(eventids_dict_A.keys()))
-            runs_B = numpy.asarray(list(eventids_dict_A.keys()))
+            runs_B = numpy.asarray(list(eventids_dict_B.keys()))
             eventids_dict_C = {}
             for run in runs_A:
-                eventids_dict_C[run] = numpy.array([])
                 if run in runs_B:
-                    eventids_dict_C[run] = numpy.append(eventids_dict_C[run],eventids_dict_A[run][~numpy.isin(eventids_dict_A[run],eventids_dict_B[run])]) #return events from A that are not in B
+                    eventids_dict_C[run] = eventids_dict_A[run][~numpy.isin(eventids_dict_A[run],eventids_dict_B[run])] #return events from A that are not in B
                 else:
-                    eventids_dict_C[run] = numpy.append(eventids_dict_C[run],eventids_dict_A[run]) #Return all from A
+                    eventids_dict_C[run] = eventids_dict_A[run] #Return all from A
                 eventids_dict_C[run] = numpy.sort(numpy.unique(eventids_dict_C[run])) 
             return eventids_dict_C
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def removeEmptyRunsFromDict(self, eventids_dict):
+        '''
+        '''
+        try:
+            runs = numpy.asarray(list(eventids_dict.keys()))
+            eventids_dict_out = {}
+            for run in runs:
+                if len(eventids_dict[run]) > 0:
+                    eventids_dict_out[run] = eventids_dict[run]
+            return eventids_dict_out
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -1951,7 +1968,7 @@ class dataSlicer():
         '''
         try:
             runs_A = numpy.asarray(list(eventids_dict_A.keys()))
-            runs_B = numpy.asarray(list(eventids_dict_A.keys()))
+            runs_B = numpy.asarray(list(eventids_dict_B.keys()))
             eventids_dict_C = {}
             for run in runs_A:
                 if run in runs_B:
@@ -1971,7 +1988,7 @@ class dataSlicer():
         '''
         try:
             runs_A = numpy.asarray(list(eventids_dict_A.keys()))
-            runs_B = numpy.asarray(list(eventids_dict_A.keys()))
+            runs_B = numpy.asarray(list(eventids_dict_B.keys()))
             runs = numpy.unique(numpy.append(runs_A,runs_B))
             eventids_dict_C = {}
             for run in runs:
@@ -2301,7 +2318,6 @@ class dataSlicer():
                 else:
                     title = '%s, Runs = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())))
             fig, ax, counts = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap, lognorm=lognorm, return_counts=True, mask_top_N_bins=mask_top_N_bins, fill_value=fill_value) #prepares binning, must be called early (before addContour)
-
             #these few lines below this should be used for adding contours to the map. 
             if include_roi:
                 legend_properties = []
@@ -2314,7 +2330,10 @@ class dataSlicer():
                             contour_eventids_dict[run] = numpy.intersect1d(contour_eventids_dict[run],eventids_dict[run]) #getCutsFromROI doesn't account for eventids, this makes it only those that are in ROI and given.
                         else:
                             del contour_eventids_dict[run]
-                    ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids_dict, self.roi_colors[roi_index], n_contour=6, mask=counts.mask, fill_value=fill_value)
+                    if type(counts) == 'numpy.ma.core.MaskedArray':
+                        ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids_dict, self.roi_colors[roi_index], n_contour=6, mask=counts.mask, fill_value=fill_value)
+                    else:
+                        ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids_dict, self.roi_colors[roi_index], n_contour=6)
                     legend_properties.append(cs.legend_elements()[0][0])
                     legend_labels.append('roi %i: %s'%(roi_index, roi_key))
 
