@@ -20,7 +20,7 @@ if __name__ == "__main__":
     #mem = '16G'
     partition = 'broadwl'
 
-    runs = numpy.arange(1643,1729)
+    runs = numpy.array([1663])#numpy.arange(1643,1729)
     done_runs = numpy.array([])
 
     ###--------###

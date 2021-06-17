@@ -18,13 +18,11 @@ import scipy
 import scipy.signal
 import scipy.signal
 
-sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
-sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
-from tools.data_handler import createFile
-from tools.fftmath import TemplateCompareTool
-from tools.fftmath import FFTPrepper
-from tools.correlator import Correlator
+from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from beacon.tools.data_handler import createFile
+from beacon.tools.fftmath import TemplateCompareTool
+from beacon.tools.fftmath import FFTPrepper
+from beacon.tools.correlator import Correlator
 
 import matplotlib
 import matplotlib.pyplot as plt

@@ -11,16 +11,14 @@ import sys
 import gc
 import pymap3d as pm
 import itertools
-sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 
-sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
-import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
-import tools.info as info
-from tools.data_handler import getEventTimes
-import analysis.phase_response as pr
-import tools.get_plane_tracks as pt
-from tools.fftmath import FFTPrepper, TimeDelayCalculator
+from    beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+import  beacon.tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
+import  beacon.tools.info as info
+from    beacon.tools.data_handler import getEventTimes
+import  beacon.analysis.phase_response as pr
+import  beacon.tools.get_plane_tracks as pt
+from    beacon.tools.fftmath import FFTPrepper, TimeDelayCalculator
 import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt

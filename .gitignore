@@ -3,3 +3,9 @@
 */*.png
 */*.svg
 */*.jpg
+data/*.zip
+data/*/state files
+data/*/pictures
+slurmout
+tools/slurmout
+tools/slurm*.out

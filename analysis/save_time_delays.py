@@ -157,7 +157,12 @@ if __name__=="__main__":
         if filename is not None:
             with h5py.File(filename, 'a') as file:
                 eventids = file['eventids'][...]
+
+
+
                 rf_cut = file['trigger_type'][...] == 2
+                # print('TEMPORARY HARDCODE') #debugging an error that occurred in run 1663 due to a zero valued waveform
+                # rf_cut[numpy.cumsum(file['trigger_type'][...] == 2) < 10000] = False #TEMPORARY
 
                 print('Total Events: %i'%file.attrs['N'])
                 print('[1] Software Events: %i'%sum(file['trigger_type'][...] == 1))
