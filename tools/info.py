@@ -443,13 +443,13 @@ def pulserRuns():
     
     return pulser_runs
 
-def loadAntennaZeroLocation(deploy_index=default_deploy):
+def loadAntennaZeroLocation(deploy_index=default_deploy,check=False):
     '''
     Loads antenna 0's location (which use used as the station location).
     Loads the latitude, longtidue, elevation
     '''
     if type(deploy_index) == str:
-        A0Location = configReader(deploy_index, return_mode='enu')[0]
+        A0Location = configReader(deploy_index, return_mode='enu',check=check, verbose=False)[0]
     elif deploy_index == 0:
         A0Location = (37.5893,-118.2381,3894.12)#latitude,longtidue,elevation  #ELEVATION GIVEN FROM GOOGLE EARTH given in m
     elif deploy_index > 0 and deploy_index <= 9:
@@ -690,13 +690,16 @@ def loadValleySourcesENU(deploy_index=default_deploy):
 #     s = list( set([str(val) for key, val in data_slicer_cut_dict.items()]) )
 
 
-def loadAntennaLocationsENU(deploy_index=default_deploy):
+def loadAntennaLocationsENU(deploy_index=default_deploy, check=False):
     '''
     Loads the antenna locations and phase locations as best they are known.
     These are given in ENU relative to Antenna 0.
+
+    Check only applies when using a deploy index that would call the config reader.
+    When it does apply it will check for both ENU and latlonel data.
     '''
     if type(deploy_index) == str:
-        ignored_origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, ignored_cable_delays = configReader(deploy_index, return_mode='enu')
+        ignored_origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, ignored_cable_delays = configReader(deploy_index, return_mode='enu',check=check, verbose=False)
     elif deploy_index == 0:
         antennas_physical   = {0:(0.0,0.0,0.0),1:(-6.039,-1.618,2.275),2:(-1.272,-10.362,1.282),3:(3.411,-11.897,-0.432)} #ORIGINAL
         '''
@@ -1091,7 +1094,7 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
     elif deploy_index >= 23:
         # This utilizes the google earth elevation profile data for relative positions, but utilizes the absolute elevation value given by the photo_gps.py script for antenna 0.
         #antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3890.77),2:(37.588909, -118.237719, 3881.02),3:(37.5889210, -118.2379850, 3887.42)} #ORIGINAL VALUES FROM GOOGLE MAPS AND ESTIMATES
-        origin = loadAntennaZeroLocation(deploy_index = deploy_index)
+        origin = loadAntennaZeroLocation(deploy_index = deploy_index, verbose=False)
         print('Antenna Physical location elevations from plane fit to gps coordinates from photos with OnePlus 6t interpreted as WGS84')
 
         original_z = 3875.53
@@ -1483,7 +1486,7 @@ def loadAntennaLocationsENU(deploy_index=default_deploy):
             antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [0.171479, 0.203726, 4.087032], 2 : [0.958606, 0.257511, 4.931464], 3 : [0.838223, 0.255872, 4.973041]}
     return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
 
-def loadCableDelays(deploy_index=default_deploy,return_raw=False):
+def loadCableDelays(deploy_index=default_deploy,return_raw=False, check=False):
     '''
     This are calculated using group_delay.py via the group delay.  They correspond to the length of the LMR400
     cable that extends from the observatory to the antennas and accounts for the majority of systematic delay
@@ -1491,7 +1494,7 @@ def loadCableDelays(deploy_index=default_deploy,return_raw=False):
     '''
     try:
         if type(deploy_index) == str:
-            ignored_origin, ignored_antennas_physical, ignored_antennas_phase_hpol, ignored_antennas_phase_vpol, cable_delays = configReader(deploy_index, return_mode='enu')
+            ignored_origin, ignored_antennas_physical, ignored_antennas_phase_hpol, ignored_antennas_phase_vpol, cable_delays = configReader(deploy_index, return_mode='enu', check=check, verbose=False)
         elif deploy_index == 0:
             cable_delays =  {'hpol': numpy.array([0.0, 0.0, 0.0, 0.0]), \
                              'vpol': numpy.array([0.0, 0.0, 0.0, 0.0])}

@@ -123,7 +123,7 @@ def configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, ante
     else:
         print('No output file created.')
 
-def checkConfigConsistency(data, decimals=6):
+def checkConfigConsistency(data, decimals=6, verbose=True):
     '''
     Given the data loaded from the configuration data file, this will check for defined ENU and latlonel coordinates, 
     and confirm if they agree with eachother.
@@ -153,9 +153,9 @@ def checkConfigConsistency(data, decimals=6):
 
                 print('Checking mast %i %s coordinates:  Match up to %i decimals'%(mast,key, decimals) + ['',' (Max precision checked)'][decimals == max_precision_to_check])
             else:
-                print(key + 'Does not contain both latlonel and ENU data.')
+                print(key + ' does not contain both latlonel and ENU data.')
 
-def updateLatlonelFromENU(data):
+def updateLatlonelFromENU(data, verbose=True):
     '''
     Given data, this will take the ENU data and use it to update the latlonel data in a deep copy of the original dict.
 
@@ -172,10 +172,11 @@ def updateLatlonelFromENU(data):
             if numpy.asarray(data['antennas']['ant%i'%mast][key]['enu']).size > 0:
                 data['antennas']['ant%i'%mast][key]['latlonel'] = numpy.asarray(pm.enu2geodetic(data['antennas']['ant%i'%mast][key]['enu'][0],data['antennas']['ant%i'%mast][key]['enu'][1],data['antennas']['ant%i'%mast][key]['enu'][2],origin[0],origin[1],origin[2]))
             else:
-                print(key + 'Does not contain ENU data for mast %i %s.'%(mast, key))
+                if verbose:
+                    print(key + ' does not contain ENU data for mast %i %s.'%(mast, key))
     return data
 
-def updateENUFromLatlonel(data):
+def updateENUFromLatlonel(data, verbose=True):
     '''
     Given data, this will take the latlonel data and use it to update the ENU data in a deep copy of the original dict.
 
@@ -192,10 +193,11 @@ def updateENUFromLatlonel(data):
             if numpy.asarray(data['antennas']['ant%i'%mast][key]['latlonel']).size > 0:
                 data['antennas']['ant%i'%mast][key]['enu'] = numpy.asarray(pm.geodetic2enu(data['antennas']['ant%i'%mast][key]['latlonel'][0],data['antennas']['ant%i'%mast][key]['latlonel'][1],data['antennas']['ant%i'%mast][key]['latlonel'][2],origin[0],origin[1],origin[2]))
             else:
-                print(key + 'Does not contain ENU data for mast %i %s.'%(mast, key))
+                if verbose:
+                    print(key + ' does not contain ENU data for mast %i %s.'%(mast, key))
     return data
 
-def configReader(json_path, return_mode='enu', check=True):
+def configReader(json_path, return_mode='enu', check=True, verbose=True):
     '''
     This will read in the custom config files and return them in a usable format that allows the json files to
     interface readily with existing analysis code.
@@ -257,9 +259,9 @@ def configReader(json_path, return_mode='enu', check=True):
     if return_mode == 'latlonel':
         print('WARNING!!! Loading antenna positions as latlonel, which is not the default behaviour and should be done with caution.')
         print('Done using the ENU data.')
-        data = updateLatlonelFromENU(data)
+        data = updateLatlonelFromENU(data, verbose=verbose)
     elif return_mode == 'enu':
-        data = updateENUFromLatlonel(data)
+        data = updateENUFromLatlonel(data, verbose=verbose)
     if check:
         print('Check after updating values:')
         checkConfigConsistency(data)
