@@ -10,13 +10,13 @@
                 "enu": []
             },            
             "hpol": {
-                "latlonel": [],
+                "latlonel": [37.58933883, -118.23762017, 3850.8272],
                 "enu": [],
                 "cable_delay": 423.37836156,
                 "channel": 0
             },
             "vpol": {
-                "latlonel": [],
+                "latlonel": [37.58933883, -118.23762017, 3850.8272],
                 "enu": [],
                 "cable_delay": 428.59277751,
                 "channel": 1
@@ -28,13 +28,13 @@
                 "enu": []
             },
             "hpol": {
-                "latlonel": [],
+                "latlonel": [37.58922017, -118.23800600, 3864.9272],
                 "enu": [],
                 "cable_delay": 428.43979143,
                 "channel": 2
             },
             "vpol": {
-                "latlonel": [],
+                "latlonel": [37.58922017, -118.23800600, 3864.9272],
                 "enu": [],
                 "cable_delay": 430.16685915,
                 "channel": 3
@@ -46,13 +46,13 @@
                 "enu": []
             },
             "hpol": {
-                "latlonel": [],
+                "latlonel": [37.58889767, -118.2377077, 3854.5272],
                 "enu": [],
                 "cable_delay": 415.47714969,
                 "channel": 4
             },
             "vpol": {
-                "latlonel": [],
+                "latlonel": [37.58889767, -118.2377077, 3854.5272],
                 "enu": [],
                 "cable_delay": 423.56765695,
                 "channel": 5
@@ -64,13 +64,13 @@
                 "enu": []
             },
             "hpol": {
-                "latlonel": [],
+                "latlonel": [37.58894300, -118.23796283, 3864.6272],
                 "enu": [],
                 "cable_delay": 423.58803498,
                 "channel": 6
             },
             "vpol": {
-                "latlonel": [],
+                "latlonel": [37.58894300, -118.23796283, 3864.6272],
                 "enu": [],
                 "cable_delay": 423.50469285,
                 "channel": 7

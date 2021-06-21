@@ -38,7 +38,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
 
-default_deploy = 30#2#13#19#15#The deployment calibration to use as the default.
+default_deploy = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day1-june20-2021.json')#30#2#13#19#15#The deployment calibration to use as the default.
 
 
 def returnDefaultDeploy():
