@@ -25,6 +25,7 @@ if __name__=="__main__":
 
     #Main Control Parameters
     runs = numpy.arange(1643,1729)
+    runs = runs[runs != 1663]
     plot_param_pairs = [\
         ['impulsivity_h', 'impulsivity_v'],\
         ['cr_template_search_h', 'cr_template_search_v'],\

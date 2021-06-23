@@ -38,7 +38,10 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import scipy.interpolate
 
-default_deploy = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day1-june20-2021.json')#30#2#13#19#15#The deployment calibration to use as the default.
+#default_deploy = 30#os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day1-june20-2021.json')#30#2#13#19#15#The deployment calibration to use as the default.
+# default_deploy = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day1-june20-2021.json')
+default_deploy = 30#os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021_2021-06-23_00-12-11p430682.json')
+
 
 
 def returnDefaultDeploy():
@@ -1094,7 +1097,7 @@ def loadAntennaLocationsENU(deploy_index=default_deploy, check=False):
     elif deploy_index >= 23:
         # This utilizes the google earth elevation profile data for relative positions, but utilizes the absolute elevation value given by the photo_gps.py script for antenna 0.
         #antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3890.77),2:(37.588909, -118.237719, 3881.02),3:(37.5889210, -118.2379850, 3887.42)} #ORIGINAL VALUES FROM GOOGLE MAPS AND ESTIMATES
-        origin = loadAntennaZeroLocation(deploy_index = deploy_index, verbose=False)
+        origin = loadAntennaZeroLocation(deploy_index = deploy_index)
         print('Antenna Physical location elevations from plane fit to gps coordinates from photos with OnePlus 6t interpreted as WGS84')
 
         original_z = 3875.53

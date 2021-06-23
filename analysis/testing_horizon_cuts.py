@@ -26,7 +26,8 @@ if __name__=="__main__":
     plt.close('all')#
 
     #Main Control Parameters
-    runs = numpy.arange(1643,1729)#numpy.arange(1643,1646)
+    runs = numpy.array([1663,1664])#numpy.arange(1643,1729)#numpy.arange(1643,1646)
+    runs = runs[runs != 1663] #1663 corrupted for some reason
     # plot_param_pairs = [\
     #     ['impulsivity_h', 'impulsivity_v'],\
     #     ['cr_template_search_h', 'cr_template_search_v'],\

@@ -1,0 +1,80 @@
+{
+    "description": "Measurements made on June 22nd using NTrip corrected RTK GPS and UNAVCO P652 data.  The expected accuracy of this data is on the scale of cm.  The listed altitudes are in WGS-84 and are adjusted by adding a height of 5ft8in, (1.7272m) from the actual measurements to account for the offset from the GPS patch antenna positions and the antennas at the top.  This is the positions of the antennas as installed after this date.  Cable delays come TDR measurements made at the same time, and should account for the several different cables (and their respective material properties) to accurately measure the time delays.",
+    "origin": {
+        "latlonel": [37.58933900, -118.23761867, 3850.5272]
+    },
+    "antennas": {
+        "ant0": {
+            "physical": {
+                "latlonel": [37.58933900, -118.23761867, 3850.5272],
+                "enu": []
+            },            
+            "hpol": {
+                "latlonel": [37.58933900, -118.23761867, 3850.5272],
+                "enu": [],
+                "cable_delay": 462.5927,
+                "channel": 0
+            },
+            "vpol": {
+                "latlonel": [37.58933900, -118.23761867, 3850.5272],
+                "enu": [],
+                "cable_delay": 459.1555,
+                "channel": 1
+            }
+        },
+        "ant1": {
+            "physical": {
+                "latlonel": [37.58922017, -118.23800600, 3865.1272],
+                "enu": []
+            },
+            "hpol": {
+                "latlonel": [37.58922017, -118.23800600, 3865.1272],
+                "enu": [],
+                "cable_delay": 468.2663,
+                "channel": 2
+            },
+            "vpol": {
+                "latlonel": [37.58922017, -118.23800600, 3865.1272],
+                "enu": [],
+                "cable_delay": 469.7423,
+                "channel": 3
+            }
+        },
+        "ant2": {
+            "physical": {
+                "latlonel": [37.58889833, -118.23769983, 3854.3272],
+                "enu": []
+            },
+            "hpol": {
+                "latlonel": [37.58889833, -118.23769983, 3854.3272],
+                "enu": [],
+                "cable_delay": 455.0525,
+                "channel": 4
+            },
+            "vpol": {
+                "latlonel": [37.58889833, -118.23769983, 3854.3272],
+                "enu": [],
+                "cable_delay": 463.0335,
+                "channel": 5
+            }
+        },
+        "ant3": {
+            "physical": {
+                "latlonel": [37.58894300, -118.23796567, 3864.3272],
+                "enu": []
+            },
+            "hpol": {
+                "latlonel": [37.58894300, -118.23796567, 3864.3272],
+                "enu": [],
+                "cable_delay": 463.0159,
+                "channel": 6
+            },
+            "vpol": {
+                "latlonel": [37.58894300, -118.23796567, 3864.3272],
+                "enu": [],
+                "cable_delay": 463.1905,
+                "channel": 7
+            }
+        }
+    }
+}
