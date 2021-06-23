@@ -10,18 +10,15 @@ import os
 import sys
 import gc
 import pymap3d as pm
-import latex
 import itertools
-sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 
-sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
-import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
-import tools.info as info
-from tools.data_handler import getEventTimes
-import analysis.phase_response as pr
-import tools.get_plane_tracks as pt
-from tools.fftmath import FFTPrepper, TimeDelayCalculator
+from    beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+import  beacon.tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
+import  beacon.tools.info as info
+from    beacon.tools.data_handler import getEventTimes
+import  beacon.analysis.phase_response as pr
+import  beacon.tools.get_plane_tracks as pt
+from    beacon.tools.fftmath import FFTPrepper, TimeDelayCalculator
 import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -220,10 +217,16 @@ class Correlator:
         reference to the original input lat lon el) to the shifted lat lon el.  This can be used as the origin for
         calculated direction to airplanes etc.  
         '''
-        self.A0_latlonel_physical = pm.enu2geodetic(self.A0_physical[0],self.A0_physical[1],self.A0_physical[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
-        self.A0_latlonel_hpol = pm.enu2geodetic(self.A0_hpol[0],self.A0_hpol[1],self.A0_hpol[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
-        self.A0_latlonel_vpol = pm.enu2geodetic(self.A0_vpol[0],self.A0_vpol[1],self.A0_vpol[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
-
+        try:
+            self.A0_latlonel_physical   = pm.enu2geodetic(self.A0_physical[0],self.A0_physical[1],self.A0_physical[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
+            self.A0_latlonel_hpol       = pm.enu2geodetic(self.A0_hpol[0],self.A0_hpol[1],self.A0_hpol[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
+            self.A0_latlonel_vpol       = pm.enu2geodetic(self.A0_vpol[0],self.A0_vpol[1],self.A0_vpol[2],self.original_A0_latlonel[0],self.original_A0_latlonel[1],self.original_A0_latlonel[2])
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)        
 
     def overwriteAntennaLocations(self, A0_physical,A1_physical,A2_physical,A3_physical,A0_hpol,A1_hpol,A2_hpol,A3_hpol,A0_vpol,A1_vpol,A2_vpol,A3_vpol, verbose=True, suppress_time_delay_calculations=False):
         '''
@@ -1137,9 +1140,9 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def interactivePlotter(self, event, mollweide = False, center_dir='E'):
+    def interactivePlotter(self, event, mollweide = False, center_dir='E', all_alignments=True):
         '''
-        This hopefully will make a plot when called by a double clock in the map.
+        This hopefully will make a plot when called by a double click in the map.
         '''
         if event.dblclick == True:
             try:
@@ -1190,49 +1193,124 @@ class Correlator:
                     t_best_0subtract1 = self.t_hpol_0subtract1[theta_index,phi_index]
                     t_best_0subtract2 = self.t_hpol_0subtract2[theta_index,phi_index]
                     t_best_0subtract3 = self.t_hpol_0subtract3[theta_index,phi_index]
+                    t_best_1subtract2 = self.t_hpol_1subtract2[theta_index,phi_index]
+                    t_best_1subtract3 = self.t_hpol_1subtract3[theta_index,phi_index]
+                    t_best_2subtract3 = self.t_hpol_2subtract3[theta_index,phi_index]
                 elif pol == 'vpol':
                     channels = numpy.array([1,3,5,7])
                     waveforms = self.wf(eventid, channels, div_std=False, hilbert=hilbert, apply_filter=self.apply_filter, tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract)
                     t_best_0subtract1 = self.t_vpol_0subtract1[theta_index,phi_index]
                     t_best_0subtract2 = self.t_vpol_0subtract2[theta_index,phi_index]
                     t_best_0subtract3 = self.t_vpol_0subtract3[theta_index,phi_index]
+                    t_best_1subtract2 = self.t_vpol_1subtract2[theta_index,phi_index]
+                    t_best_1subtract3 = self.t_vpol_1subtract3[theta_index,phi_index]
+                    t_best_2subtract3 = self.t_vpol_2subtract3[theta_index,phi_index]
 
-                #Determine how many indices to roll each waveform.
-                roll0 = 0
-                roll1 = int(numpy.rint(t_best_0subtract1/self.dt_resampled))
-                roll2 = int(numpy.rint(t_best_0subtract2/self.dt_resampled))
-                roll3 = int(numpy.rint(t_best_0subtract3/self.dt_resampled))
+                # #Determine how many indices to roll each waveform.
+                # roll0 = 0
+                # roll1 = int(numpy.rint(t_best_0subtract1/self.dt_resampled))
+                # roll2 = int(numpy.rint(t_best_0subtract2/self.dt_resampled))
+                # roll3 = int(numpy.rint(t_best_0subtract3/self.dt_resampled))
 
                 self.popout_fig = plt.figure()
                 self.popout_ax = self.popout_fig.gca()
                 plt.suptitle('ENU %s\nAzimuth = %0.3f, Zenith = %0.3f'%(event_ax.get_title().replace('-',' ').title(), event.xdata,event.ydata))
-                plt.subplot(2,1,1)
                 
-                plt.plot(self.times_resampled, waveforms[0],label='Ch%i'%channels[0])
-                plt.plot(self.times_resampled, waveforms[1],label='Ch%i'%(channels[1]))
-                plt.plot(self.times_resampled, waveforms[2],label='Ch%i'%(channels[2]))
-                plt.plot(self.times_resampled, waveforms[3],label='Ch%i'%(channels[3]))
+                if all_alignments == False:
+                    #Align signals to antenna 0
 
-                plt.ylabel('adu')
-                plt.xlabel('Time (ns)')
-                plt.minorticks_on()
-                plt.grid(b=True, which='major', color='k', linestyle='-')
-                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                plt.legend()
+                    plt.subplot(2,1,1)
+                    
+                    plt.plot(self.times_resampled, waveforms[0],label='Ch%i'%channels[0])
+                    plt.plot(self.times_resampled, waveforms[1],label='Ch%i'%(channels[1]))
+                    plt.plot(self.times_resampled, waveforms[2],label='Ch%i'%(channels[2]))
+                    plt.plot(self.times_resampled, waveforms[3],label='Ch%i'%(channels[3]))
 
-                plt.subplot(2,1,2)
-                
-                plt.plot(self.times_resampled, waveforms[0]/max(waveforms[0]),label='Ch%i'%channels[0])
-                plt.plot(self.times_resampled + t_best_0subtract1, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], t_best_0subtract1))
-                plt.plot(self.times_resampled + t_best_0subtract2, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
-                plt.plot(self.times_resampled + t_best_0subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
+                    plt.ylabel('adu')
+                    plt.xlabel('Time (ns)')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
 
-                plt.ylabel('Normalized adu')
-                plt.xlabel('Time (ns)')
-                plt.minorticks_on()
-                plt.grid(b=True, which='major', color='k', linestyle='-')
-                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                plt.legend()
+                    plt.subplot(2,1,2)
+                    
+                    plt.plot(self.times_resampled, waveforms[0]/max(waveforms[0]),label='Ch%i'%channels[0])
+                    plt.plot(self.times_resampled + t_best_0subtract1, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], t_best_0subtract1))
+                    plt.plot(self.times_resampled + t_best_0subtract2, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
+                    plt.plot(self.times_resampled + t_best_0subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
+
+                    plt.ylabel('Normalized adu')
+                    plt.xlabel('Time (ns)')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+
+                else:
+                    #Each waveform aligned to each antenna by that antennas relevant time delays. 
+                    plt.subplot(2,2,1)
+                    #Antenna 0
+                    
+                    plt.plot(self.times_resampled                    , waveforms[0]/max(waveforms[0]),label='Ch%i, shifted %0.2f ns'%(channels[0], 0))
+                    plt.plot(self.times_resampled + t_best_0subtract1, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], t_best_0subtract1))
+                    plt.plot(self.times_resampled + t_best_0subtract2, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
+                    plt.plot(self.times_resampled + t_best_0subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
+
+                    plt.ylabel('Normalized adu')
+                    plt.xlabel('Time (ns)')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+
+                    plt.subplot(2,2,2)
+                    #Antenna 1
+                    
+                    plt.plot(self.times_resampled - t_best_0subtract1, waveforms[0]/max(waveforms[0]),label='Ch%i, shifted %0.2f ns'%(channels[1], - t_best_0subtract1))
+                    plt.plot(self.times_resampled                    , waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], 0))
+                    plt.plot(self.times_resampled + t_best_1subtract2, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
+                    plt.plot(self.times_resampled + t_best_1subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
+
+                    plt.ylabel('Normalized adu')
+                    plt.xlabel('Time (ns)')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+
+                    plt.subplot(2,2,3)
+                    #Antenna 2
+                    
+                    plt.plot(self.times_resampled - t_best_0subtract2, waveforms[0]/max(waveforms[0]),label='Ch%i, shifted %0.2f ns'%(channels[0], - t_best_0subtract2))
+                    plt.plot(self.times_resampled - t_best_1subtract2, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], - t_best_1subtract2))
+                    plt.plot(self.times_resampled                    , waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], 0))
+                    plt.plot(self.times_resampled + t_best_2subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_2subtract3))
+
+                    plt.ylabel('Normalized adu')
+                    plt.xlabel('Time (ns)')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+
+                    plt.subplot(2,2,4)
+                    #Antenna 3
+                    
+                    plt.plot(self.times_resampled - t_best_0subtract3, waveforms[0]/max(waveforms[0]),label='Ch%i, shifted %0.2f ns'%(channels[0], - t_best_0subtract3))
+                    plt.plot(self.times_resampled - t_best_1subtract3, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], - t_best_1subtract3))
+                    plt.plot(self.times_resampled - t_best_2subtract3, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], - t_best_2subtract3))
+                    plt.plot(self.times_resampled                    , waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], 0))
+
+                    plt.ylabel('Normalized adu')
+                    plt.xlabel('Time (ns)')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend()
+
+
+
 
             except Exception as e:
                 print('\nError in %s'%inspect.stack()[0][3])
@@ -1504,8 +1582,10 @@ class Correlator:
 
                 if numpy.isin(pair_index ,include_baselines ):
                     linestyle = '-'
+                    linewidth = 4.0*self.min_elevation_linewidth
                 else:
                     linestyle = '--'
+                    linewidth = self.min_elevation_linewidth
 
                 i = pair[0]
                 j = pair[1]
@@ -1528,57 +1608,57 @@ class Correlator:
                     if mollweide == True:
                         if mode == 'hpol':
                             if pair_index == 0:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_0subtract1,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_0subtract1,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 1:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_0subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_0subtract2,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 2:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_0subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_0subtract3,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 3:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_1subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_1subtract2,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 4:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_1subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_1subtract3,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 5:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_2subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_hpol_2subtract3,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                         else:
                             if pair_index == 0:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_0subtract1,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_0subtract1,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 1:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_0subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_0subtract2,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 2:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_0subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_0subtract3,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 3:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_1subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_1subtract2,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 4:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_1subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_1subtract3,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 5:
-                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_2subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_rad, self.mesh_elevation_rad, numpy.roll(self.t_vpol_2subtract3,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                     else:
                         if mode == 'hpol':
                             if pair_index == 0:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_0subtract1,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_0subtract1,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 1:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_0subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_0subtract2,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 2:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_0subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_0subtract3,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 3:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_1subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_1subtract2,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 4:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_1subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_1subtract3,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 5:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_2subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_hpol_2subtract3,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                         else:
                             if pair_index == 0:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_0subtract1,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_0subtract1,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 1:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_0subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_0subtract2,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 2:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_0subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_0subtract3,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 3:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_1subtract2,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_1subtract2,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 4:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_1subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_1subtract3,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
                             elif pair_index == 5:
-                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_2subtract3,roll,axis=1), levels=[time_delay], linewidths=[4.0*self.min_elevation_linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
+                                contours = ax.contour(self.mesh_azimuth_deg, self.mesh_elevation_deg, numpy.roll(self.t_vpol_2subtract3,roll,axis=1), levels=[time_delay], linewidths=[linewidth], colors=[baseline_colors[pair_index]],alpha=0.5,linestyles=[linestyle])
 
                     fmt = str(pair) + ':' + r'%0.2f'
                     ax.clabel(contours, contours.levels, inline=False, fontsize=10, fmt=fmt,manual=False) #manual helpful for presentation quality plots.
@@ -1755,7 +1835,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -1803,7 +1883,10 @@ class Correlator:
         time_delay_dict : dict of list of floats
             The first level of the dict should specify 'hpol' and/or 'vpol'
             The following key within should have each of the baseline pairs that you wish to plot.  Each of these
-            will correspond to a list of floats with all of the time delays for that baseline you want plotted. 
+            will correspond to a list of floats with all of the time delays for that baseline you want plotted.
+        return_max_possible_map_value : bool
+            If True, then an additional value will be returned that attempts to predict the maximum possible correlation
+            value achievable based upon the cross correlations. 
         '''
         try:
             if hilbert == True:
@@ -1915,6 +1998,10 @@ class Correlator:
                 print('Invalid polarization option.  Returning nothing.')
                 return
 
+
+            if return_max_possible_map_value == True:
+                max_values = numpy.array([numpy.max(corr01),numpy.max(corr02),numpy.max(corr03),numpy.max(corr12),numpy.max(corr13),numpy.max(corr23)])
+                max_possible_map_value = numpy.mean(max_values[include_baselines]) #This would occur if the map samples the cross correlations each at their exact maximum value.   This may never actually occur in a non-ideal calibration.
 
             if plot_corr:
 
@@ -2114,9 +2201,16 @@ class Correlator:
                 self.figs.append(fig)
                 self.axs.append(ax)
 
-                
-                return mean_corr_values, fig, ax
+                if return_max_possible_map_value == True:
+                    return mean_corr_values, fig, ax, max_possible_map_value
+                else:
+                    return mean_corr_values, fig, ax
             else:
+                if return_max_possible_map_value == True:
+                    return mean_corr_values, max_possible_map_value
+                else:
+                    return mean_corr_values
+
                 return mean_corr_values
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -2126,7 +2220,7 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={}):
+    def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={}):
         '''
         Does the same thing as map, but averages over all eventids given.  Mostly helpful for 
         repeated sources such as background sources or pulsers.
@@ -2290,7 +2384,7 @@ class Correlator:
             im = self.addTimeDelayCurves(im, time_delay_dict, pol, ax, mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg)
 
             #Added circles as specified.
-            ax, peak_circle = self.addCircleToMap(ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+            ax, peak_circle = self.addCircleToMap(ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
 
             if circle_az is not None:
                 if circle_zenith is not None:
@@ -2311,7 +2405,7 @@ class Correlator:
                     if len(_circle_zenith) == len(_circle_az):
                         additional_circles = []
                         for i in range(len(_circle_az)):
-                            ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=5.0, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
+                            ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=radius, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
                             additional_circles.append(_circ)
 
             #Block out simple ENU zenith cut region. 
@@ -2545,7 +2639,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None):
+    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False):
         '''
         This will loop over eventids and makes a histogram from of location of maximum correlation
         value in the corresponding correlation maps. 
@@ -2747,32 +2841,64 @@ class Correlator:
                                     ax.text(0.45, 0.85, string, fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
 
                     plt.subplot(2,2,3)
-                    plt.ylabel('Counts (PDF)')
-                    plt.xlabel('Azimuth Distribution (Degrees)')
-                    #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
-                    plt.hist(all_phi_best - mean_phi, bins=self.phis_deg-mean_phi, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=True)
-                    x = numpy.linspace(min(self.phis_deg-mean_phi),max(self.phis_deg-mean_phi),200)
-                    plt.plot(x,scipy.stats.norm.pdf(x,0,sig_phi),label='Gaussian Fit')
+                    plt.ylabel('Counts')
+                    
+                    if shift_1d_hists == True:
+                        plt.xlabel('Azimuth Distribution (Degrees)\nCentered on Mean')
+                        #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
+                        plt.hist(all_phi_best - mean_phi, bins=self.phis_deg-mean_phi, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
+                        x = numpy.linspace(min(self.phis_deg-mean_phi),max(self.phis_deg-mean_phi),10*self.n_phi)
+                        plt.plot(x,scipy.stats.norm.pdf(x,0,sig_phi),label='Gaussian Fit')
+                        plt.xlim(min(all_phi_best - mean_phi) - 1.0,max(all_phi_best - mean_phi) + 1.0)
+                        if len(circle_az) == 1:
+                            plt.axvline(circle_az[0] - mean_phi,color='fuchsia',label='Highlighted Azimuth')
+
+                    else:
+                        plt.xlabel('Azimuth Distribution (Degrees)')
+                        #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
+                        plt.hist(all_phi_best, bins=self.phis_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
+                        x = numpy.linspace(min(self.phis_deg),max(self.phis_deg),10*self.n_phi)
+                        plt.plot(x,scipy.stats.norm.pdf(x,mean_phi,sig_phi),label='Gaussian Fit')
+                        plt.xlim(min(all_phi_best) - 1.0,max(all_phi_best) + 1.0)
+                        if circle_az is not None:
+                            if len(circle_az) == 1:
+                                plt.axvline(circle_az[0],color='fuchsia',label='Highlighted Azimuth')
+
                     plt.legend(loc = 'upper right',fontsize=10)
                     plt.minorticks_on()
                     plt.grid(b=True, which='major', color='k', linestyle='-')
                     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.xlim(min(all_phi_best - mean_phi) - 1.0,max(all_phi_best - mean_phi) + 1.0)
 
 
                     plt.subplot(2,2,4)
                     #plt.ylabel('Counts (PDF)')
-                    plt.xlabel('Zenith Distribution (Degrees)')
-                    #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
-                    plt.hist(all_theta_best - mean_theta, bins=self.thetas_deg-mean_theta, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=True)
-                    x = numpy.linspace(min(self.thetas_deg-mean_theta),max(self.thetas_deg-mean_theta),200)
-                    plt.plot(x,scipy.stats.norm.pdf(x,0,sig_theta),label='Gaussian Fit')
+                    if shift_1d_hists == True:
+                        plt.xlabel('Zenith Distribution (Degrees)\nCentered on Mean')
+                        #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
+                        plt.hist(all_theta_best - mean_theta, bins=self.thetas_deg-mean_theta, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=False)
+                        x = numpy.linspace(min(self.thetas_deg-mean_theta),max(self.thetas_deg-mean_theta),200)
+                        plt.plot(x,scipy.stats.norm.pdf(x,0,sig_theta),label='Gaussian Fit')
+                        plt.xlim(min(all_theta_best - mean_theta) - 1.0,max(all_theta_best - mean_theta) + 1.0)
+                        if circle_zenith is not None:
+                            if len(circle_zenith) == 1:
+                                plt.axvline(circle_zenith[0] - mean_theta,color='fuchsia',label='Highlighted Zenith')
+
+                    else:
+                        plt.xlabel('Zenith Distribution (Degrees)')
+                        #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
+                        plt.hist(all_theta_best, bins=self.thetas_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=False)
+                        x = numpy.linspace(min(self.thetas_deg),max(self.thetas_deg),200)
+                        plt.plot(x,scipy.stats.norm.pdf(x,mean_theta,sig_theta),label='Gaussian Fit')
+                        plt.xlim(min(all_theta_best) - 1.0,max(all_theta_best) + 1.0)
+                        if circle_zenith is not None:
+                            if len(circle_zenith) == 1:
+                                plt.axvline(circle_zenith[0],color='fuchsia',label='Highlighted Zenith')
+
+                    
                     plt.legend(loc = 'upper right',fontsize=10)
                     plt.minorticks_on()
                     plt.grid(b=True, which='major', color='k', linestyle='-')
                     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.xlim(min(all_theta_best - mean_theta) - 1.0,max(all_theta_best - mean_theta) + 1.0)
-
                     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.25)
 
             return hist, all_phi_best, all_theta_best
@@ -2825,72 +2951,110 @@ class Correlator:
                 overlap_map = numpy.zeros_like(self.mesh_azimuth_deg,dtype=int)
             elif value_mode == 'distance':
                 overlap_map = numpy.zeros_like(self.mesh_azimuth_deg,dtype=float)
+            elif value_mode == 'gaus':
+                overlap_map = numpy.zeros_like(self.mesh_azimuth_deg,dtype=float)
+
 
             for pair_key, pair_time_delay in time_delays.items():
-                time_delay = pair_time_delay[0]
+                for time_delay in pair_time_delay: 
+                    #time_delay = pair_time_delay[0]
 
-                pair = numpy.array(pair_key.replace('[','').replace(']','').split(','),dtype=int)
-                pair_index = numpy.where(numpy.sum(pair == pairs,axis=1) == 2)[0][0] #Used for consistent coloring.
+                    pair = numpy.array(pair_key.replace('[','').replace(']','').split(','),dtype=int)
+                    pair_index = numpy.where(numpy.sum(pair == pairs,axis=1) == 2)[0][0] #Used for consistent coloring.
 
-                if numpy.isin(pair_index ,include_baselines ):
-                    i = pair[0]
-                    j = pair[1]
+                    if numpy.isin(pair_index ,include_baselines ):
+                        i = pair[0]
+                        j = pair[1]
 
-                    #Attempting to use precalculate expected time delays per direction to derive theta here.
-                    if value_mode == 'box':
-                        if pol == 'hpol':
-                            if pair_index == 0:
-                                overlap_map +=  (numpy.abs(self.t_hpol_0subtract1 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 1:
-                                overlap_map +=  (numpy.abs(self.t_hpol_0subtract2 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 2:
-                                overlap_map +=  (numpy.abs(self.t_hpol_0subtract3 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 3:
-                                overlap_map +=  (numpy.abs(self.t_hpol_1subtract2 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 4:
-                                overlap_map +=  (numpy.abs(self.t_hpol_1subtract3 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 5:
-                                overlap_map +=  (numpy.abs(self.t_hpol_2subtract3 - time_delay) < window_ns).astype(int)
-                        else:
-                            if pair_index == 0:
-                                overlap_map +=  (numpy.abs(self.t_vpol_0subtract1 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 1:
-                                overlap_map +=  (numpy.abs(self.t_vpol_0subtract2 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 2:
-                                overlap_map +=  (numpy.abs(self.t_vpol_0subtract3 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 3:
-                                overlap_map +=  (numpy.abs(self.t_vpol_1subtract2 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 4:
-                                overlap_map +=  (numpy.abs(self.t_vpol_1subtract3 - time_delay) < window_ns).astype(int)
-                            elif pair_index == 5:
-                                overlap_map +=  (numpy.abs(self.t_vpol_2subtract3 - time_delay) < window_ns).astype(int)
-                    elif value_mode == 'distance':
-                        if pol == 'hpol':
-                            if pair_index == 0:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract1 - time_delay), (numpy.abs(self.t_hpol_0subtract1 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 1:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract2 - time_delay), (numpy.abs(self.t_hpol_0subtract2 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 2:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract3 - time_delay), (numpy.abs(self.t_hpol_0subtract3 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 3:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_1subtract2 - time_delay), (numpy.abs(self.t_hpol_1subtract2 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 4:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_1subtract3 - time_delay), (numpy.abs(self.t_hpol_1subtract3 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 5:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_2subtract3 - time_delay), (numpy.abs(self.t_hpol_2subtract3 - time_delay) < window_ns).astype(int))
-                        else:
-                            if pair_index == 0:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract1 - time_delay), (numpy.abs(self.t_vpol_0subtract1 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 1:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract2 - time_delay), (numpy.abs(self.t_vpol_0subtract2 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 2:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract3 - time_delay), (numpy.abs(self.t_vpol_0subtract3 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 3:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_1subtract2 - time_delay), (numpy.abs(self.t_vpol_1subtract2 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 4:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_1subtract3 - time_delay), (numpy.abs(self.t_vpol_1subtract3 - time_delay) < window_ns).astype(int))
-                            elif pair_index == 5:
-                                overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_2subtract3 - time_delay), (numpy.abs(self.t_vpol_2subtract3 - time_delay) < window_ns).astype(int))
+                        #Attempting to use precalculate expected time delays per direction to derive theta here.
+                        if value_mode == 'box':
+                            if pol == 'hpol':
+                                if pair_index == 0:
+                                    overlap_map +=  (numpy.abs(self.t_hpol_0subtract1 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 1:
+                                    overlap_map +=  (numpy.abs(self.t_hpol_0subtract2 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 2:
+                                    overlap_map +=  (numpy.abs(self.t_hpol_0subtract3 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 3:
+                                    overlap_map +=  (numpy.abs(self.t_hpol_1subtract2 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 4:
+                                    overlap_map +=  (numpy.abs(self.t_hpol_1subtract3 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 5:
+                                    overlap_map +=  (numpy.abs(self.t_hpol_2subtract3 - time_delay) < window_ns).astype(int)
+                            else:
+                                if pair_index == 0:
+                                    overlap_map +=  (numpy.abs(self.t_vpol_0subtract1 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 1:
+                                    overlap_map +=  (numpy.abs(self.t_vpol_0subtract2 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 2:
+                                    overlap_map +=  (numpy.abs(self.t_vpol_0subtract3 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 3:
+                                    overlap_map +=  (numpy.abs(self.t_vpol_1subtract2 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 4:
+                                    overlap_map +=  (numpy.abs(self.t_vpol_1subtract3 - time_delay) < window_ns).astype(int)
+                                elif pair_index == 5:
+                                    overlap_map +=  (numpy.abs(self.t_vpol_2subtract3 - time_delay) < window_ns).astype(int)
+                        elif value_mode == 'distance':
+                            if pol == 'hpol':
+                                if pair_index == 0:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract1 - time_delay), (numpy.abs(self.t_hpol_0subtract1 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 1:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract2 - time_delay), (numpy.abs(self.t_hpol_0subtract2 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 2:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_0subtract3 - time_delay), (numpy.abs(self.t_hpol_0subtract3 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 3:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_1subtract2 - time_delay), (numpy.abs(self.t_hpol_1subtract2 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 4:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_1subtract3 - time_delay), (numpy.abs(self.t_hpol_1subtract3 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 5:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_hpol_2subtract3 - time_delay), (numpy.abs(self.t_hpol_2subtract3 - time_delay) < window_ns).astype(int))
+                            else:
+                                if pair_index == 0:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract1 - time_delay), (numpy.abs(self.t_vpol_0subtract1 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 1:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract2 - time_delay), (numpy.abs(self.t_vpol_0subtract2 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 2:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_0subtract3 - time_delay), (numpy.abs(self.t_vpol_0subtract3 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 3:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_1subtract2 - time_delay), (numpy.abs(self.t_vpol_1subtract2 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 4:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_1subtract3 - time_delay), (numpy.abs(self.t_vpol_1subtract3 - time_delay) < window_ns).astype(int))
+                                elif pair_index == 5:
+                                    overlap_map +=  numpy.multiply(window_ns - numpy.abs(self.t_vpol_2subtract3 - time_delay), (numpy.abs(self.t_vpol_2subtract3 - time_delay) < window_ns).astype(int))
+                        elif value_mode == 'gaus':
+                            #Here window will be treated as FWHM
+                            sigma = window_ns / 2.355 #conversion to standard deviation.
+                            scale_factor = 1# Don't want normalized area, want normalized peak value.  #1/(sigma * numpy.sqrt(2*numpy.pi)) #So only compute once.
+                            denom = 2*(sigma**2)
+                            g = lambda x, x0 : scale_factor * numpy.exp(-((x-x0)**2)/denom)
+
+                            if pol == 'hpol':
+                                if pair_index == 0:
+                                    overlap_map +=  g(self.t_hpol_0subtract1, time_delay)
+                                elif pair_index == 1:
+                                    overlap_map +=  g(self.t_hpol_0subtract2, time_delay)
+                                elif pair_index == 2:
+                                    overlap_map +=  g(self.t_hpol_0subtract3, time_delay)
+                                elif pair_index == 3:
+                                    overlap_map +=  g(self.t_hpol_1subtract2, time_delay)
+                                elif pair_index == 4:
+                                    overlap_map +=  g(self.t_hpol_1subtract3, time_delay)
+                                elif pair_index == 5:
+                                    overlap_map +=  g(self.t_hpol_2subtract3, time_delay)
+                            else:
+                                if pair_index == 0:
+                                    overlap_map +=  g(self.t_vpol_0subtract1, time_delay)
+                                elif pair_index == 1:
+                                    overlap_map +=  g(self.t_vpol_0subtract2, time_delay)
+                                elif pair_index == 2:
+                                    overlap_map +=  g(self.t_vpol_0subtract3, time_delay)
+                                elif pair_index == 3:
+                                    overlap_map +=  g(self.t_vpol_1subtract2, time_delay)
+                                elif pair_index == 4:
+                                    overlap_map +=  g(self.t_vpol_1subtract3, time_delay)
+                                elif pair_index == 5:
+                                    overlap_map +=  g(self.t_vpol_2subtract3, time_delay)
+
 
 
             if plot_map:
@@ -2928,7 +3092,7 @@ class Correlator:
 
                 fig = plt.figure()
                 if window_title is None:
-                    fig.canvas.set_window_title('Overlap Map'%(self.reader.run,eventid,pol.title()))
+                    fig.canvas.set_window_title('Overlap Map')
                 else:
                     fig.canvas.set_window_title(window_title)
                 if mollweide == True:
@@ -3473,10 +3637,10 @@ if __name__=="__main__":
             cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
         for mode in ['hpol','vpol']:
-            mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='W', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
+            mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
             all_figs.append(fig)
             all_axs.append(ax)
-            if True:
+            if False:
                 cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[0,1,2,3,4,5])
                 # for baseline in [0,1,2,3,4,5]:
                 #     cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[baseline])

@@ -90,6 +90,40 @@ site3_measured_time_delays_hilbert_errors_hpol =  [((0, 1), 0.052428389377522186
 site3_measured_time_delays_hilbert_vpol =  [((0, 1), -95.30265032203047), ((0, 2), -150.3612627337264), ((0, 3), -175.88155062409197), ((1, 2), -55.06965132126639), ((1, 3), -80.55266965411217), ((2, 3), -25.524379719980214)]
 site3_measured_time_delays_hilbert_errors_vpol =  [((0, 1), 0.03654878810011606), ((0, 2), 0.044076823274307404), ((0, 3), 0.04115323593715623), ((1, 2), 0.039281585194972476), ((1, 3), 0.04240838492773853), ((2, 3), 0.04449409255674249)]
 
+#CW
+cw_sources = {}
+
+time_delay_dict = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76], '[0, 3]': [-15.82], '[1, 2]': [173.4], '[1, 3]': [61.77], '[2, 3]': [-111.6]}}
+
+cw_sources['khsv'] = {}
+cw_sources['khsv']['latlonel'] = numpy.array([36.008611, -115.005556, 3316*0.3048 + 10])
+period = 17.54 #ns (57 MHz)
+#cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76 - period,  95.76 - 2*period], '[0, 3]': [-15.82], '[1, 2]': [173.4 - period,  173.4 - 2*period], '[1, 3]': [61.77], '[2, 3]': [-111.6 + 2*period]}}
+cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]'   :[ -77.6           ],\
+                                                 '[0, 2]'   :[ 95.76  - period ],\
+                                                 '[0, 3]'   :[ -15.82          ],\
+                                                 '[1, 2]'   :[ 173.4  - period ],\
+                                                 '[1, 3]'   :[ 61.77           ],\
+                                                 '[2, 3]'   :[ -111.6 + period ]}}
+# cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]'   : -77.6     + period*(numpy.arange(5) - 2),\
+#                                                  '[0, 2]'   : 95.76     + period*(numpy.arange(5) - 2),\
+#                                                  '[0, 3]'   : -15.82    + period*(numpy.arange(5) - 2),\
+#                                                  '[1, 2]'   : 173.4     + period*(numpy.arange(5) - 2),\
+#                                                  '[1, 3]'   : 61.77     + period*(numpy.arange(5) - 2),\
+#                                                  '[2, 3]'   : -111.6    + period*(numpy.arange(5) - 2)}}
+cw_sources['khsv']['data_slicer_dict'] = {'std_h':[0.5,1.5],'std_v':[0.5,0.9],'snr_v':[8.0,9.0]}
+cw_sources['khsv']['data_slicer_run'] = 1650
+
+cable_delays = info.loadCableDelays(return_raw=True)
+cable_delay_differences = cable_delays['hpol'] - cable_delays['vpol']
+
+#Assuming the hpol time delays are measured accurately and so are our cable delays, this will give what we would predict the measured (raw without accounting for cable delays) time delays of the vpol to be.  I do this to attempt to use the hpol time delays in a vpol calibration.
+cw_sources['khsv']['time_delay_dict']['vpol'] = {   '[0, 1]' : [-77.6   - (cable_delays['hpol'][0] - cable_delays['hpol'][1]) + (cable_delays['vpol'][0] - cable_delays['vpol'][1]) ],\
+                                                    '[0, 2]' : [95.76   - (cable_delays['hpol'][0] - cable_delays['hpol'][2]) + (cable_delays['vpol'][0] - cable_delays['vpol'][2]) ],\
+                                                    '[0, 3]' : [-15.82  - (cable_delays['hpol'][0] - cable_delays['hpol'][3]) + (cable_delays['vpol'][0] - cable_delays['vpol'][3]) ],\
+                                                    '[1, 2]' : [173.4   - (cable_delays['hpol'][1] - cable_delays['hpol'][2]) + (cable_delays['vpol'][1] - cable_delays['vpol'][2]) ],\
+                                                    '[1, 3]' : [61.77   - (cable_delays['hpol'][1] - cable_delays['hpol'][3]) + (cable_delays['vpol'][1] - cable_delays['vpol'][3]) ],\
+                                                    '[2, 3]' : [-111.6  - (cable_delays['hpol'][2] - cable_delays['hpol'][3]) + (cable_delays['vpol'][2] - cable_delays['vpol'][3]) ]}
 
 
 
@@ -113,51 +147,92 @@ if __name__ == '__main__':
                 print('Given mode not in options.  Defaulting to hpol')
                 mode = 'hpol'
 
-            deploy_index = int(sys.argv[2])
+            deploy_index = sys.argv[2]
         else:
             print('No mode given.  Defaulting to hpol')
             mode = 'hpol'
             deploy_index = info.returnDefaultDeploy()
-        print('Plotting for Deploy Index %i '%deploy_index)
+        if type(deploy_index) == str:
+            if deploy_index.isdigit():
+                deploy_index = int(deploy_index)
+        print('Plotting for Deploy Index %s '%str(deploy_index))
 
 
         #### PULSERS ####
-        if False:
-            included_pulsers =        [ 'run1507',\
-                                        'run1509',\
-                                        'run1511']
+        if True:
+            included_pulsers =    [ 'run1507',\
+                                    'run1509',\
+                                    'run1511']
         else:
-            included_pulsers = []                                    
+            included_pulsers = []  
+
+        #### CW ####
+        if True:
+            included_cw_sources = [ 'khsv']
+        else:
+            included_cw_sources = []                                    
 
         #### VALLEY SOURCES ####                      
         valley_source_run = 1650
-        impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
-        time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+        time_delays_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+        impulsivity_dset_key = time_delays_dset_key
+        # #CORRUPTED FILES DATASETS THINK -> impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+        # #CORRUPTED FILES DATASETS THINK -> time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
         map_direction_dset_key = 'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'#'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0-sinesubtract_1'
 
+
+        # 'Solar Plant'               :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+        # # 'A'                         :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+        # 'Booker Antenna'            :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+        # # 'C'                         :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+        # 'Tonopah AFS GATR Site'     :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+        # # 'B'                         :{'time_delay_0subtract1_h':[-135,-131],'time_delay_0subtract2_h':[-111,-105]},\
+        # 'KNKN223'                   :{'time_delay_0subtract1_h':[-127,-123],'time_delay_0subtract2_h':[-127,-123.5]},\
+        # 'Dyer Cell Tower'           :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+        # 'Beatty Airport Antenna'    :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]},\
+        # # 'E'                         :{'time_delay_0subtract1_h':[-124.5,-121],'time_delay_0subtract2_h':[22.5,28.5]}
+        # 'Palmetto Cell Tower'       :{'time_delay_0subtract1_h':[-138,-131.7],'time_delay_0subtract2_h':[-7,-1]},\
+        # 'Cedar Peak'                :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+        # # 'D'                         :{'time_delay_0subtract1_h':[-143,-140],'time_delay_0subtract2_h':[-60.1,-57.4]},\
+        # 'Silver Peak Substation'    :{'time_delay_0subtract1_h':[-140.5,-137],'time_delay_0subtract2_h':[-90,-83.5],'time_delay_0subtract3_h':[-167,-161],'time_delay_1subtract2_h':[46,55]},\
+
+
         if False:
-            included_valley_sources = [ 'Tonopah AFS GATR Site',\
-                                        'Tonopah Vortac',\
-                                        'Tonopah Airport Antenna',\
-                                        'Dyer Cell Tower',\
-                                        'West Dyer Substation',\
-                                        'East Dyer Substation',\
-                                        'Oasis',\
-                                        'Beatty Substation',\
-                                        'Palmetto Cell Tower',\
-                                        'Cedar Peak',\
-                                        'Dome Thing',\
-                                        'Goldfield Hill Tower',\
-                                        'Silver Peak Substation',\
-                                        'Silver Peak Town Antenna',\
-                                        'Silver Peak Lithium Mine',\
-                                        'Past SP Substation']
+            included_valley_sources = ['Solar Plant','Booker Antenna','Tonopah AFS GATR Site','KNKN223','Dyer Cell Tower','Beatty Airport Antenna','Palmetto Cell Tower','Cedar Peak','Silver Peak Substation']
+            included_valley_sources = ['Northern Cell Tower','Solar Plant','Quarry Substation','Tonopah KTPH','Booker Antenna','Nye County Sherriff','Tonopah AFS GATR Site','KNKN223','Dyer House Antenna A','Miller Substation','Tonopah Vortac','Tonopah Airport Antenna','Dyer Cell Tower','West Dyer Substation','East Dyer Substation','Beatty Mountain Cell Tower','Beatty Airport Vortac','Beatty Substation','Oasis','Tokop','Beatty Airport Antenna','Palmetto Cell Tower','South Dyer Town','Black Mountain','Cedar Peak','Test Site A','Concrete Substation','Dome Thing','Jack Rabbit Knob','Goldfield Hill Tower','Goldield Town Tower','Goldfield KGFN-FM','Silver Peak Town Antenna','Silver Peak Lithium Mine','Past SP Substation','Silver Peak Substation']
+            # included_valley_sources = [ 'Northern Cell Tower',\
+            #                             'Booker Antenna',\
+            #                             'Tonopah AFS GATR Site',\
+            #                             'Miller Substation',\
+            #                             'Dyer Cell Tower',\
+            #                             'Beatty Airport Antenna',\
+            #                             'Palmetto Cell Tower',\
+            #                             'Cedar Peak']
+
+            # [ 'Tonopah AFS GATR Site',\
+            #     'Tonopah Vortac',\
+            #     'Tonopah Airport Antenna',\
+            #     'Dyer Cell Tower',\
+            #     'West Dyer Substation',\
+            #     'East Dyer Substation',\
+            #     'Oasis',\
+            #     'Beatty Substation',\
+            #     'Palmetto Cell Tower',\
+            #     'Cedar Peak',\
+            #     'Dome Thing',\
+            #     'Goldfield Hill Tower',\
+            #     'Silver Peak Substation',\
+            #     'Silver Peak Town Antenna',\
+            #     'Silver Peak Lithium Mine',\
+            #     'Past SP Substation']
+        elif False:
+            included_valley_sources = ['A']
         else:
-            included_valley_sources = []
+            included_valley_sources = ['A','B','C','D','E','F']
 
         #### AIRPLANES ####
         plot_animated_airplane = False #Otherwise plots first event from each plane.  
-        if True:
+        if False:
             included_airplanes =      [ '1728-62026',\
                                         '1773-14413',\
                                         '1773-63659',\
@@ -168,28 +243,28 @@ if __name__ == '__main__':
 
 
         else:
-            included_airplanes =      ['1774-178','1728-62026']
+            included_airplanes =      []#['1728-62026']
 
         plot_predicted_time_shifts = False
         plot_airplane_tracks = True
         plot_time_delay_calculations = False
         plot_time_delays_on_maps = True
         plot_expected_direction = True
-        limit_events = 10 #Number of events use for time delay calculation
+        limit_events = 1000 #Number of events use for time delay calculation
 
 
         plot_residuals = False
-        plot_histograms = False
-        iterate_sub_baselines = 3 #The lower this is the higher the time it will take to plot.  Does combinatoric subsets of baselines with this length. 
+        plot_histograms = True
+        iterate_sub_baselines = 6 #The lower this is the higher the time it will take to plot.  Does combinatoric subsets of baselines with this length. 
 
         final_corr_length = 2**17
         cor_upsample = final_corr_length
 
-        crit_freq_low_pass_MHz = None#[80,70,70,70,70,70,60,70]#90#
-        low_pass_filter_order = None#[0,8,8,8,10,8,3,8]#8#
+        crit_freq_low_pass_MHz = 85#None#[80,70,70,70,70,70,60,70]#90#
+        low_pass_filter_order = 6#None#[0,8,8,8,10,8,3,8]#8#
 
-        crit_freq_high_pass_MHz = None#70#None#60
-        high_pass_filter_order = None#6#None#8
+        crit_freq_high_pass_MHz = 25#70#None#60
+        high_pass_filter_order = 8#6#None#8
 
         sine_subtract = False
         sine_subtract_min_freq_GHz = 0.03
@@ -201,9 +276,23 @@ if __name__ == '__main__':
         apply_phase_response = True
         hilbert = False
 
+        # if deploy_index == 27:
+        #     included_antennas_lumped = [0,1,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
+        # else:
+        #     included_antennas_lumped = [0,1,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
         included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
         included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
         include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
+
+
+        #This math is to set the pairs to include in the calculation.  Typically it will be all of them, but if the option is enabled to remove some
+        #from the calculation then this will allow for that to be done.
+        pairs = numpy.array(list(itertools.combinations((0,1,2,3), 2)))
+        pairs_cut = []
+        for pair_index, pair in enumerate(numpy.array(list(itertools.combinations((0,1,2,3), 2)))):
+            pairs_cut.append(numpy.logical_and(numpy.all(numpy.isin(numpy.array(pair),included_antennas_lumped)), pair_index in include_baselines)) #include_baselines Overwritten when antennas removed.
+
+        include_baselines = numpy.where(pairs_cut)[0] #Effectively the same as the pairs_cut but index based for baselines.
 
         #### PULSERS ####
 
@@ -311,13 +400,13 @@ if __name__ == '__main__':
                 mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=pulser_key)
 
                 if plot_histograms:
-                    map_resolution = 0.1 #degrees
+                    map_resolution = 0.01 #degrees
                     range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
                     range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
                     n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
                     n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
                     
-                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tupulser_key=False, sine_subtract=True,map_source_distance_m=distance_m)
+                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                     eventids = numpy.sort(numpy.random.choice(known_pulser_ids[pulser_key][mode],min(limit_events,len(known_pulser_ids[pulser_key][mode])))) #For plotting multiple events in a histogram
@@ -445,27 +534,37 @@ if __name__ == '__main__':
                 elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(valley_source_ENU[2]/distance_m))
                 azimuth_deg = numpy.rad2deg(numpy.arctan2(valley_source_ENU[1],valley_source_ENU[0]))
                 
-                cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m, deploy_index=deploy_index)
-                cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+                if valley_source_key == 'E':
+                    range_values = [distance_m]#[100,500,1000,10000,100000]
+                else:
+                    range_values = [distance_m]
+                #range_values = [distance_m]
 
-                if plot_expected_direction == False:
-                    zenith_deg = None
-                    azimuth_deg = None
-                
-                mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=valley_source_key)
-
-                if plot_histograms:
-                    map_resolution = 0.1 #degrees
-                    range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
-                    range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
-                    n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
-                    n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
-                    
-                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tuvalley_source_key=False, sine_subtract=True,map_source_distance_m=distance_m)
+                for distance_m in range_values:
+                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m, deploy_index=deploy_index)
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-                    eventids = numpy.sort(numpy.random.choice(roi_eventids,min(limit_events,len(roi_eventids)))) #For plotting multiple events in a histogram
-                    hist = cor.histMapPeak(eventids, mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + valley_source_key, include_baselines=include_baselines,iterate_sub_baselines=iterate_sub_baselines)
+                    if plot_expected_direction == False:
+                        zenith_deg = None
+                        azimuth_deg = None
+                    
+                    mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=valley_source_key + ' %.1f m'%distance_m)
+
+                    if plot_histograms:
+                        map_resolution = 0.1 #degrees
+                        range_phi_deg=[-90,90]#(azimuth_deg - 10, azimuth_deg + 10)
+                        range_theta_deg=[70,130]#(zenith_deg - 10,zenith_deg + 10)
+                        zenith_deg = None
+                        elevation_deg = None
+                        azimuth_deg = None
+                        n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
+                        n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
+                        
+                        cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
+                        cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+                        eventids = numpy.sort(numpy.random.choice(roi_eventids,min(limit_events,len(roi_eventids)))) #For plotting multiple events in a histogram
+                        hist = cor.histMapPeak(eventids, mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + valley_source_key, include_baselines=include_baselines,iterate_sub_baselines=iterate_sub_baselines)
 
 
         #### AIRPLANES ####
@@ -602,13 +701,19 @@ if __name__ == '__main__':
                 if plot_animated_airplane == True:
                     cor.animatedMap(eventids, mode, 'deploy_index_%i'%deploy_index,include_baselines=include_baselines,map_source_distance_m = source_distance_m,  plane_zenith=zenith_deg,plane_az=azimuth_deg,hilbert=False, max_method=None,center_dir='W',save=False,dpi=300)
                 else:
+                    plane_td_dict = {}
                     for event_index, eventid in enumerate(eventids):
-                        td_dict = {mode:{'[0, 1]' : [ measured_plane_time_delays[key][0][event_index]], '[0, 2]' : [measured_plane_time_delays[key][1][event_index]], '[0, 3]' : [measured_plane_time_delays[key][2][event_index]], '[1, 2]' : [measured_plane_time_delays[key][3][event_index]], '[1, 3]' : [measured_plane_time_delays[key][4][event_index]], '[2, 3]' : [measured_plane_time_delays[key][5][event_index]]}}
+                        plane_td_dict[mode] = {}
+                        pairs = numpy.array(list(itertools.combinations((0,1,2,3), 2)))
+                        for pair_index, pair in enumerate(pairs):
+                            if pair_cut[pair_index]:
+                                plane_td_dict[mode]['[%i, %i]'%(pair[0],pair[1])] = [measured_plane_time_delays[key][(numpy.cumsum(pair_cut) - 1)[pair_index]][event_index]]
+                        #plane_td_dict = {mode:{'[0, 1]' : [ measured_plane_time_delays[key][0][event_index]], '[0, 2]' : [measured_plane_time_delays[key][1][event_index]], '[0, 3]' : [measured_plane_time_delays[key][2][event_index]], '[1, 2]' : [measured_plane_time_delays[key][3][event_index]], '[1, 3]' : [measured_plane_time_delays[key][4][event_index]], '[2, 3]' : [measured_plane_time_delays[key][5][event_index]]}}
                         cor.overwriteSourceDistance(source_distance_m[event_index], verbose=False, suppress_time_delay_calculations=False)
                         if event_index == 0:
-                            mean_corr_values, fig, ax = cor.map(eventids[event_index], mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=td_dict,window_title=key)
+                            mean_corr_values, fig, ax = cor.map(eventids[event_index], mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=plane_td_dict,window_title=key)
                         else:
-                            mean_corr_values = cor.map(eventids[event_index], mode, include_baselines=include_baselines, plot_map=False, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=td_dict,window_title=key)
+                            mean_corr_values = cor.map(eventids[event_index], mode, include_baselines=include_baselines, plot_map=False, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=plane_td_dict,window_title=key)
 
                         linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = cor.mapMax(mean_corr_values,max_method=0,verbose=True,zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,90],pol=mode)
                         offset_az.append(azimuth_deg[event_index] - phi_best)
@@ -651,7 +756,43 @@ if __name__ == '__main__':
                 plt.xlabel('Zen (deg)')
                 plt.ylabel('Reconstruction Offset')
 
+        #### VALLEY SOURCES ####
+
+        if len(included_cw_sources) > 0:
+            origin = info.loadAntennaZeroLocation()
+            for key in included_cw_sources:
+                cw_sources[key]['enu'] = numpy.array(pm.geodetic2enu(cw_sources['khsv']['latlonel'][0],cw_sources['khsv']['latlonel'][1],cw_sources['khsv']['latlonel'][2],origin[0],origin[1],origin[2]))
+
+            window_ns = 10.0
+            map_resolution = 0.25 #degrees
+            range_phi_deg = (-90, 90)
+            range_theta_deg = (0,180)
+            n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
+            n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
             
+            run = 1650
+            reader = Reader(datapath,run)
+
+            cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=1e6)
+            cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+            if mode == 'hpol':
+                ant0_ENU = cor.A0_hpol
+            elif mode == 'vpol':
+                ant0_ENU = cor.A0_vpol
+
+            for key in included_cw_sources:
+                source_distance_m = numpy.sqrt((cw_sources[key]['enu'][0] - ant0_ENU[0])**2 + (cw_sources[key]['enu'][1] - ant0_ENU[1])**2 + (cw_sources[key]['enu'][2] - ant0_ENU[2])**2)
+                azimuth_deg = numpy.rad2deg(numpy.arctan2(cw_sources[key]['enu'][1] - ant0_ENU[1],cw_sources[key]['enu'][0] - ant0_ENU[0]))
+                zenith_deg = numpy.rad2deg(numpy.arccos((cw_sources[key]['enu'][2] - ant0_ENU[2])/source_distance_m))
+
+                cor.overwriteSourceDistance(source_distance_m, verbose=False, suppress_time_delay_calculations=False)
+                overlap_value_mode = 'gaus'
+                for value_mode in [overlap_value_mode]:
+                    #['distance','gaus']:
+                    mesh_azimuth_deg, mesh_elevation_deg, overlap_map, im, ax = cor.generateTimeDelayOverlapMap(mode, cw_sources[key]['time_delay_dict'], window_ns, value_mode=value_mode, plot_map=True, mollweide=False,center_dir='E',window_title='Input %s'%key, include_baselines=include_baselines)
+                    ax.axvline(azimuth_deg,c='fuchsia',linewidth=1.0)
+                    ax.axhline(90.0 - zenith_deg,c='fuchsia',linewidth=1.0)
     except Exception as e:
         print('Error in main loop.')
         print(e)

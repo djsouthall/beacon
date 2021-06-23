@@ -111,6 +111,7 @@ class FFTPrepper:
             self.hpol_pairs = numpy.array(list(itertools.combinations((0,2,4,6), 2)))
             self.vpol_pairs = numpy.array(list(itertools.combinations((1,3,5,7), 2)))
             self.pairs = numpy.vstack((self.hpol_pairs,self.vpol_pairs)) 
+            self.crosspol_pairs = numpy.reshape(numpy.arange(8),(4,2))
 
             self.tukey_default = tukey_default #This sets the default in self.wf whether to use tukey or not. 
 
@@ -952,8 +953,12 @@ class TimeDelayCalculator(FFTPrepper):
     --------
     examples.beacon_data_reader.reader
     '''
-    def calculateTimeDelays(self, ffts, upsampled_waveforms, return_full_corrs=False, align_method=0, print_warning=True, align_method_10_estimate=None, align_method_10_window_ns=8, align_method_13_n=2):
+    def calculateTimeDelays(self, ffts, upsampled_waveforms, return_full_corrs=False, align_method=0, print_warning=True, align_method_10_estimate=None, align_method_10_window_ns=8, align_method_13_n=2, crosspol_delays=False):
         '''
+        This will calculate the time delays based on the supplied waveforms and ffts.  If crosspol_delays == False then 
+        it will perform this calculation for each baseline pair, and return the result.  If crosspol_delays == True then
+        this will calculate the cross correlation between hpol and vpol for the given set of values.
+
         Align method can be one of a few:
         0:  argmax of corrs (default)
         1:  argmax of hilbert of corrs
@@ -966,8 +971,8 @@ class TimeDelayCalculator(FFTPrepper):
         8:  Apply cfd to waveforms to get first pass guess at delays, then pick the best correlation near that. 
         9:  For this I want to use the 'slider' method of visual alignment. I.e. plot the two curves, and have a slide controlling the roll of one of the waveforms. Once satisfied with the roll, lock it down.
         10: This requires expected time delays, and will just snap to the highest value within a small window around that.  Good for fine adjustments after using method 9.  
-        11: For hpol baselines this will use 0, and for vpol it will use 9.
-        12: For vpol baselines this will use 0, and for hpol it will use 9.
+        11: For hpol baselines this will use 0, and for vpol it will use 9.  If crosspol_delays == True then this will behave identical to 9.
+        12: For vpol baselines this will use 0, and for hpol it will use 9.  If crosspol_delays == True then this will behave identical to 9.
         13: This will return the top align_method_13_n peaks of the correlations for each baseline of each event.
         'max_corrs' corresponds to the value of the selected methods peak. 
         '''
@@ -975,15 +980,31 @@ class TimeDelayCalculator(FFTPrepper):
             if print_warning:
                 print('Note that calculateTimeDelays expects the ffts to be the same format as those loaded with loadFilteredFFTs().  If this is not the case the returned time shifts may be incorrect.')
 
-            corrs_fft = numpy.multiply((ffts[self.pairs[:,0]].T/numpy.std(ffts[self.pairs[:,0]],axis=1)).T,(numpy.conj(ffts[self.pairs[:,1]]).T/numpy.std(numpy.conj(ffts[self.pairs[:,1]]),axis=1)).T) / (len(self.waveform_times_corr)//2 + 1)
 
-            if ~numpy.all(numpy.isfinite(corrs_fft)):
-                import pdb; pdb.set_trace()
+            if crosspol_delays == False:
+                pairs = self.pairs
+            else:
+                pairs = self.crosspol_pairs
+                if align_method in [11,12]:
+                    align_method = 9
+                    if print_warning:
+                        print('WARNING!!! Changing align method to method 9 while in crosspol mode.')
+
+            #Handle scenario where waveform has all zeros (which results in 0 SNR which messes up FFT/correlation)
+            bad_channels = numpy.where(numpy.std(ffts,axis=1) == 0)[0] 
+            bad_pairs = numpy.any(numpy.isin(pairs,bad_channels),axis=1) #Calculation will proceed as normal (nan's will exist), but the output of these channel will be overwritten.
+
+            corrs_fft = numpy.multiply((ffts[pairs[:,0]].T/numpy.std(ffts[pairs[:,0]],axis=1)).T,(numpy.conj(ffts[pairs[:,1]]).T/numpy.std(numpy.conj(ffts[pairs[:,1]]),axis=1)).T) / (len(self.waveform_times_corr)//2 + 1)
+
+            # if ~numpy.all(numpy.isfinite(corrs_fft)):
+            #     import pdb; pdb.set_trace()
 
             corrs = numpy.fft.fftshift(numpy.fft.irfft(corrs_fft,axis=1,n=self.final_corr_length),axes=1) * (self.final_corr_length//2) #Upsampling and keeping scale
 
-            if ~numpy.all(numpy.isfinite(corrs)):
-                import pdb; pdb.set_trace()
+            corrs[bad_pairs] = 0.0
+
+            # if ~numpy.all(numpy.isfinite(corrs)):
+            #     import pdb; pdb.set_trace()
 
 
             if align_method == 0:
@@ -1057,12 +1078,12 @@ class TimeDelayCalculator(FFTPrepper):
                 for index, wf in enumerate(upsampled_waveforms):
                     cfd_trig_times.append(min(numpy.where(wf > max(wf)*cfd_thresh)[0])*self.dt_ns_upsampled)
 
-                time_delays_cfd = numpy.zeros(len(self.pairs))
+                time_delays_cfd = numpy.zeros(len(pairs))
                 time_windows_oneside = 5 #ns3
 
                 indices = numpy.zeros(numpy.shape(corrs)[0],dtype=int)
                 max_corrs = numpy.zeros(numpy.shape(corrs)[0])
-                for pair_index, pair in enumerate(self.pairs):
+                for pair_index, pair in enumerate(pairs):
                     time_delays_cfd = cfd_trig_times[int(min(pair))] - cfd_trig_times[int(max(pair))]
                     cut = numpy.logical_and(self.corr_time_shifts < time_delays_cfd + time_windows_oneside, self.corr_time_shifts >time_delays_cfd - time_windows_oneside)
                     indices[pair_index] = numpy.argmax( numpy.multiply( cut , corrs[pair_index] ) )
@@ -1070,7 +1091,7 @@ class TimeDelayCalculator(FFTPrepper):
 
                 if False:
                     times = numpy.arange(len(wf))*self.dt_ns_upsampled
-                    for pair_index, pair in enumerate(self.pairs):
+                    for pair_index, pair in enumerate(pairs):
                         plt.figure()
                         plt.subplot(2,1,1)
                         a = pair[0]
@@ -1111,7 +1132,7 @@ class TimeDelayCalculator(FFTPrepper):
                 '''
 
                 if align_method == 9:
-                    loop_pairs = self.pairs
+                    loop_pairs = pairs
                     indices = numpy.zeros(numpy.shape(corrs)[0],dtype=int)
                     max_corrs = numpy.zeros(numpy.shape(corrs)[0])
                 elif align_method == 11:
@@ -1124,14 +1145,14 @@ class TimeDelayCalculator(FFTPrepper):
                     max_corrs = numpy.max(corrs,axis=1)
 
 
-                time_delays = numpy.zeros(len(self.pairs))
+                time_delays = numpy.zeros(len(pairs))
                 display_half_time_window = 200
                 display_half_time_window_index = int(display_half_time_window/self.dt_ns_upsampled) #In indices
                 slider_half_time_window = 300
                 slider_half_time_window_index = int(slider_half_time_window/self.dt_ns_upsampled) #In indices
 
                 t = numpy.arange(upsampled_waveforms.shape[1])*self.dt_ns_upsampled
-                for pair_index, pair in enumerate(self.pairs):
+                for pair_index, pair in enumerate(pairs):
                     if pair not in loop_pairs:
                         continue
                     #self.dt_ns_upsampled
@@ -1204,7 +1225,7 @@ class TimeDelayCalculator(FFTPrepper):
 
                     indices = numpy.zeros(numpy.shape(corrs)[0],dtype=int)
                     max_corrs = numpy.zeros(numpy.shape(corrs)[0])
-                    for pair_index, pair in enumerate(self.pairs):
+                    for pair_index, pair in enumerate(pairs):
                         search_window_cut = numpy.logical_and(self.corr_time_shifts > (align_method_10_estimate[pair_index] - align_method_10_window_ns),  self.corr_time_shifts < (align_method_10_estimate[pair_index] + align_method_10_window_ns) )
                         search_window_indices = numpy.where(search_window_cut)[0]
 
@@ -1255,14 +1276,14 @@ class TimeDelayCalculator(FFTPrepper):
                             plt.legend()
                         import pdb; pdb.set_trace()
                 if return_full_corrs == True:
-                    return indices, self.corr_time_shifts[indices], max_corrs, self.pairs, corrs
+                    return indices, self.corr_time_shifts[indices], max_corrs, pairs, corrs
                 else:
-                    return indices, self.corr_time_shifts[indices], max_corrs, self.pairs
+                    return indices, self.corr_time_shifts[indices], max_corrs, pairs
             else:
                 if return_full_corrs == True:
-                    return indices, time_shifts, max_corrs, self.pairs, corrs
+                    return indices, time_shifts, max_corrs, pairs, corrs
                 else:
-                    return indices, time_shifts, max_corrs, self.pairs
+                    return indices, time_shifts, max_corrs, pairs
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -1270,8 +1291,12 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateTimeDelaysFromEvent(self, eventid, return_full_corrs=False, align_method=0, hilbert=False, align_method_10_estimate=None, align_method_10_window_ns=8, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0,sine_subtract=False):
+    def calculateTimeDelaysFromEvent(self, eventid, return_full_corrs=False, align_method=0, hilbert=False, align_method_10_estimate=None, align_method_10_window_ns=8, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0,sine_subtract=False, crosspol_delays=False):
         '''
+        If crosspol_delays == False then it will perform this calculation for each baseline pair, and return the result.
+        If crosspol_delays == True then this will calculate the cross correlation between hpol and vpol for the given 
+        set of values.
+
         Align method can be one of a few:
         0: argmax of corrs (default)
         1: argmax of hilbert of corrs
@@ -1288,7 +1313,7 @@ class TimeDelayCalculator(FFTPrepper):
             ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid,load_upsampled_waveforms=True,hilbert=hilbert, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=sine_subtract)
             
 
-            return self.calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=return_full_corrs, align_method=align_method, print_warning=False, align_method_10_estimate=align_method_10_estimate, align_method_10_window_ns=align_method_10_window_ns)
+            return self.calculateTimeDelays(ffts, upsampled_waveforms, return_full_corrs=return_full_corrs, align_method=align_method, print_warning=False, align_method_10_estimate=align_method_10_estimate, align_method_10_window_ns=align_method_10_window_ns, crosspol_delays=crosspol_delays)
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -1296,8 +1321,12 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculateMultipleTimeDelays(self, eventids, align_method=None,hilbert=False,plot=False,hpol_cut=None,vpol_cut=None,colors=None, align_method_10_estimates=None, align_method_10_window_ns=8, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0,sine_subtract=False):
+    def calculateMultipleTimeDelays(self, eventids, align_method=None, hilbert=False, plot=False, hpol_cut=None, vpol_cut=None, colors=None, align_method_10_estimates=None, align_method_10_window_ns=8, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0,sine_subtract=False, crosspol_delays=False):
         '''
+        If crosspol_delays == False then it will perform this calculation for each baseline pair, and return the result.
+        If crosspol_delays == True then this will calculate the cross correlation between hpol and vpol for the given 
+        set of values.
+
         If colors is some set of values that matches len(eventids) then they will be used to color the event curves.
         '''
         try:
@@ -1306,6 +1335,12 @@ class TimeDelayCalculator(FFTPrepper):
             timeshifts = []
             max_corrs = []
             print('Calculating time delays:')
+            
+            if crosspol_delays == False:
+                pairs = self.pairs
+            else:
+                pairs = self.crosspol_pairs
+
             if plot == True:
                 print('Warning!  This likely will run out of ram and fail. ')
                 figs = []
@@ -1318,10 +1353,10 @@ class TimeDelayCalculator(FFTPrepper):
                         norm = None
                 else:
                     norm = None
-                for pair in self.pairs:
+                for pair in pairs:
                     fig = plt.figure()
                     plt.suptitle(str(self.reader.run))
-                    fig.canvas.set_window_title('%s%i-%i x-corr'%(['H','V'][pair[0]%2],pair[0]//2,pair[1]//2))
+                    fig.canvas.set_window_title('%s%i-%s%i x-corr'%(['H','V'][pair[0]%2],pair[0]//2,['H','V'][pair[1]%2],pair[1]//2))
                     plt.ylabel('%s x-corr'%str(pair))
                     plt.xlabel('Time Delay (ns)')
                     plt.minorticks_on()
@@ -1348,19 +1383,21 @@ class TimeDelayCalculator(FFTPrepper):
                 sys.stdout.flush()
                 if align_method is None:
                     if plot == True:
-                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=sine_subtract) #Using default of the other function
+                        indices, time_shift, corr_value, _pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=sine_subtract, crosspol_delays=crosspol_delays) #Using default of the other function
                     else:
-                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=sine_subtract) #Using default of the other function
+                        indices, time_shift, corr_value, _pairs = self.calculateTimeDelaysFromEvent(eventid,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=sine_subtract, crosspol_delays=crosspol_delays) #Using default of the other function
                 else:
                     if plot == True:
-                        indices, time_shift, corr_value, pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=sine_subtract)
+                        indices, time_shift, corr_value, _pairs, corrs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=True,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=sine_subtract, crosspol_delays=crosspol_delays)
                     else:
-                        indices, time_shift, corr_value, pairs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=sine_subtract)
+                        indices, time_shift, corr_value, _pairs = self.calculateTimeDelaysFromEvent(eventid,align_method=align_method,hilbert=hilbert,return_full_corrs=False,align_method_10_estimate=align_method_10_estimates[event_index],align_method_10_window_ns=align_method_10_window_ns,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length,sine_subtract=sine_subtract, crosspol_delays=crosspol_delays)
+                
+
                 timeshifts.append(time_shift)
                 max_corrs.append(corr_value)
                 if plot == True:
 
-                    for index, pair in enumerate(self.pairs):
+                    for index, pair in enumerate(pairs):
                         #plotting less points by plotting subset of data
                         time_mid = self.corr_time_shifts[numpy.argmax(corrs[index])]
                         
@@ -1405,6 +1442,16 @@ class TimeDelayCalculator(FFTPrepper):
                                 axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.8,c=norm_colors[event_index],label=colors[event_index])
                             else:
                                 axs[index].plot(self.corr_time_shifts[index_cut_min:index_cut_max], corrs[index][index_cut_min:index_cut_max],alpha=0.8)
+                            # indices, self.corr_time_shifts[indices], max_corrs, pairs, corrs
+                            # if norm is not None:
+                            #     axs[index].plot(self.corr_time_shifts, corrs[index],alpha=0.8,c=norm_colors[event_index],label=colors[event_index])
+                            # else:
+                            #     axs[index].plot(self.corr_time_shifts, corrs[index],alpha=0.8)
+                            
+
+                            axs[index].axvline(time_shift[index],linewidth=0.5,c='k',label='Max Value at t = %0.2f'%(time_shift[index]))
+
+
             if plot == True:
                 for ax in axs:
                     ax.legend()
@@ -1413,13 +1460,14 @@ class TimeDelayCalculator(FFTPrepper):
             timeshifts = numpy.array(timeshifts)
             max_corrs = numpy.array(max_corrs)
 
+
             if len(numpy.shape(timeshifts)) == 3:
                 timeshifts = numpy.transpose(timeshifts,axes=(1,0,2))
                 max_corrs = numpy.transpose(max_corrs,axes=(1,0,2))
             else:
                 timeshifts = numpy.transpose(timeshifts)
                 max_corrs = numpy.transpose(max_corrs)
-            return timeshifts, max_corrs, self.pairs
+            return timeshifts, max_corrs, pairs
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)

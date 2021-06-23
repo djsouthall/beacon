@@ -185,7 +185,41 @@ site3_measured_time_delays_hilbert_errors_hpol =  [((0, 1), 0.052428389377522186
 site3_measured_time_delays_hilbert_vpol =  [((0, 1), -95.30265032203047), ((0, 2), -150.3612627337264), ((0, 3), -175.88155062409197), ((1, 2), -55.06965132126639), ((1, 3), -80.55266965411217), ((2, 3), -25.524379719980214)]
 site3_measured_time_delays_hilbert_errors_vpol =  [((0, 1), 0.03654878810011606), ((0, 2), 0.044076823274307404), ((0, 3), 0.04115323593715623), ((1, 2), 0.039281585194972476), ((1, 3), 0.04240838492773853), ((2, 3), 0.04449409255674249)]
 
+cw_sources = {}
 
+time_delay_dict = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76], '[0, 3]': [-15.82], '[1, 2]': [173.4], '[1, 3]': [61.77], '[2, 3]': [-111.6]}}
+
+cw_sources['khsv'] = {}
+cw_sources['khsv']['latlonel'] = numpy.array([36.008611, -115.005556, 3316*0.3048 + 10])
+period = 17.54 #ns (57 MHz)
+cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]'   :[ -77.6           ],\
+                                                 '[0, 2]'   :[ 95.76  - period ],\
+                                                 '[0, 3]'   :[ -15.82          ],\
+                                                 '[1, 2]'   :[ 173.4  - period ],\
+                                                 '[1, 3]'   :[ 61.77           ],\
+                                                 '[2, 3]'   :[ -111.6 + period ]}}
+# cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]'   : -77.6     + period*(numpy.arange(5) - 2),\
+#                                                  '[0, 2]'   : 95.76     + period*(numpy.arange(5) - 2),\
+#                                                  '[0, 3]'   : -15.82    + period*(numpy.arange(5) - 2),\
+#                                                  '[1, 2]'   : 173.4     + period*(numpy.arange(5) - 2),\
+#                                                  '[1, 3]'   : 61.77     + period*(numpy.arange(5) - 2),\
+#                                                  '[2, 3]'   : -111.6    + period*(numpy.arange(5) - 2)}}
+#cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76], '[0, 3]': [-15.82], '[1, 2]': [173.4], '[1, 3]': [61.77], '[2, 3]': [-111.6]}}
+#cw_sources['khsv']['time_delay_dict'] = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76 + period, 95.76, 95.76 - period,  95.76 - 2*period], '[0, 3]': [-15.82], '[1, 2]': [173.4 + period, 173.4, 173.4 - period,  173.4 - 2*period], '[1, 3]': [61.77], '[2, 3]': [-111.6 + 2*period, -111.6 + period, -111.6, -111.6 - period, -111.6 - 2*period]}}
+
+cw_sources['khsv']['data_slicer_dict'] = {'std_h':[0.5,1.5],'std_v':[0.5,0.9],'snr_v':[8.0,9.0]}
+cw_sources['khsv']['data_slicer_run'] = 1650
+
+cable_delays = info.loadCableDelays(return_raw=True)
+cable_delay_differences = cable_delays['hpol'] - cable_delays['vpol']
+
+#Assuming the hpol time delays are measured accurately and so are our cable delays, this will give what we would predict the measured (raw without accounting for cable delays) time delays of the vpol to be.  I do this to attempt to use the hpol time delays in a vpol calibration.
+cw_sources['khsv']['time_delay_dict']['vpol'] = {   '[0, 1]' : [-77.6   - (cable_delays['hpol'][0] - cable_delays['hpol'][1]) + (cable_delays['vpol'][0] - cable_delays['vpol'][1]) ],\
+                                                    '[0, 2]' : [95.76   - (cable_delays['hpol'][0] - cable_delays['hpol'][2]) + (cable_delays['vpol'][0] - cable_delays['vpol'][2]) ],\
+                                                    '[0, 3]' : [-15.82  - (cable_delays['hpol'][0] - cable_delays['hpol'][3]) + (cable_delays['vpol'][0] - cable_delays['vpol'][3]) ],\
+                                                    '[1, 2]' : [173.4   - (cable_delays['hpol'][1] - cable_delays['hpol'][2]) + (cable_delays['vpol'][1] - cable_delays['vpol'][2]) ],\
+                                                    '[1, 3]' : [61.77   - (cable_delays['hpol'][1] - cable_delays['hpol'][3]) + (cable_delays['vpol'][1] - cable_delays['vpol'][3]) ],\
+                                                    '[2, 3]' : [-111.6  - (cable_delays['hpol'][2] - cable_delays['hpol'][3]) + (cable_delays['vpol'][2] - cable_delays['vpol'][3]) ]}
 
 
 
@@ -230,130 +264,218 @@ if __name__ == '__main__':
         #included_airplanes = [ '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166']
         if False:
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 1.0
             valley_weight = 1.0
             airplane_weight = 1.0
             # Southern Calibration
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'strip'#options are 'cor' or 'strip'.  If 'cor' chosen then the most impulsive event will be chosen and use to generate maps.
             if mode == 'hpol':
                 use_sources = ['Solar Plant']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
                 included_pulsers = ['run1507','run1509','run1511'] #Only included if include_pulsers == True
                 included_airplanes =      [ '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166']
+                included_cw_sources = []
             elif mode == 'vpol':
                 use_sources = ['East Dyer Substation','Goldfield KGFN-FM']
                 included_pulsers = ['run1507','run1509','run1511'] #Only included if include_pulsers == True
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
+                included_cw_sources = []
         elif False:
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 1.0
             valley_weight = 1.0
             airplane_weight = 1.0
             # Southern Calibration
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'strip'#options are 'cor' or 'strip'.  If 'cor' chosen then the most impulsive event will be chosen and use to generate maps.
             if mode == 'hpol':
                 use_sources = ['East Dyer Substation','Goldfield KGFN-FM','Silver Peak Substation']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
                 included_pulsers = ['run1507','run1509'] #Only included if include_pulsers == True
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
+                included_cw_sources = []
             elif mode == 'vpol':
                 use_sources = ['East Dyer Substation','Goldfield KGFN-FM']
                 included_pulsers = ['run1507','run1509'] #Only included if include_pulsers == True
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
+                included_cw_sources = []
         elif False:
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 1.0
             valley_weight = 1.0
             airplane_weight = 1.0
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'strip'#options are 'cor' or 'strip'.  If 'cor' chosen then the most impulsive event will be chosen and use to generate maps.
             if mode == 'hpol':
                 # Northern Calibration
                 #use_sources = ['Tonopah KTPH','Solar Plant','Silver Peak Substation']#,'Beatty Substation','Palmetto Cell Tower', 'Cedar Peak'] #Southern Calibration
                 use_sources = ['Tonopah KTPH','Solar Plant']
                 included_pulsers = ['run1507','run1509']#['run1511'] #Only included if include_pulsers == True
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
+                included_cw_sources = []
             elif mode == 'vpol':
                 use_sources = ['Tonopah KTPH','Solar Plant']
                 included_pulsers = ['run1507','run1509']#['run1511'] #Only included if include_pulsers == True
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
+                included_cw_sources = []
         
         elif False:
-            pulser_weight = 0.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
-            valley_weight = 1.0
-            airplane_weight = 1.0
+            pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 0.0
+            valley_weight = 0.0
+            airplane_weight = 0.0
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'strip'#options are 'cor' or 'strip'.  If 'cor' chosen then the most impulsive event will be chosen and use to generate maps.
             if mode == 'hpol':
-                use_sources = ['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
+                use_sources = []#['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
+                included_cw_sources = []
             elif mode == 'vpol':
                 use_sources = ['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
+                included_cw_sources = []
         elif False:
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 1.0
             valley_weight = 1.0
             airplane_weight = 1.0
             unknown_source_dir_valley = True #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'strip'#options are 'cor' or 'strip'.  If 'cor' chosen then the most impulsive event will be chosen and use to generate maps.
             unique_cut_subset = ['Solar Plant','Tonopah KTPH','West Dyer Substation','East Dyer Substation','Beatty Mountain Cell Tower','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation'] #these are all uniquely identified clusters.  Their names are not certain sources
             if mode == 'hpol':
                 use_sources = ['Solar Plant','Tonopah KTPH','West Dyer Substation','East Dyer Substation','Beatty Mountain Cell Tower','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation']#['Solar Plant','Tonopah KTPH','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
+                included_cw_sources = []
             elif mode == 'vpol':
                 use_sources = ['East Dyer Substation']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
+                included_cw_sources = []
         elif False:
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 1.0
             valley_weight = 1.0
             airplane_weight = 1.0
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'strip'#options are 'cor' or 'strip'.  If 'cor' chosen then the most impulsive event will be chosen and use to generate maps.
             unique_cut_subset = ['Solar Plant','Tonopah KTPH','West Dyer Substation','East Dyer Substation','Beatty Mountain Cell Tower','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation'] #these are all uniquely identified clusters.  Their names are not certain sources
             if mode == 'hpol':
                 use_sources = ['Solar Plant']#['Solar Plant            ','Tonopah KTPH','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
+                included_cw_sources = []
             elif mode == 'vpol':
                 use_sources = ['Solar Plant']#'East Dyer Substation',
                 included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
-        elif True:
-            unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+                included_cw_sources = []
+        elif False:
+            unknown_source_dir_valley = True #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'strip'#options are 'cor' or 'strip'.  If 'cor' chosen then the most impulsive event will be chosen and use to generate maps.
             if mode == 'hpol':
-                use_sources = ['South Dyer Town','Quarry Substation']#['South Dyer Town','Quarry Substation']#,'Palmetto Cell Tower','Beatty Airport Vortac'#['Dyer Cell Tower', 'Test Site A']#,'Miller Substation','Dyer House Antenna A','Cedar Peak']#['Miller Substation']#['Dyer Cell Tower','Miller Substation','Dyer House Antenna A','Cedar Peak']
+                use_sources = ['Miller Substation','Palmetto Cell Tower','Tonopah AFS GATR Site']#['South Dyer Town','Quarry Substation']#['South Dyer Town','Quarry Substation']#,'Palmetto Cell Tower','Beatty Airport Vortac'#['Dyer Cell Tower', 'Test Site A']#,'Miller Substation','Dyer House Antenna A','Cedar Peak']#['Miller Substation']#['Dyer Cell Tower','Miller Substation','Dyer House Antenna A','Cedar Peak']
                 included_pulsers = []
-                included_airplanes = ['1774-178']#['1728-62026','1773-14413','1773-63659','1774-178']##
+                included_airplanes = ['1728-62026']#['1774-178']#['1728-62026','1773-14413','1773-63659','1774-178']##
+                included_cw_sources = ['khsv']
             elif mode == 'vpol':
                 use_sources = ['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#'East Dyer Substation',
                 included_pulsers = []#
                 included_airplanes = ['1728-62026','1773-14413','1773-63659','1774-178']
+                included_cw_sources = []
             
             pulser_weight  = len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 1.0
             valley_weight = len(use_sources)
-            airplane_weight = 5*len(included_airplanes)
+            airplane_weight = 0#5*len(included_airplanes)
 
         elif False:
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'strip'#options are 'cor' or 'strip'.  If 'cor' chosen then the most impulsive event will be chosen and use to generate maps.
             if mode == 'hpol':
                 use_sources = ['Tokop','Palmetto Cell Tower','Dyer Cell Tower','Tonopah AFS GATR Site']#['South Dyer Town','Quarry Substation']#,'Palmetto Cell Tower','Beatty Airport Vortac'#['Dyer Cell Tower', 'Test Site A']#,'Miller Substation','Dyer House Antenna A','Cedar Peak']#['Miller Substation']#['Dyer Cell Tower','Miller Substation','Dyer House Antenna A','Cedar Peak']
                 included_pulsers = []
                 included_airplanes = ['1774-178']#['1774-178']#['1728-62026','1773-14413','1773-63659','1774-178']##
+                included_cw_sources = []
             elif mode == 'vpol':
                 use_sources = ['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#'East Dyer Substation',
                 included_pulsers = []#
                 included_airplanes = ['1728-62026','1773-14413','1773-63659','1774-178']
+                included_cw_sources = []
             
             pulser_weight  = len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 1.0
             valley_weight = len(use_sources)
             airplane_weight = 5*len(included_airplanes)
+
+        elif False:
+            unknown_source_dir_valley = True #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'gaus'#'strip'#'cor'#options are 'cor' or 'strip'.  If 'cor' ch,osen then the most impulsive event will be chosen and use to generate maps.
+            if mode == 'hpol':
+                #use_sources = ['Booker Antenna','Miller Substation','Tonopah KTPH','KNKN223','Beatty Airport Vortac']#['Tonopah AFS GATR Site','Beatty Airport Vortac']#['Miller Substation', 'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#,'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#['South Dyer Town','Quarry Substation']#['South Dyer Town','Quarry Substation']#,'Palmetto Cell Tower','Beatty Airport Vortac'#['Dyer Cell Tower', 'Test Site A']#,'Miller Substation','Dyer House Antenna A','Cedar Peak']#['Miller Substation']#['Dyer Cell Tower','Miller Substation','Dyer House Antenna A','Cedar Peak']
+                use_sources = [ 'Northern Cell Tower',\
+                                'Tonopah KTPH',\
+                                'Tonopah AFS GATR Site',\
+                                'Miller Substation',\
+                                'Tonopah Vortac',\
+                                'Dyer Cell Tower',\
+                                'East Dyer Substation',\
+                                'Beatty Airport Antenna',\
+                                'Palmetto Cell Tower',\
+                                'Cedar Peak',\
+                                'Silver Peak Substation']
+                included_pulsers = []#['run1509']#,'run1507','run1511']#
+                included_airplanes = []#['1728-62026']#['1774-178']#['1728-62026','1773-14413','1773-63659','1774-178']##
+                included_cw_sources = []#['khsv']
+            elif mode == 'vpol':
+                #Don't use palmetto for vpol
+                use_sources = ['Tonopah AFS GATR Site','Beatty Airport Vortac','KNKN223']#['Miller Substation']#['Miller Substation','Tonopah AFS GATR Site','Beatty Airport Vortac']#['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#'East Dyer Substation',
+                included_pulsers = []#['run1509']#,'run1507','run1511']#
+                included_airplanes = []
+                included_cw_sources = ['khsv']
+            
+            pulser_weight  = 1.0#len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 1.0
+            valley_weight = 1.0#len(use_sources)
+            airplane_weight = 1.0#5*len(included_airplanes)
+
+        elif True:
+            unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'strip'#'cor'#options are 'cor' or 'strip'.  If 'cor' ch,osen then the most impulsive event will be chosen and use to generate maps.
+            if mode == 'hpol':
+                #use_sources = ['Booker Antenna','Miller Substation','Tonopah KTPH','KNKN223','Beatty Airport Vortac']#['Tonopah AFS GATR Site','Beatty Airport Vortac']#['Miller Substation', 'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#,'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#['South Dyer Town','Quarry Substation']#['South Dyer Town','Quarry Substation']#,'Palmetto Cell Tower','Beatty Airport Vortac'#['Dyer Cell Tower', 'Test Site A']#,'Miller Substation','Dyer House Antenna A','Cedar Peak']#['Miller Substation']#['Dyer Cell Tower','Miller Substation','Dyer House Antenna A','Cedar Peak']
+                use_sources = [ 'A', 'B', 'C', 'D', 'E', 'F'] #'E' looks like it has particularly bad zenith, might be close and obstructed.
+                included_pulsers = []#['run1509']#,'run1507','run1511']#
+                included_airplanes = []#['1728-62026']#['1774-178']#['1728-62026','1773-14413','1773-63659','1774-178']##
+                included_cw_sources = ['khsv']
+            elif mode == 'vpol':
+                #Don't use palmetto for vpol
+                use_sources = [ 'A', 'B',  'D']#['Miller Substation']#['Miller Substation','Tonopah AFS GATR Site','Beatty Airport Vortac']#['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#'East Dyer Substation',
+                included_pulsers = []#['run1509']#,'run1507','run1511']#
+                included_airplanes = []
+                included_cw_sources = ['khsv']
+            
+            pulser_weight  = 1.0#len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 1.0
+            valley_weight = 1.0#len(use_sources)
+            airplane_weight = 1.0#5*len(included_airplanes)
             
         else:
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 1.0
             valley_weight = 1.0
             airplane_weight = 1.0
             unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'strip'#options are 'cor' or 'strip'.  If 'cor' chosen then the most impulsive event will be chosen and use to generate maps.
             use_sources = [] #iterating through potential sources until something makes sense
             included_pulsers = ['run1507','run1509','run1511']#,'run1511' #Only included if include_pulsers == True
             included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
 
 
-        #only_plot = ['Booker Antenna','Miller Substation','Tonopah Airport Antenna','Tonopah KTPH','KNKN223','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna','Dyer House Antenna A']
+        if unknown_source_dir_valley == True:
+            print('USING UNKNOWN SOURCE DIR FOR VALLEY SOURCES IN MODE: %s'%unknown_mode)
+        #only_plot = ['Booker Antenna','Miller Substation','Tonopah Airport Antenna','Tonopah KTPH','KNKN223','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna','Dyer House Antenna A','Beatty Airport Vortac']
         only_plot = use_sources
         # only_plot.append('Concrete Substation')
         # only_plot.append('Dyer Cell Tower')
@@ -414,27 +536,44 @@ if __name__ == '__main__':
         # only_plot.append('Beatty Substation')
 
         # Azimuths
+        # Source Directions based on ENU, sorted North to South are:
+        # Dyer House Antenna A : 49.777
         # Northern Cell Tower : 49.393
+        # KNKN223 : 49.390
         # Quarry Substation : 46.095
         # Solar Plant : 43.441
+        # Miller Substation : 41.522
+        # Tonopah AFS GATR Site : 34.267
+        # Nye County Sherriff : 32.643
+        # Booker Antenna : 31.535
         # Tonopah KTPH : 30.265
         # Dyer Cell Tower : 29.118
+        # Tonopah Airport Antenna : 27.992
         # Tonopah Vortac : 25.165
         # Silver Peak Lithium Mine : 19.259
         # Silver Peak Substation : 19.112
         # Silver Peak Town Antenna : 18.844
         # Past SP Substation : 18.444
+        # Concrete Substation : 16.432
+        # Test Site A : 14.821
         # Goldfield Hill Tower : 10.018
         # Goldield Town Tower : 8.967
         # Goldfield KGFN-FM : 8.803
+        # Dome Thing : 7.449
         # Cedar Peak : 4.992
+        # Jack Rabbit Knob : 4.582
         # West Dyer Substation : 3.050
+        # South Dyer Town : -2.629
         # Black Mountain : -13.073
         # Palmetto Cell Tower : -13.323
         # East Dyer Substation : -17.366
+        # Tokop : -20.082
+        # Oasis : -21.666
         # Beatty Substation : -29.850
+        # Beatty Mountain Cell Tower : -30.127
         # Beatty Airport Antenna : -31.380
         # Beatty Airport Vortac : -33.040
+
 
 
 
@@ -444,6 +583,7 @@ if __name__ == '__main__':
         plot_time_delay_calculations = False
         plot_time_delays_on_maps = True
         plot_expected_direction = True
+        plot_cw_overlap = True
         limit_events = 10 #Number of events use for time delay calculation
         #only_plot = ['East Dyer Substation','West Dyer Substation','Northern Cell Tower','Solar Plant','Quarry Substation','Tonopah KTPH','Dyer Cell Tower','Tonopah Vortac','Beatty Airport Vortac','Palmetto Cell Tower','Cedar Peak','Goldfield Hill Tower','Goldield Town Tower','Goldfield KGFN-FM','Silver Peak Town Antenna','Silver Peak Lithium Mine','Past SP Substation','Silver Peak Substation']#['Solar Plant','Tonopah KTPH','Beatty Airport Vortac','Palmetto Cell Tower','Goldfield Hill Tower','Silver Peak Substation']
         impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
@@ -458,13 +598,13 @@ if __name__ == '__main__':
         final_corr_length = 2**17
         cor_upsample = final_corr_length
 
-        crit_freq_low_pass_MHz = None#[80,70,70,70,70,70,60,70]#90#
-        low_pass_filter_order = None#[0,8,8,8,10,8,3,8]#8#
+        crit_freq_low_pass_MHz = 85#None#[80,70,70,70,70,70,60,70]#90#
+        low_pass_filter_order = 6#None#[0,8,8,8,10,8,3,8]#8#
 
-        crit_freq_high_pass_MHz = None#70#None#60
-        high_pass_filter_order = None#6#None#8
+        crit_freq_high_pass_MHz = 25#70#None#60
+        high_pass_filter_order = 8#6#None#8
 
-        sine_subtract = False
+        sine_subtract = True
         sine_subtract_min_freq_GHz = 0.03
         sine_subtract_max_freq_GHz = 0.13
         sine_subtract_percent = 0.03
@@ -517,48 +657,47 @@ if __name__ == '__main__':
         time_delay_measurement_uncertainty_ns = 1 #ns, The time window used to as error in chi^2 for time delay.  If you are assuming that the time delays are 100% accurate then this is usually sub ns.  But if you think it is slipping cycles you could give this a larger value. 
         include_sanity = False #Slow
         plot_predicted_time_shifts = False
-        random_offset_amount = 0.1#0.25 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
-        included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
+        random_offset_amount = 1#0.25 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
+        included_antennas_lumped = [0,1,2,3]#[0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
         included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
-        include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
+        include_baselines = [0,1,2,3,4,5]#[1,3,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
         plot_overlap = False #Will plot the overlap map for time delays from each source.
-        overlap_window_ns = 50 #ns The time window used to define sufficient overlap. 
-        overlap_goal = overlap_window_ns*len(included_antennas_channels)*len(use_sources) #This shouldn't be varied, vary the error if anything.  This is the portion of chi^2 coming from overlapping valley source time delays.  The measured map max will be subtracted from this in a chi^2 calculation.  
-        overlap_error = overlap_goal/50 #The error portion of chi^2 coming from overlapping valley source time delays will be devided by this number.
+        overlap_window_ns = 10 #ns The time window used to define sufficient overlap. 
+        overlap_value_mode = 'gaus' #'distance'
         limit_array_plane_azimuth_range = False #Should be seen as a temporary test.  Doesn't use any errors and isn't in standard chi^2 format.
         allowed_array_plane_azimuth_range = 20 #plus or minus this from East is not impacted by weighting. 
 
         #Limits 
-        initial_step_x = 2#0.75 #m
-        initial_step_y = 2#0.75 #m
-        initial_step_z = 2#0.75 #m
+        initial_step_x = 1#2.0 #m
+        initial_step_y = 1#2.0 #m
+        initial_step_z = 1#0.75 #m
         initial_step_cable_delay = 0.5 #ns
-        cable_delay_guess_range = 1 #ns
-        antenna_position_guess_range_x = 10#5#3#5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_y = 10#5#3#5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_z = 4#2#4#3#2#3 #Limit to how far from input phase locations to limit the parameter space to
+        cable_delay_guess_range = 100 #ns
+        antenna_position_guess_range_x = 1#20#10#3#5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = 1#20#10#3#5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_z = 1#20#5#4#3#2#3 #Limit to how far from input phase locations to limit the parameter space to
 
         #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
         manual_offset_ant0_x = 0#0#0#14
         manual_offset_ant0_y = 0#0#0#-2.7
         manual_offset_ant0_z = 0#0#0#-17
 
-        manual_offset_ant1_x = 0#-1#0#-3.23884999 #-1#0    + manual_offset_ant0_x
-        manual_offset_ant1_y = 0#5#0#-0.54016485 #-1#-2   + manual_offset_ant0_y
-        manual_offset_ant1_z = 0#0#0#-5.  #-1#0    + manual_offset_ant0_z
+        manual_offset_ant1_x = 0#0#-1#0#-3.23884999 #-1#0    + manual_offset_ant0_x
+        manual_offset_ant1_y = 0#0#5#0#-0.54016485 #-1#-2   + manual_offset_ant0_y
+        manual_offset_ant1_z = 0#-5#0#-5.  #-1#0    + manual_offset_ant0_z
 
-        manual_offset_ant2_x = 0#0#0#5. #8#0    + manual_offset_ant0_x
-        manual_offset_ant2_y = 0#-5#0#-6.59619457 #-5#-4   + manual_offset_ant0_y
-        manual_offset_ant2_z = 0#12#0#9. #5#0    + manual_offset_ant0_z
+        manual_offset_ant2_x = 0#3#0#0#0#5. #8#0    + manual_offset_ant0_x
+        manual_offset_ant2_y = 0#10#0#-5#0#-6.59619457 #-5#-4   + manual_offset_ant0_y
+        manual_offset_ant2_z = 0#0#0#-5#12#0#9. #5#0    + manual_offset_ant0_z
 
-        manual_offset_ant3_x = 0#-3#0#-3#0    + manual_offset_ant0_x
-        manual_offset_ant3_y = 0#0#0#0#0    + manual_offset_ant0_y
-        manual_offset_ant3_z = 0#3#0#3#-6   + manual_offset_ant0_z
+        manual_offset_ant3_x = 0#0#-3#0#-3#0    + manual_offset_ant0_x
+        manual_offset_ant3_y = 0#0#0#0#0#0    + manual_offset_ant0_y
+        manual_offset_ant3_z = 0#-5#0#3#-6   + manual_offset_ant0_z
 
 
-        fix_ant0_x = False
-        fix_ant0_y = False
-        fix_ant0_z = False
+        fix_ant0_x = True
+        fix_ant0_y = True
+        fix_ant0_z = True
         fix_ant1_x = False
         fix_ant1_y = False
         fix_ant1_z = False
@@ -568,7 +707,7 @@ if __name__ == '__main__':
         fix_ant3_x = False
         fix_ant3_y = False
         fix_ant3_z = False
-        fix_cable_delay0 = False
+        fix_cable_delay0 = True
         fix_cable_delay1 = False
         fix_cable_delay2 = False
         fix_cable_delay3 = False
@@ -578,18 +717,23 @@ if __name__ == '__main__':
             fix_ant0_x = True
             fix_ant0_y = True
             fix_ant0_z = True
+            fix_cable_delay0 = True
+
         if not(1 in included_antennas_lumped):
             fix_ant1_x = True
             fix_ant1_y = True
             fix_ant1_z = True
+            fix_cable_delay1 = True
         if not(2 in included_antennas_lumped):
             fix_ant2_x = True
             fix_ant2_y = True
             fix_ant2_z = True
+            fix_cable_delay2 = True
         if not(3 in included_antennas_lumped):
             fix_ant3_x = True
             fix_ant3_y = True
             fix_ant3_z = True
+            fix_cable_delay3 = True
 
         #This math is to set the pairs to include in the calculation.  Typically it will be all of them, but if the option is enabled to remove some
         #from the calculation then this will allow for that to be done.
@@ -597,14 +741,20 @@ if __name__ == '__main__':
         pairs_cut = []
         for pair_index, pair in enumerate(numpy.array(list(itertools.combinations((0,1,2,3), 2)))):
             pairs_cut.append(numpy.logical_and(numpy.all(numpy.isin(numpy.array(pair),included_antennas_lumped)), pair_index in include_baselines)) #include_baselines Overwritten when antennas removed.
-
         include_baselines = numpy.where(pairs_cut)[0] #Effectively the same as the pairs_cut but index based for baselines.
         print('Including baseline pairs:')
         print(pairs[pairs_cut])
+        if overlap_value_mode == 'distance':
+            overlap_goal = overlap_window_ns*len(include_baselines)#overlap_window_ns*len(included_antennas_channels)*len(use_sources) #This shouldn't be varied, vary the error if anything.  This is the portion of chi^2 coming from overlapping valley source time delays.  The measured map max will be subtracted from this in a chi^2 calculation.  
+            overlap_error = overlap_goal/50 #The error portion of chi^2 coming from overlapping valley source time delays will be devided by this number.
+        elif overlap_value_mode == 'gaus':
+            overlap_goal = len(include_baselines) #the maps are summed rather than averaged.  The gaussian is normalized such that it's peak value is 1.
+            overlap_error = overlap_window_ns / 2.355 #Standard deviation as utilized in the overlap map generator.
+        
 
 
         #I think adding an absolute time offset for each antenna and letting that vary could be interesting.  It could be used to adjust the cable delays.
-        cable_delays = info.loadCableDelays()[mode]
+        cable_delays = info.loadCableDelays(return_raw=True)[mode]
         print('Potential RFI Source Locations.')
         sources_ENU, data_slicer_cut_dict = info.loadValleySourcesENU()
 
@@ -731,6 +881,7 @@ if __name__ == '__main__':
         else:
             _eventids = numpy.arange(ds.reader.N())
         time_delay_dict = {}
+        time_delay_dict_eventids = {}
         for source_key, cut_dict in data_slicer_cut_dict.items():
             if plot_time_delays_on_maps == False:
                 #Only need some time delays
@@ -744,6 +895,7 @@ if __name__ == '__main__':
             roi_eventids = numpy.intersect1d(ds.getCutsFromROI(source_key),_eventids)
             roi_impulsivity = ds.getDataFromParam(roi_eventids,'impulsivity_h')
             roi_impulsivity_sort = numpy.argsort(roi_impulsivity)[::-1] #Reverse sorting so high numbers are first.
+            time_delay_dict_eventids[source_key] = roi_eventids[roi_impulsivity_sort]
             
             if len(roi_eventids) > limit_events:
                 print('LIMITING TIME DELAY CALCULATION TO %i MOST IMPULSIVE EVENTS'%limit_events)
@@ -751,7 +903,6 @@ if __name__ == '__main__':
         
             print('Calculating time delays for %s'%source_key)
             time_shifts, corrs, td_pairs = tdc.calculateMultipleTimeDelays(roi_eventids,align_method=0,hilbert=hilbert,plot=numpy.logical_and(source_key in use_sources,plot_time_delay_calculations), sine_subtract=sine_subtract)
-
             if mode == 'hpol':
                 # for event_index, eventid in enumerate(roi_eventids):
                 #     print(eventid)
@@ -892,6 +1043,11 @@ if __name__ == '__main__':
                 plane_ax.set_zlabel('Up (km)',linespacing=10)
                 plane_ax.dist = 10
 
+        if len(included_cw_sources) != 0:
+            origin = info.loadAntennaZeroLocation()
+            for key in included_cw_sources:
+                cw_sources[key]['enu'] = numpy.array(pm.geodetic2enu(cw_sources['khsv']['latlonel'][0],cw_sources['khsv']['latlonel'][1],cw_sources['khsv']['latlonel'][2],origin[0],origin[1],origin[2]))
+
 
 
         if cable_delay_guess_range is not None:
@@ -967,10 +1123,14 @@ if __name__ == '__main__':
         chi2_fig = plt.figure()
         chi2_fig.canvas.set_window_title('Initial Positions')
         chi2_ax = chi2_fig.add_subplot(111, projection='3d')
-        chi2_ax.scatter(initial_ant0_x, initial_ant0_y, initial_ant0_z,c='r',alpha=0.5,label='Initial Ant0')
-        chi2_ax.scatter(initial_ant1_x, initial_ant1_y, initial_ant1_z,c='g',alpha=0.5,label='Initial Ant1')
-        chi2_ax.scatter(initial_ant2_x, initial_ant2_y, initial_ant2_z,c='b',alpha=0.5,label='Initial Ant2')
-        chi2_ax.scatter(initial_ant3_x, initial_ant3_y, initial_ant3_z,c='m',alpha=0.5,label='Initial Ant3')
+        if 0 in included_antennas_lumped:
+            chi2_ax.scatter(initial_ant0_x, initial_ant0_y, initial_ant0_z,c='r',alpha=0.5,label='Initial Ant0')
+        if 1 in included_antennas_lumped:
+            chi2_ax.scatter(initial_ant1_x, initial_ant1_y, initial_ant1_z,c='g',alpha=0.5,label='Initial Ant1')
+        if 2 in included_antennas_lumped:
+            chi2_ax.scatter(initial_ant2_x, initial_ant2_y, initial_ant2_z,c='b',alpha=0.5,label='Initial Ant2')
+        if 3 in included_antennas_lumped:
+            chi2_ax.scatter(initial_ant3_x, initial_ant3_y, initial_ant3_z,c='m',alpha=0.5,label='Initial Ant3')
 
         chi2_ax.set_xlabel('East (m)',linespacing=10)
         chi2_ax.set_ylabel('North (m)',linespacing=10)
@@ -987,10 +1147,14 @@ if __name__ == '__main__':
         chi2_fig = plt.figure()
         chi2_fig.canvas.set_window_title('Both')
         chi2_ax = chi2_fig.add_subplot(111, projection='3d')
-        chi2_ax.scatter(initial_ant0_x, initial_ant0_y, initial_ant0_z,c='r',alpha=0.5,label='Initial Ant0')
-        chi2_ax.scatter(initial_ant1_x, initial_ant1_y, initial_ant1_z,c='g',alpha=0.5,label='Initial Ant1')
-        chi2_ax.scatter(initial_ant2_x, initial_ant2_y, initial_ant2_z,c='b',alpha=0.5,label='Initial Ant2')
-        chi2_ax.scatter(initial_ant3_x, initial_ant3_y, initial_ant3_z,c='m',alpha=0.5,label='Initial Ant3')
+        if 0 in included_antennas_lumped:
+            chi2_ax.scatter(initial_ant0_x, initial_ant0_y, initial_ant0_z,c='r',alpha=0.5,label='Initial Ant0')
+        if 1 in included_antennas_lumped:
+            chi2_ax.scatter(initial_ant1_x, initial_ant1_y, initial_ant1_z,c='g',alpha=0.5,label='Initial Ant1')
+        if 2 in included_antennas_lumped:
+            chi2_ax.scatter(initial_ant2_x, initial_ant2_y, initial_ant2_z,c='b',alpha=0.5,label='Initial Ant2')
+        if 3 in included_antennas_lumped:
+            chi2_ax.scatter(initial_ant3_x, initial_ant3_y, initial_ant3_z,c='m',alpha=0.5,label='Initial Ant3')
 
 
         if include_baseline_measurements:
@@ -1021,7 +1185,7 @@ if __name__ == '__main__':
         if unknown_source_dir_valley or include_sanity:
             # Need correlator map class to use in chi^2.
             chi_2_reader = Reader(datapath,valley_source_run)
-            chi_2_cor = Correlator(chi_2_reader,  upsample=cor_upsample, n_phi=180, n_theta=180, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
+            chi_2_cor = Correlator(chi_2_reader,  upsample=cor_upsample, n_phi=181, range_phi_deg=(-90,90), n_theta=96, range_theta_deg=(85,180), waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True)
             chi_2_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
             td_dicts = {}
             for source_key in use_sources:
@@ -1068,17 +1232,39 @@ if __name__ == '__main__':
 
                                     vals = ((geometric_time_delay - time_delay_dict[key][pair_index])**2)/time_delay_measurement_uncertainty_ns**2 #Assumes time delays are accurate
                                     chi_2 += valley_weight*numpy.sum(vals)
+                            #import pdb; pdb.set_trace()
                 else:
                     #Assuming you DON'T know the source, and using the precalculated time delays with the existing geometry to determine if the array points ANYWHERE for that source.
                     for key in use_sources:
-                        td_dict = td_dicts[key]
+                        # if key == 'E':
+                        #     distance_m = 2300
+                        #     zenith_cut_array_plane=[0,130]
+                        # else:
+                        #     distance_m = 1e6
+                        #     zenith_cut_array_plane=[0,92]
 
-                        mesh_azimuth_deg, mesh_elevation_deg, overlap_map = chi_2_cor.generateTimeDelayOverlapMap(mode, td_dict, overlap_window_ns, value_mode='distance', plot_map=False, mollweide=False,center_dir='E',window_title=None, include_baselines=include_baselines)
-                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = chi_2_cor.mapMax(overlap_map, max_method=0, verbose=False, zenith_cut_ENU=[90,115], zenith_cut_array_plane=[0,88], pol=mode) #This is used so that max value must be in reasonable window.
+                        # chi_2_cor.overwriteSourceDistance(distance_m, verbose=False, suppress_time_delay_calculations=False, debug=False)
 
-                        max_value = overlap_map.flatten()[linear_max_index]
-                        
-                        chi_2 += valley_weight*((max_value - overlap_goal)**2)/(overlap_error**2) 
+                        zenith_cut_array_plane=[0,92]
+
+                        if unknown_mode == 'strip':
+                            td_dict = td_dicts[key]
+
+                            mesh_azimuth_deg, mesh_elevation_deg, overlap_map = chi_2_cor.generateTimeDelayOverlapMap(mode, td_dict, overlap_window_ns, value_mode=overlap_value_mode, plot_map=False, mollweide=False,center_dir='E',window_title=None, include_baselines=include_baselines)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = chi_2_cor.mapMax(overlap_map, max_method=0, verbose=False, zenith_cut_ENU=[89,180], zenith_cut_array_plane=zenith_cut_array_plane, pol=mode) #This is used so that max value must be in reasonable window.
+                            max_value = overlap_map.flatten()[linear_max_index]
+                            #print('%0.4f / %0.4f = %0.3f'%(max_value, overlap_goal,max_value/overlap_goal))
+                            chi_2 += valley_weight*((max_value - overlap_goal)**2)/(overlap_error**2) 
+                        elif unknown_mode == 'cor':
+                            eventid = time_delay_dict_eventids[key][0]
+                            
+                            #DON'T SWITCH TO HILBERT< IT CHANGES THE NORMALIZATION, AND I AM MATCHING THIS TO AN EXPECTED PEAK VALUE OF 1.
+                            mean_corr_values, max_possible_map_value = chi_2_cor.map(eventid, mode, include_baselines=include_baselines, plot_map=False, plot_corr=False, hilbert=False, interactive=False, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=[90,180], zenith_cut_array_plane=zenith_cut_array_plane, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=True)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = chi_2_cor.mapMax(mean_corr_values, max_method=0, verbose=False, zenith_cut_ENU=[89,180], zenith_cut_array_plane=zenith_cut_array_plane, pol=mode) #This is used so that max value must be in reasonable window.
+                            max_value = mean_corr_values.flatten()[linear_max_index]
+                            #print('%0.4f / %0.4f = %0.3f'%(max_value, max_possible_map_value,max_value/max_possible_map_value))
+                            chi_2 += valley_weight*((max_value - max_possible_map_value)**2)/(0.2**2) 
+
 
                 if include_pulsers:
                     for key in included_pulsers:
@@ -1131,6 +1317,27 @@ if __name__ == '__main__':
                                 geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
                                 vals = ((geometric_time_delay - measured_plane_time_delays[key][pair_index])**2) #Assumes time delays are accurate
                                 chi_2 += airplane_weight*numpy.sum(vals)
+
+                if len(included_cw_sources) > 0:
+                    for key in included_cw_sources:
+                        d0 = (numpy.sqrt((cw_sources[key]['enu'][0] - ant0_x)**2 + (cw_sources[key]['enu'][1] - ant0_y)**2 + (cw_sources[key]['enu'][2] - ant0_z)**2 )/c)*1.0e9 #ns
+                        d1 = (numpy.sqrt((cw_sources[key]['enu'][0] - ant1_x)**2 + (cw_sources[key]['enu'][1] - ant1_y)**2 + (cw_sources[key]['enu'][2] - ant1_z)**2 )/c)*1.0e9 #ns
+                        d2 = (numpy.sqrt((cw_sources[key]['enu'][0] - ant2_x)**2 + (cw_sources[key]['enu'][1] - ant2_y)**2 + (cw_sources[key]['enu'][2] - ant2_z)**2 )/c)*1.0e9 #ns
+                        d3 = (numpy.sqrt((cw_sources[key]['enu'][0] - ant3_x)**2 + (cw_sources[key]['enu'][1] - ant3_y)**2 + (cw_sources[key]['enu'][2] - ant3_z)**2 )/c)*1.0e9 #ns
+
+                        d = [d0,d1,d2,d3]
+
+                        for pair_index, pair in enumerate(pairs):
+                            if pairs_cut[pair_index]:
+                                # pulser_time_delay_dict
+                                # pulser_time_delay_error_dict
+
+                                #time_delay_dict = {'hpol':{'[0, 1]' : [-77.6], '[0, 2]': [95.76], '[0, 3]': [-15.82], '[1, 2]': [173.4], '[1, 3]': [61.77], '[2, 3]': [-111.6]}}
+                                 #Single time delay value.
+
+                                geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
+                                chi_2 += numpy.min(cw_weight*((geometric_time_delay - cw_sources[key]['time_delay_dict'][mode]['[%i, %i]'%(pair[0],pair[1])])**2)) #Assumes time delays are accurate, uses only best minimized time delay from each baseline (min)
+
 
 
 
@@ -1451,20 +1658,20 @@ if __name__ == '__main__':
         chi2_fig = plt.figure()
         chi2_fig.canvas.set_window_title('Final Positions')
         chi2_ax = chi2_fig.add_subplot(111, projection='3d')
-        chi2_ax.scatter(ant0_phase_x, ant0_phase_y, ant0_phase_z,marker='*',c='r',alpha=0.5,label='Final Ant0')
-        chi2_ax.scatter(ant1_phase_x, ant1_phase_y, ant1_phase_z,marker='*',c='g',alpha=0.5,label='Final Ant1')
-        chi2_ax.scatter(ant2_phase_x, ant2_phase_y, ant2_phase_z,marker='*',c='b',alpha=0.5,label='Final Ant2')
-        chi2_ax.scatter(ant3_phase_x, ant3_phase_y, ant3_phase_z,marker='*',c='m',alpha=0.5,label='Final Ant3')
+        if 0 in included_antennas_lumped:
+            chi2_ax.scatter(ant0_phase_x, ant0_phase_y, ant0_phase_z,marker='*',c='r',alpha=0.5,label='Final Ant0')
+        if 1 in included_antennas_lumped:
+            chi2_ax.scatter(ant1_phase_x, ant1_phase_y, ant1_phase_z,marker='*',c='g',alpha=0.5,label='Final Ant1')
+        if 2 in included_antennas_lumped:
+            chi2_ax.scatter(ant2_phase_x, ant2_phase_y, ant2_phase_z,marker='*',c='b',alpha=0.5,label='Final Ant2')
+        if 3 in included_antennas_lumped:
+            chi2_ax.scatter(ant3_phase_x, ant3_phase_y, ant3_phase_z,marker='*',c='m',alpha=0.5,label='Final Ant3')
 
         chi2_ax.set_xlabel('East (m)',linespacing=10)
         chi2_ax.set_ylabel('North (m)',linespacing=10)
         chi2_ax.set_zlabel('Up (m)',linespacing=10)
         chi2_ax.dist = 10
         plt.legend()
-
-
-        
-        
 
         sources_ENU, data_slicer_cut_dict = info.loadValleySourcesENU() #Plot all potential sources
         reader = Reader(datapath,valley_source_run)
@@ -1484,7 +1691,7 @@ if __name__ == '__main__':
                 azimuth_deg = numpy.rad2deg(numpy.arctan2(sources_ENU_new[1],sources_ENU_new[0]))
 
                 #Only used for map.  Hists use higher resolution on tighter area.
-                map_resolution = 0.5 #degrees
+                map_resolution = 0.25 #degrees
                 range_phi_deg=(-180, 180)
                 range_theta_deg=(0,180)
                 n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
@@ -1543,7 +1750,7 @@ if __name__ == '__main__':
                 eventid = roi_eventids[roi_impulsivity_sort[-1]]
                 
                 #mean_corr_values, fig, ax = cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, zenith_cut_array_plane=None, interactive=True,circle_zenith=original_zenith_deg, circle_az=original_azimuth_deg, time_delay_dict=td_dict)
-                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key, include_baselines=include_baselines)
+                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key, include_baselines=include_baselines)
                 #adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(eventid, mode, plot_map=True, plot_corr=False, hilbert=True, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=source_key)
                 
                 if plot_histograms:
@@ -1683,6 +1890,54 @@ if __name__ == '__main__':
 
                     hist = adjusted_cor.histMapPeak(numpy.sort(numpy.random.choice(known_pulser_ids[key][mode],min(limit_events,len(known_pulser_ids[key][mode])))), mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + key, include_baselines=include_baselines,iterate_sub_baselines=iterate_sub_baselines)
 
+        if len(included_cw_sources) > 0 and plot_cw_overlap == True:
+            map_resolution = 0.25 #degrees
+            range_phi_deg = (-90, 90)
+            range_theta_deg = (0,180)
+            n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
+            n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
+
+            cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=1e6)
+            cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+            if mode == 'hpol':
+                cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,cor.A0_vpol,cor.A1_vpol,cor.A2_vpol,cor.A3_vpol,verbose=False)
+            else:
+                cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,cor.A0_hpol,cor.A1_hpol,cor.A2_hpol,cor.A3_hpol,initial_ant0_ENU,initial_ant1_ENU,initial_ant2_ENU,initial_ant3_ENU,verbose=False)
+
+            adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=1e6)
+            adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+            if mode == 'hpol':
+                adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,adjusted_cor.A0_vpol,adjusted_cor.A1_vpol,adjusted_cor.A2_vpol,adjusted_cor.A3_vpol,verbose=False)
+                adjusted_cor.overwriteCableDelays(m.values['cable_delay0'], adjusted_cor.cable_delays[1], m.values['cable_delay1'], adjusted_cor.cable_delays[3], m.values['cable_delay2'], adjusted_cor.cable_delays[5], m.values['cable_delay3'], adjusted_cor.cable_delays[7])
+            else:
+                adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,adjusted_cor.A0_hpol,adjusted_cor.A1_hpol,adjusted_cor.A2_hpol,adjusted_cor.A3_hpol,ant0_ENU,ant1_ENU,ant2_ENU,ant3_ENU,verbose=False)
+                adjusted_cor.overwriteCableDelays(adjusted_cor.cable_delays[0], m.values['cable_delay0'], adjusted_cor.cable_delays[2], m.values['cable_delay1'], adjusted_cor.cable_delays[4], m.values['cable_delay2'], adjusted_cor.cable_delays[6], m.values['cable_delay3'])       
+
+            window_ns = 10.0
+
+            for key in included_cw_sources:
+                initial_source_distance_m = numpy.sqrt((cw_sources[key]['enu'][0] - initial_ant0_ENU[0])**2 + (cw_sources[key]['enu'][1] - initial_ant0_ENU[1])**2 + (cw_sources[key]['enu'][2] - initial_ant0_ENU[2])**2)
+                initial_azimuth_deg = numpy.rad2deg(numpy.arctan2(cw_sources[key]['enu'][1] - initial_ant0_ENU[1],cw_sources[key]['enu'][0] - initial_ant0_ENU[0]))
+                initial_zenith_deg = numpy.rad2deg(numpy.arccos((cw_sources[key]['enu'][2] - initial_ant0_ENU[2])/initial_source_distance_m))
+
+                final_source_distance_m = numpy.sqrt((cw_sources[key]['enu'][0] - ant0_ENU[0])**2 + (cw_sources[key]['enu'][1] - ant0_ENU[1])**2 + (cw_sources[key]['enu'][2] - ant0_ENU[2])**2)
+                final_azimuth_deg = numpy.rad2deg(numpy.arctan2(cw_sources[key]['enu'][1] - ant0_ENU[1],cw_sources[key]['enu'][0] - ant0_ENU[0]))
+                final_zenith_deg = numpy.rad2deg(numpy.arccos((cw_sources[key]['enu'][2] - ant0_ENU[2])/final_source_distance_m))
+
+                cor.overwriteSourceDistance(initial_source_distance_m, verbose=False, suppress_time_delay_calculations=False)
+                adjusted_cor.overwriteSourceDistance(final_source_distance_m, verbose=False, suppress_time_delay_calculations=False)
+
+                for value_mode in [overlap_value_mode]:
+                    #['distance','gaus']:
+                    mesh_azimuth_deg, mesh_elevation_deg, overlap_map, im, ax = cor.generateTimeDelayOverlapMap(mode, cw_sources[key]['time_delay_dict'], window_ns, value_mode=value_mode, plot_map=True, mollweide=False,center_dir='E',window_title='Input %s'%key, include_baselines=include_baselines)
+                    ax.axvline(initial_azimuth_deg,c='fuchsia',linewidth=1.0)
+                    ax.axhline(90.0 - initial_zenith_deg,c='fuchsia',linewidth=1.0)
+                    mesh_azimuth_deg, mesh_elevation_deg, overlap_map, im, ax = adjusted_cor.generateTimeDelayOverlapMap(mode, cw_sources[key]['time_delay_dict'], window_ns, value_mode=value_mode, plot_map=True, mollweide=False,center_dir='E',window_title='Output %s'%key, include_baselines=include_baselines)
+                    ax.axvline(final_azimuth_deg,c='fuchsia',linewidth=1.0)
+                    ax.axhline(90.0 - final_zenith_deg,c='fuchsia',linewidth=1.0)
+
         if len(included_airplanes) > 0:
             map_resolution = 0.5 #degrees
             range_phi_deg = (-180, 180)
@@ -1728,7 +1983,7 @@ if __name__ == '__main__':
                     event_index = 0
                     td_dict = {mode:{'[0, 1]' : [ measured_plane_time_delays[key][0][event_index]], '[0, 2]' : [measured_plane_time_delays[key][1][event_index]], '[0, 3]' : [measured_plane_time_delays[key][2][event_index]], '[1, 2]' : [measured_plane_time_delays[key][3][event_index]], '[1, 3]' : [measured_plane_time_delays[key][4][event_index]], '[2, 3]' : [measured_plane_time_delays[key][5][event_index]]}}
                     adjusted_cor.overwriteSourceDistance(source_distance_m[event_index], verbose=False, suppress_time_delay_calculations=False)
-                    mean_corr_values, fig, ax = adjusted_cor.map(eventids[event_index], mode, include_baselines=airplane_include_baselines, plot_map=True, plot_corr=False, hilbert=False, center_dir=known_planes[key]['dir'], radius=1.0, zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,95], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=td_dict,window_title=key)
+                    mean_corr_values, fig, ax = adjusted_cor.map(eventids[event_index], mode, include_baselines=airplane_include_baselines, plot_map=True, plot_corr=False, hilbert=False, center_dir=known_planes[key]['dir'], radius=1.0, zenith_cut_ENU=[0,90],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg[event_index], circle_az=azimuth_deg[event_index], time_delay_dict=td_dict,window_title=key)
 
                 cors.append(adjusted_cor)
 

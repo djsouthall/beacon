@@ -60,7 +60,7 @@ if __name__=="__main__":
     plot_filter=False
     hilbert=False
     plot_multiple = False
-    final_corr_length = 2**15
+    final_corr_length = 2**17
     align_method = 0
     max_method = 0
     impulsivity_window = 400
@@ -143,7 +143,7 @@ if __name__=="__main__":
                                 sys.stdout.flush()
                             try:
                                 delays = -all_time_delays[eventid] #Unsure why I need to invert this.
-                                file['impulsivity'][tdset]['hpol'][eventid], file['impulsivity'][tdset]['vpol'][eventid] = tdc.calculateImpulsivityFromTimeDelays(eventid, delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=750) #shouldn't use sine_subtract, I think I want impulsivity to show contaminated signals as contaminated?
+                                file['impulsivity'][tdset]['hpol'][eventid], file['impulsivity'][tdset]['vpol'][eventid] = tdc.calculateImpulsivityFromTimeDelays(eventid, delays, upsampled_waveforms=None,return_full_corrs=False, align_method=0, hilbert=False,plot=False,impulsivity_window=impulsivity_window) #shouldn't use sine_subtract, I think I want impulsivity to show contaminated signals as contaminated?
                             except Exception as e:
                                 print(e)
                                 exc_type, exc_obj, exc_tb = sys.exc_info()

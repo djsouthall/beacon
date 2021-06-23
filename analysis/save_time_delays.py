@@ -57,17 +57,16 @@ if __name__=="__main__":
     datapath = os.environ['BEACON_DATA']
     align_method_13_n = 2
 
-    crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = 8
+    crit_freq_low_pass_MHz = 85
+    low_pass_filter_order = 6
 
-    crit_freq_high_pass_MHz = None
-    high_pass_filter_order = None
+    crit_freq_high_pass_MHz = 25
+    high_pass_filter_order = 8
 
     sine_subtract = True
     sine_subtract_min_freq_GHz = 0.03
-    sine_subtract_max_freq_GHz = 0.09
+    sine_subtract_max_freq_GHz = 0.13
     sine_subtract_percent = 0.03
-
 
     apply_phase_response = True
 
@@ -77,7 +76,7 @@ if __name__=="__main__":
     shorten_length = 90.0
 
     hilbert=False
-    final_corr_length = 2**16
+    final_corr_length = 2**17
 
     filter_string = ''
 
@@ -140,7 +139,6 @@ if __name__=="__main__":
 
     filter_string += 'sinesubtract_%i'%(int(sine_subtract))
 
-
     print(filter_string)
 
     plot_filter = False
@@ -159,7 +157,12 @@ if __name__=="__main__":
         if filename is not None:
             with h5py.File(filename, 'a') as file:
                 eventids = file['eventids'][...]
+
+
+
                 rf_cut = file['trigger_type'][...] == 2
+                # print('TEMPORARY HARDCODE') #debugging an error that occurred in run 1663 due to a zero valued waveform
+                # rf_cut[numpy.cumsum(file['trigger_type'][...] == 2) < 10000] = False #TEMPORARY
 
                 print('Total Events: %i'%file.attrs['N'])
                 print('[1] Software Events: %i'%sum(file['trigger_type'][...] == 1))

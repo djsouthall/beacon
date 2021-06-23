@@ -1,0 +1,1 @@
+These files were created on June 2nd 2021 from measurements made by Dan Southall.  The test setup utilized the tester board designed by Eric Oberla and described in the attached pdf.  These measurements do not include antenna elements and are not the full S21 measurements of the antennas, just the boards and the 2nd stage (which was used to characterize the boards).

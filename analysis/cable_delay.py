@@ -103,9 +103,11 @@ if __name__ == '__main__':
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
 
+                speed = 1/(1.20 * (1/0.3048)) #m/ns
+                #speed = 0.84*constants.speed_light
                 plt.subplot(4,1,4)
-                plt.plot(group_delay_freqs/1e6, group_delay*0.84*constants.speed_light,label=root.split('/')[-1].replace('_.csv','').replace('_',' '))
-                plt.ylabel('Cable Length (m)')
+                plt.plot(group_delay_freqs/1e6, (1/0.3048) * group_delay*speed,label=root.split('/')[-1].replace('_.csv','').replace('_',' '))
+                plt.ylabel('Cable Length (ft)')
                 plt.legend()
                 plt.minorticks_on()
                 plt.grid(b=True, which='major', color='k', linestyle='-')

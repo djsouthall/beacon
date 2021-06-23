@@ -41,19 +41,20 @@ if __name__=="__main__":
         run = 1701
 
     datapath = os.environ['BEACON_DATA']
-    crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = 8
 
-    crit_freq_high_pass_MHz = None
-    high_pass_filter_order = None
+    crit_freq_low_pass_MHz = 85
+    low_pass_filter_order = 6
+
+    crit_freq_high_pass_MHz = 25
+    high_pass_filter_order = 8
 
     sine_subtract = True
     sine_subtract_min_freq_GHz = 0.03
     sine_subtract_max_freq_GHz = 0.09
-    sine_subtract_percent = 0.05
+    sine_subtract_percent = 0.03
 
     hilbert=False
-    final_corr_length = 2**11
+    final_corr_length = 2**13
 
 
 
@@ -173,6 +174,7 @@ if __name__=="__main__":
                             file['cw']['has_cw'][eventid] = True
                             file['cw']['freq_hz'][eventid] = max_freq
                             file['cw']['linear_magnitude'][eventid] = max_magnitude
+                            #file['cw']['dbish'][eventid] = 
                         else:
                             file['cw']['has_cw'][eventid] = False
                             file['cw']['freq_hz'][eventid] = 0.0

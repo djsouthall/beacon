@@ -52,19 +52,23 @@ if __name__=="__main__":
 
     try:
 
-        crit_freq_low_pass_MHz = 100 #This new pulser seems to peak in the region of 85 MHz or so
-        low_pass_filter_order = 10
+
+
+        crit_freq_low_pass_MHz = None#
+        low_pass_filter_order = None#
 
         crit_freq_high_pass_MHz = None#60
         high_pass_filter_order = None#6
 
-        apply_phase_response = False
+        apply_phase_response = True
         hilbert = False
 
         sine_subtract = True
         sine_subtract_min_freq_GHz = 0.03
         sine_subtract_max_freq_GHz = 0.09
         sine_subtract_percent = 0.03
+
+        final_corr_length = 2**14
 
         run = int(run)
         time_window = 5*60 #seconds
@@ -89,7 +93,7 @@ if __name__=="__main__":
 
         if filename is not None:
             with h5py.File(filename, 'a') as file:
-                tdc = TimeDelayCalculator(reader, final_corr_length=2**13, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=(None,None), plot_filters=False, apply_phase_response=apply_phase_response)
+                tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=(None,None), plot_filters=False, apply_phase_response=apply_phase_response)
                 if sine_subtract:
                     tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
                 #eventids with rf trigger
