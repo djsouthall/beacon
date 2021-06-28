@@ -1,5 +1,5 @@
 {
-    "description": "",
+    "description": "Measurements made on June 22nd using NTrip corrected RTK GPS and UNAVCO P652 data.  The expected accuracy of this data is on the scale of cm.  The listed altitudes are in WGS-84 and are adjusted by adding a height of 5ft8in, (1.7272m) from the actual measurements to account for the offset from the GPS patch antenna positions and the antennas at the top.  This is the positions of the antennas as installed after this date.  Cable delays come TDR measurements made at the same time, and should account for the several different cables (and their respective material properties) to accurately measure the time delays.",
     "origin": {
         "latlonel": [
             37.589339,
@@ -10,7 +10,11 @@
     "antennas": {
         "ant0": {
             "physical": {
-                "latlonel": [],
+                "latlonel": [
+                    37.589339,
+                    -118.23761867,
+                    3850.5272
+                ],
                 "enu": [
                     0.0,
                     0.0,
@@ -18,7 +22,11 @@
                 ]
             },
             "hpol": {
-                "latlonel": [],
+                "latlonel": [
+                    37.589339,
+                    -118.23761867,
+                    3850.5272
+                ],
                 "enu": [
                     0.0,
                     0.0,
@@ -28,7 +36,11 @@
                 "channel": 0
             },
             "vpol": {
-                "latlonel": [],
+                "latlonel": [
+                    37.589339,
+                    -118.23761867,
+                    3850.5272
+                ],
                 "enu": [
                     0.0,
                     0.0,
@@ -40,7 +52,11 @@
         },
         "ant1": {
             "physical": {
-                "latlonel": [],
+                "latlonel": [
+                    37.58922017,
+                    -118.238006,
+                    3865.1272
+                ],
                 "enu": [
                     -34.229739100497184,
                     -13.196735088178848,
@@ -48,7 +64,11 @@
                 ]
             },
             "hpol": {
-                "latlonel": [],
+                "latlonel": [
+                    37.58922017,
+                    -118.238006,
+                    3865.1272
+                ],
                 "enu": [
                     -34.229739100497184,
                     -13.196735088178848,
@@ -58,7 +78,11 @@
                 "channel": 2
             },
             "vpol": {
-                "latlonel": [],
+                "latlonel": [
+                    37.58922017,
+                    -118.238006,
+                    3865.1272
+                ],
                 "enu": [
                     -34.229739100497184,
                     -13.196735088178848,
@@ -70,7 +94,11 @@
         },
         "ant2": {
             "physical": {
-                "latlonel": [],
+                "latlonel": [
+                    37.58889833,
+                    -118.23769983,
+                    3854.3272
+                ],
                 "enu": [
                     -7.172418589601591,
                     -48.93903858128436,
@@ -78,7 +106,11 @@
                 ]
             },
             "hpol": {
-                "latlonel": [],
+                "latlonel": [
+                    37.58889833,
+                    -118.23769983,
+                    3854.3272
+                ],
                 "enu": [
                     -7.172418589601591,
                     -48.93903858128436,
@@ -88,7 +120,11 @@
                 "channel": 4
             },
             "vpol": {
-                "latlonel": [],
+                "latlonel": [
+                    37.58889833,
+                    -118.23769983,
+                    3854.3272
+                ],
                 "enu": [
                     -7.172418589601591,
                     -48.93903858128436,
@@ -100,7 +136,11 @@
         },
         "ant3": {
             "physical": {
-                "latlonel": [],
+                "latlonel": [
+                    37.588943,
+                    -118.23796567,
+                    3864.3272
+                ],
                 "enu": [
                     -30.665742457535302,
                     -43.978183388828505,
@@ -108,7 +148,11 @@
                 ]
             },
             "hpol": {
-                "latlonel": [],
+                "latlonel": [
+                    37.588943,
+                    -118.23796567,
+                    3864.3272
+                ],
                 "enu": [
                     -30.665742457535302,
                     -43.978183388828505,
@@ -118,7 +162,11 @@
                 "channel": 6
             },
             "vpol": {
-                "latlonel": [],
+                "latlonel": [
+                    37.588943,
+                    -118.23796567,
+                    3864.3272
+                ],
                 "enu": [
                     -30.665742457535302,
                     -43.978183388828505,

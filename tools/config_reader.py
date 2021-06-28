@@ -116,8 +116,8 @@ def configWriterFromLatLonElJSON(json_path,verbose=True):
     This basically calls configWriter for but first loads in the data from json_path's latlonel information to get ENU.
     It serves to turn a config that only has latlon el data into one that also has ENU data.
     '''
-    origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays = configReader(json_path, return_mode='enu', check=True, verbose=verbose)
-    configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description="",update_latlonel=False,force_write=True)
+    origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays,  description = configReader(json_path, return_mode='enu', check=True, verbose=verbose, return_description=True)
+    configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description=description,update_latlonel=True,force_write=True)
 
 
 def checkConfigConsistency(data, decimals=6, verbose=True):
@@ -152,7 +152,7 @@ def checkConfigConsistency(data, decimals=6, verbose=True):
             else:
                 print(key + ' does not contain both latlonel and ENU data.')
 
-def updateLatlonelFromENU(data, verbose=True):
+def updateLatlonelFromENU(data, verbose=True, decimals=8):
     '''
     Given data, this will take the ENU data and use it to update the latlonel data in a deep copy of the original dict.
 
@@ -167,7 +167,7 @@ def updateLatlonelFromENU(data, verbose=True):
     for mast in range(4):
         for key in ['physical', 'hpol', 'vpol']:
             if numpy.asarray(data['antennas']['ant%i'%mast][key]['enu']).size > 0:
-                data['antennas']['ant%i'%mast][key]['latlonel'] = numpy.asarray(pm.enu2geodetic(data['antennas']['ant%i'%mast][key]['enu'][0],data['antennas']['ant%i'%mast][key]['enu'][1],data['antennas']['ant%i'%mast][key]['enu'][2],origin[0],origin[1],origin[2]))
+                data['antennas']['ant%i'%mast][key]['latlonel'] = numpy.round(numpy.asarray(pm.enu2geodetic(data['antennas']['ant%i'%mast][key]['enu'][0],data['antennas']['ant%i'%mast][key]['enu'][1],data['antennas']['ant%i'%mast][key]['enu'][2],origin[0],origin[1],origin[2])),decimals=decimals)
             else:
                 if verbose:
                     print(key + ' does not contain ENU data for mast %i %s.'%(mast, key))
@@ -194,7 +194,7 @@ def updateENUFromLatlonel(data, verbose=True):
                     print(key + ' does not contain ENU data for mast %i %s.'%(mast, key))
     return data
 
-def configReader(json_path, return_mode='enu', check=True, verbose=True):
+def configReader(json_path, return_mode='enu', check=True, verbose=True, return_description=False):
     '''
     This will read in the custom config files and return them in a usable format that allows the json files to
     interface readily with existing analysis code.
@@ -240,9 +240,10 @@ def configReader(json_path, return_mode='enu', check=True, verbose=True):
     with open(json_path) as json_file:
         data = json.load(json_file)
 
+    description = str(data['description'])
     if verbose:
         print('Calibration Description:')
-        print(data['description'])
+        print(description)
 
 
     origin = data['origin']['latlonel'] #Lat Lon Elevation, use for generating ENU from other latlonel values.     
@@ -270,8 +271,10 @@ def configReader(json_path, return_mode='enu', check=True, verbose=True):
         antennas_phase_vpol[mast] = data['antennas']['ant%i'%mast]['vpol'][return_mode]
         cable_delays['hpol'][mast] = data['antennas']['ant%i'%mast]['hpol']['cable_delay']
         cable_delays['vpol'][mast] = data['antennas']['ant%i'%mast]['vpol']['cable_delay']
-    
-    return origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays
+    if return_description == True:
+        return origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description
+    else:
+        return origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays
 
 def generateConfigFromDeployIndex(outpath, deploy_index, description=None):
     '''
