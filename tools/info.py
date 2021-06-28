@@ -40,7 +40,7 @@ import scipy.interpolate
 
 #default_deploy = 30#os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day1-june20-2021.json')#30#2#13#19#15#The deployment calibration to use as the default.
 # default_deploy = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day1-june20-2021.json')
-default_deploy = 30#os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021_2021-06-23_00-12-11p430682.json')
+default_deploy = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021.json')
 
 
 
@@ -446,13 +446,13 @@ def pulserRuns():
     
     return pulser_runs
 
-def loadAntennaZeroLocation(deploy_index=default_deploy,check=False):
+def loadAntennaZeroLocation(deploy_index=default_deploy,check=False,verbose=False):
     '''
     Loads antenna 0's location (which use used as the station location).
     Loads the latitude, longtidue, elevation
     '''
     if type(deploy_index) == str:
-        A0Location = configReader(deploy_index, return_mode='enu',check=check, verbose=False)[0]
+        A0Location = configReader(deploy_index, return_mode='enu',check=check, verbose=verbose)[0]
     elif deploy_index == 0:
         A0Location = (37.5893,-118.2381,3894.12)#latitude,longtidue,elevation  #ELEVATION GIVEN FROM GOOGLE EARTH given in m
     elif deploy_index > 0 and deploy_index <= 9:
@@ -693,7 +693,7 @@ def loadValleySourcesENU(deploy_index=default_deploy):
 #     s = list( set([str(val) for key, val in data_slicer_cut_dict.items()]) )
 
 
-def loadAntennaLocationsENU(deploy_index=default_deploy, check=False):
+def loadAntennaLocationsENU(deploy_index=default_deploy, check=False, verbose=False):
     '''
     Loads the antenna locations and phase locations as best they are known.
     These are given in ENU relative to Antenna 0.
@@ -702,7 +702,7 @@ def loadAntennaLocationsENU(deploy_index=default_deploy, check=False):
     When it does apply it will check for both ENU and latlonel data.
     '''
     if type(deploy_index) == str:
-        ignored_origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, ignored_cable_delays = configReader(deploy_index, return_mode='enu',check=check, verbose=False)
+        ignored_origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, ignored_cable_delays = configReader(deploy_index, return_mode='enu',check=check, verbose=verbose)
     elif deploy_index == 0:
         antennas_physical   = {0:(0.0,0.0,0.0),1:(-6.039,-1.618,2.275),2:(-1.272,-10.362,1.282),3:(3.411,-11.897,-0.432)} #ORIGINAL
         '''

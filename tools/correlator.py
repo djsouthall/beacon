@@ -121,13 +121,14 @@ class Correlator:
         meters away).  To change the distance call the overwriteSourceDistance() function, which will implement the
         necessary adjustments for the new source distance.
     '''
-    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None):
+    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None, all_alignments=False):
         try:
             if deploy_index is None:
                 self.deploy_index = info.returnDefaultDeploy()
             else:
                 self.deploy_index = deploy_index 
 
+            self.all_alignments = all_alignments #Determines whether to plot a single shift of time delays or all.
 
             n = 1.0003 #Index of refraction of air  #Should use https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.453-11-201507-S!!PDF-E.pdf 
             self.c = 299792458.0/n #m/s
@@ -179,7 +180,7 @@ class Correlator:
             self.A0_latlonel_hpol = self.original_A0_latlonel.copy()
             self.A0_latlonel_vpol = self.original_A0_latlonel.copy()
 
-            antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=self.deploy_index)
+            antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=self.deploy_index, verbose=True)
 
             self.A0_physical = numpy.asarray(antennas_physical[0])
             self.A1_physical = numpy.asarray(antennas_physical[1])
@@ -2027,7 +2028,7 @@ class Correlator:
                 if ~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))):
                     add_text = '\nIncluded baselines = ' + str(numpy.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])[include_baselines])
                 else:
-                    add_text = ''
+                    add_text = '\n' + str(self.deploy_index)
 
                 if center_dir.upper() == 'E':
                     center_dir_full = 'East'
@@ -2195,7 +2196,7 @@ class Correlator:
                 #Enable Interactive Portion
                 if interactive == True:
                     print('Map should be interactive')
-                    fig.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event,  mollweide=mollweide, center_dir=center_dir))
+                    fig.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event,  mollweide=mollweide, center_dir=center_dir, all_alignments=self.all_alignments))
 
                 #ax.legend(loc='lower left')
                 self.figs.append(fig)
