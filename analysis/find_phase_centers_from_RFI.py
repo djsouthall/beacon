@@ -18,16 +18,16 @@ import inspect
 import h5py
 
 #Personal Imports
-sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
-sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
-from tools.data_handler import createFile, getTimes
-import tools.station as bc
-import tools.info as info
-import tools.get_plane_tracks as pt
-from tools.fftmath import TimeDelayCalculator
-from tools.data_slicer import dataSlicerSingleRun
-from tools.correlator import Correlator
+from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from beacon.tools.data_handler import createFile, getTimes
+import beacon.tools.station as bc
+import beacon.tools.info as info
+import beacon.tools.get_plane_tracks as pt
+from beacon.tools.fftmath import TimeDelayCalculator
+from beacon.tools.data_slicer import dataSlicerSingleRun
+from beacon.tools.correlator import Correlator
+import beacon.tools.config_reader as bcr
+
 
 #Plotting Imports
 import matplotlib.pyplot as plt
@@ -441,14 +441,14 @@ if __name__ == '__main__':
             airplane_weight = 1.0#5*len(included_airplanes)
 
         elif True:
-            unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_source_dir_valley = True #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
             unknown_mode = 'strip'#'cor'#options are 'cor' or 'strip'.  If 'cor' ch,osen then the most impulsive event will be chosen and use to generate maps.
             if mode == 'hpol':
                 #use_sources = ['Booker Antenna','Miller Substation','Tonopah KTPH','KNKN223','Beatty Airport Vortac']#['Tonopah AFS GATR Site','Beatty Airport Vortac']#['Miller Substation', 'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#,'Tonopah AFS GATR Site','Palmetto Cell Tower','Beatty Airport Vortac']#['South Dyer Town','Quarry Substation']#['South Dyer Town','Quarry Substation']#,'Palmetto Cell Tower','Beatty Airport Vortac'#['Dyer Cell Tower', 'Test Site A']#,'Miller Substation','Dyer House Antenna A','Cedar Peak']#['Miller Substation']#['Dyer Cell Tower','Miller Substation','Dyer House Antenna A','Cedar Peak']
-                use_sources = [ 'A', 'B', 'C', 'D', 'E', 'F'] #'E' looks like it has particularly bad zenith, might be close and obstructed.
+                use_sources = [ 'A', 'B', 'C', 'D', 'F'] #'E' looks like it has particularly bad zenith, might be close and obstructed.
                 included_pulsers = []#['run1509']#,'run1507','run1511']#
                 included_airplanes = []#['1728-62026']#['1774-178']#['1728-62026','1773-14413','1773-63659','1774-178']##
-                included_cw_sources = ['khsv']
+                included_cw_sources = []#['khsv']
             elif mode == 'vpol':
                 #Don't use palmetto for vpol
                 use_sources = [ 'A', 'B',  'D']#['Miller Substation']#['Miller Substation','Tonopah AFS GATR Site','Beatty Airport Vortac']#['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#'East Dyer Substation',
@@ -672,14 +672,14 @@ if __name__ == '__main__':
         allowed_array_plane_azimuth_range = 20 #plus or minus this from East is not impacted by weighting. 
 
         #Limits 
-        initial_step_x = 0.1#2.0 #m
-        initial_step_y = 0.1#2.0 #m
-        initial_step_z = 0.1#0.75 #m
-        initial_step_cable_delay = 0.1 #ns
-        cable_delay_guess_range = 100 #ns
-        antenna_position_guess_range_x = 0.5#20#10#3#5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_y = 0.5#20#10#3#5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_z = 0.5#20#5#4#3#2#3 #Limit to how far from input phase locations to limit the parameter space to
+        initial_step_x = 0.25#2.0 #m
+        initial_step_y = 0.25#2.0 #m
+        initial_step_z = 0.25#0.75 #m
+        initial_step_cable_delay = 0.2 #ns
+        cable_delay_guess_range = 5 #ns
+        antenna_position_guess_range_x = 1.0#20#10#3#5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = 1.0#20#10#3#5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_z = 1.0#20#5#4#3#2#3 #Limit to how far from input phase locations to limit the parameter space to
 
         #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
         manual_offset_ant0_x = 0#0#0#14
@@ -712,9 +712,9 @@ if __name__ == '__main__':
         fix_ant3_y = False
         fix_ant3_z = False
         fix_cable_delay0 = True
-        fix_cable_delay1 = True
-        fix_cable_delay2 = True
-        fix_cable_delay3 = True
+        fix_cable_delay1 = False
+        fix_cable_delay2 = False
+        fix_cable_delay3 = False
 
         #Force antennas not to be included to be fixed.  
         if not(0 in included_antennas_lumped):
@@ -2018,6 +2018,13 @@ if __name__ == '__main__':
 
         print('Code completed.')
         print('\a')
+
+        if False:
+            #This code is intended to save the output configuration produced by this script. 
+            initial_deploy_index = str(info.returnDefaultDeploy())
+            initial_origin, initial_antennas_physical, initial_antennas_phase_hpol, initial_antennas_phase_vpol, initial_cable_delays, initial_description = configReader(test_file,return_description=True)
+
+            #bcr.configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description="",update_latlonel=False,force_write=True)
 
 
             

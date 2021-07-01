@@ -211,6 +211,9 @@ if __name__=="__main__":
         max_beam = max_beam_output[0][0]
         max_beam_counts = max_beam_output[0][0]
         ds.addROI('beam %i'%max_beam, {'triggered_beams': [max_beam - 0.5, max_beam + 0.5]})
+    elif True:
+        selected_beam = 1
+        ds.addROI('beam %i'%selected_beam, {'triggered_beams': [selected_beam - 0.5, selected_beam + 0.5]})
     else:
         for beam in range(20):
             if n_trig_per_beam[beams == beam] > 0:
