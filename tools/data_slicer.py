@@ -156,7 +156,7 @@ class dataSlicerSingleRun():
                                             'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
                                             'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',
                                             'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','phi_best_h','phi_best_v',\
-                                            'calibrated_trigtime']
+                                            'calibrated_trigtime','triggered_beams','beam_power']
 
                 self.tct = None #This will be defined when necessary by functions below. 
 
@@ -201,6 +201,10 @@ class dataSlicerSingleRun():
                 self.max_snr_val = max_snr_val
                 self.snr_n_bins_h = snr_n_bins_h
                 self.snr_n_bins_v = snr_n_bins_v
+
+                #Unknown, will be calculated as needed.
+                self.max_beam_power = None
+                self.max_beam_number = None
 
                 #Map Direction Params:
                 self.map_dset_key = map_dset_key
@@ -782,10 +786,12 @@ class dataSlicerSingleRun():
                             param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_azimuth'][...][eventids]
                         elif 'hilbert' in param_key and 'phi_best_v' in param_key:
                             param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_azimuth'][...][eventids]
-
-
                         elif 'calibrated_trigtime' == param_key:
                             param = file['calibrated_trigtime'][...][eventids]
+                        elif 'triggered_beams' == param_key:
+                            param = self.reader.returnTriggerInfo()[0][eventids]
+                        elif 'beam_power' == param_key:
+                            param = self.reader.returnTriggerInfo()[1][eventids]
 
                         file.close()
                 else:
@@ -1030,6 +1036,12 @@ class dataSlicerSingleRun():
                 if self.max_snr_val is None:
                     self.max_snr_val = self.max_p2p_val/self.min_std_val
 
+                #Append the max beam power or max beam not present and precalculated if not present
+                if numpy.isin(param_key,['triggered_beams','beam_power']):
+                    if numpy.logical_or(self.max_beam_power is None, self.max_beam_number is None):
+                        triggered_beams, beam_power, unused_eventids = self.reader.returnTriggerInfo()
+                        self.max_beam_power = numpy.max(beam_power)
+                        self.max_beam_number = numpy.max(triggered_beams)
                     
             if param_key not in self.known_param_keys:
                 print('WARNING!!!')
@@ -1263,6 +1275,17 @@ class dataSlicerSingleRun():
                         x_max_val = file['calibrated_trigtime'][...][-1]
 
                     x_n_bins = numpy.ceil((x_max_val - x_min_val)/60).astype(int) #bin into roughly 1 min chunks.
+                elif 'triggered_beams' == param_key:
+                    x_min_val = -0.5
+                    x_max_val = self.max_beam_number + 0.5 #This is crude but at least it avoids hard coding the number of beams.
+                    x_n_bins = int(x_max_val - x_min_val)
+                    label = 'Triggered Beam'
+                elif 'beam_power' == param_key:
+                    label = 'Beam Power Sum (arb)'
+                    x_min_val
+                    x_max_val = self.max_beam_power
+                    x_n_bins = 2*128 #Unsure what is reasonable for this number.  
+
 
             if calculate_bins_from_min_max:
                 current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges
