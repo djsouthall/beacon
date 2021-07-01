@@ -225,6 +225,8 @@ if __name__ == '__main__':
             #     'Silver Peak Town Antenna',\
             #     'Silver Peak Lithium Mine',\
             #     'Past SP Substation']
+        elif False:
+            included_valley_sources = ['A']
         else:
             included_valley_sources = ['A','B','C','D','E','F']
 
@@ -248,12 +250,12 @@ if __name__ == '__main__':
         plot_time_delay_calculations = False
         plot_time_delays_on_maps = True
         plot_expected_direction = True
-        limit_events = 1 #Number of events use for time delay calculation
+        limit_events = 1000 #Number of events use for time delay calculation
 
 
         plot_residuals = False
-        plot_histograms = False
-        iterate_sub_baselines = 3 #The lower this is the higher the time it will take to plot.  Does combinatoric subsets of baselines with this length. 
+        plot_histograms = True
+        iterate_sub_baselines = 6 #The lower this is the higher the time it will take to plot.  Does combinatoric subsets of baselines with this length. 
 
         final_corr_length = 2**17
         cor_upsample = final_corr_length
@@ -398,13 +400,13 @@ if __name__ == '__main__':
                 mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=pulser_key)
 
                 if plot_histograms:
-                    map_resolution = 0.1 #degrees
+                    map_resolution = 0.01 #degrees
                     range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
                     range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
                     n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
                     n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
                     
-                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, pulser_key=False, sine_subtract=True,map_source_distance_m=distance_m)
+                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                     eventids = numpy.sort(numpy.random.choice(known_pulser_ids[pulser_key][mode],min(limit_events,len(known_pulser_ids[pulser_key][mode])))) #For plotting multiple events in a histogram

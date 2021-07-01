@@ -174,6 +174,7 @@ if __name__=="__main__":
                             file['cw']['has_cw'][eventid] = True
                             file['cw']['freq_hz'][eventid] = max_freq
                             file['cw']['linear_magnitude'][eventid] = max_magnitude
+                            #file['cw']['dbish'][eventid] = 
                         else:
                             file['cw']['has_cw'][eventid] = False
                             file['cw']['freq_hz'][eventid] = 0.0

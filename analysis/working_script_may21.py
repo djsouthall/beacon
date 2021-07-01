@@ -35,12 +35,17 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore")
 plt.ion()
 
+
 datapath = os.environ['BEACON_DATA']
+
 
 if __name__=="__main__":
     #TODO: Add these parameters to the 2d data slicer.
     plt.close('all')
-    runs = numpy.array([1651,1652])#numpy.arange(1600,1729)#numpy.array([1657])#numpy.array([1650])#numpy.arange(1650,1750)#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.arange(1650,1675)#numpy.array([1774])#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.array([1650])#
+    print_datasets = False #Will open the file and list the relevant datasets.  Only turn on if necessary, unecessary access to the files risks corruption.
+
+
+    runs = numpy.arange(1643,1729)#numpy.array([1657])#numpy.array([1650])#numpy.arange(1650,1750)#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.arange(1650,1675)#numpy.array([1774])#numpy.array([1650,1728,1773,1774,1783,1784])#numpy.array([1650])#
     #failed_runs = [1637 1638 1639 1640 1641 1663 1665 1667 1682 1690]
     #run = 1774 #want run with airplane.  This has 1774-178 in it. 
 
@@ -48,7 +53,7 @@ if __name__=="__main__":
 
     time_delays_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     impulsivity_dset_key = time_delays_dset_key
-    map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_65536-maxmethod_0-sinesubtract_1-deploy_calibration_30-scope_allsky'
+    map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_16384-maxmethod_0-sinesubtract_1-deploy_calibration_30-n_phi_1440-min_phi_neg180-max_phi_180-n_theta_720-min_theta_0-max_theta_180-scope_allsky'
 
     crit_freq_low_pass_MHz = 85 #This new pulser seems to peak in the region of 85 MHz or so
     low_pass_filter_order = 6
@@ -109,7 +114,7 @@ if __name__=="__main__":
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,\
                         n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg)
 
-                if filename is not None:
+                if filename is not None and print_datasets:
                     with h5py.File(filename, 'r') as file:
                         eventids = file['eventids'][...]
 
@@ -137,7 +142,7 @@ if __name__=="__main__":
                     ds.addROI('Impulsivity H > %s'%str(min_imp),{'impulsivity_h':[min_imp,1.0]})
                     _eventids = numpy.unique(numpy.append(ds.getCutsFromROI('Impulsivity H > %s'%str(min_imp),load=False,save=False),ds.getCutsFromROI('Impulsivity V > %s'%str(min_imp),load=False,save=False)))
                     ds.resetAllROI() #already have the eventids with sufficient impulsivity
-                elif True:
+                elif False:
                     min_imp = 0.3
                     ds.addROI('Impulsivity > %s'%str(min_imp),{'impulsivity_h':[min_imp,1.0],'impulsivity_v':[min_imp,1.0]})
                     _eventids = ds.getCutsFromROI('Impulsivity > %s'%str(min_imp),load=False,save=False)
@@ -211,6 +216,7 @@ if __name__=="__main__":
                 for key_x, key_y in plot_param_pairs:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
                     fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=eventids_dict,include_roi=True, lognorm=lognorm)
+                    fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=eventids_dict,include_roi=False, lognorm=lognorm)
 
 
 

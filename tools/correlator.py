@@ -11,16 +11,14 @@ import sys
 import gc
 import pymap3d as pm
 import itertools
-sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 
-sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
-import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
-import tools.info as info
-from tools.data_handler import getEventTimes
-import analysis.phase_response as pr
-import tools.get_plane_tracks as pt
-from tools.fftmath import FFTPrepper, TimeDelayCalculator
+from    beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+import  beacon.tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
+import  beacon.tools.info as info
+from    beacon.tools.data_handler import getEventTimes
+import  beacon.analysis.phase_response as pr
+import  beacon.tools.get_plane_tracks as pt
+from    beacon.tools.fftmath import FFTPrepper, TimeDelayCalculator
 import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -123,13 +121,14 @@ class Correlator:
         meters away).  To change the distance call the overwriteSourceDistance() function, which will implement the
         necessary adjustments for the new source distance.
     '''
-    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None):
+    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None, all_alignments=False):
         try:
             if deploy_index is None:
                 self.deploy_index = info.returnDefaultDeploy()
             else:
                 self.deploy_index = deploy_index 
 
+            self.all_alignments = all_alignments #Determines whether to plot a single shift of time delays or all.
 
             n = 1.0003 #Index of refraction of air  #Should use https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.453-11-201507-S!!PDF-E.pdf 
             self.c = 299792458.0/n #m/s
@@ -181,7 +180,7 @@ class Correlator:
             self.A0_latlonel_hpol = self.original_A0_latlonel.copy()
             self.A0_latlonel_vpol = self.original_A0_latlonel.copy()
 
-            antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=self.deploy_index)
+            antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=self.deploy_index, verbose=True)
 
             self.A0_physical = numpy.asarray(antennas_physical[0])
             self.A1_physical = numpy.asarray(antennas_physical[1])
@@ -2029,7 +2028,7 @@ class Correlator:
                 if ~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))):
                     add_text = '\nIncluded baselines = ' + str(numpy.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])[include_baselines])
                 else:
-                    add_text = ''
+                    add_text = '\n' + str(self.deploy_index)
 
                 if center_dir.upper() == 'E':
                     center_dir_full = 'East'
@@ -2197,7 +2196,7 @@ class Correlator:
                 #Enable Interactive Portion
                 if interactive == True:
                     print('Map should be interactive')
-                    fig.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event,  mollweide=mollweide, center_dir=center_dir))
+                    fig.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event,  mollweide=mollweide, center_dir=center_dir, all_alignments=self.all_alignments))
 
                 #ax.legend(loc='lower left')
                 self.figs.append(fig)
@@ -2849,7 +2848,7 @@ class Correlator:
                         plt.xlabel('Azimuth Distribution (Degrees)\nCentered on Mean')
                         #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         plt.hist(all_phi_best - mean_phi, bins=self.phis_deg-mean_phi, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
-                        x = numpy.linspace(min(self.phis_deg-mean_phi),max(self.phis_deg-mean_phi),200)
+                        x = numpy.linspace(min(self.phis_deg-mean_phi),max(self.phis_deg-mean_phi),10*self.n_phi)
                         plt.plot(x,scipy.stats.norm.pdf(x,0,sig_phi),label='Gaussian Fit')
                         plt.xlim(min(all_phi_best - mean_phi) - 1.0,max(all_phi_best - mean_phi) + 1.0)
                         if len(circle_az) == 1:
@@ -2859,11 +2858,12 @@ class Correlator:
                         plt.xlabel('Azimuth Distribution (Degrees)')
                         #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         plt.hist(all_phi_best, bins=self.phis_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
-                        x = numpy.linspace(min(self.phis_deg),max(self.phis_deg),200)
+                        x = numpy.linspace(min(self.phis_deg),max(self.phis_deg),10*self.n_phi)
                         plt.plot(x,scipy.stats.norm.pdf(x,mean_phi,sig_phi),label='Gaussian Fit')
                         plt.xlim(min(all_phi_best) - 1.0,max(all_phi_best) + 1.0)
-                        if len(circle_az) == 1:
-                            plt.axvline(circle_az[0],color='fuchsia',label='Highlighted Azimuth')
+                        if circle_az is not None:
+                            if len(circle_az) == 1:
+                                plt.axvline(circle_az[0],color='fuchsia',label='Highlighted Azimuth')
 
                     plt.legend(loc = 'upper right',fontsize=10)
                     plt.minorticks_on()
@@ -2880,8 +2880,9 @@ class Correlator:
                         x = numpy.linspace(min(self.thetas_deg-mean_theta),max(self.thetas_deg-mean_theta),200)
                         plt.plot(x,scipy.stats.norm.pdf(x,0,sig_theta),label='Gaussian Fit')
                         plt.xlim(min(all_theta_best - mean_theta) - 1.0,max(all_theta_best - mean_theta) + 1.0)
-                        if len(circle_zenith) == 1:
-                            plt.axvline(circle_zenith[0] - mean_theta,color='fuchsia',label='Highlighted Zenith')
+                        if circle_zenith is not None:
+                            if len(circle_zenith) == 1:
+                                plt.axvline(circle_zenith[0] - mean_theta,color='fuchsia',label='Highlighted Zenith')
 
                     else:
                         plt.xlabel('Zenith Distribution (Degrees)')
@@ -2890,8 +2891,9 @@ class Correlator:
                         x = numpy.linspace(min(self.thetas_deg),max(self.thetas_deg),200)
                         plt.plot(x,scipy.stats.norm.pdf(x,mean_theta,sig_theta),label='Gaussian Fit')
                         plt.xlim(min(all_theta_best) - 1.0,max(all_theta_best) + 1.0)
-                        if len(circle_zenith) == 1:
-                            plt.axvline(circle_zenith[0],color='fuchsia',label='Highlighted Zenith')
+                        if circle_zenith is not None:
+                            if len(circle_zenith) == 1:
+                                plt.axvline(circle_zenith[0],color='fuchsia',label='Highlighted Zenith')
 
                     
                     plt.legend(loc = 'upper right',fontsize=10)
@@ -3636,10 +3638,10 @@ if __name__=="__main__":
             cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
         for mode in ['hpol','vpol']:
-            mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='W', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
+            mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
             all_figs.append(fig)
             all_axs.append(ax)
-            if True:
+            if False:
                 cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[0,1,2,3,4,5])
                 # for baseline in [0,1,2,3,4,5]:
                 #     cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[baseline])

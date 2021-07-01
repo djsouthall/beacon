@@ -78,11 +78,6 @@ if __name__=="__main__":
     hilbert=False
     final_corr_length = 2**17
 
-    deploy_index = None
-
-    if deploy_index is None:
-        deploy_index = info.returnDefaultDeploy()
-
     filter_string = ''
 
     if crit_freq_low_pass_MHz is None:
@@ -142,10 +137,7 @@ if __name__=="__main__":
     else:
         filter_string += 'shortenlength-%0.2f-'%(shorten_length)
 
-    filter_string += 'sinesubtract_%i-'%(int(sine_subtract))
-
-    filter_string += 'deploy_calibration_%i'%(deploy_index)
-
+    filter_string += 'sinesubtract_%i'%(int(sine_subtract))
 
     print(filter_string)
 
@@ -165,7 +157,12 @@ if __name__=="__main__":
         if filename is not None:
             with h5py.File(filename, 'a') as file:
                 eventids = file['eventids'][...]
+
+
+
                 rf_cut = file['trigger_type'][...] == 2
+                # print('TEMPORARY HARDCODE') #debugging an error that occurred in run 1663 due to a zero valued waveform
+                # rf_cut[numpy.cumsum(file['trigger_type'][...] == 2) < 10000] = False #TEMPORARY
 
                 print('Total Events: %i'%file.attrs['N'])
                 print('[1] Software Events: %i'%sum(file['trigger_type'][...] == 1))

@@ -1,0 +1,3 @@
+This data was taken at UChicago when testing the RTX system.  It contains runs that were taken in the area between GCIS and Crerar library.  Run 1a had the gps antennas seperated by 31.9' as measured manually. Run1b is similar, but the base gps was placed ontop of a box, adding elevation of 0.6'.  Run 2 is similar to these, but at a baseline measured manually to be 174.8'.  
+
+The rover GPS was measured to be at approximately (41.79-542, -87.602267, 187m), with END measurements of the base to be (-586, 776, -10) for the short baseline and (-1446, 5296, -86) for the longer baselnie.  These END measurements are given in centimeters.

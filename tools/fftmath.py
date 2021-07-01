@@ -990,15 +990,21 @@ class TimeDelayCalculator(FFTPrepper):
                     if print_warning:
                         print('WARNING!!! Changing align method to method 9 while in crosspol mode.')
 
+            #Handle scenario where waveform has all zeros (which results in 0 SNR which messes up FFT/correlation)
+            bad_channels = numpy.where(numpy.std(ffts,axis=1) == 0)[0] 
+            bad_pairs = numpy.any(numpy.isin(pairs,bad_channels),axis=1) #Calculation will proceed as normal (nan's will exist), but the output of these channel will be overwritten.
+
             corrs_fft = numpy.multiply((ffts[pairs[:,0]].T/numpy.std(ffts[pairs[:,0]],axis=1)).T,(numpy.conj(ffts[pairs[:,1]]).T/numpy.std(numpy.conj(ffts[pairs[:,1]]),axis=1)).T) / (len(self.waveform_times_corr)//2 + 1)
 
-            if ~numpy.all(numpy.isfinite(corrs_fft)):
-                import pdb; pdb.set_trace()
+            # if ~numpy.all(numpy.isfinite(corrs_fft)):
+            #     import pdb; pdb.set_trace()
 
             corrs = numpy.fft.fftshift(numpy.fft.irfft(corrs_fft,axis=1,n=self.final_corr_length),axes=1) * (self.final_corr_length//2) #Upsampling and keeping scale
 
-            if ~numpy.all(numpy.isfinite(corrs)):
-                import pdb; pdb.set_trace()
+            corrs[bad_pairs] = 0.0
+
+            # if ~numpy.all(numpy.isfinite(corrs)):
+            #     import pdb; pdb.set_trace()
 
 
             if align_method == 0:

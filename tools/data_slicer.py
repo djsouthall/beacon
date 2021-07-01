@@ -11,19 +11,18 @@ import sys
 import os
 import inspect
 import h5py
+import copy
 
 import numpy
 import scipy
 import scipy.signal
 import scipy.signal
 
-sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
-sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
-from tools.data_handler import createFile
-from tools.fftmath import TemplateCompareTool
-from tools.fftmath import FFTPrepper
-from tools.correlator import Correlator
+from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from beacon.tools.data_handler import createFile
+from beacon.tools.fftmath import TemplateCompareTool
+from beacon.tools.fftmath import FFTPrepper
+from beacon.tools.correlator import Correlator
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -157,7 +156,7 @@ class dataSlicerSingleRun():
                                             'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
                                             'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',
                                             'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','phi_best_h','phi_best_v',\
-                                            'calibrated_trigtime']
+                                            'calibrated_trigtime','triggered_beams','beam_power']
 
                 self.tct = None #This will be defined when necessary by functions below. 
 
@@ -203,13 +202,17 @@ class dataSlicerSingleRun():
                 self.snr_n_bins_h = snr_n_bins_h
                 self.snr_n_bins_v = snr_n_bins_v
 
+                #Unknown, will be calculated as needed.
+                self.max_beam_power = None
+                self.max_beam_number = None
+
                 #Map Direction Params:
                 self.map_dset_key = map_dset_key
                 if len(self.map_dset_key.split('deploy_calibration_')) > 1:
                     self.map_deploy_index = int(self.map_dset_key.split('deploy_calibration_')[-1].split('-')[0])
                 else:
                     self.map_deploy_index = None #Will use default
-                self.checkForBothMapDatasets() #Will append to known param key and prepare for if hilber used or not.
+                self.checkForComplementaryBothMapDatasets() #Will append to known param key and prepare for if hilber used or not.
                 
                 self.n_phi = n_phi
                 self.range_phi_deg = numpy.asarray(range_phi_deg)
@@ -230,6 +233,8 @@ class dataSlicerSingleRun():
                     self.roi['test'] = sample_ROI
 
                 self.checkDataAvailability()
+
+                self.masked_fallback_mode = 1
 
                 #self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, numpy.shape(roi)[0])]
             else:
@@ -308,19 +313,58 @@ class dataSlicerSingleRun():
         '''
         return print(self.known_param_keys)
 
-    def checkForBothMapDatasets(self):
+    def checkForComplementaryBothMapDatasets(self, verbose=True):
         '''
         This will use the given dset key for map data, and determine whether it is using hilbert envelopes or not.
-        It will then check for the presence of the counterpart dataset, and make the appropriate preperations.  
+        It will then check for the presence of the counterpart dataset (no hilbert enbelopes), and make the appropriate 
+        preperations to allow both datasets to be available.
+
+        Similarly for each, it will attempt to determine the "scope" of the dataset (abovehorizon, belowhorizon, 
+        allsky), and then identify if the other options are available. 
         '''
+
+
         # 'hilbert_theta_best_h','hilbert_theta_best_v','hilbert_elevation_best_h','hilbert_elevation_best_v','hilbert_phi_best_h','hilbert_phi_best_v'
         #'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1'
-        self.hilbert_map = bool(self.map_dset_key.lower().split('hilb')[1][1]) #split by hilbert, choosing string to right, the first digit after the underscore should be the bool
-        self.normal_map = not self.hilbert_map #Default before checking if both dsets exist is that only the one given exists. 
-        self.map_dset_key_hilbert = self.map_dset_key  #Fallback
+
         try:
+            self.hilbert_map = bool(self.map_dset_key.lower().split('hilb')[1][1]) #split by hilbert, choosing string to right, the first digit after the underscore should be the bool
+            self.normal_map = not self.hilbert_map #Default before checking if both dsets exist is that only the one given exists.
+
+            self.map_dset_key_hilbert = self.map_dset_key  #Fallback
+
+            #map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_16384-maxmethod_0-sinesubtract_1-deploy_calibration_30-n_phi_1440-min_phi_neg180-max_phi_180-n_theta_720-min_theta_0-max_theta_180-scope_allsky'
+
+            self.allsky_normal_map = self.normal_map and 'scope_allsky' in self.map_dset_key
+            self.belowhorizon_normal_map = self.normal_map and 'scope_belowhorizon' in self.map_dset_key
+            self.abovehorizon_normal_map = self.normal_map and 'scope_abovehorizon' in self.map_dset_key
+
+            self.allsky_hilbert_map = self.hilbert_map and 'scope_allsky' in self.map_dset_key
+            self.belowhorizon_hilbert_map = self.hilbert_map and 'scope_belowhorizon' in self.map_dset_key
+            self.abovehorizon_hilbert_map = self.hilbert_map and 'scope_abovehorizon' in self.map_dset_key
+
+            if 'Hilb_' in self.map_dset_key:
+                initial_hilbert_value = int(bool(self.map_dset_key.lower().split('hilb')[1][1]))
+                initial_hilbert = 'Hilb_%i'%initial_hilbert_value
+            else:
+                initial_hilbert = None
+
+
+            if self.allsky_normal_map or self.allsky_hilbert_map:
+                initial_scope = 'scope_allsky'
+            elif self.belowhorizon_normal_map or self.belowhorizon_hilbert_map:
+                initial_scope = 'scope_belowhorizon'
+            elif self.abovehorizon_normal_map or self.abovehorizon_hilbert_map:
+                initial_scope = 'scope_abovehorizon'
+            else:
+                initial_scope = None
+
             with h5py.File(self.analysis_filename, 'r') as file:
-                if numpy.logical_and(self.map_dset_key in list(file['map_direction'].keys()),self.map_dset_key.replace('Hilb_%i'%(self.hilbert_map),'Hilb_%i'%(not self.hilbert_map)) in list(file['map_direction'].keys())):
+                map_direction_keys = list(file['map_direction'].keys())
+
+                #Check for map counterpart not assuming any premade scope.  This will be self.hilbert_map and self.normal_map
+                
+                if numpy.logical_and(self.map_dset_key in map_direction_keys,self.map_dset_key.replace('Hilb_%i'%(self.hilbert_map),'Hilb_%i'%(not self.hilbert_map)) in map_direction_keys):
                     if self.hilbert_map == True:
                         self.map_dset_key_hilbert = self.map_dset_key
                         self.map_dset_key = self.map_dset_key.replace('Hilb_%i'%(self.hilbert_map),'Hilb_%i'%(not self.hilbert_map))
@@ -333,13 +377,74 @@ class dataSlicerSingleRun():
                     for k in added_keys:
                         self.known_param_keys.append(k)
 
-                    print('NOTE: Both version of map data (normal v.s. Hilbert) are available in this run for the given map dataset key.')
-                    print('Use the same map keys prepended with "hilbert_" to use them.  For instance "hilbert_elevation_best_h"')
+                    if verbose:
+                        print('NOTE: Both version of map data (normal v.s. Hilbert) are available in this run for the given map dataset key.')
+                        print('Use the same map keys prepended with "hilbert_" to use them.  For instance "hilbert_elevation_best_h"')
 
 
-                print('Map Direction datasets in file:')
-                for d in list(file['map_direction'].keys()): 
-                    print('\t' + d)
+                if initial_hilbert is not None and initial_scope is not None:
+                    #check for specific predefined horizon-based cut versions of the map
+                    _map_dset_key = self.map_dset_key.replace(initial_hilbert, 'Hilb_0')
+
+                    #Checking allsky
+                    _map_dset_key = _map_dset_key.replace(initial_scope,'scope_allsky')
+                    if _map_dset_key in map_direction_keys:
+                        self.allsky_normal_map = True
+                        self.map_dset_key_normal_allsky = copy.copy(_map_dset_key)
+                        added_keys = ['theta_best_h_allsky','theta_best_v_allsky','elevation_best_h_allsky','elevation_best_v_allsky','phi_best_h_allsky','phi_best_v_allsky']
+                        for k in added_keys:
+                            self.known_param_keys.append(k)
+                    
+                    _map_dset_key = _map_dset_key.replace('scope_allsky','scope_abovehorizon')
+                    if _map_dset_key in map_direction_keys:
+                        self.abovehorizon_normal_map = True
+                        self.map_dset_key_normal_abovehorizon = copy.copy(_map_dset_key)
+                        added_keys = ['theta_best_h_allsky','theta_best_v_abovehorizon','elevation_best_h_abovehorizon','elevation_best_v_abovehorizon','phi_best_h_abovehorizon','phi_best_v_abovehorizon']
+                        for k in added_keys:
+                            self.known_param_keys.append(k)
+                    
+                    _map_dset_key = _map_dset_key.replace('scope_abovehorizon','scope_belowhorizon')
+                    if _map_dset_key in map_direction_keys:
+                        self.belowhorizon_normal_map = True
+                        self.map_dset_key_normal_belowhorizon = copy.copy(_map_dset_key)
+                        added_keys = ['theta_best_h_belowhorizon','theta_best_v_belowhorizon','elevation_best_h_belowhorizon','elevation_best_v_belowhorizon','phi_best_h_belowhorizon','phi_best_v_belowhorizon']
+                        for k in added_keys:
+                            self.known_param_keys.append(k)
+
+
+                    #check for specific predefined horizon-based cut versions of the map
+                    _map_dset_key = self.map_dset_key.replace(initial_hilbert, 'Hilb_1')
+
+                    #Checking allsky
+                    _map_dset_key = _map_dset_key.replace(initial_scope,'scope_allsky')
+                    if _map_dset_key in map_direction_keys:
+                        self.allsky_hilbert_map = True
+                        self.map_dset_key_hilbert_allsky = copy.copy(_map_dset_key)
+                        added_keys = ['hilbert_theta_best_h_allsky','hilbert_theta_best_v_allsky','hilbert_elevation_best_h_allsky','hilbert_elevation_best_v_allsky','hilbert_phi_best_h_allsky','hilbert_phi_best_v_allsky']
+                        for k in added_keys:
+                            self.known_param_keys.append(k)
+                    
+                    _map_dset_key = _map_dset_key.replace('scope_allsky','scope_abovehorizon')
+                    if _map_dset_key in map_direction_keys:
+                        self.abovehorizon_hilbert_map = True
+                        self.map_dset_key_hilbert_abovehorizon = copy.copy(_map_dset_key)
+                        added_keys = ['hilbert_theta_best_h_abovehorizon','hilbert_theta_best_v_abovehorizon','hilbert_elevation_best_h_abovehorizon','hilbert_elevation_best_v_abovehorizon','hilbert_phi_best_h_abovehorizon','hilbert_phi_best_v_abovehorizon']
+                        for k in added_keys:
+                            self.known_param_keys.append(k)
+                    
+                    _map_dset_key = _map_dset_key.replace('scope_abovehorizon','scope_belowhorizon')
+                    if _map_dset_key in map_direction_keys:
+                        self.below_hilbert_map = True
+                        self.map_dset_key_hilbert_below = copy.copy(_map_dset_key)
+                        added_keys = ['hilbert_theta_best_h_belowhorizon','hilbert_theta_best_v_belowhorizon','hilbert_elevation_best_h_belowhorizon','hilbert_elevation_best_v_belowhorizon','hilbert_phi_best_h_belowhorizon','hilbert_phi_best_v_belowhorizon']
+                        for k in added_keys:
+                            self.known_param_keys.append(k)
+
+
+                if verbose:
+                    print('Map Direction datasets in file:')
+                    for d in map_direction_keys: 
+                        print('\t' + d)
 
 
                 file.close()
@@ -512,98 +617,188 @@ class dataSlicerSingleRun():
         try:
             if len(numpy.shape(eventids)) > 1:
                 print('WARNING!!! eventids is in the incorrect format.')
+            if len(eventids) > 0:
+                if param_key in self.known_param_keys:
+                    with h5py.File(self.analysis_filename, 'r') as file:
+                        if param_key == 'impulsivity_h':
+                            param = file['impulsivity'][self.impulsivity_dset_key]['hpol'][...][eventids]
+                        elif param_key == 'impulsivity_v':
+                            param = file['impulsivity'][self.impulsivity_dset_key]['vpol'][...][eventids]
+                        elif param_key == 'cr_template_search_h':
+                            this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
+                            output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
+                            param = numpy.max(output_correlation_values[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD 
+                        elif param_key == 'cr_template_search_v':
+                            this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
+                            output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
+                            param = numpy.max(output_correlation_values[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                        elif param_key == 'std_h':
+                            std = file['std'][...][eventids]
+                            param = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                        elif param_key == 'std_v':
+                            std = file['std'][...][eventids]
+                            param = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                        elif param_key == 'p2p_h': 
+                            p2p = file['p2p'][...][eventids]
+                            param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                        elif param_key == 'p2p_v': 
+                            p2p = file['p2p'][...][eventids]
+                            param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                        elif param_key == 'snr_h':
+                            std = file['std'][...][eventids]
+                            param_1 = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                            p2p = file['p2p'][...][eventids]
+                            param_2 = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                            param = numpy.divide(param_2, param_1)
+                        elif param_key == 'snr_v':
+                            std = file['std'][...][eventids]
+                            param_1 = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                            p2p = file['p2p'][...][eventids]
+                            param_2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                            param = numpy.divide(param_2, param_1)
+                        elif 'time_delay_' in param_key:
+                            split_param_key = param_key.split('_')
+                            dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
+                            param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
+                        elif 'cw_present' == param_key:
+                            param = file['cw']['has_cw'][...][eventids].astype(int)
+                        elif 'cw_freq_Mhz' == param_key:
+                            param = file['cw']['freq_hz'][...][eventids]/1e6 #MHz
+                        elif 'cw_linear_magnitude' == param_key:
+                            param = file['cw']['linear_magnitude'][...][eventids]
+                        elif 'cw_dbish' == param_key:
+                            cw_dsets = list(file['cw'].keys())
+                            if not numpy.isin('dbish',cw_dsets):
+                                print('No stored dbish data from cw dataset, attempting to calculate from linear magnitude.')
+                                if not hasattr(self, 'cw_prep'):
+                                    print('Creating FFTPrepper class to prepare CW bins.')
+                                    self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
+                                    self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
 
-            if param_key in self.known_param_keys:
-                with h5py.File(self.analysis_filename, 'r') as file:
-                    if param_key == 'impulsivity_h':
-                        param = file['impulsivity'][self.impulsivity_dset_key]['hpol'][...][eventids]
-                    elif param_key == 'impulsivity_v':
-                        param = file['impulsivity'][self.impulsivity_dset_key]['vpol'][...][eventids]
-                    elif param_key == 'cr_template_search_h':
-                        this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
-                        output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
-                        param = numpy.max(output_correlation_values[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD 
-                    elif param_key == 'cr_template_search_v':
-                        this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
-                        output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
-                        param = numpy.max(output_correlation_values[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                    elif param_key == 'std_h':
-                        std = file['std'][...][eventids]
-                        param = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                    elif param_key == 'std_v':
-                        std = file['std'][...][eventids]
-                        param = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                    elif param_key == 'p2p_h': 
-                        p2p = file['p2p'][...][eventids]
-                        param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                    elif param_key == 'p2p_v': 
-                        p2p = file['p2p'][...][eventids]
-                        param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                    elif param_key == 'snr_h':
-                        std = file['std'][...][eventids]
-                        param_1 = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                        p2p = file['p2p'][...][eventids]
-                        param_2 = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                        param = numpy.divide(param_2, param_1)
-                    elif param_key == 'snr_v':
-                        std = file['std'][...][eventids]
-                        param_1 = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                        p2p = file['p2p'][...][eventids]
-                        param_2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                        param = numpy.divide(param_2, param_1)
-                    elif 'time_delay_' in param_key:
-                        split_param_key = param_key.split('_')
-                        dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
-                        param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
-                    elif 'cw_present' == param_key:
-                        param = file['cw']['has_cw'][...][eventids].astype(int)
-                    elif 'cw_freq_Mhz' == param_key:
-                        param = file['cw']['freq_hz'][...][eventids]/1e6 #MHz
-                    elif 'cw_linear_magnitude' == param_key:
-                        param = file['cw']['linear_magnitude'][...][eventids]
-                    elif 'cw_dbish' == param_key:
-                        cw_dsets = list(file['cw'].keys())
-                        if not numpy.isin('dbish',cw_dsets):
-                            print('No stored dbish data from cw dataset, attempting to calculate from linear magnitude.')
-                            if not hasattr(self, 'cw_prep'):
-                                self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
-                                self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
-                            linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
-                            param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
-                        else:
-                            param = file['cw']['dbish'][...][eventids]
-                    elif 'theta_best_h' == param_key:
-                        param = file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
-                    elif 'theta_best_v' == param_key:
-                        param = file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
-                    elif 'elevation_best_h' == param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
-                    elif 'elevation_best_v' == param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
-                    elif 'phi_best_h' == param_key:
-                        param = file['map_direction'][self.map_dset_key]['hpol_ENU_azimuth'][...][eventids]
-                    elif 'phi_best_v' == param_key:
-                        param = file['map_direction'][self.map_dset_key]['vpol_ENU_azimuth'][...][eventids]
+                                linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
+                                param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
+                            else:
+                                #param = file['cw']['dbish'][...][eventids] #Should work, but I messed it up.  Bodging it for now.
+                                #print('dbish not correctly setup in flag_cw.py.  Converting linear to dbish now.')
+                                linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
+                                param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
+                        
+                        elif 'hilbert' not in param_key and 'theta_best_h_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'theta_best_v_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_h_allsky' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_v_allsky' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_h_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_v_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_azimuth'][...][eventids]
 
-                    elif 'hilbert_theta_best_h' == param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert_theta_best_v' == param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert_elevation_best_h' == param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert_elevation_best_v' == param_key:
-                        param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
-                    elif 'hilbert_phi_best_h' == param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_azimuth'][...][eventids]
-                    elif 'hilbert_phi_best_v' == param_key:
-                        param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_azimuth'][...][eventids]
-                    if 'calibrated_trigtime' == param_key:
-                        param = file['calibrated_trigtime'][...][eventids]
+                        elif 'hilbert' not in param_key and 'theta_best_h_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'theta_best_v_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_h_abovehorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_v_abovehorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_h_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_v_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_azimuth'][...][eventids]
 
-                    file.close()
+                        elif 'hilbert' not in param_key and 'theta_best_h_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'theta_best_v_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_h_belowhorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_v_belowhorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_h_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_v_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_azimuth'][...][eventids]
+
+                        elif 'hilbert' not in param_key and 'theta_best_h' in param_key:
+                            param = file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'theta_best_v' in param_key:
+                            param = file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_h' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'elevation_best_v' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_h' in param_key:
+                            param = file['map_direction'][self.map_dset_key]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' not in param_key and 'phi_best_v' in param_key:
+                            param = file['map_direction'][self.map_dset_key]['vpol_ENU_azimuth'][...][eventids]
+
+                        elif 'hilbert' in param_key and 'theta_best_h_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'theta_best_v_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_h_allsky' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_v_allsky' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_h_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_v_allsky' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_azimuth'][...][eventids]
+
+                        elif 'hilbert' in param_key and 'theta_best_h_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'theta_best_v_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_h_abovehorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_v_abovehorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_h_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_v_abovehorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_azimuth'][...][eventids]
+
+                        elif 'hilbert' in param_key and 'theta_best_h_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'theta_best_v_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_h_belowhorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_v_belowhorizon' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_h_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_v_belowhorizon' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_azimuth'][...][eventids]
+
+                        elif 'hilbert' in param_key and 'theta_best_h' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'theta_best_v' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_h' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'elevation_best_v' in param_key:
+                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_h' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_azimuth'][...][eventids]
+                        elif 'hilbert' in param_key and 'phi_best_v' in param_key:
+                            param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_azimuth'][...][eventids]
+                        elif 'calibrated_trigtime' == param_key:
+                            param = file['calibrated_trigtime'][...][eventids]
+                        elif 'triggered_beams' == param_key:
+                            param = self.reader.returnTriggerInfo()[0][eventids]
+                        elif 'beam_power' == param_key:
+                            param = self.reader.returnTriggerInfo()[1][eventids]
+
+                        file.close()
+                else:
+                    print('\nWARNING!!!\nOther parameters have not been accounted for yet.\n%s'%(param_key))
+                return param
             else:
-                print('\nWARNING!!!\nOther parameters have not been accounted for yet.\n%s'%(param_key))
-            return param
+                return numpy.array([])
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print('Run: ',self.reader.run)
@@ -720,7 +915,7 @@ class dataSlicerSingleRun():
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def get2dHistCounts(self, main_param_key_x, main_param_key_y, eventids, set_bins=True, load=False):
+    def get2dHistCounts(self, main_param_key_x, main_param_key_y, eventids, set_bins=True, load=False,mask_top_N_bins=0,fill_value=0):
         '''
         Given the set of requested eventids, this will calculate the counts for the plot corresponding to 
         main_param_key, and will return the counts matrix. 
@@ -782,7 +977,8 @@ class dataSlicerSingleRun():
                 print('\tGetting counts from 2dhist')
 
                 counts = numpy.histogram2d(param_x, param_y, bins = [self.current_bin_edges_x,self.current_bin_edges_y])[0].T #Outside of file being open 
-
+            if mask_top_N_bins > 0:
+                counts = self.returnMaskedArray(counts,mask_top_N_bins,fill_value=fill_value)    
             return counts
 
         except Exception as e:
@@ -840,6 +1036,12 @@ class dataSlicerSingleRun():
                 if self.max_snr_val is None:
                     self.max_snr_val = self.max_p2p_val/self.min_std_val
 
+                #Append the max beam power or max beam not present and precalculated if not present
+                if numpy.isin(param_key,['triggered_beams','beam_power']):
+                    if numpy.logical_or(self.max_beam_power is None, self.max_beam_number is None):
+                        triggered_beams, beam_power, unused_eventids = self.reader.returnTriggerInfo()
+                        self.max_beam_power = numpy.max(beam_power)
+                        self.max_beam_number = numpy.max(triggered_beams)
                     
             if param_key not in self.known_param_keys:
                 print('WARNING!!!')
@@ -933,11 +1135,12 @@ class dataSlicerSingleRun():
                         x_max_val = 1000*float(file['cw'].attrs['sine_subtract_min_freq_GHz'])
                         x_min_val = 1000*float(file['cw'].attrs['sine_subtract_max_freq_GHz'])
                         cw_dsets = list(file['cw'].keys())
-                        if not numpy.isin('dbish',cw_dsets):
-                            print('Creating FFTPrepper class to prepare CW bins.')
-                            if not hasattr(self, 'cw_prep'):
-                                self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
-                                self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
+                        if not hasattr(self, 'cw_prep'):
+                            if verbose:
+                                print('Creating FFTPrepper class to prepare CW bins.')
+                            self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
+                            self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
+
                     label = 'Identified CW Freq (MHz)'
                     
                     raw_freqs = self.cw_prep.rfftWrapper(self.cw_prep.t(), numpy.ones_like(self.cw_prep.t()))[0]
@@ -957,105 +1160,110 @@ class dataSlicerSingleRun():
                     x_max_val = 60
                     x_min_val = 0
 
-
-
-
                     # self.n_phi = n_phi
                     # self.range_phi_deg = range_phi_deg
                     # self.n_theta = n_theta
                     # self.range_theta_deg = range_theta_deg
 
-
-
-
-
-                elif 'theta_best_h' == param_key:
+                elif 'hilbert_' not in param_key and 'theta_best_h' in param_key:
+                    scope = param_key.replace('theta_best_h','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only'
+                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
                     else:
-                        label = 'Best Reconstructed Zenith (Deg)\nHpol Antennas Only'
+                        label = 'Best Reconstructed Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_theta_deg)
                     x_min_val = numpy.min(self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'theta_best_v' == param_key:
+                elif 'hilbert_' not in param_key and 'theta_best_v' in param_key:
+                    scope = param_key.replace('theta_best_v','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only'
+                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
                     else:
-                        label = 'Best Reconstructed Zenith (Deg)\nVpol Antennas Only'
+                        label = 'Best Reconstructed Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_theta_deg)
                     x_min_val = numpy.min(self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'elevation_best_h' == param_key:
+                elif 'hilbert_' not in param_key and 'elevation_best_h' in param_key:
+                    scope = param_key.replace('elevation_best_h','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only'
+                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
                     else:
-                        label = 'Best Reconstructed Elevation (Deg)\nHpol Antennas Only'
+                        label = 'Best Reconstructed Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(90.0 - self.range_theta_deg)
                     x_min_val = numpy.min(90.0 - self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'elevation_best_v' == param_key:
+                elif 'hilbert_' not in param_key and 'elevation_best_v' in param_key:
+                    scope = param_key.replace('elevation_best_v','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only'
+                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
                     else:
-                        label = 'Best Reconstructed Elevation (Deg)\nVpol Antennas Only'
+                        label = 'Best Reconstructed Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(90.0 - self.range_theta_deg)
                     x_min_val = numpy.min(90.0 - self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'phi_best_h' == param_key:
+                elif 'hilbert_' not in param_key and 'phi_best_h' in param_key:
+                    scope = param_key.replace('phi_best_h','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only'
+                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
                     else:
-                        label = 'Best Reconstructed Azimuth (Deg)\nHpol Antennas Only'
+                        label = 'Best Reconstructed Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_phi_deg)
                     x_min_val = numpy.min(self.range_phi_deg)
                     x_n_bins = self.n_phi
-                elif 'phi_best_v' == param_key:
+                elif 'hilbert_' not in param_key and 'phi_best_v' in param_key:
+                    scope = param_key.replace('phi_best_v','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only'
+                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
                     else:
-                        label = 'Best Reconstructed Azimuth (Deg)\nVpol Antennas Only'
+                        label = 'Best Reconstructed Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_phi_deg)
                     x_min_val = numpy.min(self.range_phi_deg)
                     x_n_bins = self.n_phi
 
-                elif 'hilbert_theta_best_h' == param_key:
-                    label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only'
+                elif 'hilbert_' in param_key and 'theta_best_h' in param_key:
+                    scope = param_key.replace('hilbert_theta_best_h','')
+                    label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_theta_deg)
                     x_min_val = numpy.min(self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'hilbert_theta_best_v' == param_key:
-                    label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only'
+                elif 'hilbert_' in param_key and 'theta_best_v' in param_key:
+                    scope = param_key.replace('hilbert_theta_best_v','')
+                    label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_theta_deg)
                     x_min_val = numpy.min(self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'hilbert_elevation_best_h' == param_key:
-                    label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only'
+                elif 'hilbert_' in param_key and 'elevation_best_h' in param_key:
+                    scope = param_key.replace('hilbert_elevation_best_h','')
+                    label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(90.0 - self.range_theta_deg)
                     x_min_val = numpy.min(90.0 - self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'hilbert_elevation_best_v' == param_key:
-                    label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only'
+                elif 'hilbert_' in param_key and 'elevation_best_v' in param_key:
+                    scope = param_key.replace('hilbert_elevation_best_v','')
+                    label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(90.0 - self.range_theta_deg)
                     x_min_val = numpy.min(90.0 - self.range_theta_deg)
                     x_n_bins = self.n_theta
-                elif 'hilbert_phi_best_h' == param_key:
-                    label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only'
+                elif 'hilbert_' in param_key and 'phi_best_h' in param_key:
+                    scope = param_key.replace('hilbert_phi_best_h','')
+                    label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_phi_deg)
                     x_min_val = numpy.min(self.range_phi_deg)
                     x_n_bins = self.n_phi
-                elif 'hilbert_phi_best_v' == param_key:
-                    label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only'
+                elif 'hilbert_' in param_key and 'phi_best_v' in param_key:
+                    scope = param_key.replace('hilbert_phi_best_v','')
+                    label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_phi_deg)
                     x_min_val = numpy.min(self.range_phi_deg)
@@ -1067,6 +1275,17 @@ class dataSlicerSingleRun():
                         x_max_val = file['calibrated_trigtime'][...][-1]
 
                     x_n_bins = numpy.ceil((x_max_val - x_min_val)/60).astype(int) #bin into roughly 1 min chunks.
+                elif 'triggered_beams' == param_key:
+                    x_min_val = -0.5
+                    x_max_val = self.max_beam_number + 0.5 #This is crude but at least it avoids hard coding the number of beams.
+                    x_n_bins = int(x_max_val - x_min_val)
+                    label = 'Triggered Beam'
+                elif 'beam_power' == param_key:
+                    label = 'Beam Power Sum (arb)'
+                    x_min_val
+                    x_max_val = self.max_beam_power
+                    x_n_bins = 2*128 #Unsure what is reasonable for this number.  
+
 
             if calculate_bins_from_min_max:
                 current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges
@@ -1093,22 +1312,99 @@ class dataSlicerSingleRun():
         self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
         
 
-    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids, title=None,cmap='coolwarm',load=False,lognorm=True):
+    def returnMaskedArray(self,data,mask_top_N_bins,fill_value=None,fallback_mode=None):
+        '''
+        The input number of bins with the highest counts will be masked, and a masked array of the same shape will be
+        returned.  Because multiple bins may have the same content, more than mask_top_N_bins may actually be removed.
+
+        If the given number of bins to mask is too much (more than the number of bins with meaningful content), then
+        the code will execute based on fallback_mode.  fallback_mode == 0 will return the original data, with no mask,
+        while fallback_mode == 1 will return the data masked for everything not equal to the minimum non-zero bin count.
+        If None then it will use the default defined by the class.
+        '''
+        try:
+            if fallback_mode is None:
+                fallback_mode = self.masked_fallback_mode
+            if fill_value is None:
+                fill_value = numpy.ma.default_fill_value(data.flat[0])
+            if mask_top_N_bins == 0:
+                output = numpy.ma.masked_array(data,fill_value=fill_value)
+            elif numpy.sum(data) == 0:
+                print('DATA GIVEN IS 0. RETURNING.')
+                output = numpy.ma.masked_array(data,fill_value=fill_value)
+            elif mask_top_N_bins > numpy.size(data):
+                print('WARNING!!! NUMBER OF BINS TO MASK [%i] GREATER THAN NUMBER OF BINS.'%mask_top_N_bins)
+                print('RETURNING ORIGINAL DATA UNMASKED')
+                output = numpy.ma.masked_array(data,fill_value=fill_value)
+
+            elif mask_top_N_bins >= numpy.sum(data > 0):
+                print('WARNING!!! NUMBER OF BINS TO MASK [%i] GREATER THAN OR EQUAL TO THE NUMBER OF BINS WITH CONTENT [%i].'%(mask_top_N_bins,numpy.sum(data > 0)))
+                if fallback_mode == 0:
+                    print('RETURNING ORIGINAL DATA UNMASKED')
+                    output = numpy.ma.masked_array(data,fill_value=fill_value)
+                else:
+                    sorted_bin_contents = numpy.unique(numpy.sort(numpy.concatenate(data))[::-1])
+                    maximum_accepted_bin_content = numpy.min(sorted_bin_contents[sorted_bin_contents > 0])
+                    output = numpy.ma.masked_array(data,mask=data > maximum_accepted_bin_content,fill_value=fill_value) #fallback, no longer >=, just >
+                    if numpy.sum(output) == 0:
+                        print('RETURNING DATA WITHOUT MASK DUE TO EMPTY COUNT ATTEMPT')
+                        output = numpy.ma.masked_array(data,fill_value=fill_value)   
+                    else:
+                        print('RETURNING DATA WITH MASK NOT INCLUDING MINIMUM NON-ZERO BINS')
+            else:
+                minimum_denied_bin_content = numpy.sort(numpy.concatenate(data))[::-1][mask_top_N_bins] #Anything greater than or equal to this will be masked.
+
+                if minimum_denied_bin_content <= 1:
+                    minimum_denied_bin_content = 1
+                    print('WARNING!!! THE MINIMUM DENIED BIN CONTENT FOR MASK IS <= 1 (RESULTING IN NO COUNTS).')
+                    #print('WARNING!!! NUMBER OF BINS TO MASK [%i] GREATER THAN OR EQUAL TO THE NUMBER OF BINS WITH CONTENT GREATER THAN OR EQUAL TO MINIMUM DENIED BIN CONTENT [%i]. , IGNORING.'%(mask_top_N_bins,numpy.sum(data >= minimum_denied_bin_content)))
+                    if fallback_mode == 0:
+                        print('RETURNING ORIGINAL DATA UNMASKED')
+                        output = numpy.ma.masked_array(data,fill_value=fill_value)
+                    else:
+                        output = numpy.ma.masked_array(data,mask=data > minimum_denied_bin_content,fill_value=fill_value) #fallback, no longer >=, just >
+                        if numpy.sum(output) == 0:
+                            print('RETURNING DATA WITHOUT MASK DUE TO EMPTY COUNT ATTEMPT')
+                            output = numpy.ma.masked_array(data,fill_value=fill_value)   
+                        else:
+                            print('RETURNING DATA WITH MASK NOT INCLUDING MINIMUM NON-ZERO BINS')
+                else:
+                    output = numpy.ma.masked_array(data,mask=data >= minimum_denied_bin_content,fill_value=fill_value) #default behaviour, should be >=
+            return output
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
+    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids, title=None,cmap='coolwarm', return_counts=False, load=False,lognorm=True, mask_top_N_bins=0, fill_value=None):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
         (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
         up as a contour on the plot.  
+
+        Parameters
+        ----------
+        mask_top_N_bins : int
+            Given a value here, the map will be converted to a masked array, where the most populaated N bins will be
+            masked.
         '''
         try:
             #Should make eventids a self.eventids so I don't need to call this every time.
-            counts = self.get2dHistCounts(main_param_key_x,main_param_key_y,eventids,load=load,set_bins=True) #set_bins should only be called on first call, not on contours.
-            
+            counts = self.get2dHistCounts(main_param_key_x,main_param_key_y,eventids,load=load,set_bins=True,mask_top_N_bins=mask_top_N_bins0, fill_value=fill_value) #set_bins should only be called on first call, not on contours.
+            if mask_top_N_bins > 0:
+                masked_bins = numpy.sum(counts.mask())
+
 
             _fig, _ax = plt.subplots()
-            if title is not None:
-                plt.title(title)
-            else:
-                plt.title('%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types)))
+            if title is None:
+                title = '%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types))
+                if mask_top_N_bins > 0:
+                    title += ', masked_bins = %i'%masked_bins
+            plt.title(title)
 
             if lognorm == True:
                 _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
@@ -1153,7 +1449,10 @@ class dataSlicerSingleRun():
                 print('Error in colorbar, often caused by no events.')
                 print(e)
 
-            return _fig, _ax
+            if return_counts:
+                return _fig, _ax, counts
+            else:
+                return _fig, _ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print('Run: ',self.reader.run)
@@ -1162,7 +1461,7 @@ class dataSlicerSingleRun():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def addContour(self, ax, main_param_key_x, main_param_key_y, contour_eventids, contour_color, load=False, n_contour=5, alpha=0.85, log_contour=True):
+    def addContour(self, ax, main_param_key_x, main_param_key_y, contour_eventids, contour_color, load=False, n_contour=5, alpha=0.85, log_contour=True,mask=None,fill_value=None):
         '''
         Given the plot made from plot2dHist, this will add contours to it for the events specified by contour_eventids.
         This assumes that setCurrentPlotBins has already been called by plot2dHist. 
@@ -1195,6 +1494,11 @@ class dataSlicerSingleRun():
         '''
         try:
             counts = self.get2dHistCounts(main_param_key_x, main_param_key_y, contour_eventids, load=load, set_bins=False)
+            if mask is not None:
+                #Want mask to be applied on top N bins of original data, not the countoured data.  So mask is given.
+                if fill_value is not None:
+                    fill_value = numpy.ma.default_fill_value(counts.flat[0])
+                counts = numpy.ma.masked_array(counts, mask=mask, fill_value=fill_value)
 
             if log_contour:
                 #Log?
@@ -1230,7 +1534,7 @@ class dataSlicerSingleRun():
             print(exc_type, fname, exc_tb.tb_lineno)
             
 
-    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids=None, cmap='coolwarm', include_roi=True, load=False, lognorm=True):
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids=None, cmap='coolwarm', include_roi=True, load=False, lognorm=True, mask_top_N_bins=0, fill_value=0, suppress_legend=False):
         '''
         This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
         calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
@@ -1246,7 +1550,7 @@ class dataSlicerSingleRun():
                 title = '%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types))                
             else:
                 title = '%s, Run = %i'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run))
-            fig, ax = self.plot2dHist(main_param_key_x, main_param_key_y, eventids, title=title, cmap=cmap,lognorm=lognorm) #prepares binning, must be called early (before addContour)
+            fig, ax, counts = self.plot2dHist(main_param_key_x, main_param_key_y, eventids, title=title, cmap=cmap,lognorm=lognorm, return_counts=True, mask_top_N_bins=mask_top_N_bins, fill_value=fill_value) #prepares binning, must be called early (before addContour)
 
             #these few lines below this should be used for adding contours to the map. 
             if include_roi:
@@ -1258,11 +1562,12 @@ class dataSlicerSingleRun():
                     contour_eventids = numpy.intersect1d(contour_eventids,eventids) #getCutsFromROI doesn't account for eventids, this makes it only those that are in ROI and given.
                     # print(len(contour_eventids))
                     #import pdb; pdb.set_trace()
-                    ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids, self.roi_colors[roi_index], n_contour=6)
+                    ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids, self.roi_colors[roi_index], n_contour=6,mask=counts.mask, fill_value=fill_value)
                     legend_properties.append(cs.legend_elements()[0][0])
                     legend_labels.append('roi %i: %s'%(roi_index, roi_key))
 
-                plt.legend(legend_properties,legend_labels,loc='upper left')
+                if suppress_legend == False:
+                    plt.legend(legend_properties,legend_labels,loc='upper left')
 
             return fig, ax
         except Exception as e:
@@ -1630,6 +1935,99 @@ class dataSlicer():
         self.runs = self.runs[cut]
         self.data_slicers = self.data_slicers[cut]
 
+    def returnMaskedArray(self,*args,**kwargs):
+        '''
+        Uses the returnMaskedArray function from the dataSlicerSingleRun class.
+        '''
+        return self.data_slicers[0].returnMaskedArray(*args,**kwargs)
+
+    def returnEventsAWithoutB(self, eventids_dict_A, eventids_dict_B):
+        '''
+        Given 2 eventid dictionaries, this will return a third dictionary containing all eventids in A that are not
+        contained in B.
+
+        '''
+        try:
+            runs_A = numpy.asarray(list(eventids_dict_A.keys()))
+            runs_B = numpy.asarray(list(eventids_dict_B.keys()))
+            eventids_dict_C = {}
+            for run in runs_A:
+                if run in runs_B:
+                    eventids_dict_C[run] = eventids_dict_A[run][~numpy.isin(eventids_dict_A[run],eventids_dict_B[run])] #return events from A that are not in B
+                else:
+                    eventids_dict_C[run] = eventids_dict_A[run] #Return all from A
+                eventids_dict_C[run] = numpy.sort(numpy.unique(eventids_dict_C[run])) 
+            return eventids_dict_C
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def removeEmptyRunsFromDict(self, eventids_dict):
+        '''
+        '''
+        try:
+            runs = numpy.asarray(list(eventids_dict.keys()))
+            eventids_dict_out = {}
+            for run in runs:
+                if len(eventids_dict[run]) > 0:
+                    eventids_dict_out[run] = eventids_dict[run]
+            return eventids_dict_out
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
+    def returnCommonEvents(self, eventids_dict_A, eventids_dict_B):
+        '''
+        Given 2 eventid dictionaries, this will return a third dictionary containing all eventids that exist in  both 
+        sets.
+        '''
+        try:
+            runs_A = numpy.asarray(list(eventids_dict_A.keys()))
+            runs_B = numpy.asarray(list(eventids_dict_B.keys()))
+            eventids_dict_C = {}
+            for run in runs_A:
+                if run in runs_B:
+                    eventids_dict_C[run] = numpy.sort(numpy.unique(eventids_dict_A[run][numpy.isin(eventids_dict_A[run],eventids_dict_B[run])])) #Add events from A that are in B.               
+            return eventids_dict_C
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def returnUniqueEvents(self, eventids_dict_A, eventids_dict_B):
+        '''
+        Given 2 eventid dictionaries, this will return a third dictionary containing all eventids from both sets, but
+        with no duplicates.
+        '''
+        try:
+            runs_A = numpy.asarray(list(eventids_dict_A.keys()))
+            runs_B = numpy.asarray(list(eventids_dict_B.keys()))
+            runs = numpy.unique(numpy.append(runs_A,runs_B))
+            eventids_dict_C = {}
+            for run in runs:
+                eventids_dict_C[run] = numpy.array([])
+                if run in runs_A:
+                    eventids_dict_C[run] = numpy.append(eventids_dict_C[run],eventids_dict_A[run])
+                if run in runs_B:
+                    eventids_dict_C[run] = numpy.append(eventids_dict_C[run],eventids_dict_B[run])
+                eventids_dict_C[run] = numpy.sort(numpy.unique(eventids_dict_C[run]))
+            return eventids_dict_C
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
     def concatenateParamDict(self, param_data_dict):
         '''
         Given a dictionary (keys indicating run number) for a parameter of data.  This will turn that into a 1d array.
@@ -1651,11 +2049,11 @@ class dataSlicer():
             print(exc_type, fname, exc_tb.tb_lineno)
     def printKnownParamKeys(self):
         return self.data_slicers[0].printKnownParamKeys()
-    def checkForBothMapDatasets(self, verbose=False):
+    def checkForComplementaryBothMapDatasets(self, verbose=False):
         for run_index, run in enumerate(self.runs):
             if verbose:
                 print('Run %i'%run)
-            self.data_slicers[run_index].checkForBothMapDatasets()
+            self.data_slicers[run_index].checkForComplementaryBothMapDatasets()
     def printDatasets(self, verbose=False):
         for run_index, run in enumerate(self.runs):
             if verbose:
@@ -1757,7 +2155,7 @@ class dataSlicer():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def get2dHistCounts(self, main_param_key_x, main_param_key_y, eventids_dict, set_bins=True):
+    def get2dHistCounts(self, main_param_key_x, main_param_key_y, eventids_dict, set_bins=True,mask_top_N_bins=0,fill_value=0):
         try:
             if set_bins == True:
                 self.setCurrentPlotBins(main_param_key_x,main_param_key_y,eventids_dict)
@@ -1768,7 +2166,8 @@ class dataSlicer():
             param_y = self.getDataFromParam(eventids_dict, main_param_key_y)
             print('\tGetting counts from 2dhist')
             counts = numpy.histogram2d(self.concatenateParamDict(param_x), self.concatenateParamDict(param_y), bins = [self.current_bin_edges_x,self.current_bin_edges_y])[0].T #Outside of file being open 
-
+            if mask_top_N_bins > 0:
+                counts = self.returnMaskedArray(counts,mask_top_N_bins,fill_value=fill_value)
             return counts
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -1777,7 +2176,7 @@ class dataSlicer():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids_dict, title=None,cmap='coolwarm', lognorm=True):
+    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids_dict, title=None,cmap='coolwarm', lognorm=True, return_counts=False, mask_top_N_bins=0, fill_value=0):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
         (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
@@ -1785,16 +2184,17 @@ class dataSlicer():
         '''
         try:
             #Should make eventids a self.eventids so I don't need to call this every time.
-            counts = self.get2dHistCounts(main_param_key_x,main_param_key_y,eventids_dict,set_bins=True) #set_bins should only be called on first call, not on contours.
-            
+            counts = self.get2dHistCounts(main_param_key_x,main_param_key_y,eventids_dict,set_bins=True,mask_top_N_bins=mask_top_N_bins, fill_value=fill_value) #set_bins should only be called on first call, not on contours.
             _fig, _ax = plt.subplots()
-            if title is not None:
-                plt.title(title)
-            else:
+
+            if title is None:
                 if numpy.all(numpy.diff(list(eventids_dict.keys()))) == 1:
-                    plt.title('%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types)))
+                    title = '%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types))
                 else:
-                    plt.title('%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types)))
+                    title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types))
+                if mask_top_N_bins > 0:
+                    title += ', masked_bins = %i'%masked_bins
+            plt.title(title)
 
             if lognorm == True:
                 _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
@@ -1834,14 +2234,17 @@ class dataSlicer():
                 print('Error in colorbar, often caused by no events.')
                 print(e)
 
-            return _fig, _ax
+            if return_counts:
+                return _fig, _ax, counts
+            else:
+                return _fig, _ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-    def addContour(self, ax, main_param_key_x, main_param_key_y, contour_eventids_dict, contour_color, n_contour=5, alpha=0.85, log_contour=True):
+    def addContour(self, ax, main_param_key_x, main_param_key_y, contour_eventids_dict, contour_color, n_contour=5, alpha=0.85, log_contour=True, mask=None, fill_value=None):
         '''
         Given the plot made from plot2dHist, this will add contours to it for the events specified by contour_eventids.
         This assumes that setCurrentPlotBins has already been called by plot2dHist. 
@@ -1875,6 +2278,12 @@ class dataSlicer():
         try:
             counts = self.get2dHistCounts(main_param_key_x, main_param_key_y, contour_eventids_dict, set_bins=False)
 
+            if mask is not None:
+                #Want mask to be applied on top N bins of original data, not the countoured data.  So mask is given.
+                if fill_value is not None:
+                    fill_value = numpy.ma.default_fill_value(counts.flat[0])
+                counts = numpy.ma.masked_array(counts, mask=mask, fill_value=fill_value)
+
             if log_contour:
                 #Log?
                 #locator = ticker.LogLocator()
@@ -1906,7 +2315,7 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', include_roi=True, lognorm=True):
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', include_roi=True, lognorm=True, mask_top_N_bins=0, fill_value=0, suppress_legend=False):
         '''
         This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
         calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
@@ -1930,8 +2339,7 @@ class dataSlicer():
                     title = '%s, Runs = %i-%i'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1])
                 else:
                     title = '%s, Runs = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())))
-            fig, ax = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap, lognorm=lognorm) #prepares binning, must be called early (before addContour)
-
+            fig, ax, counts = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap, lognorm=lognorm, return_counts=True, mask_top_N_bins=mask_top_N_bins, fill_value=fill_value) #prepares binning, must be called early (before addContour)
             #these few lines below this should be used for adding contours to the map. 
             if include_roi:
                 legend_properties = []
@@ -1944,11 +2352,15 @@ class dataSlicer():
                             contour_eventids_dict[run] = numpy.intersect1d(contour_eventids_dict[run],eventids_dict[run]) #getCutsFromROI doesn't account for eventids, this makes it only those that are in ROI and given.
                         else:
                             del contour_eventids_dict[run]
-                    ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids_dict, self.roi_colors[roi_index], n_contour=6)
+                    if type(counts) == 'numpy.ma.core.MaskedArray':
+                        ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids_dict, self.roi_colors[roi_index], n_contour=6, mask=counts.mask, fill_value=fill_value)
+                    else:
+                        ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids_dict, self.roi_colors[roi_index], n_contour=6)
                     legend_properties.append(cs.legend_elements()[0][0])
                     legend_labels.append('roi %i: %s'%(roi_index, roi_key))
 
-                plt.legend(legend_properties,legend_labels,loc='upper left')
+                if suppress_legend == False:
+                    plt.legend(legend_properties,legend_labels,loc='upper left')
 
             return fig, ax
         except Exception as e:
@@ -2073,6 +2485,7 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
 
 
 
