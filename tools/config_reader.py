@@ -1,6 +1,7 @@
 import json
 import sys
 import os
+import inspect
 import copy
 import pymap3d as pm
 import numpy
@@ -238,33 +239,40 @@ def configReader(json_path, return_mode='enu', check=False):
     check : bool
         If True then this will run checkConfigConsistency.  Default is False.
     '''
-    with open(json_path) as json_file:
-        data = json.load(json_file)
+    try:
+        with open(json_path) as json_file:
+            data = json.load(json_file)
 
-    print('Calibration Description:')
-    print(data['description'])
+        print('Calibration Description:')
+        print(data['description'])
 
-    if check:
-        checkConfigConsistency(data)
+        if check:
+            checkConfigConsistency(data)
 
-    origin = data['origin']['latlonel'] #Lat Lon Elevation, use for generating ENU from other latlonel values.     
-    antennas_physical = {}
-    antennas_phase_hpol = {}
-    antennas_phase_vpol = {}
-    cable_delays = {'hpol' : [0.0 , 0.0 , 0.0 , 0.0],'vpol' : [0.0 , 0.0 , 0.0 , 0.0]}
+        origin = data['origin']['latlonel'] #Lat Lon Elevation, use for generating ENU from other latlonel values.     
+        antennas_physical = {}
+        antennas_phase_hpol = {}
+        antennas_phase_vpol = {}
+        cable_delays = {'hpol' : [0.0 , 0.0 , 0.0 , 0.0],'vpol' : [0.0 , 0.0 , 0.0 , 0.0]}
 
-    if return_mode == 'latlonel':
-        print('WARNING!!! Loading antenna positions as latlonel, which is not the default behaviour and should be done with caution.')
-        print('Done using the ENU data.')
-        data = updateLatlonelFromENU(data)
-    for mast in range(4):
-        antennas_physical[mast] = data['antennas']['ant%i'%mast]['physical']['latlonel']
-        antennas_phase_hpol[mast] = data['antennas']['ant%i'%mast]['hpol'][return_mode]
-        antennas_phase_vpol[mast] = data['antennas']['ant%i'%mast]['vpol'][return_mode]
-        cable_delays['hpol'][mast] = data['antennas']['ant%i'%mast]['hpol']['cable_delay']
-        cable_delays['vpol'][mast] = data['antennas']['ant%i'%mast]['vpol']['cable_delay']
-    
-    return origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays
+        if return_mode == 'latlonel':
+            print('WARNING!!! Loading antenna positions as latlonel, which is not the default behaviour and should be done with caution.')
+            print('Done using the ENU data.')
+            data = updateLatlonelFromENU(data)
+        for mast in range(4):
+            antennas_physical[mast] = data['antennas']['ant%i'%mast]['physical']['latlonel']
+            antennas_phase_hpol[mast] = data['antennas']['ant%i'%mast]['hpol'][return_mode]
+            antennas_phase_vpol[mast] = data['antennas']['ant%i'%mast]['vpol'][return_mode]
+            cable_delays['hpol'][mast] = data['antennas']['ant%i'%mast]['hpol']['cable_delay']
+            cable_delays['vpol'][mast] = data['antennas']['ant%i'%mast]['vpol']['cable_delay']
+        
+        return origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
 
 def generateConfigFromDeployIndex(outpath, deploy_index):
     '''
