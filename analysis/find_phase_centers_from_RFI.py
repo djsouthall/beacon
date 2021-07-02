@@ -454,7 +454,7 @@ if __name__ == '__main__':
                 use_sources = [ 'A', 'B',  'D']#['Miller Substation']#['Miller Substation','Tonopah AFS GATR Site','Beatty Airport Vortac']#['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#'East Dyer Substation',
                 included_pulsers = []#['run1509']#,'run1507','run1511']#
                 included_airplanes = []
-                included_cw_sources = ['khsv']
+                included_cw_sources = []#['khsv']
             
             pulser_weight  = 1.0#len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
@@ -676,9 +676,9 @@ if __name__ == '__main__':
         initial_step_y = 0.25#2.0 #m
         initial_step_z = 0.25#0.75 #m
         initial_step_cable_delay = 0.2 #ns
-        cable_delay_guess_range = 5 #ns
+        cable_delay_guess_range = 10 #ns
         antenna_position_guess_range_x = 1.0#20#10#3#5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_y = 1.0#20#10#3#5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = 3.0#20#10#3#5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
         antenna_position_guess_range_z = 1.0#20#5#4#3#2#3 #Limit to how far from input phase locations to limit the parameter space to
 
         #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
@@ -1517,76 +1517,147 @@ if __name__ == '__main__':
         
         
         #rawChi2(ant0_x=antennas_phase_start[0][0], ant0_y=antennas_phase_start[0][1], ant0_z=antennas_phase_start[0][2], ant1_x=antennas_phase_start[1][0], ant1_y=antennas_phase_start[1][1], ant1_z=antennas_phase_start[1][2], ant2_x=antennas_phase_start[2][0], ant2_y=antennas_phase_start[2][1], ant2_z=antennas_phase_start[2][2], ant3_x=antennas_phase_start[3][0], ant3_y=antennas_phase_start[3][1], ant3_z=antennas_phase_start[3][2])
+        try:
+            m = Minuit(     rawChi2,\
+                            ant0_x=initial_ant0_x,\
+                            ant0_y=initial_ant0_y,\
+                            ant0_z=initial_ant0_z,\
+                            ant1_x=initial_ant1_x,\
+                            ant1_y=initial_ant1_y,\
+                            ant1_z=initial_ant1_z,\
+                            ant2_x=initial_ant2_x,\
+                            ant2_y=initial_ant2_y,\
+                            ant2_z=initial_ant2_z,\
+                            ant3_x=initial_ant3_x,\
+                            ant3_y=initial_ant3_y,\
+                            ant3_z=initial_ant3_z,\
+                            cable_delay0=cable_delays[0],\
+                            cable_delay1=cable_delays[1],\
+                            cable_delay2=cable_delays[2],\
+                            cable_delay3=cable_delays[3],\
+                            error_ant0_x=initial_step_x,\
+                            error_ant0_y=initial_step_y,\
+                            error_ant0_z=initial_step_z,\
+                            error_ant1_x=initial_step_x,\
+                            error_ant1_y=initial_step_y,\
+                            error_ant1_z=initial_step_z,\
+                            error_ant2_x=initial_step_x,\
+                            error_ant2_y=initial_step_y,\
+                            error_ant2_z=initial_step_z,\
+                            error_ant3_x=initial_step_x,\
+                            error_ant3_y=initial_step_y,\
+                            error_ant3_z=initial_step_z,\
+                            error_cable_delay0=initial_step_cable_delay,\
+                            error_cable_delay1=initial_step_cable_delay,\
+                            error_cable_delay2=initial_step_cable_delay,\
+                            error_cable_delay3=initial_step_cable_delay,\
+                            errordef = 1.0,\
+                            limit_ant0_x=ant0_physical_limits_x,\
+                            limit_ant0_y=ant0_physical_limits_y,\
+                            limit_ant0_z=ant0_physical_limits_z,\
+                            limit_ant1_x=ant1_physical_limits_x,\
+                            limit_ant1_y=ant1_physical_limits_y,\
+                            limit_ant1_z=ant1_physical_limits_z,\
+                            limit_ant2_x=ant2_physical_limits_x,\
+                            limit_ant2_y=ant2_physical_limits_y,\
+                            limit_ant2_z=ant2_physical_limits_z,\
+                            limit_ant3_x=ant3_physical_limits_x,\
+                            limit_ant3_y=ant3_physical_limits_y,\
+                            limit_ant3_z=ant3_physical_limits_z,\
+                            limit_cable_delay0=limit_cable_delay0,\
+                            limit_cable_delay1=limit_cable_delay1,\
+                            limit_cable_delay2=limit_cable_delay2,\
+                            limit_cable_delay3=limit_cable_delay3,\
+                            fix_ant0_x=fix_ant0_x,\
+                            fix_ant0_y=fix_ant0_y,\
+                            fix_ant0_z=fix_ant0_z,\
+                            fix_ant1_x=fix_ant1_x,\
+                            fix_ant1_y=fix_ant1_y,\
+                            fix_ant1_z=fix_ant1_z,\
+                            fix_ant2_x=fix_ant2_x,\
+                            fix_ant2_y=fix_ant2_y,\
+                            fix_ant2_z=fix_ant2_z,\
+                            fix_ant3_x=fix_ant3_x,\
+                            fix_ant3_y=fix_ant3_y,\
+                            fix_ant3_z=fix_ant3_z,\
+                            fix_cable_delay0=fix_cable_delay0,\
+                            fix_cable_delay1=fix_cable_delay1,\
+                            fix_cable_delay2=fix_cable_delay2,\
+                            fix_cable_delay3=fix_cable_delay3)
+            result = m.migrad(resume=False)
+        except Exception as e:
+            print(e)
+            print('Attempting setup of iminuit again, but assuming newer version of imnuit.')
+            m = Minuit(     rawChi2,\
+                            ant0_x=initial_ant0_x,\
+                            ant0_y=initial_ant0_y,\
+                            ant0_z=initial_ant0_z,\
+                            ant1_x=initial_ant1_x,\
+                            ant1_y=initial_ant1_y,\
+                            ant1_z=initial_ant1_z,\
+                            ant2_x=initial_ant2_x,\
+                            ant2_y=initial_ant2_y,\
+                            ant2_z=initial_ant2_z,\
+                            ant3_x=initial_ant3_x,\
+                            ant3_y=initial_ant3_y,\
+                            ant3_z=initial_ant3_z,\
+                            cable_delay0=cable_delays[0],\
+                            cable_delay1=cable_delays[1],\
+                            cable_delay2=cable_delays[2],\
+                            cable_delay3=cable_delays[3])
 
-        m = Minuit(     rawChi2,\
-                        ant0_x=initial_ant0_x,\
-                        ant0_y=initial_ant0_y,\
-                        ant0_z=initial_ant0_z,\
-                        ant1_x=initial_ant1_x,\
-                        ant1_y=initial_ant1_y,\
-                        ant1_z=initial_ant1_z,\
-                        ant2_x=initial_ant2_x,\
-                        ant2_y=initial_ant2_y,\
-                        ant2_z=initial_ant2_z,\
-                        ant3_x=initial_ant3_x,\
-                        ant3_y=initial_ant3_y,\
-                        ant3_z=initial_ant3_z,\
-                        cable_delay0=cable_delays[0],\
-                        cable_delay1=cable_delays[1],\
-                        cable_delay2=cable_delays[2],\
-                        cable_delay3=cable_delays[3],\
-                        error_ant0_x=initial_step_x,\
-                        error_ant0_y=initial_step_y,\
-                        error_ant0_z=initial_step_z,\
-                        error_ant1_x=initial_step_x,\
-                        error_ant1_y=initial_step_y,\
-                        error_ant1_z=initial_step_z,\
-                        error_ant2_x=initial_step_x,\
-                        error_ant2_y=initial_step_y,\
-                        error_ant2_z=initial_step_z,\
-                        error_ant3_x=initial_step_x,\
-                        error_ant3_y=initial_step_y,\
-                        error_ant3_z=initial_step_z,\
-                        error_cable_delay0=initial_step_cable_delay,\
-                        error_cable_delay1=initial_step_cable_delay,\
-                        error_cable_delay2=initial_step_cable_delay,\
-                        error_cable_delay3=initial_step_cable_delay,\
-                        errordef = 1.0,\
-                        limit_ant0_x=ant0_physical_limits_x,\
-                        limit_ant0_y=ant0_physical_limits_y,\
-                        limit_ant0_z=ant0_physical_limits_z,\
-                        limit_ant1_x=ant1_physical_limits_x,\
-                        limit_ant1_y=ant1_physical_limits_y,\
-                        limit_ant1_z=ant1_physical_limits_z,\
-                        limit_ant2_x=ant2_physical_limits_x,\
-                        limit_ant2_y=ant2_physical_limits_y,\
-                        limit_ant2_z=ant2_physical_limits_z,\
-                        limit_ant3_x=ant3_physical_limits_x,\
-                        limit_ant3_y=ant3_physical_limits_y,\
-                        limit_ant3_z=ant3_physical_limits_z,\
-                        limit_cable_delay0=limit_cable_delay0,\
-                        limit_cable_delay1=limit_cable_delay1,\
-                        limit_cable_delay2=limit_cable_delay2,\
-                        limit_cable_delay3=limit_cable_delay3,\
-                        fix_ant0_x=fix_ant0_x,\
-                        fix_ant0_y=fix_ant0_y,\
-                        fix_ant0_z=fix_ant0_z,\
-                        fix_ant1_x=fix_ant1_x,\
-                        fix_ant1_y=fix_ant1_y,\
-                        fix_ant1_z=fix_ant1_z,\
-                        fix_ant2_x=fix_ant2_x,\
-                        fix_ant2_y=fix_ant2_y,\
-                        fix_ant2_z=fix_ant2_z,\
-                        fix_ant3_x=fix_ant3_x,\
-                        fix_ant3_y=fix_ant3_y,\
-                        fix_ant3_z=fix_ant3_z,\
-                        fix_cable_delay0=fix_cable_delay0,\
-                        fix_cable_delay1=fix_cable_delay1,\
-                        fix_cable_delay2=fix_cable_delay2,\
-                        fix_cable_delay3=fix_cable_delay3)
+            m.errors['ant0_x'] = initial_step_x
+            m.errors['ant0_y'] = initial_step_y
+            m.errors['ant0_z'] = initial_step_z
+            m.errors['ant1_x'] = initial_step_x
+            m.errors['ant1_y'] = initial_step_y
+            m.errors['ant1_z'] = initial_step_z
+            m.errors['ant2_x'] = initial_step_x
+            m.errors['ant2_y'] = initial_step_y
+            m.errors['ant2_z'] = initial_step_z
+            m.errors['ant3_x'] = initial_step_x
+            m.errors['ant3_y'] = initial_step_y
+            m.errors['ant3_z'] = initial_step_z
+            m.errors['cable_delay0'] = initial_step_cable_delay
+            m.errors['cable_delay1'] = initial_step_cable_delay
+            m.errors['cable_delay2'] = initial_step_cable_delay
+            m.errors['cable_delay3'] = initial_step_cable_delay
+            m.errordef = 1.0
+            m.limits['ant0_x'] = ant0_physical_limits_x
+            m.limits['ant0_y'] = ant0_physical_limits_y
+            m.limits['ant0_z'] = ant0_physical_limits_z
+            m.limits['ant1_x'] = ant1_physical_limits_x
+            m.limits['ant1_y'] = ant1_physical_limits_y
+            m.limits['ant1_z'] = ant1_physical_limits_z
+            m.limits['ant2_x'] = ant2_physical_limits_x
+            m.limits['ant2_y'] = ant2_physical_limits_y
+            m.limits['ant2_z'] = ant2_physical_limits_z
+            m.limits['ant3_x'] = ant3_physical_limits_x
+            m.limits['ant3_y'] = ant3_physical_limits_y
+            m.limits['ant3_z'] = ant3_physical_limits_z
+            m.limits['cable_delay0'] = limit_cable_delay0
+            m.limits['cable_delay1'] = limit_cable_delay1
+            m.limits['cable_delay2'] = limit_cable_delay2
+            m.limits['cable_delay3'] = limit_cable_delay3
+            m.fixed['ant0_x'] = fix_ant0_x
+            m.fixed['ant0_y'] = fix_ant0_y
+            m.fixed['ant0_z'] = fix_ant0_z
+            m.fixed['ant1_x'] = fix_ant1_x
+            m.fixed['ant1_y'] = fix_ant1_y
+            m.fixed['ant1_z'] = fix_ant1_z
+            m.fixed['ant2_x'] = fix_ant2_x
+            m.fixed['ant2_y'] = fix_ant2_y
+            m.fixed['ant2_z'] = fix_ant2_z
+            m.fixed['ant3_x'] = fix_ant3_x
+            m.fixed['ant3_y'] = fix_ant3_y
+            m.fixed['ant3_z'] = fix_ant3_z
+            m.fixed['cable_delay0'] = fix_cable_delay0
+            m.fixed['cable_delay1'] = fix_cable_delay1
+            m.fixed['cable_delay2'] = fix_cable_delay2
+            m.fixed['cable_delay3'] = fix_cable_delay3
 
+            result = m.migrad()
 
-        result = m.migrad(resume=False)
 
         print(result)
         m.hesse()
@@ -1623,23 +1694,30 @@ if __name__ == '__main__':
         ant0_phase_x = m.values['ant0_x']
         ant0_phase_y = m.values['ant0_y']
         ant0_phase_z = m.values['ant0_z']
+        ant0_cable_delay = m.values['cable_delay0']
 
         ant1_phase_x = m.values['ant1_x']
         ant1_phase_y = m.values['ant1_y']
         ant1_phase_z = m.values['ant1_z']
+        ant1_cable_delay = m.values['cable_delay1']
 
         ant2_phase_x = m.values['ant2_x']
         ant2_phase_y = m.values['ant2_y']
         ant2_phase_z = m.values['ant2_z']
+        ant2_cable_delay = m.values['cable_delay2']
 
         ant3_phase_x = m.values['ant3_x']
         ant3_phase_y = m.values['ant3_y']
         ant3_phase_z = m.values['ant3_z']
+        ant3_cable_delay = m.values['cable_delay3']
 
         ant0_ENU = numpy.array([ant0_phase_x, ant0_phase_y, ant0_phase_z]) #initial_ant0_ENU
         ant1_ENU = numpy.array([ant1_phase_x, ant1_phase_y, ant1_phase_z])
         ant2_ENU = numpy.array([ant2_phase_x, ant2_phase_y, ant2_phase_z])
         ant3_ENU = numpy.array([ant3_phase_x, ant3_phase_y, ant3_phase_z])
+        resulting_cable_delays = numpy.array([ant0_cable_delay,ant1_cable_delay,ant2_cable_delay,ant3_cable_delay])
+
+        output_antennas_phase = {0:ant0_ENU, 1:ant1_ENU, 2:ant2_ENU, 3:ant3_ENU}
 
         chi2_ax.plot([initial_ant0_x , ant0_phase_x], [initial_ant0_y , ant0_phase_y], [initial_ant0_z , ant0_phase_z],c='r',alpha=0.5,linestyle='--')
         chi2_ax.plot([initial_ant1_x , ant1_phase_x], [initial_ant1_y , ant1_phase_y], [initial_ant1_z , ant1_phase_z],c='g',alpha=0.5,linestyle='--')
@@ -1791,7 +1869,6 @@ if __name__ == '__main__':
             ant1_ENU = numpy.array([ant1_phase_x, ant1_phase_y, ant1_phase_z])
             ant2_ENU = numpy.array([ant2_phase_x, ant2_phase_y, ant2_phase_z])
             ant3_ENU = numpy.array([ant3_phase_x, ant3_phase_y, ant3_phase_z])
-            
 
             for key in included_pulsers:
                 #Calculate old and new geometries
@@ -2019,12 +2096,34 @@ if __name__ == '__main__':
         print('Code completed.')
         print('\a')
 
-        if False:
+        if True:
             #This code is intended to save the output configuration produced by this script. 
             initial_deploy_index = str(info.returnDefaultDeploy())
-            initial_origin, initial_antennas_physical, initial_antennas_phase_hpol, initial_antennas_phase_vpol, initial_cable_delays, initial_description = configReader(test_file,return_description=True)
+            initial_origin, initial_antennas_physical, initial_antennas_phase_hpol, initial_antennas_phase_vpol, initial_cable_delays, initial_description = bcr.configReader(initial_deploy_index,return_description=True)
 
-            #bcr.configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description="",update_latlonel=False,force_write=True)
+            output_origin = initial_origin
+            output_antennas_physical = initial_antennas_physical
+            if mode == 'hpol':
+                output_antennas_phase_hpol = output_antennas_phase
+                output_antennas_phase_vpol = initial_antennas_phase_vpol
+            else:
+                output_antennas_phase_hpol = initial_antennas_phase_hpol
+                output_antennas_phase_vpol = output_antennas_phase
+            output_cable_delays = initial_cable_delays
+            output_cable_delays[mode] = resulting_cable_delays
+            output_description = 'Automatically generated description for a calibration starting from deploy_index: %s.  This config has updated %s values based on a calibration that was performed.  Initial description: %s'%(initial_deploy_index, mode, initial_description)
+
+            if len(os.path.split(initial_deploy_index)) == 2:
+                json_path = initial_deploy_index
+            else:
+                json_path = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'config','automatically_generated_config_0.json')
+            
+            with open('./find_phase_centers_from_RFI.py', "r") as this_file:
+                #read whole file to a string
+                script_string = this_file.read()
+
+            bcr.configWriter(json_path, output_origin, output_antennas_physical, output_antennas_phase_hpol, output_antennas_phase_vpol, output_cable_delays, description=output_description,update_latlonel=True,force_write=True, additional_text=script_string) #does not overwrite.
+
 
 
             

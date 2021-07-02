@@ -165,7 +165,7 @@ if __name__=="__main__":
 
             filter_string += 'sinesubtract_%i-'%(int(sine_subtract))
 
-            filter_string += 'deploycalibration_%s-'%(str(deploy_index))
+            filter_string += 'deploycalibration_%s-'%(str(deploy_index).replace('_','').replace('-',''))
 
             phi_str = 'n_phi_%i-min_phi_%s-max_phi_%s-'%(n_phi, str(min_phi).replace('-','neg'),str(max_phi).replace('-','neg'))
             filter_string += phi_str

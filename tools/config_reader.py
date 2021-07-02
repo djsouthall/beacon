@@ -8,6 +8,7 @@ import datetime
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from beacon.tools.angle_annotation import AngleAnnotation
+import matplotlib.patheffects as PathEffects
 
 def loadSampleData():
     '''
@@ -27,7 +28,7 @@ def default(obj):
         return obj.tolist()
     raise TypeError('Not serializable')
 
-def configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description="",update_latlonel=False,force_write=True):
+def configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description="", update_latlonel=False, force_write=True, additional_text=''):
     '''
     The counterpart to configReader, given the normal calibration dictionaries, this will write a calibration file
     that can be loaded for later analysis.
@@ -63,7 +64,9 @@ def configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, ante
     force_write : bool
         If True then then this will alter the filename by appending it with _# until it reaches a number/filename
         that does not already exist.  This is intended to avoid overwriting existing calibration files.  If False
-        then the calibration will not be saved at all.  
+        then the calibration will not be saved at all.
+    additional_text : str
+        Any text that you would like also stored with the calibration file, but to be stored seperately to description.
     '''
 
     if ~os.path.exists(json_path) or force_write == True:
@@ -76,7 +79,9 @@ def configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, ante
 
         print("Saving configuration file to %s"%json_path)
         data = {}
-        data["description"] = description
+        data["description"] = str(description)
+
+        data['additional_text'] = str(additional_text)
         
         data["origin"] = {}
         data["origin"]["latlonel"] = origin
@@ -354,6 +359,23 @@ def configSchematicPlotter(deploy_index, en_figsize=(16,16), eu_figsize=(16,9), 
     label_fontsize = 16
     vector_length = 0.75*element_height
 
+    if False:
+        #Making and saving markers for each antenna for use elsewhere.
+        for mast in range(4):
+            fig = plt.figure(figsize = (5,5))
+            ax = plt.gca()
+            plt.axis('off')
+            plt.axis('equal')
+            ax.add_patch(Rectangle((ants[mast][0] + box_width/2 - element_width/2, ants[mast][1] - element_height/2), width=element_width, height=element_height, facecolor=mast_colors[mast], edgecolor=mast_colors[mast], zorder = 10))
+            ax.add_patch(Rectangle((ants[mast][0],ants[mast][1] - box_height/2), width=box_width, height=box_height, facecolor=box_color, edgecolor='k', zorder = 50))
+            plt.ylim(ants[mast][1] - element_height/2 - 0.25 , ants[mast][1] + element_height/2 + 0.25)
+            plt.xlim(ants[mast][0] - 0.05, ants[mast][0] + 0.05)
+            txt = plt.text(ants[mast][0] + 1, ants[mast][1], str(mast), fontsize=48, zorder = 100, c = 'w')
+            txt.set_path_effects([PathEffects.withStroke(linewidth=4, foreground=mast_colors[mast])])
+            plt.draw()
+            plt.tight_layout()
+            fig.savefig(os.path.join('./','antenna%i.png'%mast),dpi=108*4,pad_inches = 0, bbox_inches=0, transparent=True)
+            print('Saved figure for antenna %i'%mast)
     if True:
         #Top down view
         names.append('EN')
