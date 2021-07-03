@@ -5,13 +5,10 @@ This script is meant to determine where each map points for each event and then 
 import os
 import sys
 import h5py
-sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
-
-sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
-import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
-import tools.info as info
-from tools.data_handler import createFile
+from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+import beacon.tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
+import beacon.tools.info as info
+from beacon.tools.data_handler import createFile
 
 import matplotlib.pyplot as plt
 import scipy.signal
@@ -98,9 +95,9 @@ if __name__=="__main__":
 
     #This code will loop over all options included here, and they will be stored as seperate dsets.  Each of these applies different cuts to mapmax when it is attempting to select the best reconstruction direction.
     mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky'] 
-    polarizations = ['hpol','vpol'] #Will loop over both if hpol and vpol present
+    polarizations = ['hpol']#,'vpol'] #Will loop over both if hpol and vpol present
     hilbert_modes = [False]#[True,False] #Will loop over both if True and False present
-    deploy_index = None #None results in default_deploy
+    deploy_index = None#os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021.json') #None results in default_deploy
     
     #Note that the below values set the angular resolution of the plot, while the presets from mapmax_cut_modes limit where in the generated plots will be considered for max values.
     n_phi       = 1440
@@ -165,7 +162,7 @@ if __name__=="__main__":
 
             filter_string += 'sinesubtract_%i-'%(int(sine_subtract))
 
-            filter_string += 'deploycalibration_%s-'%(str(deploy_index).replace('_','').replace('-',''))
+            filter_string += 'deploy_calibration_%s-'%(os.path.split(str(deploy_index))[1])
 
             phi_str = 'n_phi_%i-min_phi_%s-max_phi_%s-'%(n_phi, str(min_phi).replace('-','neg'),str(max_phi).replace('-','neg'))
             filter_string += phi_str
@@ -178,7 +175,6 @@ if __name__=="__main__":
             print(filter_string)
 
             filter_strings.append(filter_string)
-
 
         try:
             run = int(run)
@@ -227,6 +223,7 @@ if __name__=="__main__":
                                 file['map_direction'].create_group(filter_string)
                             else:
                                 print('%s group already exists in file %s'%(filter_string,filename))
+
 
                             map_direction_subsets = list(file['map_direction'][filter_string].keys())
 
@@ -345,7 +342,7 @@ if __name__=="__main__":
 
                         cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract, deploy_index=deploy_index)
 
-                        print('Cor setup to use deploy index %i'%cor.deploy_index)
+                        print('Cor setup to use deploy index %s'%str(cor.deploy_index))
 
                         if sine_subtract:
                             cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)

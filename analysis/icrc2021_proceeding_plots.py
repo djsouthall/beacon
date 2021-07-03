@@ -35,7 +35,7 @@ if __name__=="__main__":
     eu_figsize = 2.5*numpy.array((2.95,2.5))#(16,9)
 
     dpi = 108*4
-    extension = '.pdf'
+    extension = '.svg'
 
 
 
@@ -51,7 +51,7 @@ if __name__=="__main__":
         if outpath_made:
             for index, fig in enumerate(figs):
                 plt.tight_layout()
-                fig.savefig(os.path.join(outpath,names[index] + extension),dpi=dpi, bbox_inches = 'tight',pad_inches = 0)
+                fig.savefig(os.path.join(outpath,names[index] + extension),dpi=dpi, pad_inches = 0,bbox_inches=0, transparent=True)
 
         
 

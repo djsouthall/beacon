@@ -245,6 +245,10 @@ def configReader(json_path, return_mode='enu', check=True, verbose=True, return_
     check : bool
         If True then this will run checkConfigConsistency.  Default is False.
     '''
+    if os.path.split(json_path)[0] == '':
+        print('WARNING!!! No directory path given for json_path, assuming default path of %s'%(os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config')))
+        json_path = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config',json_path)
+
     with open(json_path) as json_file:
         data = json.load(json_file)
 
@@ -374,7 +378,7 @@ def configSchematicPlotter(deploy_index, en_figsize=(16,16), eu_figsize=(16,9), 
             txt.set_path_effects([PathEffects.withStroke(linewidth=4, foreground=mast_colors[mast])])
             plt.draw()
             plt.tight_layout()
-            fig.savefig(os.path.join('./','antenna%i.png'%mast),dpi=108*4,pad_inches = 0, bbox_inches=0, transparent=True)
+            fig.savefig(os.path.join('./','antenna%i.svg'%mast),dpi=108*4,pad_inches = 0, bbox_inches=0, transparent=True)
             print('Saved figure for antenna %i'%mast)
     if True:
         #Top down view

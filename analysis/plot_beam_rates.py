@@ -170,7 +170,7 @@ if __name__=="__main__":
 
 
   #Main Control Parameters
-  runs = numpy.arange(1643,1645)#numpy.arange(1643,1729)
+  runs = numpy.arange(1643,1729)
   #runs = runs[runs != 1663]
   figsize = (16,9)
   dpi = 108*4
@@ -219,14 +219,14 @@ if __name__=="__main__":
             if n_trig_per_beam[beams == beam] > 0:
                 ds.addROI('beam %i'%beam, {'triggered_beams': [beam - 0.5, beam + 0.5]})
 
-    for key_x, key_y in plot_param_pairs:
-        print('Generating %s plot'%(key_x + ' vs ' + key_y))
-        # if key_x == 'phi_best_h' and key_y == 'elevation_best_h':
-        #     fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None,include_roi=len(list(ds.roi.keys()))!=0, lognorm=True)
-        #     fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None,include_roi=len(list(ds.roi.keys()))!=0, lognorm=False)
-        # else:
-        #     fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm)
-        fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm)
+    # for key_x, key_y in plot_param_pairs:
+    #     print('Generating %s plot'%(key_x + ' vs ' + key_y))
+    #     # if key_x == 'phi_best_h' and key_y == 'elevation_best_h':
+    #     #     fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None,include_roi=len(list(ds.roi.keys()))!=0, lognorm=True)
+    #     #     fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None,include_roi=len(list(ds.roi.keys()))!=0, lognorm=False)
+    #     # else:
+    #     #     fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm)
+    #     fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm)
     # fig.set_size_inches(figsize[0], figsize[1])
     # plt.tight_layout()
     # fig.savefig(os.path.join(outpath,key_x + '-vs-' + key_y + '.png'),dpi=dpi)
@@ -246,7 +246,8 @@ if __name__=="__main__":
 
     current_bin_edges, label = ds.data_slicers[0].getSingleParamPlotBins('triggered_beams', ds.getEventidsFromTriggerType(), verbose=False)
     plt.figure()
-    plt.hist(triggered_beams, bins = current_bin_edges)
+    triggered_beams = triggered_beams = ds.concatenateParamDict(ds.getDataFromParam(ds.getEventidsFromTriggerType(),'triggered_beams'))
+    plt.hist(triggered_beams, bins = current_bin_edges, edgecolor='black', linewidth=1.2)
     plt.xlabel('Beam Trigger')
   except Exception as e:
     print(e)

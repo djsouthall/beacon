@@ -209,9 +209,12 @@ class dataSlicerSingleRun():
                 #Map Direction Params:
                 self.map_dset_key = map_dset_key
                 if len(self.map_dset_key.split('deploy_calibration_')) > 1:
-                    self.map_deploy_index = int(self.map_dset_key.split('deploy_calibration_')[-1].split('-')[0])
+                    self.map_deploy_index = str(self.map_dset_key.split('deploy_calibration_')[-1].split('-n_phi')[0])
+                    #self.map_deploy_index = int(self.map_dset_key.split('deploy_calibration_')[-1].split('-')[0])
                 else:
                     self.map_deploy_index = None #Will use default
+
+
                 self.checkForComplementaryBothMapDatasets() #Will append to known param key and prepare for if hilber used or not.
                 
                 self.n_phi = n_phi

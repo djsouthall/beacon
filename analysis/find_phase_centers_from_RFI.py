@@ -263,6 +263,8 @@ if __name__ == '__main__':
 
         #included_airplanes = [ '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166']
         if False:
+            initial_deploy_index = info.returnDefaultDeploy()
+            valley_source_run = 1650
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
             valley_weight = 1.0
@@ -281,6 +283,8 @@ if __name__ == '__main__':
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
                 included_cw_sources = []
         elif False:
+            initial_deploy_index = info.returnDefaultDeploy()
+            valley_source_run = 1650
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
             valley_weight = 1.0
@@ -299,6 +303,8 @@ if __name__ == '__main__':
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
                 included_cw_sources = []
         elif False:
+            initial_deploy_index = info.returnDefaultDeploy()
+            valley_source_run = 1650
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
             valley_weight = 1.0
@@ -319,6 +325,8 @@ if __name__ == '__main__':
                 included_cw_sources = []
         
         elif False:
+            initial_deploy_index = info.returnDefaultDeploy()
+            valley_source_run = 1650
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 0.0
             valley_weight = 0.0
@@ -336,6 +344,8 @@ if __name__ == '__main__':
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
                 included_cw_sources = []
         elif False:
+            initial_deploy_index = info.returnDefaultDeploy()
+            valley_source_run = 1650
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
             valley_weight = 1.0
@@ -354,6 +364,8 @@ if __name__ == '__main__':
                 included_airplanes = []# '1728-62026', '1773-14413', '1773-63659', '1774-178', '1774-88800', '1783-28830', '1784-7166'
                 included_cw_sources = []
         elif False:
+            initial_deploy_index = info.returnDefaultDeploy()
+            valley_source_run = 1650
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
             valley_weight = 1.0
@@ -385,6 +397,8 @@ if __name__ == '__main__':
                 included_airplanes = ['1728-62026','1773-14413','1773-63659','1774-178']
                 included_cw_sources = []
             
+            initial_deploy_index = info.returnDefaultDeploy()
+            valley_source_run = 1650
             pulser_weight  = len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
             valley_weight = len(use_sources)
@@ -404,6 +418,8 @@ if __name__ == '__main__':
                 included_airplanes = ['1728-62026','1773-14413','1773-63659','1774-178']
                 included_cw_sources = []
             
+            initial_deploy_index = info.returnDefaultDeploy()
+            valley_source_run = 1650
             pulser_weight  = len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
             valley_weight = len(use_sources)
@@ -435,6 +451,8 @@ if __name__ == '__main__':
                 included_airplanes = []
                 included_cw_sources = ['khsv']
             
+            initial_deploy_index = info.returnDefaultDeploy()
+            valley_source_run = 1650
             pulser_weight  = 1.0#len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
             valley_weight = 1.0#len(use_sources)
@@ -456,12 +474,40 @@ if __name__ == '__main__':
                 included_airplanes = []
                 included_cw_sources = []#['khsv']
             
+            initial_deploy_index = info.returnDefaultDeploy()
+            valley_source_run = 1650
+            pulser_weight  = 1.0#len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
+            cw_weight = 1.0
+            valley_weight = 1.0#len(use_sources)
+            airplane_weight = 1.0#5*len(included_airplanes)
+        elif False:
+            initial_deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021.json')
+            valley_source_run = 5249 #Aribitrary, hasn't been looked at.  Just trying to prepare for calibrating new data.
+            unknown_source_dir_valley = True #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+            unknown_mode = 'strip'#'cor'#options are 'cor' or 'strip'.  If 'cor' chosen then the most impulsive event will be chosen and use to generate maps.
+            
+            if mode == 'hpol':
+                use_sources = [ 'A', 'B', 'C', 'D', 'F'] #Unsure if any of these will work for the new data.
+                included_pulsers = []
+                included_airplanes = []
+                included_cw_sources = []
+            elif mode == 'vpol':
+                #Don't use palmetto for vpol
+                use_sources = [ 'A', 'B',  'D']
+                included_pulsers = []
+                included_airplanes = []
+                included_cw_sources = []
+            
+            initial_deploy_index = info.returnDefaultDeploy()
+            valley_source_run = 1650
             pulser_weight  = 1.0#len(included_pulsers) #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
             valley_weight = 1.0#len(use_sources)
             airplane_weight = 1.0#5*len(included_airplanes)
             
         else:
+            initial_deploy_index = info.returnDefaultDeploy()
+            valley_source_run = 1650
             pulser_weight = 1.0 #The ratio of these three components of the chi^2 can be adjusted here.  These numbers directly multiply by their respective components before they are added to the chi^2 value.
             cw_weight = 1.0
             valley_weight = 1.0

@@ -32,6 +32,8 @@ from tools.correlator import Correlator
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from mpl_toolkits.mplot3d import Axes3D
+import matplotlib
+matplotlib.use('Agg') #Uncomment when trying to save plane gifs
 
 
 #Settings
@@ -159,7 +161,7 @@ if __name__ == '__main__':
 
 
         #### PULSERS ####
-        if True:
+        if False:
             included_pulsers =    [ 'run1507',\
                                     'run1509',\
                                     'run1511']
@@ -167,7 +169,7 @@ if __name__ == '__main__':
             included_pulsers = []  
 
         #### CW ####
-        if True:
+        if False:
             included_cw_sources = [ 'khsv']
         else:
             included_cw_sources = []                                    
@@ -227,11 +229,13 @@ if __name__ == '__main__':
             #     'Past SP Substation']
         elif False:
             included_valley_sources = ['A']
-        else:
+        elif False:
             included_valley_sources = ['A','B','C','D','E','F']
+        else:
+            included_valley_sources = []
 
         #### AIRPLANES ####
-        plot_animated_airplane = False #Otherwise plots first event from each plane.  
+        plot_animated_airplane = True #Otherwise plots first event from each plane.  
         if False:
             included_airplanes =      [ '1728-62026',\
                                         '1773-14413',\
@@ -240,17 +244,24 @@ if __name__ == '__main__':
                                         '1774-88800',\
                                         '1783-28830',\
                                         '1784-7166']
+            ignore_planes=[]
 
 
         else:
-            included_airplanes =      []#['1728-62026']
+            included_airplanes =      ['1728-62026']
+            ignore_planes=[             '1773-14413',\
+                                        '1773-63659',\
+                                        '1774-178',\
+                                        '1774-88800',\
+                                        '1783-28830',\
+                                        '1784-7166']
 
         plot_predicted_time_shifts = False
         plot_airplane_tracks = True
         plot_time_delay_calculations = False
         plot_time_delays_on_maps = True
         plot_expected_direction = True
-        limit_events = 1000 #Number of events use for time delay calculation
+        limit_events = 10 #Number of events use for time delay calculation
 
 
         plot_residuals = False
@@ -580,7 +591,7 @@ if __name__ == '__main__':
             try_to_use_precalculated_time_delays_airplanes_but_just_as_guess_for_real_time_delays_why_is_this_so_long = False
 
             print('Loading known plane locations.')
-            known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks(ignore_planes=[]) # ['1728-62026','1773-14413','1773-63659','1774-88800','1783-28830','1784-7166']#'1774-88800','1728-62026'
+            known_planes, calibrated_trigtime, output_tracks = pt.getKnownPlaneTracks(ignore_planes=ignore_planes) # ['1728-62026','1773-14413','1773-63659','1774-88800','1783-28830','1784-7166']#'1774-88800','1728-62026'
             origin = info.loadAntennaZeroLocation(deploy_index=deploy_index)
             antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=deploy_index)
             if mode == 'hpol':
@@ -618,7 +629,8 @@ if __name__ == '__main__':
                 reader = Reader(datapath,run)
                 eventids = known_planes[key]['eventids'][:,1]
 
-                enu = numpy.array(pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'],origin[0],origin[1],origin[2]))
+                altitude_offset_m = origin[2]  # m, this is added to the planes altitude for no good reason other than to make it look better.  Perhaps the reported altitude isn't MSL, but rather above ground level?
+                enu = numpy.array(pm.geodetic2enu(output_tracks[key]['lat'],output_tracks[key]['lon'],output_tracks[key]['alt'] + altitude_offset_m,origin[0],origin[1],origin[2]))
                 
                 unique_enu_indices = numpy.sort(numpy.unique(enu,axis=1,return_index=True)[1])
                 distance = numpy.sqrt(enu[0]**2 + enu[0]**2 + enu[0]**2)
@@ -627,7 +639,9 @@ if __name__ == '__main__':
                 
                 plane_polys[key] = pt.PlanePoly(output_tracks[key]['timestamps'][unique_enu_indices],enu[:,unique_enu_indices],plot=False)
 
-                interpolated_plane_locations[key] = plane_polys[key].poly(calibrated_trigtime[key])
+                expected_readout_offset = 8 # seconds, the expected offset between reported plane position and the signals we see.  Unsure what is sensible but 8 seems to make plane 1728 line up well.
+
+                interpolated_plane_locations[key] = plane_polys[key].poly(calibrated_trigtime[key] + expected_readout_offset)
                 
 
                 if plot_airplane_tracks == True:
@@ -699,7 +713,11 @@ if __name__ == '__main__':
                 cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                 if plot_animated_airplane == True:
-                    cor.animatedMap(eventids, mode, 'deploy_index_%i'%deploy_index,include_baselines=include_baselines,map_source_distance_m = source_distance_m,  plane_zenith=zenith_deg,plane_az=azimuth_deg,hilbert=False, max_method=None,center_dir='W',save=False,dpi=300)
+                    if len(os.path.split(deploy_index)) == 2:
+                        title = os.path.split(deploy_index)[1].split('.')[0]
+                    else:
+                        title = 'deploy_index_%s'%str(deploy_index)
+                    cor.animatedMap(eventids, mode, title,include_baselines=include_baselines,map_source_distance_m = source_distance_m,  plane_zenith=zenith_deg,plane_az=azimuth_deg,hilbert=False, max_method=None,center_dir='W',save=True,dpi=300)
                 else:
                     plane_td_dict = {}
                     for event_index, eventid in enumerate(eventids):
