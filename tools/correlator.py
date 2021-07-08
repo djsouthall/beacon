@@ -123,6 +123,7 @@ class Correlator:
     '''
     def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None, all_alignments=False):
         try:
+            self.conference_mode = False #Enable to apply any temporary adjustments such as fontsizes or title labels. 
             if deploy_index is None:
                 self.deploy_index = info.returnDefaultDeploy()
             else:
@@ -2121,7 +2122,7 @@ class Correlator:
                 #Plot array plane 0 elevation curve.
                 im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
 
-                if False:
+                if self.conference_mode:
                     ticks_deg = numpy.array([-60,-40,-30,-15,0,15,30,45,60,75])
                     if mollweide == True:
                         plt.yticks(numpy.deg2rad(ticks_deg))
@@ -2581,6 +2582,15 @@ class Correlator:
             if plane_elevation is not None and _plane_az is not None:
                 ax, circle, lines = self.addCircleToMap(ax, _plane_az[0], plane_elevation[0], azimuth_offset_deg=0.0, mollweide=True, radius=radius, crosshair=True, return_circle=True, return_crosshair=True, color='fuchsia', linewidth=2.0,fill=False,zorder=10) #azimuth offset_deg already accounted for as passed.
 
+            if self.conference_mode:
+                ticks_deg = numpy.array([-60,-40,-30,-15,0,15,30,45,60,75])
+                plt.yticks(numpy.deg2rad(ticks_deg))
+                x = plane_xy[0]
+                y1 = plane_xy[1]
+                y2 = -numpy.pi/2 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
+                y1_interp = scipy.interpolate.interp1d(x,y1)
+                ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
+                #plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=6,color='#41719C')
 
             def update(frame):
                 _frame = frame%len(eventids) #lets it loop multiple times.  i.e. give animation more frames but same content looped.
@@ -2602,9 +2612,12 @@ class Correlator:
                     if plane_elevation is not None and _plane_az is not None:
                         circle.center = azimuth, elevation
                         ax.add_artist(circle)
-
                         lines[0].set_ydata([numpy.deg2rad(plane_elevation[_frame]),numpy.deg2rad(plane_elevation[_frame])])
                         lines[1].set_xdata([numpy.deg2rad(_plane_az[_frame]),numpy.deg2rad(_plane_az[_frame])])
+
+                    if self.conference_mode:
+                        ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
+
                 except Exception as e:
                     pass
                 return [im]
@@ -2802,9 +2815,14 @@ class Correlator:
                     plt.ylabel('Elevation Angle (Degrees)')
                     plt.grid(True)
 
+
+
                     if plot_max:
                         #Added circles as specified.
-                        ax, peak_circle = self.addCircleToMap(ax, phi_best, 90.0 - theta_best, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+                        if self.conference_mode == False:
+                            ax, peak_circle = self.addCircleToMap(ax, phi_best, 90.0 - theta_best, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+                        else:
+                            pass
 
                     if circle_az is not None:
                         if circle_zenith is not None:
@@ -2841,7 +2859,16 @@ class Correlator:
                                     string = '$\\sigma_\\phi$ = %0.3f\n$\\sigma_\\theta$ = %0.3f\n$\\rho_{\\phi,\\theta}$ = %0.3f\nReconstruction Offset = %0.3f deg'%(sig_phi, sig_theta, rho_phi_theta, numpy.sqrt( (_circle_az[i] - phi_best)**2 + (_circle_zenith[i] - theta_best)**2 ) )
                                     ax.text(0.45, 0.85, string, fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
 
-                    plt.subplot(2,2,3)
+                    if self.conference_mode:
+                        angular_range = 1
+                        if mollweide == True:
+                            angular_range = numpy.deg2rad(angular_range)
+                        ax.set_xlim(mean_phi - angular_range, mean_phi + angular_range)
+                        ax.set_ylim(90.0 - mean_theta - angular_range, 90.0 - mean_theta + angular_range)
+                        plt.figure()
+                        plt.subplot(1,2,1)
+                    else:
+                        plt.subplot(2,2,3)
                     plt.ylabel('Counts')
                     
                     if shift_1d_hists == True:
@@ -2849,17 +2876,20 @@ class Correlator:
                         #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         plt.hist(all_phi_best - mean_phi, bins=self.phis_deg-mean_phi, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
                         x = numpy.linspace(min(self.phis_deg-mean_phi),max(self.phis_deg-mean_phi),10*self.n_phi)
-                        plt.plot(x,scipy.stats.norm.pdf(x,0,sig_phi),label='Gaussian Fit')
+                        plt.plot(x,scipy.stats.norm.pdf(x,0,sig_phi)*numpy.diff(self.phis_deg)[0]*len(all_phi_best),label='Gaussian Fit')
                         plt.xlim(min(all_phi_best - mean_phi) - 1.0,max(all_phi_best - mean_phi) + 1.0)
-                        if len(circle_az) == 1:
-                            plt.axvline(circle_az[0] - mean_phi,color='fuchsia',label='Highlighted Azimuth')
+                        if circle_az is not None:
+                            if len(circle_az) == 1:
+                                plt.axvline(circle_az[0] - mean_phi,color='fuchsia',label='Highlighted Azimuth')
+
+
 
                     else:
                         plt.xlabel('Azimuth Distribution (Degrees)')
                         #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         plt.hist(all_phi_best, bins=self.phis_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
                         x = numpy.linspace(min(self.phis_deg),max(self.phis_deg),10*self.n_phi)
-                        plt.plot(x,scipy.stats.norm.pdf(x,mean_phi,sig_phi),label='Gaussian Fit')
+                        plt.plot(x,scipy.stats.norm.pdf(x,mean_phi,sig_phi)*numpy.diff(self.phis_deg)[0]*len(all_phi_best),label='Gaussian Fit')
                         plt.xlim(min(all_phi_best) - 1.0,max(all_phi_best) + 1.0)
                         if circle_az is not None:
                             if len(circle_az) == 1:
@@ -2870,15 +2900,17 @@ class Correlator:
                     plt.grid(b=True, which='major', color='k', linestyle='-')
                     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-
-                    plt.subplot(2,2,4)
+                    if self.conference_mode:
+                        plt.subplot(1,2,2)
+                    else:
+                        plt.subplot(2,2,4)
                     #plt.ylabel('Counts (PDF)')
                     if shift_1d_hists == True:
                         plt.xlabel('Zenith Distribution (Degrees)\nCentered on Mean')
                         #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         plt.hist(all_theta_best - mean_theta, bins=self.thetas_deg-mean_theta, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=False)
-                        x = numpy.linspace(min(self.thetas_deg-mean_theta),max(self.thetas_deg-mean_theta),200)
-                        plt.plot(x,scipy.stats.norm.pdf(x,0,sig_theta),label='Gaussian Fit')
+                        x = numpy.linspace(min(self.thetas_deg-mean_theta),max(self.thetas_deg-mean_theta),10*self.n_theta)
+                        plt.plot(x,scipy.stats.norm.pdf(x,0,sig_theta)*numpy.diff(self.thetas_deg)[0]*len(all_theta_best),label='Gaussian Fit')
                         plt.xlim(min(all_theta_best - mean_theta) - 1.0,max(all_theta_best - mean_theta) + 1.0)
                         if circle_zenith is not None:
                             if len(circle_zenith) == 1:
@@ -2888,8 +2920,8 @@ class Correlator:
                         plt.xlabel('Zenith Distribution (Degrees)')
                         #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         plt.hist(all_theta_best, bins=self.thetas_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=False)
-                        x = numpy.linspace(min(self.thetas_deg),max(self.thetas_deg),200)
-                        plt.plot(x,scipy.stats.norm.pdf(x,mean_theta,sig_theta),label='Gaussian Fit')
+                        x = numpy.linspace(min(self.thetas_deg),max(self.thetas_deg),10*self.n_theta)
+                        plt.plot(x,scipy.stats.norm.pdf(x,mean_theta,sig_theta)*numpy.diff(self.thetas_deg)[0]*len(all_theta_best),label='Gaussian Fit')
                         plt.xlim(min(all_theta_best) - 1.0,max(all_theta_best) + 1.0)
                         if circle_zenith is not None:
                             if len(circle_zenith) == 1:

@@ -562,6 +562,7 @@ class dataSlicerSingleRun():
         try:
             if numpy.any(~numpy.isin(list(roi_dict.keys()), self.known_param_keys)):
                 print('WARNING!!!')
+                import pdb; pdb.set_trace()
                 for key in list(roi_dict.keys())[~numpy.isin(list(roi_dict.keys()), self.known_param_keys)]:
                     print('The given roi parameter [%s] not in the list of known parameters\n%s:'%(key,str(self.known_param_keys)))
                 return
@@ -1013,6 +1014,9 @@ class dataSlicerSingleRun():
             The x/y label for plotting. 
         '''
         try:
+            if len(eventids) == 0:
+                print('No eventids given to getSingleParamPlotBins, using all eventids corresponding to selected trigger types.')
+                eventids = self.getEventidsFromTriggerType()
             if param_key in self.known_param_keys:
                 #Append snr to the lists below only if max value isn't present.
                 if self.max_snr_val is None:
@@ -1882,6 +1886,7 @@ class dataSlicer():
     '''
     def __init__(self,  runs, impulsivity_dset_key, time_delays_dset_key, map_dset_key, remove_incomplete_runs=True, **kwargs):
         try:
+            self.conference_mode = False #Enable to apply any temporary adjustments such as fontsizes or title labels. 
             self.roi = {}
             self.data_slicers = []
             self.runs = []#numpy.sort(runs).astype(int)
@@ -1930,13 +1935,21 @@ class dataSlicer():
         '''
         This will loop over the data slicers and remove any that do not have all required datasets.
         '''
-        cut = numpy.array([ds.dsets_present for ds in self.data_slicers])
-        if sum(~cut) > 0:
-            print('Removing the following runs for not having all required datasets:')
-            print(self.runs[~cut])
+        try:
+            cut = numpy.array([ds.dsets_present for ds in self.data_slicers])
+            if sum(~cut) > 0:
+                print('Removing the following runs for not having all required datasets:')
+                print(self.runs[~cut])
 
-        self.runs = self.runs[cut]
-        self.data_slicers = self.data_slicers[cut]
+            self.runs = self.runs[cut]
+            self.data_slicers = self.data_slicers[cut]
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
 
     def returnMaskedArray(self,*args,**kwargs):
         '''
@@ -2211,9 +2224,9 @@ class dataSlicer():
                 if numpy.logical_and('phi_best_' in main_param_key_x,numpy.logical_or('theta_best_' in main_param_key_y,'elevation_best_' in main_param_key_y)):
                     #Make cor to plot the array plane.
                     cor = Correlator(self.data_slicers[0].reader,  upsample=2**10, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,apply_phase_response=False, tukey=False, sine_subtract=False, deploy_index=self.data_slicers[0].map_deploy_index) #only for array plane
-                    if numpy.logical_and(main_param_key_x.split('_')[-1] == 'h', main_param_key_y.split('_')[-1] == 'h'):
+                    if numpy.logical_and(main_param_key_x.replace('_allsky','').replace('_abovehorizon','').replace('_belowhorizon','').split('_')[-1] == 'h', main_param_key_y.replace('_allsky','').replace('_abovehorizon','').replace('_belowhorizon','').split('_')[-1] == 'h'):
                         plane_xy = cor.getPlaneZenithCurves(cor.n_hpol.copy(), 'hpol', 90.0, azimuth_offset_deg=0.0)
-                    elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'v', main_param_key_y.split('_')[-1] == 'v'):
+                    elif numpy.logical_and(main_param_key_x.replace('_allsky','').replace('_abovehorizon','').replace('_belowhorizon','').split('_')[-1] == 'v', main_param_key_y.replace('_allsky','').replace('_abovehorizon','').replace('_belowhorizon','').split('_')[-1] == 'v'):
                         plane_xy = cor.getPlaneZenithCurves(cor.n_vpol.copy(), 'vpol', 90.0, azimuth_offset_deg=0.0)
                     else:
                         plane_xy = None
@@ -2222,6 +2235,16 @@ class dataSlicer():
                             plane_xy[1] = 90.0 - plane_xy[1]
                         plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=1,color='k')
                         plt.xlim([-180,180])
+                    if self.conference_mode:
+                        ticks_deg = numpy.array([-60,-40,-30,-15,0,15,30,45,60,75])
+                        plt.yticks(ticks_deg)
+                        x = plane_xy[0]
+                        y1 = plane_xy[1]
+                        y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
+                        _ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
+                        plt.ylim(min(y1) - 5, 30)
+                        plt.xlim(-90,90)
+
             plt.xlabel(self.current_label_x)
             plt.ylabel(self.current_label_y)
             plt.grid(which='both', axis='both')
@@ -2229,6 +2252,24 @@ class dataSlicer():
             _ax.grid(b=True, which='major', color='k', linestyle='-')
             _ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
+            if self.conference_mode:
+                plt.title('')
+                plt.tight_layout()
+                if numpy.logical_and('phi_best_' in main_param_key_x,numpy.logical_or('theta_best_' in main_param_key_y,'elevation_best_' in main_param_key_y)):
+                    plt.ylabel('Elevation (deg)', fontsize=24)
+                    plt.xlabel('Azimuth (Deg)\n(East = 0 deg, North = 90 deg)', fontsize=24)
+                elif numpy.logical_and('std_' in main_param_key_x,'std_' in main_param_key_y):
+                    plt.title('')
+                    plt.xlabel(self.current_label_x.replace('hpol','HPol'), fontsize=24)
+                    plt.ylabel(self.current_label_y.replace('vpol','VPol'), fontsize=24)
+                    plt.xlim(0,9)
+                    plt.ylim(0,9)
+                elif numpy.logical_and('p2p_' in main_param_key_x,'p2p_' in main_param_key_y):
+                    plt.title('')
+                    plt.xlabel(self.current_label_x.replace('hpol','HPol'), fontsize=24)
+                    plt.ylabel(self.current_label_y.replace('vpol','VPol'), fontsize=24)
+                    plt.xlim(20,128)
+                _fig.canvas.set_window_title(self.current_label_x)
 
             try:
                 cbar = _fig.colorbar(_im)
@@ -2360,8 +2401,10 @@ class dataSlicer():
                     else:
                         ax, cs = self.addContour(ax, main_param_key_x, main_param_key_y, contour_eventids_dict, self.roi_colors[roi_index], n_contour=6)
                     legend_properties.append(cs.legend_elements()[0][0])
-                    legend_labels.append('roi %i: %s'%(roi_index, roi_key))
-
+                    if self.conference_mode == False:
+                        legend_labels.append('roi %i: %s'%(roi_index, roi_key))
+                    else:
+                        legend_labels.append('%s'%(roi_key))
                 if suppress_legend == False:
                     plt.legend(legend_properties,legend_labels,loc='upper left')
 

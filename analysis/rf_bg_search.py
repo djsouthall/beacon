@@ -97,8 +97,13 @@ if __name__=="__main__":
     mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky'] 
     polarizations = ['hpol']#,'vpol'] #Will loop over both if hpol and vpol present
     hilbert_modes = [False]#[True,False] #Will loop over both if True and False present
-    deploy_index = None#os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021.json') #None results in default_deploy
-    
+
+    if run in numpy.arange(1643,1729):
+        deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config', 'chi2_optimized_deploy_from_rtk-gps-day1-june20-2021.json')
+    elif run > 5050:
+        deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021.json')
+    else:
+        deploy_index = None
     #Note that the below values set the angular resolution of the plot, while the presets from mapmax_cut_modes limit where in the generated plots will be considered for max values.
     n_phi       = 1440
     min_phi     = -180
@@ -112,6 +117,9 @@ if __name__=="__main__":
 
     if deploy_index is None:
         deploy_index = info.returnDefaultDeploy()
+
+    print('DEPLOY INDEX:')
+    print(deploy_index)
 
     for hilbert in hilbert_modes:
 

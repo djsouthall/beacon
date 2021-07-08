@@ -10,6 +10,7 @@ import datetime
 import numpy
 from beacon.tools.data_slicer import dataSlicer
 from beacon.tools.config_reader import configSchematicPlotter
+import beacon.tools.info as info
 import matplotlib
 import matplotlib.pyplot as plt
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -37,6 +38,27 @@ if __name__=="__main__":
     dpi = 108*4
     extension = '.svg'
 
+    pulser_locations = info.loadPulserLocationsENU()
+    origin = info.loadAntennaZeroLocation()
+    a = pulser_locations['run1507']
+    b = pulser_locations['run1509']
+    c = pulser_locations['run1511']
+
+    az = numpy.array([])
+    zen = numpy.array([])
+    d = numpy.array([])
+    for pulser_key in ['run1507','run1509','run1511']:
+        p = pulser_locations[pulser_key]
+        source_distance_m = numpy.sqrt(p[0]**2 + p[1]**2 + p[2]**2)
+        d = numpy.append(d ,source_distance_m)
+        azimuth_deg = numpy.rad2deg(numpy.arctan2(p[1],p[0]))
+        az = numpy.append(az ,azimuth_deg)
+        zenith_deg = numpy.rad2deg(numpy.arccos(p[2]/source_distance_m))
+        zen = numpy.append(zen ,zenith_deg)
+
+    print(az)
+    print(zen)
+    print(d)
 
 
 

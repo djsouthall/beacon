@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib
-matplotlib.use('Agg') #Uncomment when trying to save plane gifs
+#matplotlib.use('Agg') #Uncomment when trying to save plane gifs
 
 
 #Settings
@@ -227,7 +227,7 @@ if __name__ == '__main__':
             #     'Silver Peak Town Antenna',\
             #     'Silver Peak Lithium Mine',\
             #     'Past SP Substation']
-        elif False:
+        elif True:
             included_valley_sources = ['A']
         elif False:
             included_valley_sources = ['A','B','C','D','E','F']
@@ -235,7 +235,7 @@ if __name__ == '__main__':
             included_valley_sources = []
 
         #### AIRPLANES ####
-        plot_animated_airplane = True #Otherwise plots first event from each plane.  
+        plot_animated_airplane = False #Otherwise plots first event from each plane.  
         if False:
             included_airplanes =      [ '1728-62026',\
                                         '1773-14413',\
@@ -246,6 +246,15 @@ if __name__ == '__main__':
                                         '1784-7166']
             ignore_planes=[]
 
+        elif True:
+            included_airplanes =      []
+            ignore_planes=[             '1728-62026',\
+                                        '1773-14413',\
+                                        '1773-63659',\
+                                        '1774-178',\
+                                        '1774-88800',\
+                                        '1783-28830',\
+                                        '1784-7166']
 
         else:
             included_airplanes =      ['1728-62026']
@@ -261,7 +270,7 @@ if __name__ == '__main__':
         plot_time_delay_calculations = False
         plot_time_delays_on_maps = True
         plot_expected_direction = True
-        limit_events = 10 #Number of events use for time delay calculation
+        limit_events = 1000 #Number of events use for time delay calculation
 
 
         plot_residuals = False
@@ -427,9 +436,9 @@ if __name__ == '__main__':
 
         if len(included_valley_sources) > 0:
 
-            map_resolution = 0.25 #degrees
-            range_phi_deg = (-90, 90)
-            range_theta_deg = (0,180)
+            map_resolution = 0.05 #degrees
+            range_phi_deg = (45,47)#(-90, 90)
+            range_theta_deg = (95,98)#(0,180)
             n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
             n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
             
@@ -575,7 +584,8 @@ if __name__ == '__main__':
                         cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                         eventids = numpy.sort(numpy.random.choice(roi_eventids,min(limit_events,len(roi_eventids)))) #For plotting multiple events in a histogram
-                        hist = cor.histMapPeak(eventids, mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + valley_source_key, include_baselines=include_baselines,iterate_sub_baselines=iterate_sub_baselines)
+                        cor.averagedMap(eventids, 'hpol', plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={})
+                        hist = cor.histMapPeak(eventids, mode, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + valley_source_key, include_baselines=include_baselines,iterate_sub_baselines=iterate_sub_baselines, shift_1d_hists=True)
 
 
         #### AIRPLANES ####
@@ -717,7 +727,8 @@ if __name__ == '__main__':
                         title = os.path.split(deploy_index)[1].split('.')[0]
                     else:
                         title = 'deploy_index_%s'%str(deploy_index)
-                    cor.animatedMap(eventids, mode, title,include_baselines=include_baselines,map_source_distance_m = source_distance_m,  plane_zenith=zenith_deg,plane_az=azimuth_deg,hilbert=False, max_method=None,center_dir='W',save=True,dpi=300)
+                    #cor.animatedMap(eventids, mode, title,include_baselines=include_baselines,map_source_distance_m = source_distance_m,  plane_zenith=zenith_deg,plane_az=azimuth_deg,hilbert=False, max_method=None,center_dir='W',save=True,dpi=300)
+                    cor.animatedMap(eventids, mode, title,include_baselines=include_baselines,map_source_distance_m = source_distance_m,  plane_zenith=None,plane_az=None,hilbert=False, max_method=None,center_dir='W',save=True,dpi=300)
                 else:
                     plane_td_dict = {}
                     for event_index, eventid in enumerate(eventids):
@@ -811,6 +822,9 @@ if __name__ == '__main__':
                     mesh_azimuth_deg, mesh_elevation_deg, overlap_map, im, ax = cor.generateTimeDelayOverlapMap(mode, cw_sources[key]['time_delay_dict'], window_ns, value_mode=value_mode, plot_map=True, mollweide=False,center_dir='E',window_title='Input %s'%key, include_baselines=include_baselines)
                     ax.axvline(azimuth_deg,c='fuchsia',linewidth=1.0)
                     ax.axhline(90.0 - zenith_deg,c='fuchsia',linewidth=1.0)
+
+        #### OTHER ####
+        cor.plotPointingResolution('hpol', snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[0,1,2,3,4,5])
     except Exception as e:
         print('Error in main loop.')
         print(e)
