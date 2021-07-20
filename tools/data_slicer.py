@@ -596,14 +596,18 @@ class dataSlicerSingleRun():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def getEventidsFromTriggerType(self):
+    def getEventidsFromTriggerType(self, trigger_types=None):
         '''
-        This will get the eventids that match one of the specified trigger types in self.trigger_types
+        This will get the eventids that match one of the specified trigger types.  If trigger_types is None then
+        this will load using the trigger types specified in self.trigger_types, this is the default behaviour. 
         '''
         try:
             with h5py.File(self.analysis_filename, 'r') as file:
                 #Initial cut based on trigger type.
-                eventids = numpy.where(numpy.isin(file['trigger_type'][...],self.trigger_types))[0]
+                if trigger_types is None:
+                    eventids = numpy.where(numpy.isin(file['trigger_type'][...],self.trigger_types))[0]
+                else:
+                    eventids = numpy.where(numpy.isin(file['trigger_type'][...],trigger_types))[0]
                 file.close()
             return eventids
         except Exception as e:
@@ -2091,12 +2095,12 @@ class dataSlicer():
             self.data_slicers[run_index].resetAllROI()
         self.roi = {}
         self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, len(list(self.roi.keys())))]
-    def getEventidsFromTriggerType(self, verbose=False):
+    def getEventidsFromTriggerType(self, trigger_types=None, verbose=False):
         eventids_dict = {}
         for run_index, run in enumerate(self.runs):
             if verbose:
                 print('Run %i'%run)
-            eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+            eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType(trigger_types=trigger_types)
         return eventids_dict
     def getDataFromParam(self, eventids_dict, param_key, verbose=False):
         '''
@@ -2531,6 +2535,13 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+    def getDataArrayFromParam(self, param_key, trigger_types=None):
+        '''
+        This will return the data corresponding to param_key for all events specified by the given trigger types.  
+        If trigger_types is None then the previously assigned trigger types will be used. 
+        '''
+        return self.concatenateParamDict(self.getDataFromParam(self.getEventidsFromTriggerType(trigger_types=trigger_types),param_key))
+
 
 
 

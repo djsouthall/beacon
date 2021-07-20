@@ -2171,7 +2171,7 @@ class Correlator:
                         if len(_circle_zenith) == len(_circle_az):
                             additional_circles = []
                             for i in range(len(_circle_az)):
-                                ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
+                                ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
                                 additional_circles.append(_circ)
 
                 if add_airplanes:

@@ -444,7 +444,7 @@ def pulserRuns():
     pulser_runs : numpy.ndarray of ints
         This is the list of known pulser runs as determined by the matching_times.py script.
     '''
-    pulser_runs = numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793,1504,1506,1507,1508,1509,15011]) 
+    pulser_runs = numpy.array([734,735,736,737,739,740,746,747,757,757,762,763,764,766,767,768,769,770,781,782,783,784,785,786,787,788,789,790,792,793,1504,1506,1507,1508,1509,1511,5179,5180,5181,5182,5183,5184,5185,5190,5191,5192,5193,5194,5195,5196,5197,5198]) 
     
     return pulser_runs
 
@@ -1747,7 +1747,20 @@ def loadPulserPolarizations():
 
     #Site 3 37.592001861° N 118.2354480278 W 
     pulser_pol['run1511'] = 'both'
-    
+
+    pulser_pol['run5181'] = 'both'
+    pulser_pol['run5182'] = 'both'
+    pulser_pol['run5183'] = 'both'
+    pulser_pol['run5184'] = 'both'
+    pulser_pol['run5185'] = 'both'
+    pulser_pol['run5191'] = 'both'
+    pulser_pol['run5192'] = 'both'
+    pulser_pol['run5193'] = 'both'
+    pulser_pol['run5194'] = 'both'
+    pulser_pol['run5195'] = 'both'
+    pulser_pol['run5196'] = 'both'
+    pulser_pol['run5197'] = 'both'
+    pulser_pol['run5198'] = 'both'
     
     return pulser_pol   
 
@@ -1808,6 +1821,24 @@ def loadPulserLocations(deploy_index=default_deploy):
     #Day 6 37° 35.166' N 118° 13.990' W 
     pulser_locations['run792'] = (37.5861,-118.2332,3779.52)
     pulser_locations['run793'] = (37.5861,-118.2332,3779.52)
+
+    # Pulsing June 2021 Site 1
+    pulser_locations['run5191'] = (37.586044, -118.233545, 3765.2 + 1)
+    pulser_locations['run5192'] = (37.586044, -118.233545, 3765.2 + 1)
+    pulser_locations['run5193'] = (37.586044, -118.233545, 3765.2 + 1)
+    pulser_locations['run5194'] = (37.586044, -118.233545, 3765.2 + 1)
+    pulser_locations['run5195'] = (37.586044, -118.233545, 3765.2 + 1)
+    pulser_locations['run5196'] = (37.586044, -118.233545, 3765.2 + 1)
+    pulser_locations['run5197'] = (37.586044, -118.233545, 3765.2 + 1)
+    pulser_locations['run5198'] = (37.586044, -118.233545, 3765.2 + 1)
+
+    # Pulsing June 2021 Site 2
+    pulser_locations['run5181'] = ( 37.591998, -118.235489, 3805.8 + 1)
+    pulser_locations['run5182'] = ( 37.591998, -118.235489, 3805.8 + 1)
+    pulser_locations['run5183'] = ( 37.591998, -118.235489, 3805.8 + 1)
+    pulser_locations['run5184'] = ( 37.591998, -118.235489, 3805.8 + 1)
+    pulser_locations['run5185'] = ( 37.591998, -118.235489, 3805.8 + 1)
+
 
     
 
@@ -1872,6 +1903,7 @@ def loadPulserLocations(deploy_index=default_deploy):
         #Site 3 37.592001861° N 118.2354480278 W 
         #Alt: 3806.25m (GPS)  3832.55m (MSL) Google Earth: 3827.6784
         pulser_locations['run1511'] = (37.592001861, -118.2354480278,3806.25)
+
 
     return pulser_locations    
 
@@ -2051,7 +2083,8 @@ def loadClockRates():
     'run1507'   :31249815.193117745,
     'run1508'   :31249811.59632718,
     'run1509'   :31249810.666976035,
-    'run1511'   :31249840.967325963}
+    'run1511'   :31249840.967325963,
+    'run5181'   :31249782.340630278}
     clock_rates['default'] = numpy.mean([v for key,v in clock_rates.items()])
     return clock_rates
 
@@ -2246,6 +2279,109 @@ def loadPulserEventids(remove_ignored=True):
     known_pulser_ids['run1511']['hpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1511_pulser_eventids_site_3_bicone_hpol_20dB.csv',delimiter=',').astype(int)
     known_pulser_ids['run1511']['vpol'] = numpy.loadtxt(os.environ['BEACON_ANALYSIS_DIR'] + 'tools/eventids/run1511_pulser_eventids_site_3_bicone_vpol_20dB.csv',delimiter=',').astype(int)
 
+    known_pulser_ids['run5182'] = {} #These are probably wrong
+    known_pulser_ids['run5182']['hpol'] = numpy.array([ 45,   48,   57,   66,   71,   80,   83,   86,  110,  124,  152,\
+                                                        162,  192,  209,  224,  250,  253,  287,  314,  325,  329,  343,\
+                                                        352,  355,  358,  361,  371,  380,  404,  411,  430,  439,  470,\
+                                                        481,  492,  527,  543,  560,  563,  575,  593,  607,  610,  613,\
+                                                        618,  633,  638,  659,  701,  714,  722,  727,  730,  733,  738,\
+                                                        755,  760,  769,  789,  816,  832,  845,  854,  877,  882,  896,\
+                                                        907,  910,  925,  949,  986,  990,  997, 1095, 1098, 1105, 1118])
+    known_pulser_ids['run5182']['vpol'] = numpy.copy(known_pulser_ids['run5182']['hpol'])
+
+    known_pulser_ids['run5185'] = {}
+    known_pulser_ids['run5185']['hpol'] = numpy.array([ 688,  700,  997, 1033, 1154, 1257, 1289, 1341, 1512, 1630, 1705, 1743, 1773, 1876, 3077])
+    known_pulser_ids['run5185']['vpol'] = numpy.copy(known_pulser_ids['run5182']['hpol'])
+
+    known_pulser_ids['run5195'] = {} #Some of these are probably wrong
+
+    # known_pulser_ids['run5195']['hpol'] = numpy.array([  53,   67,  200,  232,  241,  269,  290,  306,  308,  309,  319,\
+    #                                               324,  326,  397,  434,  542,  573,  589,  598,  709,  745,  766,\
+    #                                               790,  791,  848,  849,  862,  878,  882,  906,  927,  941,  970,\
+    #                                              1004, 1074, 1107, 1115, 1124, 1125, 1173, 1209, 1242, 1277, 1319,\
+    #                                              1340, 1375, 1389, 1400, 1401, 1409, 1417, 1420, 1441, 1443, 1447,\
+    #                                              1453, 1484, 1485, 1490, 1495, 1508, 1515, 1517, 1557, 1567, 1568,\
+    #                                              1576, 1579, 1591, 1594, 1620, 1621, 1634, 1655, 1716, 1750, 1781,\
+    #                                              1783, 1793, 1796, 1797, 1811, 1840, 1846, 1859, 1861, 1862, 1875,\
+    #                                              1900, 1928, 1934, 1936, 1973, 1996, 2034, 2045, 2054, 2078, 2090,\
+    #                                              2124, 2159, 2188, 2209, 2225, 2227, 2241, 2242, 2280, 2289, 2292,\
+    #                                              2306, 2332, 2338, 2420, 2456, 2489, 2496, 2525, 2549, 2674, 2754,\
+    #                                              2781, 2807, 2827, 2869, 2877, 2884, 2887, 2888, 2959, 2981, 2984,\
+    #                                              2994, 2998, 3001, 3032, 3046, 3050, 3065, 3066, 3067, 3076, 3077,\
+    #                                              3084, 3102, 3103, 3115, 3126, 3163, 3170, 3179, 3217, 3286, 3290,\
+    #                                              3295, 3310, 3342, 3443, 3460, 3465, 3505, 3514, 3744, 3802, 3803,\
+    #                                              3813, 3819, 3851, 3852, 3864, 3881, 3911, 3921, 3922, 3923, 3944,\
+    #                                              3965, 3972, 4019, 4020, 4038, 4084, 4094, 4095, 4139, 4159, 4170,\
+    #                                              4196, 4206, 4227, 4235, 4254, 4264, 4504, 4538, 4547, 4617, 4628,\
+    #                                              4734, 4752, 4779])
+
+    known_pulser_ids['run5195']['hpol'] = numpy.array([1703, 1710, 1717, 1724, 1738, 1752, 1766, 1771, 1779, 1787, 1794,\
+                                                 1800, 1813, 1820, 1843, 1850, 1857, 1864, 1868, 1884, 1892, 1898,\
+                                                 1904, 1910, 1918, 1927, 1931, 1941, 1948, 1954, 1960, 1965, 1988,\
+                                                 1995, 2002, 2009, 2015, 2022, 2029, 2036, 2044, 2051, 2058, 2064,\
+                                                 2079, 2086, 2100, 2114, 2135, 2149, 2169, 2212, 2233, 2247, 2296,\
+                                                 2303, 2310, 2316, 2324, 2331, 2337, 2359, 2378, 2393, 2401, 2407,\
+                                                 2415, 2422, 2429, 2434, 2449, 2463, 2477, 2483, 2499, 2513, 2539,\
+                                                 2540, 2547, 2577, 2588, 2594, 2604, 2611, 2624, 2635, 2644, 2649,\
+                                                 2659, 2677, 2688, 2693, 2710, 2715, 2726, 2736, 2761, 2776, 2792,\
+                                                 2817, 2840, 2845, 2865, 2911, 2921, 2927, 2957, 2960, 2965, 2970,\
+                                                 2978, 2986, 2989, 3000, 3003, 3034, 3047, 3051, 3056, 3061, 3075,\
+                                                 3083, 3098, 3101, 3116, 3119, 3123, 3128, 3149, 3164, 3169, 3195,\
+                                                 3199, 3226, 3261, 3267, 3271, 3277, 3283, 3296, 3303, 3308, 3320,\
+                                                 3325, 3327, 3334, 3339, 3349, 3358, 3368, 3373, 3377, 3399, 3405,\
+                                                 3410, 3420, 3426, 3449, 3455, 3463, 3469, 3508, 3511, 3521, 3526,\
+                                                 3535, 3560, 3564, 3588, 3592, 3607, 3629, 3633, 3656, 3666, 3672,\
+                                                 3681, 3710, 3716, 3758, 3812, 3815, 3818, 3826, 3834, 3844, 3861,\
+                                                 3867, 3873, 3882, 3889, 3894, 3900, 3914, 3957, 3966, 3976, 3987,\
+                                                 4009, 4014, 4023, 4034, 4048, 4052, 4062, 4078, 4098, 4141, 4162,\
+                                                 4216, 4231, 4244, 4278, 4332, 4347, 4359, 4373, 4378, 4381, 4391,\
+                                                 4394, 4409, 4436, 4443, 4460, 4490, 4494, 4512, 4533, 4541, 4545,\
+                                                 4552, 4564, 4575, 4632, 4656, 4665, 4677, 4682, 4688, 4724, 4740,\
+                                                 4780, 4785, 4789, 4815])
+
+    # known_pulser_ids['run5195']['hpol'] = numpy.array([ 53,   67,  200,  232,  241,  269,  290,  306,  308,  309,  319,\
+    #                                                     324,  326,  397,  434,  542,  573,  589,  598,  709,  745,  766,\
+    #                                                     790,  791,  848,  849,  862,  878,  882,  906,  927,  941,  970,\
+    #                                                     1004, 1074, 1107, 1115, 1124, 1125, 1173, 1209, 1242, 1277, 1319,\
+    #                                                     1340, 1375, 1389, 1400, 1401, 1409, 1417, 1420, 1441, 1443, 1447,\
+    #                                                     1453, 1484, 1485, 1490, 1495, 1508, 1515, 1517, 1557, 1567, 1568,\
+    #                                                     1576, 1579, 1591, 1594, 1620, 1621, 1634, 1655, 1703, 1710, 1716,\
+    #                                                     1717, 1724, 1738, 1750, 1752, 1766, 1771, 1779, 1781, 1783, 1787,\
+    #                                                     1793, 1794, 1796, 1797, 1800, 1811, 1813, 1820, 1840, 1843, 1846,\
+    #                                                     1850, 1857, 1859, 1861, 1862, 1864, 1868, 1875, 1884, 1892, 1898,\
+    #                                                     1900, 1904, 1910, 1918, 1927, 1928, 1931, 1934, 1936, 1941, 1948,\
+    #                                                     1954, 1960, 1965, 1973, 1988, 1995, 1996, 2002, 2009, 2015, 2022,\
+    #                                                     2029, 2034, 2036, 2044, 2045, 2051, 2054, 2058, 2064, 2078, 2079,\
+    #                                                     2086, 2090, 2100, 2114, 2124, 2135, 2149, 2159, 2169, 2188, 2209,\
+    #                                                     2212, 2225, 2227, 2233, 2241, 2242, 2247, 2280, 2289, 2292, 2296,\
+    #                                                     2303, 2306, 2310, 2316, 2324, 2331, 2332, 2337, 2338, 2359, 2378,\
+    #                                                     2393, 2401, 2407, 2415, 2420, 2422, 2429, 2434, 2449, 2456, 2463,\
+    #                                                     2477, 2483, 2489, 2496, 2499, 2513, 2525, 2539, 2540, 2547, 2549,\
+    #                                                     2577, 2588, 2594, 2604, 2611, 2624, 2635, 2644, 2649, 2659, 2674,\
+    #                                                     2677, 2688, 2693, 2710, 2715, 2726, 2736, 2754, 2761, 2776, 2781,\
+    #                                                     2792, 2807, 2817, 2827, 2840, 2845, 2865, 2869, 2877, 2884, 2887,\
+    #                                                     2888, 2911, 2921, 2927, 2957, 2959, 2960, 2965, 2970, 2978, 2981,\
+    #                                                     2984, 2986, 2989, 2994, 2998, 3000, 3001, 3003, 3032, 3034, 3046,\
+    #                                                     3047, 3050, 3051, 3056, 3061, 3065, 3066, 3067, 3075, 3076, 3077,\
+    #                                                     3083, 3084, 3098, 3101, 3102, 3103, 3115, 3116, 3119, 3123, 3126,\
+    #                                                     3128, 3149, 3163, 3164, 3169, 3170, 3179, 3195, 3199, 3217, 3226,\
+    #                                                     3261, 3267, 3271, 3277, 3283, 3286, 3290, 3295, 3296, 3303, 3308,\
+    #                                                     3310, 3320, 3325, 3327, 3334, 3339, 3342, 3349, 3358, 3368, 3373,\
+    #                                                     3377, 3399, 3405, 3410, 3420, 3426, 3443, 3449, 3455, 3460, 3463,\
+    #                                                     3465, 3469, 3505, 3508, 3511, 3514, 3521, 3526, 3535, 3560, 3564,\
+    #                                                     3588, 3592, 3607, 3629, 3633, 3656, 3666, 3672, 3681, 3710, 3716,\
+    #                                                     3744, 3758, 3802, 3803, 3812, 3813, 3815, 3818, 3819, 3826, 3834,\
+    #                                                     3844, 3851, 3852, 3861, 3864, 3867, 3873, 3881, 3882, 3889, 3894,\
+    #                                                     3900, 3911, 3914, 3921, 3922, 3923, 3944, 3957, 3965, 3966, 3972,\
+    #                                                     3976, 3987, 4009, 4014, 4019, 4020, 4023, 4034, 4038, 4048, 4052,\
+    #                                                     4062, 4078, 4084, 4094, 4095, 4098, 4139, 4141, 4159, 4162, 4170,\
+    #                                                     4196, 4206, 4216, 4227, 4231, 4235, 4244, 4254, 4264, 4278, 4332,\
+    #                                                     4347, 4359, 4373, 4378, 4381, 4391, 4394, 4409, 4436, 4443, 4460,\
+    #                                                     4490, 4494, 4504, 4512, 4533, 4538, 4541, 4545, 4547, 4552, 4564,\
+    #                                                     4575, 4617, 4628, 4632, 4656, 4665, 4677, 4682, 4688, 4724, 4734,\
+    #                                                     4740, 4752, 4779, 4780, 4785, 4789, 4815])
+    known_pulser_ids['run5195']['vpol'] = numpy.copy(known_pulser_ids['run5195']['hpol'])
+
     if remove_ignored == True:
         ignore_events = loadIgnorableEventids()
         for key in numpy.array(list(known_pulser_ids.keys()))[numpy.isin(numpy.array(list(known_pulser_ids.keys())),numpy.array(list(ignore_events.keys())))]:
@@ -2256,6 +2392,8 @@ def loadPulserEventids(remove_ignored=True):
                 known_pulser_ids[key] = known_pulser_ids[key][~numpy.isin(known_pulser_ids[key],ignore_events[key])]
     #import pdb; pdb.set_trace()
     return known_pulser_ids
+
+
 
 
 def loadBeamDelays(finame_hpol_delays=None, finame_vpol_delays=None, reset_rel_to_ant0=False):
@@ -2296,6 +2434,56 @@ def loadBeamDelays(finame_hpol_delays=None, finame_vpol_delays=None, reset_rel_t
             hpol_vals[i][6] = hpol_vals[i][6]-hpol_ant0_delay
             
     return hpol_vals, vpol_vals
+
+def printBaselines(deploy_index=default_deploy, calculate_phase=False, verbose=False, attempt_residual=False):
+    '''
+    Currently only intended to plot the most recent station with the three pulsers that we used for it.
+    '''
+    try:
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = loadAntennaLocationsENU(deploy_index=deploy_index,check=False)
+
+        print(loadAntennaLocationsENU(deploy_index=deploy_index,check=False))
+
+        colors = ['b','g','r','c']
+
+
+        if calculate_phase:
+            modes = ['physical','hpol', 'vpol']
+        else:
+            modes = ['physical']
+
+        for mode in modes:
+            if mode == 'hpol':
+                enu = antennas_phase_hpol
+            elif mode == 'vpol':
+                enu = antennas_phase_vpol
+            else:
+                enu = antennas_physical
+
+            print('%s baselines:'%mode)
+            for pair_index, pair in enumerate([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]):
+                try:
+                    if attempt_residual and 'day3' in deploy_index:
+                        baselines_2021 = [36.30442813493905,48.26056193162632,49.77493409688374,40.73270820884672,23.883751506682128,24.267904281450853] #from theodolite measurements.
+                        baseline = numpy.sqrt((enu[pair[0]][0] - enu[pair[1]][0])**2 + (enu[pair[0]][1] - enu[pair[1]][1])**2 + (enu[pair[0]][2] - enu[pair[1]][2])**2) - baselines_2021[pair_index]
+                    elif attempt_residual and 'day1' in deploy_index:
+                        baselines_2019 = [37.66621036587292,49.35422199796859,51.328014180051625,40.99761587693306,24.65026253006104,23.78813961956573] #from theodolite measurements.
+                        baseline = numpy.sqrt((enu[pair[0]][0] - enu[pair[1]][0])**2 + (enu[pair[0]][1] - enu[pair[1]][1])**2 + (enu[pair[0]][2] - enu[pair[1]][2])**2) - baselines_2019[pair_index]
+                    else:
+                        baseline = numpy.sqrt((enu[pair[0]][0] - enu[pair[1]][0])**2 + (enu[pair[0]][1] - enu[pair[1]][1])**2 + (enu[pair[0]][2] - enu[pair[1]][2])**2)
+                    print('\t%s : %0.3f m'%(str(pair),baseline))
+                except:
+                    if verbose:
+                        print('%s failed or not present.'%mode)
+
+
+
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
 
 '''
 MAKE AN EXPECTED PULSER TIME DELAY FUNCTION
@@ -2407,4 +2595,3 @@ if __name__ == '__main__':
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
-

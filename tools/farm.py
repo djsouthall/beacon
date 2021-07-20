@@ -33,9 +33,10 @@ if __name__ == "__main__":
             continue
         jobname = 'bcn%i'%run
 
-        batch = 'sbatch --partition=%s --job-name=%s '%(partition,jobname)
+        batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,jobname)
 
-        command = os.environ['BEACON_ANALYSIS_DIR'] + 'analysis/rf_bg_search.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'analysis/rf_bg_search.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'tools/data_handler.py %i redo'%(run)#'analysis/cr_search/simple_cr_template_search.py %i 1'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
+        command = os.environ['BEACON_ANALYSIS_DIR'] + 'analysis/rf_bg_search.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'tools/data_handler.py %i redo'%(run)#'analysis/cr_search/simple_cr_template_search.py %i 1'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
+        #command = os.environ['BEACON_ANALYSIS_DIR'] + 'analysis/rf_bg_search.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'analysis/rf_bg_search.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'tools/data_handler.py %i redo'%(run)#'analysis/cr_search/simple_cr_template_search.py %i 1'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
 
         command_queue = batch + command
         print(command_queue)    

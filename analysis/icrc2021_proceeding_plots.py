@@ -63,7 +63,7 @@ if __name__=="__main__":
 
 
     #Schematic Figure:
-    if True:
+    if False:
         '''
         This is the figure of the array layout.  
         '''

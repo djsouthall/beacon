@@ -1709,7 +1709,10 @@ class TemplateCompareTool(FFTPrepper):
         '''
         try:
             #Load events waveforms
-            ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid, load_upsampled_waveforms=load_upsampled_waveforms,sine_subtract=sine_subtract)
+            if load_upsampled_waveforms:
+                ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid, load_upsampled_waveforms=load_upsampled_waveforms,sine_subtract=sine_subtract)
+            else:
+                ffts = self.loadFilteredFFTs(eventid, load_upsampled_waveforms=load_upsampled_waveforms,sine_subtract=sine_subtract)
 
             #Perform cross correlations with the template.
             corrs_fft = numpy.multiply((ffts.T/numpy.std(ffts,axis=1)).T,(self.scaled_conj_template_ffts_filtered)) / (len(self.waveform_times_corr)//2 + 1)
@@ -1838,6 +1841,17 @@ class TemplateCompareTool(FFTPrepper):
                     for channel in channels:
                         ax = axs[channel]
                         ax.plot(times, rolled_wfs[channel],alpha=0.2)
+
+            if plot == True:
+                #Repeat for template and plot on top. 
+                max_corrs, upsampled_waveforms, rolled_wfs = self.alignToTemplate(template_eventid, align_method=align_method)
+                averaged_waveforms += rolled_wfs/len(eventids)
+
+                if plot == True:
+                    for channel in channels:
+                        ax = axs[channel]
+                        ax.plot(times, rolled_wfs[channel],linestyle='--',c='b',label=str(channel)+' template')
+
             if plot == True:
                 for channel in channels:
                     ax = axs[channel]

@@ -22,7 +22,7 @@ datapath = os.environ['BEACON_DATA']
 
 if __name__=="__main__":
     plt.close('all')
-    interactive_mode = True
+    interactive_mode = False
     if interactive_mode == False:
         outpath = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'figures', 'parameter_plots_' + str(datetime.datetime.now()).replace(' ', '_').replace('.','p').replace(':','-'))
         matplotlib.use('Agg')
@@ -33,8 +33,8 @@ if __name__=="__main__":
         plt.ion()
 
     #Main Control Parameters
-    runs = numpy.arange(1643,1645)#1729)
-    #runs = runs[runs != 1663]
+    runs = numpy.arange(1643,1729)
+    runs = runs[runs != 1663]
     # plot_param_pairs = [\
     #     ['impulsivity_h', 'impulsivity_v'],\
     #     ['cr_template_search_h', 'cr_template_search_v'],\
@@ -106,7 +106,7 @@ if __name__=="__main__":
     #     ['phi_best_h_belowhorizon', 'elevation_best_h_belowhorizon'],\
     #     ['phi_best_v_belowhorizon', 'elevation_best_v_belowhorizon'],\
     #     ]
-    figsize = (8,6)
+    figsize = (16,9)
     dpi = 108*4
 
 
@@ -154,7 +154,7 @@ if __name__=="__main__":
             ds.addROI('Above Horizon',{'elevation_best_h_allsky':[0,90]})# , 'cr_template_search_h': [0.7,1]
             #Done for OR condition
             eventids_dict = ds.getCutsFromROI('Above Horizon',load=False,save=False)
-        elif True:
+        elif False:
             #ds.addROI('RFI Source',{'phi_best_h_allsky':[36,39],'elevation_best_h_allsky':[-12,-6]})# , 'cr_template_search_h': [0.7,1]
 
             ds.addROI('RFI Source',{'phi_best_h_allsky':[45,47],'elevation_best_h_allsky':[-9,-4],'snr_h':[15,100],'snr_v':[15,100],'time_delay_0subtract1_h':[-127,-123], 'time_delay_0subtract2_h':[-129,-124]})
@@ -223,14 +223,29 @@ if __name__=="__main__":
         else:
             eventids_dict = None
 
+        if False:
+            for key_x, key_y in plot_param_pairs:
+                print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=eventids_dict,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm)
+                fig.set_size_inches(figsize[0], figsize[1])
+                plt.tight_layout()
+                if interactive_mode == False:
+                    fig.savefig(os.path.join(outpath,key_x + '-vs-' + key_y + '.png'),dpi=dpi)
 
-        # for key_x, key_y in plot_param_pairs:
-        #     print('Generating %s plot'%(key_x + ' vs ' + key_y))
-        #     fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=eventids_dict,include_roi=len(list(ds.roi.keys()))!=0, lognorm=lognorm)
-        #     fig.set_size_inches(figsize[0], figsize[1])
-        #     plt.tight_layout()
-        #     if interactive_mode == False:
-        #         fig.savefig(os.path.join(outpath,key_x + '-vs-' + key_y + '.png'),dpi=dpi)
+        if True:
+            key_x, key_y = ['phi_best_h_allsky', 'elevation_best_h_allsky']
+            for beam in numpy.arange(20):
+                ds.resetAllROI()
+                roi = 'beam %i'%beam
+                ds.addROI(roi,{'triggered_beams':[beam - 0.5,beam + 0.5]})
+                #Done for OR condition
+                eventids_dict = ds.getCutsFromROI(roi,load=False,save=False)
+                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=eventids_dict,include_roi=False, lognorm=lognorm)
+                ax.set_title(roi)
+                fig.set_size_inches(figsize[0], figsize[1])
+                plt.tight_layout()
+                if interactive_mode == False:
+                    fig.savefig(os.path.join(outpath,key_x + '-vs-' + key_y + '-beam%i.png'%beam),dpi=dpi)
 
 
 

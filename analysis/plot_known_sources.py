@@ -165,6 +165,10 @@ if __name__ == '__main__':
             included_pulsers =    [ 'run1507',\
                                     'run1509',\
                                     'run1511']
+        elif True:
+            included_pulsers =    [ 'run5182',\
+                                    'run5185',\
+                                    'run5195']
         else:
             included_pulsers = []  
 
@@ -227,7 +231,7 @@ if __name__ == '__main__':
             #     'Silver Peak Town Antenna',\
             #     'Silver Peak Lithium Mine',\
             #     'Past SP Substation']
-        elif True:
+        elif False:
             included_valley_sources = ['A']
         elif False:
             included_valley_sources = ['A','B','C','D','E','F']
@@ -274,7 +278,7 @@ if __name__ == '__main__':
 
 
         plot_residuals = False
-        plot_histograms = True
+        plot_histograms = False
         iterate_sub_baselines = 6 #The lower this is the higher the time it will take to plot.  Does combinatoric subsets of baselines with this length. 
 
         final_corr_length = 2**17
@@ -319,7 +323,7 @@ if __name__ == '__main__':
         if len(included_pulsers) > 0:
 
             map_resolution = 0.25 #degrees
-            range_phi_deg = (-90, 90)
+            range_phi_deg = (-180, 180)
             range_theta_deg = (0,180)
             n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
             n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
@@ -366,6 +370,9 @@ if __name__ == '__main__':
                     pulser_time_delay_dict['run1511'] = site3_measured_time_delays_vpol
                     pulser_time_delay_error_dict['run1511'] = site3_measured_time_delays_errors_vpol
 
+            for run in numpy.arange(5180,5200):
+                pulser_time_delay_dict['run%i'%run] = None
+
 
 
             pulser_locations_ENU = info.loadPulserLocationsENU(deploy_index=deploy_index)
@@ -387,7 +394,10 @@ if __name__ == '__main__':
                     tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=_waveform_index_range,plot_filters=False,apply_phase_response=apply_phase_response)
                     if sine_subtract:
                         tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
-                    _time_delays = numpy.append(numpy.array(pulser_time_delay_dict['run%i'%run])[:,1],numpy.array(pulser_time_delay_dict['run%i'%run])[:,1]) #Just duplicating, I am only plotting the ones for this polarization anyways.
+                    if pulser_time_delay_dict['run%i'%run] is not None:
+                        _time_delays = numpy.append(numpy.array(pulser_time_delay_dict['run%i'%run])[:,1],numpy.array(pulser_time_delay_dict['run%i'%run])[:,1]) #Just duplicating, I am only plotting the ones for this polarization anyways.
+                    else:
+                        _time_delays = None
                     if mode == 'hpol':
                         _eventid = numpy.random.choice(known_pulser_ids['run%i'%run]['hpol'])
                         _fig, _ax = tdc.plotEvent(_eventid, channels=[0,2,4,6], apply_filter=True, hilbert=hilbert, sine_subtract=True, apply_tukey=None, additional_title_text='Sample Event shifted by input time delays', time_delays=_time_delays)
@@ -398,6 +408,7 @@ if __name__ == '__main__':
                 #Calculate old and new geometries
                 #Distance needed when calling correlator, as it uses that distance.
                 pulser_ENU = numpy.array([pulser_locations_ENU[pulser_key][0] , pulser_locations_ENU[pulser_key][1] , pulser_locations_ENU[pulser_key][2]])
+                print(pulser_key, pulser_ENU/1000)
                 distance_m = numpy.linalg.norm(pulser_ENU)
                 zenith_deg = numpy.rad2deg(numpy.arccos(pulser_ENU[2]/distance_m))
                 elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(pulser_ENU[2]/distance_m))
@@ -410,7 +421,7 @@ if __name__ == '__main__':
                     zenith_deg = None
                     azimuth_deg = None
 
-                if plot_time_delays_on_maps:
+                if plot_time_delays_on_maps and pulser_time_delay_dict[pulser_key] is not None:
                     td_dict = {mode:{'[0, 1]' :  [pulser_time_delay_dict[pulser_key][0][1]], '[0, 2]' : [pulser_time_delay_dict[pulser_key][1][1]], '[0, 3]' : [pulser_time_delay_dict[pulser_key][2][1]], '[1, 2]' : [pulser_time_delay_dict[pulser_key][3][1]], '[1, 3]' : [pulser_time_delay_dict[pulser_key][4][1]], '[2, 3]' : [pulser_time_delay_dict[pulser_key][5][1]]}}
                 else:
                     td_dict = {}
@@ -420,9 +431,12 @@ if __name__ == '__main__':
                 mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=pulser_key)
 
                 if plot_histograms:
-                    map_resolution = 0.01 #degrees
-                    range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
-                    range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
+                    # map_resolution = 0.01 #degrees
+                    # range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
+                    # range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
+                    map_resolution = 0.25 #degrees
+                    range_phi_deg = (-90, 90)
+                    range_theta_deg = (0,180)
                     n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
                     n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
                     

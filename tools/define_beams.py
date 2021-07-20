@@ -3,6 +3,7 @@ This script is meant to be used to map the current beams for the BEACON trigger.
 '''
 import os
 import sys
+from pathlib import Path
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 
@@ -442,12 +443,12 @@ if __name__=="__main__":
     set you must scroll to the DEFINE BEAMS HERE section below and ensure the correct scenario is being run.  Each
     scenario has an associated 'mode' label.  If that mode label is included in 'modes' then it will be run.
     '''
-    modes = ['hpol_2018','vpol_2018']#['vpol_no_ant01']:#['hpol','vpol','vpol_no_ant0','vpol_no_ant01']:
+    modes = ['hpol_2021']#['hpol_2018','vpol_2018']#['vpol_no_ant01']:#['hpol','vpol','vpol_no_ant0','vpol_no_ant01']:
 
     use_pulser=False
     max_method = 0
     
-    circle_beam_centers = False #Will add circles to the maps centered on the selected beams.
+    circle_beam_centers = True #Will add circles to the maps centered on the selected beams.
     radius = 2.5 #Degrees I think?  Should eventually represent error. 
     circle_color = 'lime'
     circle_linewidth = 2
@@ -473,9 +474,10 @@ if __name__=="__main__":
 
 
     # BeamMaker is built on the Correlator class, and by default will use "default_deploy" as set in info.py as the calibration of choice. You can also set it as a kwarg here.  None will go to default deploy. 
-    deploy_index = 0#None
+    deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021.json')#0#None
 
-    for hilbert in [False, True]:
+
+    for hilbert in [False]:
         datapath = os.environ['BEACON_DATA']
         if use_pulser == True:
             run = 1509
@@ -499,13 +501,14 @@ if __name__=="__main__":
         reader = Reader(datapath,run)
         date = dt.datetime.today().strftime('%Y-%m-%d') #appended to file names.
         # BeamMaker is built on the Correlator class, and by default will use "default_deploy" as set in info.py as the calibration of choice. You can also set it as a kwarg here.  None will go to default deploy. 
-        bm = BeamMaker(reader, n_phi=360,range_phi_deg=(-180,180), n_theta=180, range_theta_deg=(0,180), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,deploy_index=deploy_index)
-        print('Using calibration %i'%bm.deploy_index) #note that if you manually reset antenna positions this is no longer the case obviously.             
+        bm = BeamMaker(reader, n_phi=4*360,range_phi_deg=(-180,180), n_theta=4*180, range_theta_deg=(0,180), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,deploy_index=deploy_index)
+        print('Using calibration %s'%str(bm.deploy_index)) #note that if you manually reset antenna positions this is no longer the case obviously.             
 
+        deploy_root_name = os.path.split(str(bm.deploy_index))[1].replace('.json','')
 
         all_fig = []
         all_ax = []
-
+        center_dir = 'E'
         sample_delays = {}
         for mode in modes:
             print('\nMode = %s\n'%mode)
@@ -531,8 +534,8 @@ if __name__=="__main__":
                     turnoff_ants=None
                     year = 'any'
 
-                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
-                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%s_%s_%s.csv'%(mode,str(hilbert),str(deploy_root_name),display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%s_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),str(deploy_root_name),display_type,date)
                     '''
                     thetas_deg = numpy.array([100])#
                     phis_per_theta = numpy.array([1])
@@ -545,8 +548,8 @@ if __name__=="__main__":
                     turnoff_ants=None
                     year = 'any'
                     
-                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
-                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%s_%s_%s.csv'%(mode,str(hilbert),str(deploy_root_name),display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%s_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),str(deploy_root_name),display_type,date)
                 elif mode == 'vpol_no_ant0':
                     thetas_deg = numpy.array([2,10,25,40,68,90,100])#numpy.array([2,15,30,50,80,100])
                     phis_per_theta = numpy.array([1,5,7,9,12,2,15])#numpy.array([1,5,8,10,8,15])
@@ -554,8 +557,8 @@ if __name__=="__main__":
                     turnoff_ants=[0]
                     year = 'any'
                     
-                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
-                    savefig_text = '%s_coverage_map_%i_beams_no_ant0_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%s_%s_%s.csv'%(mode,str(hilbert),str(deploy_root_name),display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_no_ant0_hilbert-%s_deploy-%s_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),str(deploy_root_name),display_type,date)
                     mode = 'vpol'
                 elif mode == 'vpol_no_ant01':
                     thetas_deg = numpy.array([2,10,25,40,68,90,100])#numpy.array([2,15,30,50,80,100])
@@ -564,8 +567,8 @@ if __name__=="__main__":
                     turnoff_ants=[0,1]
                     year = 'any'
                     
-                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
-                    savefig_text = '%s_coverage_map_%i_beams_no_ant01_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%s_%s_%s.csv'%(mode,str(hilbert),str(deploy_root_name),display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_no_ant01_hilbert-%s_deploy-%s_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),str(deploy_root_name),display_type,date)
                     mode = 'vpol'
                 elif mode == 'hpol_2018':
                     thetas_deg = numpy.array([-40,-20, 0, 20, 40]) + 90.
@@ -574,8 +577,8 @@ if __name__=="__main__":
                     turnoff_ants = None
                     year = 'any'
                     
-                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
-                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%s_%s_%s.csv'%(mode,str(hilbert),str(deploy_root_name),display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%s_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),str(deploy_root_name),display_type,date)
                     mode = 'hpol'
                 elif mode == 'vpol_2018':
                     thetas_deg = numpy.array([-40,-20, 0, 20, 40]) + 90.
@@ -584,8 +587,8 @@ if __name__=="__main__":
                     turnoff_ants = None
                     year = 'any'
                     
-                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
-                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%s_%s_%s.csv'%(mode,str(hilbert),str(deploy_root_name),display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%s_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),str(deploy_root_name),display_type,date)
                     mode = 'vpol'
                 elif mode == 'hpol_2019':
                     thetas_deg = numpy.array([-40,-20, 0, 20, 40])+ 90.
@@ -597,9 +600,9 @@ if __name__=="__main__":
                     
                     turnoff_ants = None
                     
-                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
-                    savefig_text = '%s_coverage_wfs_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
-                    savefig_text1 = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%s_%s_%s.csv'%(mode,str(hilbert),str(deploy_root_name),display_type,date)
+                    savefig_text = '%s_coverage_wfs_%i_beams_hilbert-%s_deploy-%s_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),str(deploy_root_name),display_type,date)
+                    savefig_text1 = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%s_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),str(deploy_root_name),display_type,date)
                     
                     mode = 'hpol'
                     year = '2019'
@@ -615,14 +618,29 @@ if __name__=="__main__":
                     
                     turnoff_ants = None
                     
-                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%i_%s_%s.csv'%(mode,str(hilbert),bm.deploy_index,display_type,date)
-                    savefig_text = '%s_coverage_wfs_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
-                    savefig_text1 = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%i_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),bm.deploy_index,display_type,date)
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%s_%s_%s.csv'%(mode,str(hilbert),str(deploy_root_name),display_type,date)
+                    savefig_text = '%s_coverage_wfs_%i_beams_hilbert-%s_deploy-%s_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),str(deploy_root_name),display_type,date)
+                    savefig_text1 = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%s_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),str(deploy_root_name),display_type,date)
                     
                     mode = 'vpol'
                     year = '2019'
                     pol = 1
-                    
+
+                elif mode == 'hpol_2021':
+                    elev_deg = numpy.concatenate([numpy.linspace(10,70,7),numpy.linspace(15,60,4),[0]])
+                    thetas_deg = 90 - elev_deg
+                    phis_per_theta = numpy.concatenate([numpy.ones(7), 2*numpy.ones(4), [5]]).astype(int)
+                    phis_angular_ranges = numpy.vstack((numpy.tile([-10,10],(7,1)),numpy.tile([-20,20],(4,1)) , [-50, 50] ))
+                    turnoff_ants=None
+                    mode = 'hpol'
+                    year = '2021'
+
+                    outfile_name = '%s_beam_sample_delays_hilbert-%s_deploy-%s_%s_%s.csv'%(mode,str(hilbert),deploy_root_name,display_type,date)
+                    savefig_text = '%s_coverage_map_%i_beams_hilbert-%s_deploy-%s_%s_%s.jpg'%(mode,sum(phis_per_theta),str(hilbert),deploy_root_name,display_type,date)
+
+            # Path(outfile_name).touch()
+            # Path(savefig_text).touch()
+
             beam_thetas_deg = numpy.array([])#numpy.zeros(sum(phis_per_theta))
             beam_phis_deg = numpy.array([])#numpy.zeros(sum(phis_per_theta))
             for theta_index, theta in enumerate(thetas_deg):
@@ -656,11 +674,11 @@ if __name__=="__main__":
                 
                 for i in range(nbeams):
                     bm.overwriteDelays(mode, beam_delays[i,4], beam_delays[i,5], beam_delays[i,6])
-                
+                    
                     mean_corr_values, figy1, axy1 = bm.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), 
                         plot_map=True, plot_corr=True, hilbert=False, interactive=False, 
                         max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, 
-                        zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, 
+                        zenith_cut_array_plane=None, center_dir=center_dir, circle_zenith=None, circle_az=None, 
                         radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False)
                     figy1.savefig(savefig_text1)
 
@@ -704,9 +722,9 @@ if __name__=="__main__":
             fig.canvas.set_window_title('Beam Coverage Map')
             ax = fig.add_subplot(1,1,1)
             if normalize == True or post_normalize == True:
-                im = ax.imshow(coverage, interpolation='none', extent=[min(bm.phis_deg),max(bm.phis_deg),max(bm.thetas_deg),min(bm.thetas_deg)],cmap=cmap,vmin=0,vmax=1) #cmap=plt.cm.jet)
+                im = ax.imshow(coverage, interpolation='none', extent=[min(bm.phis_deg),max(bm.phis_deg),90 - max(bm.thetas_deg),90 - min(bm.thetas_deg)],cmap=cmap,vmin=0,vmax=1) #cmap=plt.cm.jet)
             else:
-                im = ax.imshow(coverage, interpolation='none', extent=[min(bm.phis_deg),max(bm.phis_deg),max(bm.thetas_deg),min(bm.thetas_deg)],cmap=cmap) #cmap=plt.cm.jet)
+                im = ax.imshow(coverage, interpolation='none', extent=[min(bm.phis_deg),max(bm.phis_deg),90 - max(bm.thetas_deg),90 - min(bm.thetas_deg)],cmap=cmap) #cmap=plt.cm.jet)
             cbar = fig.colorbar(im)
             plt.title('Beam Coverage Map')
             cbar_label = 'Max Beam Sensitivity'
@@ -720,14 +738,60 @@ if __name__=="__main__":
             plt.xlabel('Azimuth Angle (Degrees)')
             plt.ylabel('Zenith Angle (Degrees)')
 
+            add_ground_mask = True
+            if add_ground_mask:
+                mollweide = False
+                if center_dir.upper() == 'E':
+                    center_dir_full = 'East'
+                    azimuth_offset_rad = 0 #This is subtracted from the xaxis to roll it effectively.
+                    azimuth_offset_deg = 0 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From East = 0 deg, North = 90 deg)'
+                    roll = 0
+                elif center_dir.upper() == 'N':
+                    center_dir_full = 'North'
+                    azimuth_offset_rad = numpy.pi/2 #This is subtracted from the xaxis to roll it effectively. 
+                    azimuth_offset_deg = 90 #This is subtracted from the xaxis to roll it effectively. 
+                    xlabel = 'Azimuth (From North = 0 deg, West = 90 deg)'
+                    roll = numpy.argmin(abs(bm.phis_rad - azimuth_offset_rad))
+                elif center_dir.upper() == 'W':
+                    center_dir_full = 'West'
+                    azimuth_offset_rad = numpy.pi #This is subtracted from the xaxis to roll it effectively.
+                    azimuth_offset_deg = 180 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From West = 0 deg, South = 90 deg)'
+                    roll = len(bm.phis_rad)//2
+                elif center_dir.upper() == 'S':
+                    center_dir_full = 'South'
+                    azimuth_offset_rad = -numpy.pi/2 #This is subtracted from the xaxis to roll it effectively.
+                    azimuth_offset_deg = -90 #This is subtracted from the xaxis to roll it effectively.
+                    xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)'
+                    roll = numpy.argmin(abs(bm.phis_rad - azimuth_offset_rad))
+
+                if mode == 'hpol':
+                    plane_xy = bm.getPlaneZenithCurves(bm.n_hpol.copy(), 'hpol', 90.0, azimuth_offset_deg=azimuth_offset_deg)
+                elif mode == 'vpol':
+                    plane_xy = bm.getPlaneZenithCurves(bm.n_vpol.copy(), 'vpol', 90.0, azimuth_offset_deg=azimuth_offset_deg)
+                elif mode == 'all':
+                    plane_xy = bm.getPlaneZenithCurves(bm.n_all.copy(), 'all', 90.0, azimuth_offset_deg=azimuth_offset_deg) #This is janky
+
+                #Plot array plane 0 elevation curve.
+                im = bm.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = bm.min_elevation_linewidth, color='k')
+
+                x = plane_xy[0]
+                y1 = plane_xy[1]
+
+                y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
+
+                ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
+                ax.set_ylim(-90,90)
+
 
             if circle_beam_centers == True:
                 for beam_index in range(len(beam_thetas_deg)):
-                    circle = plt.Circle((beam_phis_deg[beam_index], beam_thetas_deg[beam_index]), radius, edgecolor=circle_color,linewidth=circle_linewidth,fill=False)
+                    circle = plt.Circle((beam_phis_deg[beam_index], 90 - beam_thetas_deg[beam_index]), radius, edgecolor=circle_color,linewidth=circle_linewidth,fill=False)
                     ax.add_artist(circle)
 
-                    
-            fig.savefig(savefig_text)
+
+            fig.savefig(savefig_text.replace('.jpg','.png'),dpi=108*4, figsize=(16,9))
 
             all_fig.append(fig)
             all_ax.append(ax)
