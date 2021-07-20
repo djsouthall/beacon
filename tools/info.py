@@ -2290,7 +2290,7 @@ def loadPulserEventids(remove_ignored=True):
     known_pulser_ids['run5182']['vpol'] = numpy.copy(known_pulser_ids['run5182']['hpol'])
 
     known_pulser_ids['run5185'] = {}
-    known_pulser_ids['run5185']['hpol'] = numpy.array([ 688,  700,  997, 1033, 1154, 1257, 1289, 1341, 1512, 1630, 1705, 1743, 1773, 1876, 3077])
+    known_pulser_ids['run5185']['hpol'] = numpy.array([ 688,  700,  997, 1033, 1154, 1257, 1289, 1341, 1512, 1630, 1705, 1773, 1876, 3077])
     known_pulser_ids['run5185']['vpol'] = numpy.copy(known_pulser_ids['run5182']['hpol'])
 
     known_pulser_ids['run5195'] = {} #Some of these are probably wrong
@@ -2314,6 +2314,8 @@ def loadPulserEventids(remove_ignored=True):
     #                                              3965, 3972, 4019, 4020, 4038, 4084, 4094, 4095, 4139, 4159, 4170,\
     #                                              4196, 4206, 4227, 4235, 4254, 4264, 4504, 4538, 4547, 4617, 4628,\
     #                                              4734, 4752, 4779])
+
+    
 
     known_pulser_ids['run5195']['hpol'] = numpy.array([1703, 1710, 1717, 1724, 1738, 1752, 1766, 1771, 1779, 1787, 1794,\
                                                  1800, 1813, 1820, 1843, 1850, 1857, 1864, 1868, 1884, 1892, 1898,\

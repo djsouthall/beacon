@@ -95,7 +95,7 @@ if __name__=="__main__":
 
     #This code will loop over all options included here, and they will be stored as seperate dsets.  Each of these applies different cuts to mapmax when it is attempting to select the best reconstruction direction.
     mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky'] 
-    polarizations = ['hpol']#,'vpol'] #Will loop over both if hpol and vpol present
+    polarizations = ['hpol','vpol'] #Will loop over both if hpol and vpol present
     hilbert_modes = [False]#[True,False] #Will loop over both if True and False present
 
     if run in numpy.arange(1643,1729):
@@ -111,7 +111,7 @@ if __name__=="__main__":
 
     n_theta     = 720
     min_theta   = 0
-    max_theta   = 180
+    max_theta   = 120
 
 
 
@@ -373,11 +373,11 @@ if __name__=="__main__":
                                     elif mapmax_cut_modes[filter_string_index] == 'belowhorizon':
                                         # print('belowhorizon')
                                         zenith_cut_ENU=[90,180]
-                                        zenith_cut_array_plane=[0,92] #Up to 2 degrees below projectd array plane.
+                                        zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
                                     elif mapmax_cut_modes[filter_string_index] == 'allsky':
                                         # print('allsky')
                                         zenith_cut_ENU=None
-                                        zenith_cut_array_plane=[0,100]
+                                        zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
                                     else:
                                         zenith_cut_ENU=None
                                         zenith_cut_array_plane=None

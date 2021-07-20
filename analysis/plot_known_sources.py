@@ -11,6 +11,7 @@ import sys
 import csv
 import scipy
 import scipy.interpolate
+import scipy.ndimage
 import pymap3d as pm
 from iminuit import Minuit
 import inspect
@@ -166,8 +167,7 @@ if __name__ == '__main__':
                                     'run1509',\
                                     'run1511']
         elif True:
-            included_pulsers =    [ 'run5182',\
-                                    'run5185',\
+            included_pulsers =    [ 'run5185',\
                                     'run5195']
         else:
             included_pulsers = []  
@@ -279,6 +279,7 @@ if __name__ == '__main__':
 
         plot_residuals = False
         plot_histograms = False
+        plot_animated_events = False #Will cycle through multiple events for the same plot.  May be slow and heavy on resources.
         iterate_sub_baselines = 6 #The lower this is the higher the time it will take to plot.  Does combinatoric subsets of baselines with this length. 
 
         final_corr_length = 2**17
@@ -429,6 +430,12 @@ if __name__ == '__main__':
                 eventid = numpy.random.choice(known_pulser_ids[pulser_key][mode]) #For plotting single map
                 
                 mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=pulser_key)
+
+                label, num_features = scipy.ndimage.label(mean_corr_values > 0.5*numpy.max(mean_corr_values))
+
+
+                if plot_animated_events:
+                    cor.animatedMap(known_pulser_ids[pulser_key][mode], mode, pulser_key, include_baselines=[0,1,2,3,4,5], plane_zenith=zenith_deg, plane_az=azimuth_deg, map_source_distance_m=distance_m, radius=1.0, hilbert=False, max_method=None,center_dir='E',save=True,dpi=300,fps=3)
 
                 if plot_histograms:
                     # map_resolution = 0.01 #degrees
