@@ -135,7 +135,7 @@ cw_sources['khsv']['time_delay_dict']['vpol'] = {   '[0, 1]' : [-77.6   - (cable
 
 if __name__ == '__main__':
     try:
-        plt.close('all')
+        #plt.close('all')
         if len(sys.argv) == 2:
             if str(sys.argv[1]) in ['vpol', 'hpol']:
                 mode = str(sys.argv[1])
@@ -167,8 +167,17 @@ if __name__ == '__main__':
                                     'run1509',\
                                     'run1511']
         elif True:
-            included_pulsers =    [ 'run5185',\
-                                    'run5195']
+            if 'day3' in deploy_index:
+                included_pulsers =    [ 'run5185',\
+                                        'run5195',\
+                                        'run1511',\
+                                        'run1507']
+            elif 'day1' in deploy_index:
+                included_pulsers =    [ 'run5185',\
+                                        'run5195',\
+                                        'run1511',\
+                                        'run1507']
+
         else:
             included_pulsers = []  
 
@@ -272,7 +281,7 @@ if __name__ == '__main__':
         plot_predicted_time_shifts = False
         plot_airplane_tracks = True
         plot_time_delay_calculations = False
-        plot_time_delays_on_maps = True
+        plot_time_delays_on_maps = False
         plot_expected_direction = True
         limit_events = 1000 #Number of events use for time delay calculation
 
@@ -296,7 +305,7 @@ if __name__ == '__main__':
         sine_subtract_max_freq_GHz = 0.13
         sine_subtract_percent = 0.03
 
-        waveform_index_range = (None,None)
+        waveform_index_range = (None,None) #Sometimes overwritten below
 
         apply_phase_response = True
         hilbert = False
@@ -384,13 +393,27 @@ if __name__ == '__main__':
                 run = int(pulser_key.replace('run',''))
                 reader = Reader(datapath,run)
 
+                if run == 1507:
+                    _waveform_index_range = (1500,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
+                    _waveform_index_range = (None, None)
+                elif run == 1509:
+                    _waveform_index_range = (2500,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
+                    _waveform_index_range = (None, None)
+                elif run == 1511:
+                    _waveform_index_range = (1250,1750) #Looking at the later bit of the waveform only, 10000 will cap off.
+                    _waveform_index_range = (None, None)
+                elif run == 5185:
+                    t_index_cut = numpy.where(reader.t() > 1000)[0]
+                    _waveform_index_range = (min(t_index_cut),max(t_index_cut)) #Looking at the later bit of the waveform only, 10000 will cap off.    
+                    _waveform_index_range = (None,None)
+                elif run == 5195:
+                    t_index_cut = numpy.where(reader.t() > 4000)[0]
+                    _waveform_index_range = (min(t_index_cut),max(t_index_cut)) #Looking at the later bit of the waveform only, 10000 will cap off.
+                    _waveform_index_range = (None,None)
+                else:
+                    _waveform_index_range = (None, None)
+
                 if plot_predicted_time_shifts:
-                    if run == 1507:
-                            _waveform_index_range = (1500,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
-                    elif run == 1509:
-                            _waveform_index_range = (2500,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
-                    elif run == 1511:
-                            _waveform_index_range = (1250,1750) #Looking at the later bit of the waveform only, 10000 will cap off.  
                     reader = Reader(datapath,run)
                     tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=_waveform_index_range,plot_filters=False,apply_phase_response=apply_phase_response)
                     if sine_subtract:
@@ -400,10 +423,10 @@ if __name__ == '__main__':
                     else:
                         _time_delays = None
                     if mode == 'hpol':
-                        _eventid = numpy.random.choice(known_pulser_ids['run%i'%run]['hpol'])
+                        _eventid = known_pulser_ids['run%i'%run]['hpol'][0]#numpy.random.choice(known_pulser_ids['run%i'%run]['hpol'])
                         _fig, _ax = tdc.plotEvent(_eventid, channels=[0,2,4,6], apply_filter=True, hilbert=hilbert, sine_subtract=True, apply_tukey=None, additional_title_text='Sample Event shifted by input time delays', time_delays=_time_delays)
                     else:
-                        _eventid = numpy.random.choice(known_pulser_ids['run%i'%run]['vpol'])
+                        _eventid = known_pulser_ids['run%i'%run]['vpol'][0]#numpy.random.choice(known_pulser_ids['run%i'%run]['vpol'])
                         _fig, _ax = tdc.plotEvent(_eventid, channels=[1,3,5,7], apply_filter=True, hilbert=hilbert, sine_subtract=True, apply_tukey=None, additional_title_text='Sample Event shifted by input time delays', time_delays=_time_delays)
 
                 #Calculate old and new geometries
@@ -415,7 +438,7 @@ if __name__ == '__main__':
                 elevation_deg = 90.0 - numpy.rad2deg(numpy.arccos(pulser_ENU[2]/distance_m))
                 azimuth_deg = numpy.rad2deg(numpy.arctan2(pulser_ENU[1],pulser_ENU[0]))
                 
-                cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m, deploy_index=deploy_index)
+                cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=_waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m, deploy_index=deploy_index)
                 cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                 if plot_expected_direction == False:
@@ -427,7 +450,7 @@ if __name__ == '__main__':
                 else:
                     td_dict = {}
 
-                eventid = numpy.random.choice(known_pulser_ids[pulser_key][mode]) #For plotting single map
+                eventid = known_pulser_ids[pulser_key][mode][0]#numpy.random.choice(known_pulser_ids[pulser_key][mode]) #For plotting single map
                 
                 mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,window_title=pulser_key)
 
@@ -845,7 +868,7 @@ if __name__ == '__main__':
                     ax.axhline(90.0 - zenith_deg,c='fuchsia',linewidth=1.0)
 
         #### OTHER ####
-        cor.plotPointingResolution('hpol', snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[0,1,2,3,4,5])
+        #cor.plotPointingResolution('hpol', snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[0,1,2,3,4,5])
     except Exception as e:
         print('Error in main loop.')
         print(e)

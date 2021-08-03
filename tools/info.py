@@ -703,793 +703,800 @@ def loadAntennaLocationsENU(deploy_index=default_deploy, check=False, verbose=Fa
     Check only applies when using a deploy index that would call the config reader.
     When it does apply it will check for both ENU and latlonel data.
     '''
-    if type(deploy_index) == str:
-        ignored_origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, ignored_cable_delays = configReader(deploy_index, return_mode='enu',check=check, verbose=verbose)
-    elif deploy_index == 0:
-        antennas_physical   = {0:(0.0,0.0,0.0),1:(-6.039,-1.618,2.275),2:(-1.272,-10.362,1.282),3:(3.411,-11.897,-0.432)} #ORIGINAL
-        '''
-        #These were determined using only run 793
-        antennas_phase_hpol = {0:(  -0.02557475,   0.03116954,   0.09699316),1:(-6.07239516,  -1.57654064,   2.40102979),2:(-1.03349923, -10.66185761,   0.41323144),3:( 3.0254727 , -11.41386618,   1.08350273)}#ADJUSTED HPOL
-        antennas_phase_vpol = {0:(-0.3113139 ,   0.37988811,   1.22224369),1:(-5.87779214,  -1.8179266 ,   1.68175401),2:(-1.57186065,  -9.98385335,   2.45102724),3:( 3.79236323, -12.37305718,  -1.80125484)}#ADJUSTED VPOL
-        '''
-        #These were determined in first attempt with day 5 and day 6 data with no bounds on phase positons.
-        antennas_phase_hpol = {0:( -1.05036701,  -2.83990607,   5.7301439) , 1:(-5.04455409,   1.80238432,  -3.37157069), 2:(-0.70469931,  -9.35762227,  -1.46880603),  3:( 0.62819922, -18.85449124,  14.09627911)}#ADJUSTED HPOL
-        antennas_phase_vpol = {0:( -1.97517555,  -4.78830899,  10.53874329), 1:( -5.26414199,   0.06191184,  -1.6073464), 2:( -1.17891238,  -8.69156208,   0.24012179), 3:(  4.23558404, -11.0023696 ,  -4.13418962)}#ADJUSTED VPOL
-    elif deploy_index > 0 and deploy_index <= 9:
-
-        origin = loadAntennaZeroLocation(deploy_index = deploy_index)
-        antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3890.77),2:(37.588909, -118.237719, 3881.02),3:(37.5889210, -118.2379850, 3887.42)} #ORIGINAL
-        antennas_physical = {}
-        for key, location in antennas_physical_latlon.items():
-            antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
-
-        if deploy_index == 1:
-            #Errors not currently used.  
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.307267, -12.610417, 11.411196], 2 : [-10.464510, -46.217141, -0.229276], 3 : [-31.172820, -42.069610, 14.812669]}
-            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.042770, 0.047592, 0.232313], 2 : [0.069353, 0.034351, 0.297275], 3 : [0.065285, 0.047254, 0.249236]}
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-29.908104, -12.713682, 11.649818], 2 : [-9.956527, -46.119743, 1.003367], 3 : [-31.175775, -41.743273, 15.241286]}
-            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.057717, 0.065283, 0.261789], 2 : [0.080427, 0.046084, 0.282382], 3 : [0.084447, 0.065313, 0.276901]}
-
-        elif deploy_index == 2:
+    try:
+        if type(deploy_index) == str:
+            ignored_origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, ignored_cable_delays = configReader(deploy_index, return_mode='enu',check=check, verbose=verbose)
+        elif deploy_index == 0:
+            antennas_physical   = {0:(0.0,0.0,0.0),1:(-6.039,-1.618,2.275),2:(-1.272,-10.362,1.282),3:(3.411,-11.897,-0.432)} #ORIGINAL
             '''
-            #These are the ones I got by flipping channel 2
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-28.231754, -13.562168, 9.068510], 2 : [-9.735529, -45.985775, -0.088781], 3 : [-31.298949, -42.571000, 13.874803]}                                                          
-            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.066406, 0.054628, 0.148034], 2 : [0.033279, 0.044264, 0.117928], 3 : [0.034486, 0.038190, 0.096574]} 
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.466405, -12.754674, 11.112169], 2 : [-10.727788, -46.128595, -1.850623], 3 : [-31.569865, -42.169063, 13.027888]}                                                        
-            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.024673, 0.039216, 0.162412], 2 : [0.041817, 0.028456, 0.215791], 3 : [0.038274, 0.035657, 0.180371]} 
+            #These were determined using only run 793
+            antennas_phase_hpol = {0:(  -0.02557475,   0.03116954,   0.09699316),1:(-6.07239516,  -1.57654064,   2.40102979),2:(-1.03349923, -10.66185761,   0.41323144),3:( 3.0254727 , -11.41386618,   1.08350273)}#ADJUSTED HPOL
+            antennas_phase_vpol = {0:(-0.3113139 ,   0.37988811,   1.22224369),1:(-5.87779214,  -1.8179266 ,   1.68175401),2:(-1.57186065,  -9.98385335,   2.45102724),3:( 3.79236323, -12.37305718,  -1.80125484)}#ADJUSTED VPOL
             '''
-            '''
-            #These are the ones that I had prior to 11/21/2019
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.401760, -12.621386, 10.810656], 2 : [-10.372617, -46.301546, -0.381405], 3 : [-31.261194, -42.193276, 14.412270]}
-            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.042055, 0.048239, 0.254382], 2 : [0.069051, 0.034678, 0.330481], 3 : [0.065562, 0.049100, 0.276208]}
+            #These were determined in first attempt with day 5 and day 6 data with no bounds on phase positons.
+            antennas_phase_hpol = {0:( -1.05036701,  -2.83990607,   5.7301439) , 1:(-5.04455409,   1.80238432,  -3.37157069), 2:(-0.70469931,  -9.35762227,  -1.46880603),  3:( 0.62819922, -18.85449124,  14.09627911)}#ADJUSTED HPOL
+            antennas_phase_vpol = {0:( -1.97517555,  -4.78830899,  10.53874329), 1:( -5.26414199,   0.06191184,  -1.6073464), 2:( -1.17891238,  -8.69156208,   0.24012179), 3:(  4.23558404, -11.0023696 ,  -4.13418962)}#ADJUSTED VPOL
+        elif deploy_index > 0 and deploy_index <= 9:
 
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-29.979756, -12.405349, 9.822749], 2 : [-9.619360, -46.467924, 2.456841], 3 : [-31.138537, -41.778211, 14.606688]}
-            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.051475, 0.064251, 0.278799], 2 : [0.078516, 0.049043, 0.293481], 3 : [0.085002, 0.073460, 0.303864]}
+            origin = loadAntennaZeroLocation(deploy_index = deploy_index)
+            antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3890.77),2:(37.588909, -118.237719, 3881.02),3:(37.5889210, -118.2379850, 3887.42)} #ORIGINAL
+            antennas_physical = {}
+            for key, location in antennas_physical_latlon.items():
+                antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
 
-            '''
+            if deploy_index == 1:
+                #Errors not currently used.  
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.307267, -12.610417, 11.411196], 2 : [-10.464510, -46.217141, -0.229276], 3 : [-31.172820, -42.069610, 14.812669]}
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.042770, 0.047592, 0.232313], 2 : [0.069353, 0.034351, 0.297275], 3 : [0.065285, 0.047254, 0.249236]}
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-29.908104, -12.713682, 11.649818], 2 : [-9.956527, -46.119743, 1.003367], 3 : [-31.175775, -41.743273, 15.241286]}
+                antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.057717, 0.065283, 0.261789], 2 : [0.080427, 0.046084, 0.282382], 3 : [0.084447, 0.065313, 0.276901]}
 
-            #These are from the first 6 planes found. 
-            # antennas_phase_hpol = {0 : [259.993245, 787.655542, 437.666287], 1 : [259.993245, 787.655542, 437.666287], 2 : [283.612514, 755.111988, 431.073474], 3 : [261.116575, 757.466770, 437.434022]}
-            # antennas_phase_hpol_hesse = {0 : [0.045983, 0.129863, 0.037608], 1 : [0.045983, 0.129863, 0.037608], 2 : [0.046190, 0.130497, 0.037696], 3 : [0.045993, 0.129540, 0.037607]}
+            elif deploy_index == 2:
+                '''
+                #These are the ones I got by flipping channel 2
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-28.231754, -13.562168, 9.068510], 2 : [-9.735529, -45.985775, -0.088781], 3 : [-31.298949, -42.571000, 13.874803]}                                                          
+                antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.066406, 0.054628, 0.148034], 2 : [0.033279, 0.044264, 0.117928], 3 : [0.034486, 0.038190, 0.096574]} 
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.466405, -12.754674, 11.112169], 2 : [-10.727788, -46.128595, -1.850623], 3 : [-31.569865, -42.169063, 13.027888]}                                                        
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.024673, 0.039216, 0.162412], 2 : [0.041817, 0.028456, 0.215791], 3 : [0.038274, 0.035657, 0.180371]} 
+                '''
+                '''
+                #These are the ones that I had prior to 11/21/2019
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.401760, -12.621386, 10.810656], 2 : [-10.372617, -46.301546, -0.381405], 3 : [-31.261194, -42.193276, 14.412270]}
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.042055, 0.048239, 0.254382], 2 : [0.069051, 0.034678, 0.330481], 3 : [0.065562, 0.049100, 0.276208]}
 
-            # antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-32.940076, -15.159404, 13.220501], 2 : [-9.459576, -48.470314, 9.195625], 3 : [-31.800885, -44.470317, 16.231648]}
-            # antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.010150, 0.021543, 0.007624], 2 : [0.010652, 0.025185, 0.008330], 3 : [0.009642, 0.020038, 0.006959]}
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-29.979756, -12.405349, 9.822749], 2 : [-9.619360, -46.467924, 2.456841], 3 : [-31.138537, -41.778211, 14.606688]}
+                antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.051475, 0.064251, 0.278799], 2 : [0.078516, 0.049043, 0.293481], 3 : [0.085002, 0.073460, 0.303864]}
 
-            #These include the next 6, specifically calibrated to be W sensitive. #currently the best for planes found in west
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-32.940076, -15.159404, 13.220501], 2 : [-9.459576, -48.470314, 9.195625], 3 : [-31.800885, -44.470317, 16.231648]}
-            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.010150, 0.021543, 0.007624], 2 : [0.010652, 0.025185, 0.008330], 3 : [0.009642, 0.020038, 0.006959]}
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-31.224503, -13.170500, 10.000003], 2 : [-9.765921, -46.417296, 3.205128], 3 : [-31.080523, -42.279361, 12.014143]}
-            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.037041, 0.074031, 4.992054], 2 : [0.023776, 0.044105, 0.048783], 3 : [0.027407, 0.050578, 0.057576]}
-        elif deploy_index == 3:
-            #Here I am just rerunning the time delays from the pulser, and also letting the cable delays vary.  I am only doing a simple chi^2 (Just the adjustedChi^2)
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.568717, -12.446193, 10.212559], 2 : [-9.692826, -46.525891, 2.602984], 3 : [-31.642232, -41.937230, 15.393675]}
-            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.067854, 0.057468, 0.200232], 2 : [0.023387, 0.025701, 0.123221], 3 : [0.022399, 0.009549, 0.082992]}
+                '''
 
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-31.334960, -12.928318, 15.911683], 2 : [-10.717905, -46.442935, 0.488731], 3 : [-31.672917, -42.311738, 15.209071]}
-            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.022266, 0.010907, 0.128100], 2 : [0.024116, 0.014593, 0.176512], 3 : [0.026911, 0.013143, 0.139782]}
-        elif deploy_index == 4:
-            #hpol calibration based solely off of matching Solar Plant calibration
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-34.482512, -16.819514, 13.000502], 2 : [-6.612918, -45.580198, 11.070150], 3 : [-30.208161, -42.804228, 13.270912]}
-            antennas_phase_hpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [3.715818, 3.611556, 4.597339], 2 : [5.816696, 5.086424, 5.437195], 3 : [4.455286, 4.555449, 3.064820]}
+                #These are from the first 6 planes found. 
+                # antennas_phase_hpol = {0 : [259.993245, 787.655542, 437.666287], 1 : [259.993245, 787.655542, 437.666287], 2 : [283.612514, 755.111988, 431.073474], 3 : [261.116575, 757.466770, 437.434022]}
+                # antennas_phase_hpol_hesse = {0 : [0.045983, 0.129863, 0.037608], 1 : [0.045983, 0.129863, 0.037608], 2 : [0.046190, 0.130497, 0.037696], 3 : [0.045993, 0.129540, 0.037607]}
 
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-34.224499, -16.170499, 12.999983], 2 : [-9.338844, -45.953347, 0.917863], 3 : [-31.007327, -42.196964, 12.929773]}
-            antennas_phase_vpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.129504, 0.136716, 4.293571], 2 : [2.441008, 4.373686, 3.341286], 3 : [2.412784, 2.502000, 3.880752]}
-        elif deploy_index == 5:
-            #Hpol uses the following sources
-            #use_sources = ['Quarry Substation','Palmetto Cell Tower','Goldfield KGFN-FM','Silver Peak Substation']
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.482512, -13.819514, 16.000502], 2 : [-7.382560, -44.541828, 14.070150], 3 : [-33.208161, -39.804228, 16.270912]}
-            antennas_phase_hpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.003555, 0.170239, 0.097863], 2 : [0.108990, 0.235702, 0.799819], 3 : [0.004331, 0.041649, 0.105451]}
-            #Vpol uses the following sources
-            #
-        elif deploy_index == 6:
-            #Southern hpol calibration using ['East Dyer Substation','Goldfield KGFN-FM','Silver Peak Substation']
-            antennas_phase_hpol = {0 : [5.000000, -5.000000, 0.000000], 1 : [-34.908104, -10.002345, 16.649818], 2 : [-10.030078, -45.396969, 6.003367], 3 : [-34.535026, -36.743273, 20.241286]}
-            antennas_phase_hpol_hesse = {0 : [0.011569, 0.048381, 0.050000], 1 : [0.011566, 0.394467, 0.268665], 2 : [0.112954, 0.401714, 0.596043], 3 : [0.110909, 0.048557, 0.549806]}
-            #Southern vpol ['East Dyer Substation','Goldfield KGFN-FM']
-            antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-35.307267, -9.499658, 16.411193], 2 : [-9.729938, -42.427576, 4.534545], 3 : [-34.426753, -37.069610, 19.812659]}
-            antennas_phase_vpol_hesse = {0 : [0.017758, 0.035716, 0.050000], 1 : [0.017726, 0.549810, 0.388825], 2 : [1.513986, 2.623749, 9.713300], 3 : [0.134422, 0.035845, 0.402331]}
+                # antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-32.940076, -15.159404, 13.220501], 2 : [-9.459576, -48.470314, 9.195625], 3 : [-31.800885, -44.470317, 16.231648]}
+                # antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.010150, 0.021543, 0.007624], 2 : [0.010652, 0.025185, 0.008330], 3 : [0.009642, 0.020038, 0.006959]}
 
-        elif deploy_index == 7:
-            #Northern hpol calibration using ['Tonopah KTPH','Solar Plant','Silver Peak Substation']
-            antennas_phase_hpol = {0 : [5.000000, -5.000000, 0.000000], 1 : [-33.689692, -15.002345, 21.649818], 2 : [-11.494760, -46.163473, 1.003367], 3 : [-33.922477, -41.471350, 15.241288]}
-            antennas_phase_hpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.144083, 0.098881, 7.940934], 2 : [0.338200, 0.531446, 2.016936], 3 : [0.339069, 0.524670, 9.907052]}
-            #Northern vpol ['Tonopah KTPH','Solar Plant']
-            antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-34.603054, -14.499658, 21.411172], 2 : [-13.467258, -43.818630, 8.089366], 3 : [-35.052678, -40.378028, 22.496440]}
-            antennas_phase_vpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.186809, 0.170799, 6.939977], 2 : [0.761651, 2.035546, 7.680443], 3 : [0.754464, 1.907757, 5.935745]}
-        elif deploy_index == 8:
-            #This uses the sources used for both the southern and northern calibrations above
-            # hpol : ['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']
-            # vpol : ['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant']
-            antennas_phase_hpol = {0 : [5.000000, -5.000000, 0.000000], 1 : [-35.499550, -12.062215, 21.649776], 2 : [-10.363603, -46.707683, 11.003365], 3 : [-34.919269, -38.689617, 25.241286]}
-            antennas_phase_hpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.128056, 0.264925, 8.677112], 2 : [0.128084, 0.264799, 1.257417], 3 : [0.128088, 0.264868, 0.600729]}
+                #These include the next 6, specifically calibrated to be W sensitive. #currently the best for planes found in west
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-32.940076, -15.159404, 13.220501], 2 : [-9.459576, -48.470314, 9.195625], 3 : [-31.800885, -44.470317, 16.231648]}
+                antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.010150, 0.021543, 0.007624], 2 : [0.010652, 0.025185, 0.008330], 3 : [0.009642, 0.020038, 0.006959]}
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-31.224503, -13.170500, 10.000003], 2 : [-9.765921, -46.417296, 3.205128], 3 : [-31.080523, -42.279361, 12.014143]}
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.037041, 0.074031, 4.992054], 2 : [0.023776, 0.044105, 0.048783], 3 : [0.027407, 0.050578, 0.057576]}
+            elif deploy_index == 3:
+                #Here I am just rerunning the time delays from the pulser, and also letting the cable delays vary.  I am only doing a simple chi^2 (Just the adjustedChi^2)
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.568717, -12.446193, 10.212559], 2 : [-9.692826, -46.525891, 2.602984], 3 : [-31.642232, -41.937230, 15.393675]}
+                antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.067854, 0.057468, 0.200232], 2 : [0.023387, 0.025701, 0.123221], 3 : [0.022399, 0.009549, 0.082992]}
 
-            antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-36.058825, -12.207762, 21.411190], 2 : [-10.579375, -46.727175, 9.534532], 3 : [-35.094910, -39.333878, 24.812656]}
-            antennas_phase_vpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.137129, 0.265938, 1.316943], 2 : [0.137083, 0.265485, 1.881641], 3 : [0.137130, 0.265949, 0.504853]}
-        elif deploy_index == 9:
-            #This uses the airplane data ignoring sources in the East.  
-            #Western Hpol calibration
-            antennas_phase_hpol = {0 : [5.000000, -5.000000, 0.000000], 1 : [-29.499550, -18.062215, 15.649776], 2 : [-5.412771, -50.968447, 11.312891], 3 : [-28.919269, -44.689617, 19.241286]}
-            antennas_phase_hpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.000994, 0.001836, 0.000453], 2 : [0.052628, 0.117427, 0.041269], 3 : [0.000234, 0.000440, 0.000199]}
-            #Western Vpol calibration
-            antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-30.058825, -18.207762, 15.411190], 2 : [-7.416143, -51.399893, 9.940570], 3 : [-29.094910, -45.333878, 18.812656]}
-            antennas_phase_vpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.002770, 0.007155, 0.002050], 2 : [0.093939, 0.138281, 0.121274], 3 : [0.000847, 0.001238, 0.001117]}
-    elif deploy_index > 9 and deploy_index <= 11:
-        #For these deploy indices I am attempting to be more sure of which elevation metric is being used, and ensuring it is properly handled.
-        #The origin of coordinates are coming from a picture taken near the base of antenna 0 on a OnePlus 6T, which **I THINK** uses MSL elevation (then adjusted below to be WGS84)
-        origin = loadAntennaZeroLocation(deploy_index = deploy_index)
-        #The offset between MSL and WGS84 onsite according to pulsing data averages to MSL = WGS84 + 26.356m, so I am subtracting the offset such that datum is WGS84
-        # A0Location = (37.0 + 35.0/60.0 + 21.6528/3600, -(118. + 14.0/60.0 + 15.4715/3600.0), 3850.333 - 26.356) #6ft below antennas, ~3ft to the side (north east ish)
-        # A1Location = (37.5892, -118.2380, 3862.776 - 26.356) #No good photos for elevation.  Could be off on this one, this is from a picture taken at approximately the same height?  GPS come from pictures and google maps.  Likely too high.
-        # A2Location = (37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 - 26.356) #6ft below antennas, ~3ft to the side (north east ish)
-        # A3Location = (37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 - 26.356) #Slightly downhill south, closer to antenna
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-31.334960, -12.928318, 15.911683], 2 : [-10.717905, -46.442935, 0.488731], 3 : [-31.672917, -42.311738, 15.209071]}
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.022266, 0.010907, 0.128100], 2 : [0.024116, 0.014593, 0.176512], 3 : [0.026911, 0.013143, 0.139782]}
+            elif deploy_index == 4:
+                #hpol calibration based solely off of matching Solar Plant calibration
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-34.482512, -16.819514, 13.000502], 2 : [-6.612918, -45.580198, 11.070150], 3 : [-30.208161, -42.804228, 13.270912]}
+                antennas_phase_hpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [3.715818, 3.611556, 4.597339], 2 : [5.816696, 5.086424, 5.437195], 3 : [4.455286, 4.555449, 3.064820]}
 
-        #plotting these makes me think that antenna 2 is not low enough?  Hopefully that fixes in a calibration?  
-        print('Antenna Physical location elevations from photos with OnePlus 6t using a false assumption that it is MSL (so doing elevation - 26.356 to get what was suspected to be WGS84 but was not)')
-        antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3862.776 - 26.356),2:(37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 - 26.356),3:(37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 - 26.356)} #MSL mostly derived from pictures taken with a OnePlus 6t phone, then converted to WGS84 by subtracting measured offset from pulsing site gps
-        antennas_physical = {}
-        for key, location in antennas_physical_latlon.items():
-            antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-34.224499, -16.170499, 12.999983], 2 : [-9.338844, -45.953347, 0.917863], 3 : [-31.007327, -42.196964, 12.929773]}
+                antennas_phase_vpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.129504, 0.136716, 4.293571], 2 : [2.441008, 4.373686, 3.341286], 3 : [2.412784, 2.502000, 3.880752]}
+            elif deploy_index == 5:
+                #Hpol uses the following sources
+                #use_sources = ['Quarry Substation','Palmetto Cell Tower','Goldfield KGFN-FM','Silver Peak Substation']
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.482512, -13.819514, 16.000502], 2 : [-7.382560, -44.541828, 14.070150], 3 : [-33.208161, -39.804228, 16.270912]}
+                antennas_phase_hpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.003555, 0.170239, 0.097863], 2 : [0.108990, 0.235702, 0.799819], 3 : [0.004331, 0.041649, 0.105451]}
+                #Vpol uses the following sources
+                #
+            elif deploy_index == 6:
+                #Southern hpol calibration using ['East Dyer Substation','Goldfield KGFN-FM','Silver Peak Substation']
+                antennas_phase_hpol = {0 : [5.000000, -5.000000, 0.000000], 1 : [-34.908104, -10.002345, 16.649818], 2 : [-10.030078, -45.396969, 6.003367], 3 : [-34.535026, -36.743273, 20.241286]}
+                antennas_phase_hpol_hesse = {0 : [0.011569, 0.048381, 0.050000], 1 : [0.011566, 0.394467, 0.268665], 2 : [0.112954, 0.401714, 0.596043], 3 : [0.110909, 0.048557, 0.549806]}
+                #Southern vpol ['East Dyer Substation','Goldfield KGFN-FM']
+                antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-35.307267, -9.499658, 16.411193], 2 : [-9.729938, -42.427576, 4.534545], 3 : [-34.426753, -37.069610, 19.812659]}
+                antennas_phase_vpol_hesse = {0 : [0.017758, 0.035716, 0.050000], 1 : [0.017726, 0.549810, 0.388825], 2 : [1.513986, 2.623749, 9.713300], 3 : [0.134422, 0.035845, 0.402331]}
 
-        if deploy_index == 10:
+            elif deploy_index == 7:
+                #Northern hpol calibration using ['Tonopah KTPH','Solar Plant','Silver Peak Substation']
+                antennas_phase_hpol = {0 : [5.000000, -5.000000, 0.000000], 1 : [-33.689692, -15.002345, 21.649818], 2 : [-11.494760, -46.163473, 1.003367], 3 : [-33.922477, -41.471350, 15.241288]}
+                antennas_phase_hpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.144083, 0.098881, 7.940934], 2 : [0.338200, 0.531446, 2.016936], 3 : [0.339069, 0.524670, 9.907052]}
+                #Northern vpol ['Tonopah KTPH','Solar Plant']
+                antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-34.603054, -14.499658, 21.411172], 2 : [-13.467258, -43.818630, 8.089366], 3 : [-35.052678, -40.378028, 22.496440]}
+                antennas_phase_vpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.186809, 0.170799, 6.939977], 2 : [0.761651, 2.035546, 7.680443], 3 : [0.754464, 1.907757, 5.935745]}
+            elif deploy_index == 8:
+                #This uses the sources used for both the southern and northern calibrations above
+                # hpol : ['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']
+                # vpol : ['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant']
+                antennas_phase_hpol = {0 : [5.000000, -5.000000, 0.000000], 1 : [-35.499550, -12.062215, 21.649776], 2 : [-10.363603, -46.707683, 11.003365], 3 : [-34.919269, -38.689617, 25.241286]}
+                antennas_phase_hpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.128056, 0.264925, 8.677112], 2 : [0.128084, 0.264799, 1.257417], 3 : [0.128088, 0.264868, 0.600729]}
+
+                antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-36.058825, -12.207762, 21.411190], 2 : [-10.579375, -46.727175, 9.534532], 3 : [-35.094910, -39.333878, 24.812656]}
+                antennas_phase_vpol_hesse = {0 : [0.050000, 0.050000, 0.050000], 1 : [0.137129, 0.265938, 1.316943], 2 : [0.137083, 0.265485, 1.881641], 3 : [0.137130, 0.265949, 0.504853]}
+            elif deploy_index == 9:
+                #This uses the airplane data ignoring sources in the East.  
+                #Western Hpol calibration
+                antennas_phase_hpol = {0 : [5.000000, -5.000000, 0.000000], 1 : [-29.499550, -18.062215, 15.649776], 2 : [-5.412771, -50.968447, 11.312891], 3 : [-28.919269, -44.689617, 19.241286]}
+                antennas_phase_hpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.000994, 0.001836, 0.000453], 2 : [0.052628, 0.117427, 0.041269], 3 : [0.000234, 0.000440, 0.000199]}
+                #Western Vpol calibration
+                antennas_phase_vpol = {0 : [4.999999, -4.999999, 0.000000], 1 : [-30.058825, -18.207762, 15.411190], 2 : [-7.416143, -51.399893, 9.940570], 3 : [-29.094910, -45.333878, 18.812656]}
+                antennas_phase_vpol_hesse = {0 : [0.100000, 0.100000, 0.100000], 1 : [0.002770, 0.007155, 0.002050], 2 : [0.093939, 0.138281, 0.121274], 3 : [0.000847, 0.001238, 0.001117]}
+        elif deploy_index > 9 and deploy_index <= 11:
+            #For these deploy indices I am attempting to be more sure of which elevation metric is being used, and ensuring it is properly handled.
+            #The origin of coordinates are coming from a picture taken near the base of antenna 0 on a OnePlus 6T, which **I THINK** uses MSL elevation (then adjusted below to be WGS84)
+            origin = loadAntennaZeroLocation(deploy_index = deploy_index)
+            #The offset between MSL and WGS84 onsite according to pulsing data averages to MSL = WGS84 + 26.356m, so I am subtracting the offset such that datum is WGS84
+            # A0Location = (37.0 + 35.0/60.0 + 21.6528/3600, -(118. + 14.0/60.0 + 15.4715/3600.0), 3850.333 - 26.356) #6ft below antennas, ~3ft to the side (north east ish)
+            # A1Location = (37.5892, -118.2380, 3862.776 - 26.356) #No good photos for elevation.  Could be off on this one, this is from a picture taken at approximately the same height?  GPS come from pictures and google maps.  Likely too high.
+            # A2Location = (37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 - 26.356) #6ft below antennas, ~3ft to the side (north east ish)
+            # A3Location = (37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 - 26.356) #Slightly downhill south, closer to antenna
+
+            #plotting these makes me think that antenna 2 is not low enough?  Hopefully that fixes in a calibration?  
+            print('Antenna Physical location elevations from photos with OnePlus 6t using a false assumption that it is MSL (so doing elevation - 26.356 to get what was suspected to be WGS84 but was not)')
+            antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3862.776 - 26.356),2:(37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 - 26.356),3:(37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 - 26.356)} #MSL mostly derived from pictures taken with a OnePlus 6t phone, then converted to WGS84 by subtracting measured offset from pulsing site gps
+            antennas_physical = {}
+            for key, location in antennas_physical_latlon.items():
+                antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+
+            if deploy_index == 10:
+                #Errors not currently used.
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.307267, -12.610417, 11.411196], 2 : [-10.464510, -46.217141, -0.229276], 3 : [-31.172820, -42.069610, 14.812669]}
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.042770, 0.047592, 0.232313], 2 : [0.069353, 0.034351, 0.297275], 3 : [0.065285, 0.047254, 0.249236]}
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-29.908104, -12.713682, 11.649818], 2 : [-9.956527, -46.119743, 1.003367], 3 : [-31.175775, -41.743273, 15.241286]}
+                antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.057717, 0.065283, 0.261789], 2 : [0.080427, 0.046084, 0.282382], 3 : [0.084447, 0.065313, 0.276901]}
+            elif deploy_index == 11:
+                #Using only pulsers based on deploy_index 10.  Has large error in z.
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, -4.999851], 1 : [-33.368096, -13.390900, 16.719218], 2 : [-7.939456, -48.869670, 12.249774], 3 : [-31.401009, -43.024315, 13.745746]}
+                antennas_phase_hpol_hesse = {0 : [1.000000, 1.000000, 7.550356], 1 : [0.899323, 0.590841, 5.101403], 2 : [0.194723, 0.190567, 1.998298], 3 : [0.166002, 0.195414, 6.334229]}
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 4.999999], 1 : [-32.828532, -13.166628, 9.409578], 2 : [-7.902534, -48.485135, 2.249786], 3 : [-28.853200, -43.872502, 13.687206]}
+                antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 7.807538], 1 : [0.854570, 0.469628, 8.731584], 2 : [0.248426, 0.184186, 7.639721], 3 : [0.779508, 0.313825, 5.027621]}
+
+        elif deploy_index == 12:
+            #For these deploy indices I am attempting to be more sure of which elevation metric is being used, and ensuring it is properly handled.
+            #Plotting the reported coordinates of every photo I took on the hillside, including those beside the pulsing site 1, I believe the oneplus 6T reports in WGS84.
+            origin = loadAntennaZeroLocation(deploy_index = deploy_index)
+            # A0Location = (37.0 + 35.0/60.0 + 21.6528/3600, -(118. + 14.0/60.0 + 15.4715/3600.0), 3850.333) #6ft below antennas, ~3ft to the side (north east ish)
+            # A1Location = (37.5892, -118.2380, 3862.776) #No good photos for elevation.  Could be off on this one, this is from a picture taken at approximately the same height?  GPS come from pictures and google maps.  Likely too high.
+            # A2Location = (37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583) #6ft below antennas, ~3ft to the side (north east ish)
+            # A3Location = (37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079) #Slightly downhill south, closer to antenna
+
+            #plotting these makes me think that antenna 2 is not low enough?  Hopefully that fixes in a calibration?  
+            print('Antenna Physical location elevations from photos with OnePlus 6t interpreted as WGS84')
+            antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3862.776 ),2:(37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 ),3:(37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 )} 
+
+            antennas_physical = {}
+            for key, location in antennas_physical_latlon.items():
+                antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
             #Errors not currently used.
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.307267, -12.610417, 11.411196], 2 : [-10.464510, -46.217141, -0.229276], 3 : [-31.172820, -42.069610, 14.812669]}
-            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.042770, 0.047592, 0.232313], 2 : [0.069353, 0.034351, 0.297275], 3 : [0.065285, 0.047254, 0.249236]}
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-29.908104, -12.713682, 11.649818], 2 : [-9.956527, -46.119743, 1.003367], 3 : [-31.175775, -41.743273, 15.241286]}
-            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.057717, 0.065283, 0.261789], 2 : [0.080427, 0.046084, 0.282382], 3 : [0.084447, 0.065313, 0.276901]}
-        elif deploy_index == 11:
-            #Using only pulsers based on deploy_index 10.  Has large error in z.
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, -4.999851], 1 : [-33.368096, -13.390900, 16.719218], 2 : [-7.939456, -48.869670, 12.249774], 3 : [-31.401009, -43.024315, 13.745746]}
-            antennas_phase_hpol_hesse = {0 : [1.000000, 1.000000, 7.550356], 1 : [0.899323, 0.590841, 5.101403], 2 : [0.194723, 0.190567, 1.998298], 3 : [0.166002, 0.195414, 6.334229]}
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 4.999999], 1 : [-32.828532, -13.166628, 9.409578], 2 : [-7.902534, -48.485135, 2.249786], 3 : [-28.853200, -43.872502, 13.687206]}
-            antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 7.807538], 1 : [0.854570, 0.469628, 8.731584], 2 : [0.248426, 0.184186, 7.639721], 3 : [0.779508, 0.313825, 5.027621]}
-
-    elif deploy_index == 12:
-        #For these deploy indices I am attempting to be more sure of which elevation metric is being used, and ensuring it is properly handled.
-        #Plotting the reported coordinates of every photo I took on the hillside, including those beside the pulsing site 1, I believe the oneplus 6T reports in WGS84.
-        origin = loadAntennaZeroLocation(deploy_index = deploy_index)
-        # A0Location = (37.0 + 35.0/60.0 + 21.6528/3600, -(118. + 14.0/60.0 + 15.4715/3600.0), 3850.333) #6ft below antennas, ~3ft to the side (north east ish)
-        # A1Location = (37.5892, -118.2380, 3862.776) #No good photos for elevation.  Could be off on this one, this is from a picture taken at approximately the same height?  GPS come from pictures and google maps.  Likely too high.
-        # A2Location = (37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583) #6ft below antennas, ~3ft to the side (north east ish)
-        # A3Location = (37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079) #Slightly downhill south, closer to antenna
-
-        #plotting these makes me think that antenna 2 is not low enough?  Hopefully that fixes in a calibration?  
-        print('Antenna Physical location elevations from photos with OnePlus 6t interpreted as WGS84')
-        antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3862.776 ),2:(37.0 + 35.0/60.0 + 19.9643/3600, -(118. + 14.0/60.0 + 15.9971/3600.0), 3857.583 ),3:(37.0 + 35.0/60.0 + 20.1155/3600, -(118. + 14.0/60.0 + 16.7496/3600.0), 3859.079 )} 
-
-        antennas_physical = {}
-        for key, location in antennas_physical_latlon.items():
-            antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
-        #Errors not currently used.
-        print('Using best guess physical as both phase locations as well!')
-        antennas_phase_vpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
-        antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
-        antennas_phase_hpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
-        antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
-    
-    elif deploy_index >= 13 and deploy_index <= 22:
-        #These positions from from photo_gps.py, which was used to make a plane model of the hillside based on GPS coordinates of
-        #cell phone pictures.  The GPS coordinates are then input in this plane to calculate the altitudes.  
-        # ENU calculated below relative to deploy_index == 1
-        # Antenna 0
-        # (E, N, U)       : (0.000000,0.000000,-22.687778)
-        # (lat, lon, alt) : (37.589310,-118.237621,3852.842222)
-        # Antenna 1
-        # (E, N, U)       : (-33.493731,-12.216161,-2.989690)
-        # (lat, lon, alt) : (37.589200,-118.238000,3872.540409)
-        # Antenna 2
-        # (E, N, U)       : (-8.660669,-44.533633,-26.183296)
-        # (lat, lon, alt) : (37.588909,-118.237719,3849.346866)
-        # Antenna 3
-        # (E, N, U)       : (-32.168224,-43.200941,-10.301701)
-        # (lat, lon, alt) : (37.588921,-118.237985,3865.228526)
-        origin = loadAntennaZeroLocation(deploy_index = deploy_index)
-        print('Antenna Physical location elevations from plane fit to gps coordinates from photos with OnePlus 6t interpreted as WGS84')
-        antennas_physical_latlon = {0:origin,1:(37.589200,-118.238000,3872.540409),2:(37.588909,-118.237719,3849.346866),3:(37.588921,-118.237985,3865.228526)} 
-
-        antennas_physical = {}
-        for key, location in antennas_physical_latlon.items():
-            antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
-        #Errors not currently used.
-        if deploy_index == 13:
             print('Using best guess physical as both phase locations as well!')
             antennas_phase_vpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
             antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
             antennas_phase_hpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
             antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
-        elif deploy_index == 14:
-            antennas_phase_hpol = {0 : [-0.171160, 1.999962, -3.377134], 1 : [-34.009522, -10.993301, 10.040922], 2 : [-7.848979, -46.517627, 4.278406], 3 : [-32.649573, -41.250262, 16.077983]}
-            antennas_phase_hpol_hesse = {0 : [0.652427, 3.986116, 4.445558], 1 : [0.699547, 0.223363, 15.134269], 2 : [0.660478, 0.795400, 3.666424], 3 : [0.707570, 0.270289, 3.338366]}
-            
-            antennas_phase_vpol = {0 : [-1.424875, 1.992824, 7.248382], 1 : [-33.783376, -11.218451, 11.753426], 2 : [-7.280174, -46.531850, 2.117580], 3 : [-30.760044, -42.275804, 15.503537]}
-            antennas_phase_vpol_hesse = {0 : [0.795334, 3.995309, 12.736719], 1 : [0.874418, 0.546834, 11.724445], 2 : [0.814953, 2.000217, 4.394386], 3 : [0.855157, 0.555719, 4.022556]}
+        
+        elif deploy_index >= 13 and deploy_index <= 22:
+            #These positions from from photo_gps.py, which was used to make a plane model of the hillside based on GPS coordinates of
+            #cell phone pictures.  The GPS coordinates are then input in this plane to calculate the altitudes.  
+            # ENU calculated below relative to deploy_index == 1
+            # Antenna 0
+            # (E, N, U)       : (0.000000,0.000000,-22.687778)
+            # (lat, lon, alt) : (37.589310,-118.237621,3852.842222)
+            # Antenna 1
+            # (E, N, U)       : (-33.493731,-12.216161,-2.989690)
+            # (lat, lon, alt) : (37.589200,-118.238000,3872.540409)
+            # Antenna 2
+            # (E, N, U)       : (-8.660669,-44.533633,-26.183296)
+            # (lat, lon, alt) : (37.588909,-118.237719,3849.346866)
+            # Antenna 3
+            # (E, N, U)       : (-32.168224,-43.200941,-10.301701)
+            # (lat, lon, alt) : (37.588921,-118.237985,3865.228526)
+            origin = loadAntennaZeroLocation(deploy_index = deploy_index)
+            print('Antenna Physical location elevations from plane fit to gps coordinates from photos with OnePlus 6t interpreted as WGS84')
+            antennas_physical_latlon = {0:origin,1:(37.589200,-118.238000,3872.540409),2:(37.588909,-118.237719,3849.346866),3:(37.588921,-118.237985,3865.228526)} 
 
-        elif deploy_index == 15:
-            antennas_phase_hpol_hesse = {0 : [1.107598, 1.155382, 8.290938], 1 : [1.208719, 1.214783, 5.448297], 2 : [1.184062, 1.182823, 9.523712], 3 : [1.251305, 1.219051, 7.934458]}
-            antennas_phase_vpol_hesse = {0 : [0.286134, 0.170131, 1.475580], 1 : [0.630060, 0.204455, 9.826477], 2 : [0.283998, 0.178813, 1.356786], 3 : [0.282316, 0.180412, 1.246523]}
+            antennas_physical = {}
+            for key, location in antennas_physical_latlon.items():
+                antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+            #Errors not currently used.
+            if deploy_index == 13:
+                print('Using best guess physical as both phase locations as well!')
+                antennas_phase_vpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+                antennas_phase_hpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
+                antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+            elif deploy_index == 14:
+                antennas_phase_hpol = {0 : [-0.171160, 1.999962, -3.377134], 1 : [-34.009522, -10.993301, 10.040922], 2 : [-7.848979, -46.517627, 4.278406], 3 : [-32.649573, -41.250262, 16.077983]}
+                antennas_phase_hpol_hesse = {0 : [0.652427, 3.986116, 4.445558], 1 : [0.699547, 0.223363, 15.134269], 2 : [0.660478, 0.795400, 3.666424], 3 : [0.707570, 0.270289, 3.338366]}
+                
+                antennas_phase_vpol = {0 : [-1.424875, 1.992824, 7.248382], 1 : [-33.783376, -11.218451, 11.753426], 2 : [-7.280174, -46.531850, 2.117580], 3 : [-30.760044, -42.275804, 15.503537]}
+                antennas_phase_vpol_hesse = {0 : [0.795334, 3.995309, 12.736719], 1 : [0.874418, 0.546834, 11.724445], 2 : [0.814953, 2.000217, 4.394386], 3 : [0.855157, 0.555719, 4.022556]}
 
-            antennas_phase_hpol = {0 : [-0.121226, 1.755070, -4.164016], 1 : [-33.783739, -12.067049, 14.709302], 2 : [-6.931436, -47.135687, 0.600605], 3 : [-30.835281, -42.606386, 14.853267]}
-            antennas_phase_vpol = {0 : [-0.442439, 1.784501, -3.595621], 1 : [-34.121366, -11.965828, 14.797254], 2 : [-7.324517, -47.078042, 0.728544], 3 : [-30.611585, -42.820426, 14.415308]}
-        elif deploy_index == 16:
-            #This set of coordinates DOES NOT COME FROM CHI^2. 
-            #This is meant as input.  Essentially starting with the relative antenna positions achieved using airplane 
-            #data in the past, but ensuring that antenna 0/the array is at the newly defined elevation.  The relative
-            #positions come from calibration 2.
+            elif deploy_index == 15:
+                antennas_phase_hpol_hesse = {0 : [1.107598, 1.155382, 8.290938], 1 : [1.208719, 1.214783, 5.448297], 2 : [1.184062, 1.182823, 9.523712], 3 : [1.251305, 1.219051, 7.934458]}
+                antennas_phase_vpol_hesse = {0 : [0.286134, 0.170131, 1.475580], 1 : [0.630060, 0.204455, 9.826477], 2 : [0.283998, 0.178813, 1.356786], 3 : [0.282316, 0.180412, 1.246523]}
 
-            #These include the next 6, specifically calibrated to be W sensitive. #currently the best for planes found in west
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-32.940076, -15.159404, 13.220501], 2 : [-9.459576, -48.470314, 9.195625], 3 : [-31.800885, -44.470317, 16.231648]}
-            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.010150, 0.021543, 0.007624], 2 : [0.010652, 0.025185, 0.008330], 3 : [0.009642, 0.020038, 0.006959]}
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-31.224503, -13.170500, 10.000003], 2 : [-9.765921, -46.417296, 3.205128], 3 : [-31.080523, -42.279361, 12.014143]}
-            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.037041, 0.074031, 4.992054], 2 : [0.023776, 0.044105, 0.048783], 3 : [0.027407, 0.050578, 0.057576]}
-        elif deploy_index == 17:
-            #This is using valley sources same as 8, but starting from 13. Results in time delays semi reasonable. 
-            #Saved and intended for use as a starting condition for low movement of just pulser data. 
-            antennas_phase_hpol = {0 : [-4.865278, 3.214076, 4.630806], 1 : [-32.974217, -15.411447, 22.795159], 2 : [-10.943711, -45.497623, -4.818512], 3 : [-32.061146, -42.722525, 9.177065]}
-            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
-            antennas_phase_vpol = {0 : [-4.530553, 3.253017, 4.554258], 1 : [-31.055576, -16.501015, 24.679216], 2 : [-10.686676, -45.258288, -5.432522], 3 : [-31.480157, -42.663642, 9.087964]}
-            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
-        elif deploy_index == 18:
-            #This set of coordinates DOES NOT COME FROM CHI^2. 
-            #This is meant as input.  Essentially starting with the relative antenna positions achieved using valley sources 
-            #(literally deploy_index 8), but with the origin set to match 13. 
-            #data in the past, but ensuring that antenna 0/the array is at the newly defined elevation.  The relative
-            #positions come from calibration 2.
+                antennas_phase_hpol = {0 : [-0.121226, 1.755070, -4.164016], 1 : [-33.783739, -12.067049, 14.709302], 2 : [-6.931436, -47.135687, 0.600605], 3 : [-30.835281, -42.606386, 14.853267]}
+                antennas_phase_vpol = {0 : [-0.442439, 1.784501, -3.595621], 1 : [-34.121366, -11.965828, 14.797254], 2 : [-7.324517, -47.078042, 0.728544], 3 : [-30.611585, -42.820426, 14.415308]}
+            elif deploy_index == 16:
+                #This set of coordinates DOES NOT COME FROM CHI^2. 
+                #This is meant as input.  Essentially starting with the relative antenna positions achieved using airplane 
+                #data in the past, but ensuring that antenna 0/the array is at the newly defined elevation.  The relative
+                #positions come from calibration 2.
 
-            #These include the next 6, specifically calibrated to be W sensitive. #currently the best for planes found in west
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-32.940076, -15.159404, 13.220501], 2 : [-9.459576, -48.470314, 9.195625], 3 : [-31.800885, -44.470317, 16.231648]}
-            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.010150, 0.021543, 0.007624], 2 : [0.010652, 0.025185, 0.008330], 3 : [0.009642, 0.020038, 0.006959]}
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-31.224503, -13.170500, 10.000003], 2 : [-9.765921, -46.417296, 3.205128], 3 : [-31.080523, -42.279361, 12.014143]}
-            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.037041, 0.074031, 4.992054], 2 : [0.023776, 0.044105, 0.048783], 3 : [0.027407, 0.050578, 0.057576]}
-        elif deploy_index == 19:
-            #This one works well for the 3 pulsers (which it is based on) and has good results for all antennas but antenna 0 in the valley.
-            #Rerunning with this as starting ocndition but with antenna 0 allowed to move. 
-            antennas_phase_hpol = {0 : [2.703403, -0.727873, 2.927082], 1 : [-28.493635, -14.166269, 14.698087], 2 : [-5.072297, -49.533393, 1.504482], 3 : [-27.537450, -44.914837, 17.271776]}
-            antennas_phase_hpol_hesse = {0 : [0.760297, 0.277011, 5.718408], 1 : [1.583672, 0.196639, 0.419612], 2 : [0.171910, 6.326707, 0.502885], 3 : [0.658066, 0.254736, 9.730493]}
-            antennas_phase_vpol = {0 : [2.531864, -0.815938, 4.787836], 1 : [-28.560448, -14.142631, 14.698089], 2 : [-5.005754, -49.488358, 1.504481], 3 : [-27.190815, -45.237602, 17.383858]}
-            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
-        elif deploy_index == 20:
-            #Similar in effect to 19 but with slightly different antenna locations and cable delays.  
-            #This one works well for the 3 pulsers (which it is based on) and has good results for all antennas but antenna 0 in the valley.
-            #Rerunning with this as starting ocndition but with antenna 0 allowed to move. 
-            '''
-            #Starting from deploy_index 13
-            #Parameters trying to achieve the 3 antenna match starting from deploy_index = 13.
-            include_pulsers = True 
-            include_baseline_measurements = False
-            baseline_measurement_uncertainty_m = 3 #Assuming a 3m spread in our data.  This is very approximate.
-            time_delay_measurement_uncertainty_ns = 25 #ns, The time window used to as error in chi^2 for time delay.  If you are assuming that the time delays are 100% accurate then this is usually sub ns.  But if you think it is slipping cycles you could give this a larger value. 
-            include_sanity = True #Slow
-            plot_predicted_time_shifts = False
-            random_offset_amount = 0.25 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
-            included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
-            included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
-            include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
-            plot_overlap = True #Will plot the overlap map for time delays from each source.
-            overlap_window_ns = 50 #ns The time window used to define sufficient overlap. 
-            overlap_goal = overlap_window_ns*len(included_antennas_channels)*len(use_sources) #This shouldn't be varied, vary the error if anything.  This is the portion of chi^2 coming from overlapping valley source time delays.  The measured map max will be subtracted from this in a chi^2 calculation.  
-            overlap_error = overlap_goal/50 #The error portion of chi^2 coming from overlapping valley source time delays will be devided by this number.
-            limit_array_plane_azimuth_range = False #Should be seen as a temporary test.  Doesn't use any errors and isn't in standard chi^2 format.
-            allowed_array_plane_azimuth_range = 20 #plus or minus this from East is not impacted by weighting. 
+                #These include the next 6, specifically calibrated to be W sensitive. #currently the best for planes found in west
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-32.940076, -15.159404, 13.220501], 2 : [-9.459576, -48.470314, 9.195625], 3 : [-31.800885, -44.470317, 16.231648]}
+                antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.010150, 0.021543, 0.007624], 2 : [0.010652, 0.025185, 0.008330], 3 : [0.009642, 0.020038, 0.006959]}
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-31.224503, -13.170500, 10.000003], 2 : [-9.765921, -46.417296, 3.205128], 3 : [-31.080523, -42.279361, 12.014143]}
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.037041, 0.074031, 4.992054], 2 : [0.023776, 0.044105, 0.048783], 3 : [0.027407, 0.050578, 0.057576]}
+            elif deploy_index == 17:
+                #This is using valley sources same as 8, but starting from 13. Results in time delays semi reasonable. 
+                #Saved and intended for use as a starting condition for low movement of just pulser data. 
+                antennas_phase_hpol = {0 : [-4.865278, 3.214076, 4.630806], 1 : [-32.974217, -15.411447, 22.795159], 2 : [-10.943711, -45.497623, -4.818512], 3 : [-32.061146, -42.722525, 9.177065]}
+                antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+                antennas_phase_vpol = {0 : [-4.530553, 3.253017, 4.554258], 1 : [-31.055576, -16.501015, 24.679216], 2 : [-10.686676, -45.258288, -5.432522], 3 : [-31.480157, -42.663642, 9.087964]}
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+            elif deploy_index == 18:
+                #This set of coordinates DOES NOT COME FROM CHI^2. 
+                #This is meant as input.  Essentially starting with the relative antenna positions achieved using valley sources 
+                #(literally deploy_index 8), but with the origin set to match 13. 
+                #data in the past, but ensuring that antenna 0/the array is at the newly defined elevation.  The relative
+                #positions come from calibration 2.
 
-            #Limits 
-            initial_step_x = 0.5#75 #m
-            initial_step_y = 0.5#75 #m
-            initial_step_z = 0.5#5 #m
-            initial_step_cable_delay = 1.0 #ns
-            cable_delay_guess_range = 10 #ns
-            antenna_position_guess_range_x = 5#2#4 #Limit to how far from input phase locations to limit the parameter space to
-            antenna_position_guess_range_y = 5#2#7 #Limit to how far from input phase locations to limit the parameter space to
-            antenna_position_guess_range_z = 5#3 #Limit to how far from input phase locations to limit the parameter space to
+                #These include the next 6, specifically calibrated to be W sensitive. #currently the best for planes found in west
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-32.940076, -15.159404, 13.220501], 2 : [-9.459576, -48.470314, 9.195625], 3 : [-31.800885, -44.470317, 16.231648]}
+                antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.010150, 0.021543, 0.007624], 2 : [0.010652, 0.025185, 0.008330], 3 : [0.009642, 0.020038, 0.006959]}
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-31.224503, -13.170500, 10.000003], 2 : [-9.765921, -46.417296, 3.205128], 3 : [-31.080523, -42.279361, 12.014143]}
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.037041, 0.074031, 4.992054], 2 : [0.023776, 0.044105, 0.048783], 3 : [0.027407, 0.050578, 0.057576]}
+            elif deploy_index == 19:
+                #This one works well for the 3 pulsers (which it is based on) and has good results for all antennas but antenna 0 in the valley.
+                #Rerunning with this as starting ocndition but with antenna 0 allowed to move. 
+                antennas_phase_hpol = {0 : [2.703403, -0.727873, 2.927082], 1 : [-28.493635, -14.166269, 14.698087], 2 : [-5.072297, -49.533393, 1.504482], 3 : [-27.537450, -44.914837, 17.271776]}
+                antennas_phase_hpol_hesse = {0 : [0.760297, 0.277011, 5.718408], 1 : [1.583672, 0.196639, 0.419612], 2 : [0.171910, 6.326707, 0.502885], 3 : [0.658066, 0.254736, 9.730493]}
+                antennas_phase_vpol = {0 : [2.531864, -0.815938, 4.787836], 1 : [-28.560448, -14.142631, 14.698089], 2 : [-5.005754, -49.488358, 1.504481], 3 : [-27.190815, -45.237602, 17.383858]}
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+            elif deploy_index == 20:
+                #Similar in effect to 19 but with slightly different antenna locations and cable delays.  
+                #This one works well for the 3 pulsers (which it is based on) and has good results for all antennas but antenna 0 in the valley.
+                #Rerunning with this as starting ocndition but with antenna 0 allowed to move. 
+                '''
+                #Starting from deploy_index 13
+                #Parameters trying to achieve the 3 antenna match starting from deploy_index = 13.
+                include_pulsers = True 
+                include_baseline_measurements = False
+                baseline_measurement_uncertainty_m = 3 #Assuming a 3m spread in our data.  This is very approximate.
+                time_delay_measurement_uncertainty_ns = 25 #ns, The time window used to as error in chi^2 for time delay.  If you are assuming that the time delays are 100% accurate then this is usually sub ns.  But if you think it is slipping cycles you could give this a larger value. 
+                include_sanity = True #Slow
+                plot_predicted_time_shifts = False
+                random_offset_amount = 0.25 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
+                included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
+                included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
+                include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
+                plot_overlap = True #Will plot the overlap map for time delays from each source.
+                overlap_window_ns = 50 #ns The time window used to define sufficient overlap. 
+                overlap_goal = overlap_window_ns*len(included_antennas_channels)*len(use_sources) #This shouldn't be varied, vary the error if anything.  This is the portion of chi^2 coming from overlapping valley source time delays.  The measured map max will be subtracted from this in a chi^2 calculation.  
+                overlap_error = overlap_goal/50 #The error portion of chi^2 coming from overlapping valley source time delays will be devided by this number.
+                limit_array_plane_azimuth_range = False #Should be seen as a temporary test.  Doesn't use any errors and isn't in standard chi^2 format.
+                allowed_array_plane_azimuth_range = 20 #plus or minus this from East is not impacted by weighting. 
 
-            #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
-            manual_offset_ant0_x = 0
-            manual_offset_ant0_y = 0
-            manual_offset_ant0_z = 0
+                #Limits 
+                initial_step_x = 0.5#75 #m
+                initial_step_y = 0.5#75 #m
+                initial_step_z = 0.5#5 #m
+                initial_step_cable_delay = 1.0 #ns
+                cable_delay_guess_range = 10 #ns
+                antenna_position_guess_range_x = 5#2#4 #Limit to how far from input phase locations to limit the parameter space to
+                antenna_position_guess_range_y = 5#2#7 #Limit to how far from input phase locations to limit the parameter space to
+                antenna_position_guess_range_z = 5#3 #Limit to how far from input phase locations to limit the parameter space to
 
-
-            fix_ant0_x = False
-            fix_ant0_y = False
-            fix_ant0_z = False
-            fix_ant1_x = False
-            fix_ant1_y = False
-            fix_ant1_z = False
-            fix_ant2_x = False
-            fix_ant2_y = False
-            fix_ant2_z = False
-            fix_ant3_x = False
-            fix_ant3_y = False
-            fix_ant3_z = False
-            fix_cable_delay0 = False
-            fix_cable_delay1 = False
-            fix_cable_delay2 = False
-            fix_cable_delay3 = False
-            '''
-            antennas_phase_hpol = {0 : [-0.982288, 1.447974, 4.762703], 1 : [-34.051753, -12.072183, 14.698504], 2 : [-7.246353, -47.198002, 1.340104], 3 : [-31.114755, -42.627657, 14.924516]}
-            antennas_phase_hpol_hesse = {0 : [0.351842, 0.260876, 7.831570], 1 : [0.504778, 0.276552, 7.620909], 2 : [0.354478, 0.265431, 8.304336], 3 : [0.354914, 0.273275, 1.883443]}
-            antennas_phase_vpol = {0 : [-0.784322, 1.765724, 1.553684], 1 : [-34.153473, -11.806226, 15.018032], 2 : [-7.391859, -46.958796, 1.473361], 3 : [-30.656309, -42.670223, 14.731633]}
-            antennas_phase_vpol_hesse = {0 : [0.682632, 0.613462, 3.806129], 1 : [0.718409, 0.646417, 8.186476], 2 : [0.696899, 0.646127, 8.174901], 3 : [0.714915, 0.643952, 3.290147]}
-        elif deploy_index == 21:
-            #Using relative positions from deploy 1 with z of deploy 13
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.307267, -12.610417, 11.411196], 2 : [-10.464510, -46.217141, -0.229276], 3 : [-31.172820, -42.069610, 14.812669]}
-            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.042770, 0.047592, 0.232313], 2 : [0.069353, 0.034351, 0.297275], 3 : [0.065285, 0.047254, 0.249236]}
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-29.908104, -12.713682, 11.649818], 2 : [-9.956527, -46.119743, 1.003367], 3 : [-31.175775, -41.743273, 15.241286]}
-            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.057717, 0.065283, 0.261789], 2 : [0.080427, 0.046084, 0.282382], 3 : [0.084447, 0.065313, 0.276901]}
-        elif deploy_index == 22:
-            '''
-            This one comes from starting with 13, then manually shifting antennas around.  Limiting cable delay variation
-            and locking down the position of antenna 0, and using only valley sources.
-
-            pulser_weight = 0.0 #Each pulsing site worth this % as much as a valley source.
-            unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
-            if mode == 'hpol':
-                use_sources = ['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
-                included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
-            elif mode == 'vpol':
-                use_sources = ['Tonopah Vortac','Tonopah AFS GATR Site']#'East Dyer Substation',
-                included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
+                manual_offset_ant0_x = 0
+                manual_offset_ant0_y = 0
+                manual_offset_ant0_z = 0
 
 
+                fix_ant0_x = False
+                fix_ant0_y = False
+                fix_ant0_z = False
+                fix_ant1_x = False
+                fix_ant1_y = False
+                fix_ant1_z = False
+                fix_ant2_x = False
+                fix_ant2_y = False
+                fix_ant2_z = False
+                fix_ant3_x = False
+                fix_ant3_y = False
+                fix_ant3_z = False
+                fix_cable_delay0 = False
+                fix_cable_delay1 = False
+                fix_cable_delay2 = False
+                fix_cable_delay3 = False
+                '''
+                antennas_phase_hpol = {0 : [-0.982288, 1.447974, 4.762703], 1 : [-34.051753, -12.072183, 14.698504], 2 : [-7.246353, -47.198002, 1.340104], 3 : [-31.114755, -42.627657, 14.924516]}
+                antennas_phase_hpol_hesse = {0 : [0.351842, 0.260876, 7.831570], 1 : [0.504778, 0.276552, 7.620909], 2 : [0.354478, 0.265431, 8.304336], 3 : [0.354914, 0.273275, 1.883443]}
+                antennas_phase_vpol = {0 : [-0.784322, 1.765724, 1.553684], 1 : [-34.153473, -11.806226, 15.018032], 2 : [-7.391859, -46.958796, 1.473361], 3 : [-30.656309, -42.670223, 14.731633]}
+                antennas_phase_vpol_hesse = {0 : [0.682632, 0.613462, 3.806129], 1 : [0.718409, 0.646417, 8.186476], 2 : [0.696899, 0.646127, 8.174901], 3 : [0.714915, 0.643952, 3.290147]}
+            elif deploy_index == 21:
+                #Using relative positions from deploy 1 with z of deploy 13
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-30.307267, -12.610417, 11.411196], 2 : [-10.464510, -46.217141, -0.229276], 3 : [-31.172820, -42.069610, 14.812669]}
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.042770, 0.047592, 0.232313], 2 : [0.069353, 0.034351, 0.297275], 3 : [0.065285, 0.047254, 0.249236]}
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-29.908104, -12.713682, 11.649818], 2 : [-9.956527, -46.119743, 1.003367], 3 : [-31.175775, -41.743273, 15.241286]}
+                antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.057717, 0.065283, 0.261789], 2 : [0.080427, 0.046084, 0.282382], 3 : [0.084447, 0.065313, 0.276901]}
+            elif deploy_index == 22:
+                '''
+                This one comes from starting with 13, then manually shifting antennas around.  Limiting cable delay variation
+                and locking down the position of antenna 0, and using only valley sources.
 
-            #Parameters trying to achieve the 3 antenna match starting from deploy_index = 13.
-            include_pulsers = True 
-            include_baseline_measurements = True
-            baseline_measurement_uncertainty_m = 3 #Assuming a 3m spread in our data.  This is very approximate.
-            time_delay_measurement_uncertainty_ns = 1 #ns, The time window used to as error in chi^2 for time delay.  If you are assuming that the time delays are 100% accurate then this is usually sub ns.  But if you think it is slipping cycles you could give this a larger value. 
-            include_sanity = False #Slow
-            plot_predicted_time_shifts = False
-            random_offset_amount = 0.1#0.25 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
-            included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
-            included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
-            include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
-            plot_overlap = False #Will plot the overlap map for time delays from each source.
-            overlap_window_ns = 50 #ns The time window used to define sufficient overlap. 
-            overlap_goal = overlap_window_ns*len(included_antennas_channels)*len(use_sources) #This shouldn't be varied, vary the error if anything.  This is the portion of chi^2 coming from overlapping valley source time delays.  The measured map max will be subtracted from this in a chi^2 calculation.  
-            overlap_error = overlap_goal/50 #The error portion of chi^2 coming from overlapping valley source time delays will be devided by this number.
-            limit_array_plane_azimuth_range = False #Should be seen as a temporary test.  Doesn't use any errors and isn't in standard chi^2 format.
-            allowed_array_plane_azimuth_range = 20 #plus or minus this from East is not impacted by weighting. 
-
-            #Limits 
-            initial_step_x = 0.75 #m
-            initial_step_y = 0.75 #m
-            initial_step_z = 0.5 #m
-            initial_step_cable_delay = 0.25 #ns
-            cable_delay_guess_range = 3 #ns
-            antenna_position_guess_range_x = 5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
-            antenna_position_guess_range_y = 5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
-            antenna_position_guess_range_z = 5#2#3 #Limit to how far from input phase locations to limit the parameter space to
-
-            #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
-            manual_offset_ant0_x = 0#14
-            manual_offset_ant0_y = 0#-2.7
-            manual_offset_ant0_z = 0#-17
-
-            manual_offset_ant1_x = -1#0    + manual_offset_ant0_x
-            manual_offset_ant1_y = 5#-2   + manual_offset_ant0_y
-            manual_offset_ant1_z = 0#0    + manual_offset_ant0_z
-
-            manual_offset_ant2_x = 0#0    + manual_offset_ant0_x
-            manual_offset_ant2_y = -5#-4   + manual_offset_ant0_y
-            manual_offset_ant2_z = 12#0    + manual_offset_ant0_z
-
-            manual_offset_ant3_x = -3#0    + manual_offset_ant0_x
-            manual_offset_ant3_y = 0#0    + manual_offset_ant0_y
-            manual_offset_ant3_z = 3#-6   + manual_offset_ant0_z
+                pulser_weight = 0.0 #Each pulsing site worth this % as much as a valley source.
+                unknown_source_dir_valley = False #If true then the chi^2 will not assume known arrival directions, but will instead just attempt to get overlap ANYWHERE for all selected populations.
+                if mode == 'hpol':
+                    use_sources = ['Tonopah Airport Antenna','Tonopah AFS GATR Site','Dome Thing','Silver Peak Town Antenna']#['East Dyer Substation','Goldfield KGFN-FM','Tonopah KTPH','Solar Plant','Silver Peak Substation']#['Tonopah KTPH','Solar Plant','Silver Peak Substation']#'East Dyer Substation',
+                    included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1509']#['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
+                elif mode == 'vpol':
+                    use_sources = ['Tonopah Vortac','Tonopah AFS GATR Site']#'East Dyer Substation',
+                    included_pulsers = ['run1507','run1509','run1511']#['run1507','run1509','run1511']#['run1507','run1509','run1511'] #Only included if include_pulsers == True
 
 
-            fix_ant0_x = True
-            fix_ant0_y = True
-            fix_ant0_z = True
-            fix_ant1_x = False
-            fix_ant1_y = False
-            fix_ant1_z = False
-            fix_ant2_x = False
-            fix_ant2_y = False
-            fix_ant2_z = False
-            fix_ant3_x = False
-            fix_ant3_y = False
-            fix_ant3_z = False
-            fix_cable_delay0 = True
-            fix_cable_delay1 = False
-            fix_cable_delay2 = False
-            fix_cable_delay3 = False
-            '''
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-39.493623, -4.905741, 14.698088], 2 : [-12.239970, -51.023459, 3.504483], 3 : [-37.662065, -38.394831, 10.386077]}
-            antennas_phase_hpol_hesse = {0 : [0.750000, 0.750000, 0.500000], 1 : [1.981312, 0.439145, 7.869927], 2 : [0.222825, 0.508381, 7.186704], 3 : [0.225246, 0.502959, 6.634587]}
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-39.493635, -5.121617, 14.698087], 2 : [-12.425378, -50.901975, 7.789672], 3 : [-37.428109, -39.320700, 11.755655]}
-            antennas_phase_vpol_hesse = {0 : [0.750000, 0.750000, 0.500000], 1 : [7.476337, 0.667707, 6.331664], 2 : [0.303953, 0.562640, 7.032839], 3 : [0.319401, 0.566975, 5.809684]}
-    elif deploy_index >= 23:
-        # This utilizes the google earth elevation profile data for relative positions, but utilizes the absolute elevation value given by the photo_gps.py script for antenna 0.
-        #antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3890.77),2:(37.588909, -118.237719, 3881.02),3:(37.5889210, -118.2379850, 3887.42)} #ORIGINAL VALUES FROM GOOGLE MAPS AND ESTIMATES
-        origin = loadAntennaZeroLocation(deploy_index = deploy_index)
-        print('Antenna Physical location elevations from plane fit to gps coordinates from photos with OnePlus 6t interpreted as WGS84')
 
-        original_z = 3875.53
-        phone_z = 3852.842222
+                #Parameters trying to achieve the 3 antenna match starting from deploy_index = 13.
+                include_pulsers = True 
+                include_baseline_measurements = True
+                baseline_measurement_uncertainty_m = 3 #Assuming a 3m spread in our data.  This is very approximate.
+                time_delay_measurement_uncertainty_ns = 1 #ns, The time window used to as error in chi^2 for time delay.  If you are assuming that the time delays are 100% accurate then this is usually sub ns.  But if you think it is slipping cycles you could give this a larger value. 
+                include_sanity = False #Slow
+                plot_predicted_time_shifts = False
+                random_offset_amount = 0.1#0.25 #m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
+                included_antennas_lumped = [0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
+                included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
+                include_baselines = [0,1,2,3,4,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
+                plot_overlap = False #Will plot the overlap map for time delays from each source.
+                overlap_window_ns = 50 #ns The time window used to define sufficient overlap. 
+                overlap_goal = overlap_window_ns*len(included_antennas_channels)*len(use_sources) #This shouldn't be varied, vary the error if anything.  This is the portion of chi^2 coming from overlapping valley source time delays.  The measured map max will be subtracted from this in a chi^2 calculation.  
+                overlap_error = overlap_goal/50 #The error portion of chi^2 coming from overlapping valley source time delays will be devided by this number.
+                limit_array_plane_azimuth_range = False #Should be seen as a temporary test.  Doesn't use any errors and isn't in standard chi^2 format.
+                allowed_array_plane_azimuth_range = 20 #plus or minus this from East is not impacted by weighting. 
 
+                #Limits 
+                initial_step_x = 0.75 #m
+                initial_step_y = 0.75 #m
+                initial_step_z = 0.5 #m
+                initial_step_cable_delay = 0.25 #ns
+                cable_delay_guess_range = 3 #ns
+                antenna_position_guess_range_x = 5#4#2#4 #Limit to how far from input phase locations to limit the parameter space to
+                antenna_position_guess_range_y = 5#4#2#7 #Limit to how far from input phase locations to limit the parameter space to
+                antenna_position_guess_range_z = 5#2#3 #Limit to how far from input phase locations to limit the parameter space to
 
-        antennas_physical_latlon =  {0:origin,1:(37.5892, -118.2380, 3890.77 - original_z + phone_z),2:(37.588909, -118.237719, 3881.02 - original_z + phone_z),3:(37.5889210, -118.2379850, 3887.42 - original_z + phone_z)} 
-        antennas_physical = {}
+                #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
+                manual_offset_ant0_x = 0#14
+                manual_offset_ant0_y = 0#-2.7
+                manual_offset_ant0_z = 0#-17
 
-        for key, location in antennas_physical_latlon.items():
-            antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
-        #Errors not currently used.
-        if deploy_index == 23:
-            print('Using best guess physical as both phase locations as well!')
-            antennas_phase_vpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
-            antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
-            antennas_phase_hpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
-            antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
-        elif deploy_index == 24:
-            #Made based of of khsv signal + 'Miller Substation','Tonopah AFS GATR Site' with unkown source directions.  Only works for antennas 0,1,3
-            #antennas_phase_hpol = {0 : [0.000000, 0.000000, -4.990390], 1 : [-32.664553, -13.694597, 16.364447], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-31.208945, -45.179683, 15.312945]}
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, -4.990390], 1 : [-32.664553, -13.694597, 20.239900], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-31.208945, -45.179683, 15.312945]} #edited antenna 1 z to start where vpol was found to be. 
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, -5.000000], 1 : [-32.735165, -13.434077, 20.239900], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.927869, -44.407966, 15.259098]}
+                manual_offset_ant1_x = -1#0    + manual_offset_ant0_x
+                manual_offset_ant1_y = 5#-2   + manual_offset_ant0_y
+                manual_offset_ant1_z = 0#0    + manual_offset_ant0_z
 
-            antennas_phase_hpol_hesse = {0 : [2.000000, 2.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [2.000000, 2.000000, 0.750000], 3 : [0.000000, 0.000000, 0.000000]}
-            antennas_phase_vpol_hesse = {0 : [2.000000, 2.000000, 0.376409], 1 : [0.040986, 0.049558, 0.314455], 2 : [2.000000, 2.000000, 0.750000], 3 : [0.096819, 0.165549, 2.221534]}
+                manual_offset_ant2_x = 0#0    + manual_offset_ant0_x
+                manual_offset_ant2_y = -5#-4   + manual_offset_ant0_y
+                manual_offset_ant2_z = 12#0    + manual_offset_ant0_z
 
-            '''
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-33.188229, -13.605917, 15.280357], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-31.142426, -44.937935, 17.380436]}
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-32.980772, -13.604003, 21.074896], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-31.619148, -44.744242, 11.074111]}
-            antennas_phase_vpol_hesse = {0 : [2.000000, 2.000000, 0.750000], 1 : [0.000000, 0.000000, 0.000000], 2 : [2.000000, 2.000000, 0.750000], 3 : [0.000000, 0.000000, 0.000000]}
-            antennas_phase_hpol_hesse = {0 : [2.000000, 2.000000, 0.750000], 1 : [0.000300, 0.000360, 0.001686], 2 : [2.000000, 2.000000, 0.750000], 3 : [0.040703, 0.210699, 0.156562]}
-
-            cable_delays_vpol = numpy.array([13.115628,15.781942,11.090487,10.848566])
-            cable_delays_vpol_hesse = numpy.array([0.500000,0.000000,0.500000,0.000000])
+                manual_offset_ant3_x = -3#0    + manual_offset_ant0_x
+                manual_offset_ant3_y = 0#0    + manual_offset_ant0_y
+                manual_offset_ant3_z = 3#-6   + manual_offset_ant0_z
 
 
-            cable_delays_hpol = numpy.array([7.901212,11.040073,0.000000,6.786517])
-            cable_delays_hpol_hesse = numpy.array([0.500000,0.000796,0.500000,0.249012])
+                fix_ant0_x = True
+                fix_ant0_y = True
+                fix_ant0_z = True
+                fix_ant1_x = False
+                fix_ant1_y = False
+                fix_ant1_z = False
+                fix_ant2_x = False
+                fix_ant2_y = False
+                fix_ant2_z = False
+                fix_ant3_x = False
+                fix_ant3_y = False
+                fix_ant3_z = False
+                fix_cable_delay0 = True
+                fix_cable_delay1 = False
+                fix_cable_delay2 = False
+                fix_cable_delay3 = False
+                '''
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-39.493623, -4.905741, 14.698088], 2 : [-12.239970, -51.023459, 3.504483], 3 : [-37.662065, -38.394831, 10.386077]}
+                antennas_phase_hpol_hesse = {0 : [0.750000, 0.750000, 0.500000], 1 : [1.981312, 0.439145, 7.869927], 2 : [0.222825, 0.508381, 7.186704], 3 : [0.225246, 0.502959, 6.634587]}
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-39.493635, -5.121617, 14.698087], 2 : [-12.425378, -50.901975, 7.789672], 3 : [-37.428109, -39.320700, 11.755655]}
+                antennas_phase_vpol_hesse = {0 : [0.750000, 0.750000, 0.500000], 1 : [7.476337, 0.667707, 6.331664], 2 : [0.303953, 0.562640, 7.032839], 3 : [0.319401, 0.566975, 5.809684]}
+        elif deploy_index >= 23:
+            # This utilizes the google earth elevation profile data for relative positions, but utilizes the absolute elevation value given by the photo_gps.py script for antenna 0.
+            #antennas_physical_latlon = {0:origin,1:(37.5892, -118.2380, 3890.77),2:(37.588909, -118.237719, 3881.02),3:(37.5889210, -118.2379850, 3887.42)} #ORIGINAL VALUES FROM GOOGLE MAPS AND ESTIMATES
+            origin = loadAntennaZeroLocation(deploy_index = deploy_index)
+            print('Antenna Physical location elevations from plane fit to gps coordinates from photos with OnePlus 6t interpreted as WGS84')
 
-            '''
-        elif deploy_index == 25:
-            #Starting from 24, but with more sources.  Still limited to 3 antennas. 
-            '''
-            ------------------------------------------------------------------
-            | FCN = 0.0003234               |     Ncalls=931 (931 total)     |
-            | EDM = 8.84e-05 (Goal: 0.0002) |            up = 1.0            |
-            ------------------------------------------------------------------
-            |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
-            ------------------------------------------------------------------
-            |     True      |     True      |   False   |       False        |
-            ------------------------------------------------------------------
-            | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
-            ------------------------------------------------------------------
-            |     False     |     True      |   False   |   False   |  True  |
-            ------------------------------------------------------------------
-            --------------------------------------------------------------------------------------------------
-            |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
-            --------------------------------------------------------------------------------------------------
-            | 0 | ant0_x       |     0     |     2     |            |            |   -10   |   10    |  yes  |
-            | 1 | ant0_y       |     0     |     2     |            |            |   -10   |   10    |  yes  |
-            | 2 | ant0_z       |    0.0    |    0.8    |            |            |   -5    |    5    |  yes  |
-            | 3 | ant1_x       |   -35.6   |    2.6    |    -3.7    |    13.1    |-43.4936 |-23.4936 |       |
-            | 4 | ant1_y       |    -18    |     4     |     -4     |     16     |-22.2161 |-2.21612 |       |
-            | 5 | ant1_z       |    20     |     6     |    -10     |     5      | 10.2399 | 20.2399 |       |
-            | 6 | ant2_x       |   -8.7    |    2.0    |            |            |-18.6606 | 1.33936 |  yes  |
-            | 7 | ant2_y       |   -44.5   |    2.0    |            |            |-54.5335 |-34.5335 |  yes  |
-            | 8 | ant2_z       |    5.5    |    0.8    |            |            |0.489838 | 10.4898 |  yes  |
-            | 9 | ant3_x       |   -30.0   |    2.6    |    -7.8    |    10.9    |-42.1681 |-22.1681 |       |
-            | 10| ant3_y       |    -43    |     4     |    -10     |     10     |-53.2008 |-33.2008 |       |
-            | 11| ant3_z       |    13     |     5     |     -7     |     4      | 6.88977 | 16.8898 |       |
-            | 12| cable_delay0 |    7.9    |    0.1    |            |            | 4.90121 | 10.9012 |  yes  |
-            | 13| cable_delay1 |   11.2    |    3.0    |    -3.7    |    3.7     | 9.00991 | 15.0099 |       |
-            | 14| cable_delay2 |    0.0    |    0.1    |            |            |   -3    |    3    |  yes  |
-            | 15| cable_delay3 |    8.4    |    4.5    |    -3.9    |    2.1     | 4.52048 | 10.5205 |       |
-            --------------------------------------------------------------------------------------------------
+            original_z = 3875.53
+            phone_z = 3852.842222
 
 
-            Copy-Paste Prints:
-            ------------
+            antennas_physical_latlon =  {0:origin,1:(37.5892, -118.2380, 3890.77 - original_z + phone_z),2:(37.588909, -118.237719, 3881.02 - original_z + phone_z),3:(37.5889210, -118.2379850, 3887.42 - original_z + phone_z)} 
+            antennas_physical = {}
 
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.627008, -18.143051, 20.169783], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.001992, -43.078926, 12.520058]}
-            antennas_phase_hpol_hesse = {0 : [2.000000, 2.000000, 0.750000], 1 : [13.102980, 14.054989, 5.158160], 2 : [2.000000, 2.000000, 0.750000], 3 : [10.944684, 15.051348, 6.694572]}
+            for key, location in antennas_physical_latlon.items():
+                antennas_physical[key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+            #Errors not currently used.
+            if deploy_index == 23:
+                print('Using best guess physical as both phase locations as well!')
+                antennas_phase_vpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
+                antennas_phase_vpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+                antennas_phase_hpol = {0 : [antennas_physical[0][0],antennas_physical[0][1],antennas_physical[0][2]], 1 : [antennas_physical[1][0],antennas_physical[1][1],antennas_physical[1][2]], 2 : [antennas_physical[2][0],antennas_physical[2][1],antennas_physical[2][2]], 3 : [antennas_physical[3][0],antennas_physical[3][1],antennas_physical[3][2]]}
+                antennas_phase_hpol_hesse = {0 : [0.000000, 0.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+            elif deploy_index == 24:
+                #Made based of of khsv signal + 'Miller Substation','Tonopah AFS GATR Site' with unkown source directions.  Only works for antennas 0,1,3
+                #antennas_phase_hpol = {0 : [0.000000, 0.000000, -4.990390], 1 : [-32.664553, -13.694597, 16.364447], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-31.208945, -45.179683, 15.312945]}
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, -4.990390], 1 : [-32.664553, -13.694597, 20.239900], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-31.208945, -45.179683, 15.312945]} #edited antenna 1 z to start where vpol was found to be. 
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, -5.000000], 1 : [-32.735165, -13.434077, 20.239900], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.927869, -44.407966, 15.259098]}
 
-            cable_delays_hpol = numpy.array([7.901212,11.157171,0.000000,8.444916])
-            cable_delays_hpol_hesse = numpy.array([0.100000,3.663444,0.100000,3.264144])
-            Code completed.
-            '''
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.627008, -18.143051, 20.169783], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.001992, -43.078926, 12.520058]}
-            antennas_phase_hpol_hesse = {0 : [2.000000, 2.000000, 0.750000], 1 : [13.102980, 14.054989, 5.158160], 2 : [2.000000, 2.000000, 0.750000], 3 : [10.944684, 15.051348, 6.694572]}
+                antennas_phase_hpol_hesse = {0 : [2.000000, 2.000000, 0.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [2.000000, 2.000000, 0.750000], 3 : [0.000000, 0.000000, 0.000000]}
+                antennas_phase_vpol_hesse = {0 : [2.000000, 2.000000, 0.376409], 1 : [0.040986, 0.049558, 0.314455], 2 : [2.000000, 2.000000, 0.750000], 3 : [0.096819, 0.165549, 2.221534]}
 
-            #Vpol not calculated, based on hpol.
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.627008, -18.143051, 20.169783], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.001992, -43.078926, 12.520058]}
-            antennas_phase_vpol_hesse = {0 : [2.000000, 2.000000, 0.750000], 1 : [13.102980, 14.054989, 5.158160], 2 : [2.000000, 2.000000, 0.750000], 3 : [10.944684, 15.051348, 6.694572]}
+                '''
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-33.188229, -13.605917, 15.280357], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-31.142426, -44.937935, 17.380436]}
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-32.980772, -13.604003, 21.074896], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-31.619148, -44.744242, 11.074111]}
+                antennas_phase_vpol_hesse = {0 : [2.000000, 2.000000, 0.750000], 1 : [0.000000, 0.000000, 0.000000], 2 : [2.000000, 2.000000, 0.750000], 3 : [0.000000, 0.000000, 0.000000]}
+                antennas_phase_hpol_hesse = {0 : [2.000000, 2.000000, 0.750000], 1 : [0.000300, 0.000360, 0.001686], 2 : [2.000000, 2.000000, 0.750000], 3 : [0.040703, 0.210699, 0.156562]}
 
-        elif deploy_index == 26:
-            #Starting from 25, with more sources, and using cor map peaks instead of strips.  Ultimately the same calibration but more refined.
-
-            # ------------------------------------------------------------------
-            # | FCN = 0                       |      Ncalls=40 (40 total)      |
-            # | EDM = 0 (Goal: 0.0002)        |            up = 1.0            |
-            # ------------------------------------------------------------------
-            # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
-            # ------------------------------------------------------------------
-            # |     False     |     True      |   False   |       False        |
-            # ------------------------------------------------------------------
-            # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
-            # ------------------------------------------------------------------
-            # |     True      |     True      |   False   |   False   | False  |
-            # ------------------------------------------------------------------
-            # --------------------------------------------------------------------------------------------------
-            # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
-            # --------------------------------------------------------------------------------------------------
-            # | 0 | ant0_x       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
-            # | 1 | ant0_y       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
-            # | 2 | ant0_z       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
-            # | 3 | ant1_x       | -3.5535e1 | 0.0000e1  |            |            | -37.627 | -33.627 |       |
-            # | 4 | ant1_y       | -1.8062e1 | 0.0000e1  |            |            |-20.1431 |-16.1431 |       |
-            # | 5 | ant1_z       | 2.0166e1  | 0.0000e1  |            |            | 18.1698 | 22.1698 |       |
-            # | 6 | ant2_x       |   -8.7    |    0.5    |            |            |-10.6606 |-6.66064 |  yes  |
-            # | 7 | ant2_y       |   -44.5   |    0.5    |            |            |-46.5335 |-42.5335 |  yes  |
-            # | 8 | ant2_z       |    5.5    |    0.5    |            |            | 3.48984 | 7.48984 |  yes  |
-            # | 9 | ant3_x       | -2.991e1  |  0.000e1  |            |            | -32.002 | -28.002 |       |
-            # | 10| ant3_y       | -4.3007e1 | 0.0000e1  |            |            |-45.0789 |-41.0789 |       |
-            # | 11| ant3_z       | 1.2424e1  | 0.0000e1  |            |            | 10.5201 | 14.5201 |       |
-            # | 12| cable_delay0 |    7.9    |    0.1    |            |            | 4.90121 | 10.9012 |  yes  |
-            # | 13| cable_delay1 | 1.1157e1  | 0.0000e1  |            |            | 8.15717 | 14.1572 |       |
-            # | 14| cable_delay2 |    0.0    |    0.1    |            |            |   -3    |    3    |  yes  |
-            # | 15| cable_delay3 |  8.4449   |  0.0000   |            |            | 5.44492 | 11.4449 |       |
-            # --------------------------------------------------------------------------------------------------
+                cable_delays_vpol = numpy.array([13.115628,15.781942,11.090487,10.848566])
+                cable_delays_vpol_hesse = numpy.array([0.500000,0.000000,0.500000,0.000000])
 
 
-            # Copy-Paste Prints:
-            # ------------
+                cable_delays_hpol = numpy.array([7.901212,11.040073,0.000000,6.786517])
+                cable_delays_hpol_hesse = numpy.array([0.500000,0.000796,0.500000,0.249012])
 
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.535249, -18.061861, 20.165817], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-29.909783, -43.007372, 12.424257]}
-            antennas_phase_hpol_hesse = {0 : [0.500000, 0.500000, 0.500000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.500000, 0.500000, 0.500000], 3 : [0.000000, 0.000000, 0.000000]}
-
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.535249, -18.061861, 20.165817], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-29.909783, -43.007372, 12.424257]}
-            antennas_phase_vpol_hesse = {0 : [0.500000, 0.500000, 0.500000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.500000, 0.500000, 0.500000], 3 : [0.000000, 0.000000, 0.000000]}
-        elif deploy_index == 27:
-            # From 26 using known sources A,B,C,D, and TV.  Using only antennas 0,1,3, hpol only.
-            # ------------------------------------------------------------------
-            # | FCN = 3.125                   |     Ncalls=607 (607 total)     |
-            # | EDM = 9.57e-08 (Goal: 0.0002) |            up = 1.0            |
-            # ------------------------------------------------------------------
-            # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
-            # ------------------------------------------------------------------
-            # |     True      |     True      |   False   |       False        |
-            # ------------------------------------------------------------------
-            # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
-            # ------------------------------------------------------------------
-            # |     False     |     True      |   True    |   True    | False  |
-            # ------------------------------------------------------------------
-            # --------------------------------------------------------------------------------------------------
-            # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
-            # --------------------------------------------------------------------------------------------------
-            # | 0 | ant0_x       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
-            # | 1 | ant0_y       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
-            # | 2 | ant0_z       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
-            # | 3 | ant1_x       |  -37.28   |   0.16    |   -0.16    |    0.33    |-37.5352 |-33.5352 |       |
-            # | 4 | ant1_y       |  -18.72   |   0.21    |   -0.22    |    0.22    |-20.0619 |-16.0619 |       |
-            # | 5 | ant1_z       |18.165817004|3.692450139|-0.000000004|2.472806550 | 18.1658 | 22.1658 |       |
-            # | 6 | ant2_x       |   -8.7    |    0.5    |            |            |-10.6606 |-6.66064 |  yes  |
-            # | 7 | ant2_y       |   -44.5   |    0.5    |            |            |-46.5335 |-42.5335 |  yes  |
-            # | 8 | ant2_z       |    5.5    |    0.5    |            |            | 3.48984 | 7.48984 |  yes  |
-            # | 9 | ant3_x       |   -30.0   |    0.8    |    -0.9    |    0.7     |-31.9098 |-27.9098 |       |
-            # | 10| ant3_y       |  -43.53   |   0.27    |   -0.27    |    0.27    |-45.0074 |-41.0074 |       |
-            # | 11| ant3_z       |   10.4    |    3.2    |    -3.2    |    2.4     | 10.4243 | 14.4243 |       |
-            # | 12| cable_delay0 |    7.9    |    0.1    |            |            | 4.90121 | 10.9012 |  yes  |
-            # | 13| cable_delay1 |    8.2    |    1.0    |    -1.0    |    0.9     | 8.15717 | 14.1572 |       |
-            # | 14| cable_delay2 |    0.0    |    0.1    |            |            |   -3    |    3    |  yes  |
-            # | 15| cable_delay3 |    9.6    |    2.1    |    -2.5    |    1.8     | 5.44492 | 11.4449 |       |
-            # --------------------------------------------------------------------------------------------------
+                '''
+            elif deploy_index == 25:
+                #Starting from 24, but with more sources.  Still limited to 3 antennas. 
+                '''
+                ------------------------------------------------------------------
+                | FCN = 0.0003234               |     Ncalls=931 (931 total)     |
+                | EDM = 8.84e-05 (Goal: 0.0002) |            up = 1.0            |
+                ------------------------------------------------------------------
+                |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
+                ------------------------------------------------------------------
+                |     True      |     True      |   False   |       False        |
+                ------------------------------------------------------------------
+                | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
+                ------------------------------------------------------------------
+                |     False     |     True      |   False   |   False   |  True  |
+                ------------------------------------------------------------------
+                --------------------------------------------------------------------------------------------------
+                |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
+                --------------------------------------------------------------------------------------------------
+                | 0 | ant0_x       |     0     |     2     |            |            |   -10   |   10    |  yes  |
+                | 1 | ant0_y       |     0     |     2     |            |            |   -10   |   10    |  yes  |
+                | 2 | ant0_z       |    0.0    |    0.8    |            |            |   -5    |    5    |  yes  |
+                | 3 | ant1_x       |   -35.6   |    2.6    |    -3.7    |    13.1    |-43.4936 |-23.4936 |       |
+                | 4 | ant1_y       |    -18    |     4     |     -4     |     16     |-22.2161 |-2.21612 |       |
+                | 5 | ant1_z       |    20     |     6     |    -10     |     5      | 10.2399 | 20.2399 |       |
+                | 6 | ant2_x       |   -8.7    |    2.0    |            |            |-18.6606 | 1.33936 |  yes  |
+                | 7 | ant2_y       |   -44.5   |    2.0    |            |            |-54.5335 |-34.5335 |  yes  |
+                | 8 | ant2_z       |    5.5    |    0.8    |            |            |0.489838 | 10.4898 |  yes  |
+                | 9 | ant3_x       |   -30.0   |    2.6    |    -7.8    |    10.9    |-42.1681 |-22.1681 |       |
+                | 10| ant3_y       |    -43    |     4     |    -10     |     10     |-53.2008 |-33.2008 |       |
+                | 11| ant3_z       |    13     |     5     |     -7     |     4      | 6.88977 | 16.8898 |       |
+                | 12| cable_delay0 |    7.9    |    0.1    |            |            | 4.90121 | 10.9012 |  yes  |
+                | 13| cable_delay1 |   11.2    |    3.0    |    -3.7    |    3.7     | 9.00991 | 15.0099 |       |
+                | 14| cable_delay2 |    0.0    |    0.1    |            |            |   -3    |    3    |  yes  |
+                | 15| cable_delay3 |    8.4    |    4.5    |    -3.9    |    2.1     | 4.52048 | 10.5205 |       |
+                --------------------------------------------------------------------------------------------------
 
 
-            # Copy-Paste Prints:
-            # ------------
+                Copy-Paste Prints:
+                ------------
 
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.032919, -43.530065, 10.424257]}
-            antennas_phase_hpol_hesse = {0 : [0.500000, 0.500000, 0.500000], 1 : [0.161029, 0.214942, 3.674703], 2 : [0.500000, 0.500000, 0.500000], 3 : [0.825754, 0.271855, 3.198833]}
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.627008, -18.143051, 20.169783], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.001992, -43.078926, 12.520058]}
+                antennas_phase_hpol_hesse = {0 : [2.000000, 2.000000, 0.750000], 1 : [13.102980, 14.054989, 5.158160], 2 : [2.000000, 2.000000, 0.750000], 3 : [10.944684, 15.051348, 6.694572]}
 
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.032919, -43.530065, 10.424257]}
-            antennas_phase_vpol_hesse = {0 : [0.500000, 0.500000, 0.500000], 1 : [0.161029, 0.214942, 3.674703], 2 : [0.500000, 0.500000, 0.500000], 3 : [0.825754, 0.271855, 3.198833]}
-        elif deploy_index == 28:
-            #Starting with 27, letting only antenna 2 float.  I had to let the cable delay float a lot and I am not sure why.  Using known source locations ABCD.  Large freedom of movement allowed for antenna 2.
-            #Still no vpol
-            
-            # ------------------------------------------------------------------
-            # | FCN = 4.576                   |     Ncalls=147 (147 total)     |
-            # | EDM = 9.57e-09 (Goal: 0.0002) |            up = 1.0            |
-            # ------------------------------------------------------------------
-            # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
-            # ------------------------------------------------------------------
-            # |     True      |     True      |   False   |       False        |
-            # ------------------------------------------------------------------
-            # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
-            # ------------------------------------------------------------------
-            # |     False     |     True      |   True    |   True    | False  |
-            # ------------------------------------------------------------------
-            # --------------------------------------------------------------------------------------------------
-            # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
-            # --------------------------------------------------------------------------------------------------
-            # | 0 | ant0_x       |     0     |     1     |            |            |   -20   |   20    |  yes  |
-            # | 1 | ant0_y       |     0     |     1     |            |            |   -20   |   20    |  yes  |
-            # | 2 | ant0_z       |     0     |     1     |            |            |   -5    |    5    |  yes  |
-            # | 3 | ant1_x       |   -37.3   |    1.0    |            |            |-57.2814 |-17.2814 |  yes  |
-            # | 4 | ant1_y       |   -18.7   |    1.0    |            |            |-38.7206 | 1.27945 |  yes  |
-            # | 5 | ant1_z       |   18.2    |    1.0    |            |            | 13.1658 | 23.1658 |  yes  |
-            # | 6 | ant2_x       |   -17.3   |    0.9    |    -0.9    |    0.9     |-28.6606 | 11.3394 |       |
-            # | 7 | ant2_y       |  -53.74   |   0.20    |   -0.20    |    0.20    |-64.5335 |-24.5335 |       |
-            # | 8 | ant2_z       |    6.2    |    3.4    |    -2.7    |    3.9     | 3.48984 | 13.4898 |       |
-            # | 9 | ant3_x       |    -30    |     1     |            |            |-50.0329 |-10.0329 |  yes  |
-            # | 10| ant3_y       |   -43.5   |    1.0    |            |            |-63.5301 |-23.5301 |  yes  |
-            # | 11| ant3_z       |   10.4    |    1.0    |            |            | 5.42426 | 15.4243 |  yes  |
-            # | 12| cable_delay0 |    7.9    |    0.5    |            |            |-992.099 | 1007.9  |  yes  |
-            # | 13| cable_delay1 |    8.2    |    0.5    |            |            |-991.843 | 1008.16 |  yes  |
-            # | 14| cable_delay2 |   -47.7   |    3.0    |    -3.0    |    3.0     |  -1000  |  1000   |       |
-            # | 15| cable_delay3 |    9.6    |    0.5    |            |            |-990.409 | 1009.59 |  yes  |
-            # --------------------------------------------------------------------------------------------------
+                cable_delays_hpol = numpy.array([7.901212,11.157171,0.000000,8.444916])
+                cable_delays_hpol_hesse = numpy.array([0.100000,3.663444,0.100000,3.264144])
+                Code completed.
+                '''
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.627008, -18.143051, 20.169783], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.001992, -43.078926, 12.520058]}
+                antennas_phase_hpol_hesse = {0 : [2.000000, 2.000000, 0.750000], 1 : [13.102980, 14.054989, 5.158160], 2 : [2.000000, 2.000000, 0.750000], 3 : [10.944684, 15.051348, 6.694572]}
 
+                #Vpol not calculated, based on hpol.
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.627008, -18.143051, 20.169783], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.001992, -43.078926, 12.520058]}
+                antennas_phase_vpol_hesse = {0 : [2.000000, 2.000000, 0.750000], 1 : [13.102980, 14.054989, 5.158160], 2 : [2.000000, 2.000000, 0.750000], 3 : [10.944684, 15.051348, 6.694572]}
 
-            # Copy-Paste Prints:
-            # ------------
+            elif deploy_index == 26:
+                #Starting from 25, with more sources, and using cor map peaks instead of strips.  Ultimately the same calibration but more refined.
 
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-17.337033, -53.740481, 6.177357], 3 : [-30.032919, -43.530065, 10.424257]}
-            antennas_phase_hpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [1.000000, 1.000000, 1.000000], 2 : [0.928322, 0.204631, 3.417158], 3 : [1.000000, 1.000000, 1.000000]}
-
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-17.337033, -53.740481, 6.177357], 3 : [-30.032919, -43.530065, 10.424257]}
-            antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [1.000000, 1.000000, 1.000000], 2 : [0.928322, 0.204631, 3.417158], 3 : [1.000000, 1.000000, 1.000000]}
-        elif deploy_index == 29:
-            #Made starting with 28, and letting 1,2,3 vary +- 20m, cable delays fixed.  Using "known source locations" from a,b,c,d,e,f
-            #This "works" well in that it points to all 5 source locations.  Unsure how to sanity check however, as the
-            #determined locations of the antennas do not match with my memory of where they were lcoated particularly well.
-            #Works VERY poorly for the CW signal
-            # ------------------------------------------------------------------
-            # | FCN = 7.084                   |     Ncalls=372 (372 total)     |
-            # | EDM = 0.000198 (Goal: 0.0002) |            up = 1.0            |
-            # ------------------------------------------------------------------
-            # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
-            # ------------------------------------------------------------------
-            # |     True      |     True      |   False   |       False        |
-            # ------------------------------------------------------------------
-            # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
-            # ------------------------------------------------------------------
-            # |     False     |     True      |   True    |   True    | False  |
-            # ------------------------------------------------------------------
-            # --------------------------------------------------------------------------------------------------
-            # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
-            # --------------------------------------------------------------------------------------------------
-            # | 0 | ant0_x       |     0     |     1     |            |            |   -20   |   20    |  yes  |
-            # | 1 | ant0_y       |     0     |     1     |            |            |   -20   |   20    |  yes  |
-            # | 2 | ant0_z       |     0     |     1     |            |            |   -20   |   20    |  yes  |
-            # | 3 | ant1_x       |  -38.10   |   0.23    |   -0.23    |    0.23    |-57.2814 |-17.2814 |       |
-            # | 4 | ant1_y       |  -16.97   |   0.25    |   -0.25    |    0.25    |-38.7206 | 1.27945 |       |
-            # | 5 | ant1_z       |   26.9    |    2.5    |    -2.5    |    2.4     |-1.83418 | 38.1658 |       |
-            # | 6 | ant2_x       |   -5.86   |   0.23    |   -0.23    |    0.23    | -34.337 | 5.66297 |       |
-            # | 7 | ant2_y       |  -45.67   |   0.25    |   -0.25    |    0.25    |-63.7405 |-23.7405 |       |
-            # | 8 | ant2_z       |   -7.6    |    2.5    |    -2.5    |    2.5     |-13.8226 | 26.1774 |       |
-            # | 9 | ant3_x       |  -30.45   |   0.23    |   -0.23    |    0.23    |-50.0329 |-10.0329 |       |
-            # | 10| ant3_y       |  -42.80   |   0.25    |   -0.25    |    0.25    |-63.5301 |-23.5301 |       |
-            # | 11| ant3_z       |   13.1    |    2.5    |    -2.5    |    2.4     |-9.57574 | 30.4243 |       |
-            # | 12| cable_delay0 |    7.9    |    0.5    |            |            |-2.09879 | 17.9012 |  yes  |
-            # | 13| cable_delay1 |    8.2    |    0.5    |            |            |-1.84283 | 18.1572 |  yes  |
-            # | 14| cable_delay2 |    0.0    |    0.5    |            |            |   -10   |   10    |  yes  |
-            # | 15| cable_delay3 |    9.6    |    0.5    |            |            |-0.408563| 19.5914 |  yes  |
-            # --------------------------------------------------------------------------------------------------
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-38.102155, -16.971278, 26.881001], 2 : [-5.862395, -45.670696, -7.619558], 3 : [-30.451192, -42.804655, 13.053250]}
-            antennas_phase_hpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [0.232099, 0.254682, 2.453574], 2 : [0.238776, 0.257414, 2.540291], 3 : [0.233637, 0.255081, 2.488746]}
-
-            #Vpol only uses A,B,D as these have vpol.  This is generated started from 29 hpol (with vpol cable delays) and letting antennas float pm 3 m.
-            # ------------------------------------------------------------------
-            # | FCN = 0.7056                  |    Ncalls=2135 (2135 total)    |
-            # | EDM = 6.69e-05 (Goal: 0.0002) |            up = 1.0            |
-            # ------------------------------------------------------------------
-            # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
-            # ------------------------------------------------------------------
-            # |     False     |     True      |   False   |       False        |
-            # ------------------------------------------------------------------
-            # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
-            # ------------------------------------------------------------------
-            # |     True      |     True      |   False   |   False   | False  |
-            # ------------------------------------------------------------------
-            # --------------------------------------------------------------------------------------------------
-            # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
-            # --------------------------------------------------------------------------------------------------
-            # | 0 | ant0_x       |     0     |     1     |            |            |   -3    |    3    |  yes  |
-            # | 1 | ant0_y       |     0     |     1     |            |            |   -3    |    3    |  yes  |
-            # | 2 | ant0_z       |     0     |     1     |            |            |   -3    |    3    |  yes  |
-            # | 3 | ant1_x       | -3.8684e1 | 0.0000e1  |            |            |-41.1022 |-35.1022 |       |
-            # | 4 | ant1_y       | -1.8606e1 | 0.0000e1  |            |            |-19.9713 |-13.9713 |       |
-            # | 5 | ant1_z       | 2.3881e1  | 0.0000e1  |            |            | 23.881  | 29.881  |       |
-            # | 6 | ant2_x       |  -5.4477  |  0.0000   |            |            |-8.86239 | -2.8624 |       |
-            # | 7 | ant2_y       | -4.5528e1 | 0.0000e1  |            |            |-48.6707 |-42.6707 |       |
-            # | 8 | ant2_z       |  -5.7316  |  0.0000   |            |            |-10.6196 |-4.61956 |       |
-            # | 9 | ant3_x       | -3.0946e1 | 0.0000e1  |            |            |-33.4512 |-27.4512 |       |
-            # | 10| ant3_y       | -4.4897e1 | 0.0000e1  |            |            |-45.8047 |-39.8047 |       |
-            # | 11| ant3_z       | 1.0053e1  | 0.0000e1  |            |            | 10.0533 | 16.0532 |       |
-            # | 12| cable_delay0 |   13.1    |    0.5    |            |            | 3.11563 | 23.1156 |  yes  |
-            # | 13| cable_delay1 |  5.7821   |  0.0000   |            |            | 5.78194 | 25.7819 |       |
-            # | 14| cable_delay2 |  9.1349   |  0.0000   |            |            | 1.09049 | 21.0905 |       |
-            # | 15| cable_delay3 |  4.7912   |  0.0000   |            |            |0.848566 | 20.8486 |       |
-            # --------------------------------------------------------------------------------------------------
-
-            #Currently from hpol only
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-38.684105, -18.606490, 23.881001], 2 : [-5.447701, -45.528246, -5.731552], 3 : [-30.946243, -44.897257, 10.053253]}
-            antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
-
-            # cable_delays_vpol = numpy.array([13.115628,5.782146,9.134935,4.791166])
-            # cable_delays_vpol_hesse = numpy.array([0.500000,0.000000,0.000000,0.000000])
-
-        elif deploy_index == 30:
-            # Using 29, but changing the khsv (TV) signal to different cycles (chosen to be offset/cycle slip for a 
-            # signal that is 57 MHz).  These new TV time delays allow for better TV signal overlap with similar 
-            # calibration found in 29.
-            # ------------------------------------------------------------------
-            # | FCN = 9.477                   |     Ncalls=606 (606 total)     |
-            # | EDM = 5.22e-05 (Goal: 0.0002) |            up = 1.0            |
-            # ------------------------------------------------------------------
-            # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
-            # ------------------------------------------------------------------
-            # |     True      |     True      |   False   |       False        |
-            # ------------------------------------------------------------------
-            # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
-            # ------------------------------------------------------------------
-            # |     False     |     True      |   True    |   True    | False  |
-            # ------------------------------------------------------------------
-            # --------------------------------------------------------------------------------------------------
-            # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
-            # --------------------------------------------------------------------------------------------------
-            # | 0 | ant0_x       |     0     |     1     |            |            |   -20   |   20    |  yes  |
-            # | 1 | ant0_y       |     0     |     1     |            |            |   -20   |   20    |  yes  |
-            # | 2 | ant0_z       |     0     |     1     |            |            |   -20   |   20    |  yes  |
-            # | 3 | ant1_x       |   -41.7   |    0.8    |    -0.8    |    0.8     |-58.1022 |-18.1022 |       |
-            # | 4 | ant1_y       |  -19.02   |   0.25    |   -0.25    |    0.25    |-36.9713 | 3.02872 |       |
-            # | 5 | ant1_z       |   33.4    |    2.6    |    -2.6    |    2.6     |  6.881  | 46.881  |       |
-            # | 6 | ant2_x       |   -11.1   |    0.8    |    -0.8    |    0.8     |-25.8624 | 14.1376 |       |
-            # | 7 | ant2_y       |  -48.55   |   0.25    |   -0.25    |    0.25    |-65.6707 |-25.6707 |       |
-            # | 8 | ant2_z       |    1.7    |    2.6    |    -2.6    |    2.6     |-27.6196 | 12.3804 |       |
-            # | 9 | ant3_x       |   -32.0   |    0.8    |    -0.8    |    0.8     |-50.4512 |-10.4512 |       |
-            # | 10| ant3_y       |  -43.68   |   0.25    |   -0.25    |    0.25    |-62.8047 |-22.8047 |       |
-            # | 11| ant3_z       |   15.8    |    2.6    |    -2.6    |    2.6     |-6.94675 | 33.0532 |       |
-            # | 12| cable_delay0 |    7.9    |    0.5    |            |            |-92.0988 | 107.901 |  yes  |
-            # | 13| cable_delay1 |   -6.2    |    2.5    |    -2.4    |    2.4     |-91.8428 | 108.157 |       |
-            # | 14| cable_delay2 |   -20.5   |    2.4    |    -2.4    |    2.4     |  -100   |   100   |       |
-            # | 15| cable_delay3 |    3.6    |    2.4    |    -2.4    |    2.4     |-90.4086 | 109.591 |       |
-            # --------------------------------------------------------------------------------------------------
+                # ------------------------------------------------------------------
+                # | FCN = 0                       |      Ncalls=40 (40 total)      |
+                # | EDM = 0 (Goal: 0.0002)        |            up = 1.0            |
+                # ------------------------------------------------------------------
+                # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
+                # ------------------------------------------------------------------
+                # |     False     |     True      |   False   |       False        |
+                # ------------------------------------------------------------------
+                # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
+                # ------------------------------------------------------------------
+                # |     True      |     True      |   False   |   False   | False  |
+                # ------------------------------------------------------------------
+                # --------------------------------------------------------------------------------------------------
+                # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
+                # --------------------------------------------------------------------------------------------------
+                # | 0 | ant0_x       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
+                # | 1 | ant0_y       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
+                # | 2 | ant0_z       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
+                # | 3 | ant1_x       | -3.5535e1 | 0.0000e1  |            |            | -37.627 | -33.627 |       |
+                # | 4 | ant1_y       | -1.8062e1 | 0.0000e1  |            |            |-20.1431 |-16.1431 |       |
+                # | 5 | ant1_z       | 2.0166e1  | 0.0000e1  |            |            | 18.1698 | 22.1698 |       |
+                # | 6 | ant2_x       |   -8.7    |    0.5    |            |            |-10.6606 |-6.66064 |  yes  |
+                # | 7 | ant2_y       |   -44.5   |    0.5    |            |            |-46.5335 |-42.5335 |  yes  |
+                # | 8 | ant2_z       |    5.5    |    0.5    |            |            | 3.48984 | 7.48984 |  yes  |
+                # | 9 | ant3_x       | -2.991e1  |  0.000e1  |            |            | -32.002 | -28.002 |       |
+                # | 10| ant3_y       | -4.3007e1 | 0.0000e1  |            |            |-45.0789 |-41.0789 |       |
+                # | 11| ant3_z       | 1.2424e1  | 0.0000e1  |            |            | 10.5201 | 14.5201 |       |
+                # | 12| cable_delay0 |    7.9    |    0.1    |            |            | 4.90121 | 10.9012 |  yes  |
+                # | 13| cable_delay1 | 1.1157e1  | 0.0000e1  |            |            | 8.15717 | 14.1572 |       |
+                # | 14| cable_delay2 |    0.0    |    0.1    |            |            |   -3    |    3    |  yes  |
+                # | 15| cable_delay3 |  8.4449   |  0.0000   |            |            | 5.44492 | 11.4449 |       |
+                # --------------------------------------------------------------------------------------------------
 
 
-            #Vpol comes from hpol, with limited movement of 3m around the hpol antennas.
-            # ------------------------------------------------------------------
-            # | FCN = 16.36                   |    Ncalls=1991 (1991 total)    |
-            # | EDM = 0.000187 (Goal: 0.0002) |            up = 1.0            |
-            # ------------------------------------------------------------------
-            # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
-            # ------------------------------------------------------------------
-            # |     True      |     True      |   False   |       False        |
-            # ------------------------------------------------------------------
-            # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
-            # ------------------------------------------------------------------
-            # |     False     |     True      |   True    |   True    | False  |
-            # ------------------------------------------------------------------
-            # --------------------------------------------------------------------------------------------------
-            # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
-            # --------------------------------------------------------------------------------------------------
-            # | 0 | ant0_x       |     0     |     1     |            |            |   -3    |    3    |  yes  |
-            # | 1 | ant0_y       |     0     |     1     |            |            |   -3    |    3    |  yes  |
-            # | 2 | ant0_z       |     0     |     1     |            |            |   -3    |    3    |  yes  |
-            # | 3 | ant1_x       |  -38.70   |   0.17    |   -0.17    |    0.17    |-44.6952 |-38.6952 |       |
-            # | 4 | ant1_y       |  -16.32   |   0.20    |   -0.20    |    0.20    |-22.0227 |-16.0227 |       |
-            # | 5 | ant1_z       |   30.4    |    4.1    |    -4.1    |    1.9     | 30.3832 | 36.3832 |       |
-            # | 6 | ant2_x       |   -10.1   |    1.0    |    -1.0    |    1.0     |-14.0539 |-8.05391 |       |
-            # | 7 | ant2_y       |  -47.49   |   0.26    |   -0.26    |    0.26    |-51.5494 |-45.5494 |       |
-            # | 8 | ant2_z       |    2.9    |    5.0    |    -4.1    |    1.9     |-1.25035 | 4.74965 |       |
-            # | 9 | ant3_x       |   -30.5   |    0.9    |    -1.0    |    0.8     | -34.956 | -28.956 |       |
-            # | 10| ant3_y       |  -43.43   |   0.26    |   -0.26    |    0.26    |-46.6801 |-40.6801 |       |
-            # | 11| ant3_z       |    13     |     5     |     -5     |     4      | 12.8067 | 18.8067 |       |
-            # | 12| cable_delay0 |   13.1    |    0.5    |            |            |-86.8844 | 113.116 |  yes  |
-            # | 13| cable_delay1 |    9.3    |    0.4    |    -0.6    |    0.4     |-94.2179 | 105.782 |       |
-            # | 14| cable_delay2 |   -8.1    |    3.2    |    -3.0    |    3.1     |-90.8651 | 109.135 |       |
-            # | 15| cable_delay3 |    8.5    |    2.8    |    -3.2    |    2.3     |-95.2088 | 104.791 |       |
-            # --------------------------------------------------------------------------------------------------
+                # Copy-Paste Prints:
+                # ------------
+
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.535249, -18.061861, 20.165817], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-29.909783, -43.007372, 12.424257]}
+                antennas_phase_hpol_hesse = {0 : [0.500000, 0.500000, 0.500000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.500000, 0.500000, 0.500000], 3 : [0.000000, 0.000000, 0.000000]}
+
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-35.535249, -18.061861, 20.165817], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-29.909783, -43.007372, 12.424257]}
+                antennas_phase_vpol_hesse = {0 : [0.500000, 0.500000, 0.500000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.500000, 0.500000, 0.500000], 3 : [0.000000, 0.000000, 0.000000]}
+            elif deploy_index == 27:
+                # From 26 using known sources A,B,C,D, and TV.  Using only antennas 0,1,3, hpol only.
+                # ------------------------------------------------------------------
+                # | FCN = 3.125                   |     Ncalls=607 (607 total)     |
+                # | EDM = 9.57e-08 (Goal: 0.0002) |            up = 1.0            |
+                # ------------------------------------------------------------------
+                # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
+                # ------------------------------------------------------------------
+                # |     True      |     True      |   False   |       False        |
+                # ------------------------------------------------------------------
+                # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
+                # ------------------------------------------------------------------
+                # |     False     |     True      |   True    |   True    | False  |
+                # ------------------------------------------------------------------
+                # --------------------------------------------------------------------------------------------------
+                # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
+                # --------------------------------------------------------------------------------------------------
+                # | 0 | ant0_x       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
+                # | 1 | ant0_y       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
+                # | 2 | ant0_z       |    0.0    |    0.5    |            |            |   -2    |    2    |  yes  |
+                # | 3 | ant1_x       |  -37.28   |   0.16    |   -0.16    |    0.33    |-37.5352 |-33.5352 |       |
+                # | 4 | ant1_y       |  -18.72   |   0.21    |   -0.22    |    0.22    |-20.0619 |-16.0619 |       |
+                # | 5 | ant1_z       |18.165817004|3.692450139|-0.000000004|2.472806550 | 18.1658 | 22.1658 |       |
+                # | 6 | ant2_x       |   -8.7    |    0.5    |            |            |-10.6606 |-6.66064 |  yes  |
+                # | 7 | ant2_y       |   -44.5   |    0.5    |            |            |-46.5335 |-42.5335 |  yes  |
+                # | 8 | ant2_z       |    5.5    |    0.5    |            |            | 3.48984 | 7.48984 |  yes  |
+                # | 9 | ant3_x       |   -30.0   |    0.8    |    -0.9    |    0.7     |-31.9098 |-27.9098 |       |
+                # | 10| ant3_y       |  -43.53   |   0.27    |   -0.27    |    0.27    |-45.0074 |-41.0074 |       |
+                # | 11| ant3_z       |   10.4    |    3.2    |    -3.2    |    2.4     | 10.4243 | 14.4243 |       |
+                # | 12| cable_delay0 |    7.9    |    0.1    |            |            | 4.90121 | 10.9012 |  yes  |
+                # | 13| cable_delay1 |    8.2    |    1.0    |    -1.0    |    0.9     | 8.15717 | 14.1572 |       |
+                # | 14| cable_delay2 |    0.0    |    0.1    |            |            |   -3    |    3    |  yes  |
+                # | 15| cable_delay3 |    9.6    |    2.1    |    -2.5    |    1.8     | 5.44492 | 11.4449 |       |
+                # --------------------------------------------------------------------------------------------------
 
 
-            antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-41.695157, -19.022663, 33.383186], 2 : [-11.053909, -48.549442, 1.749655], 3 : [-31.956005, -43.680061, 15.806712]}
-            antennas_phase_hpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [0.813590, 0.252366, 2.627863], 2 : [0.792450, 0.252823, 2.624041], 3 : [0.855193, 0.260376, 2.641065]}
+                # Copy-Paste Prints:
+                # ------------
 
-            antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-38.695157, -16.320563, 30.383186], 2 : [-10.124559, -47.491375, 2.875563], 3 : [-30.465630, -43.425621, 12.857971]}
-            antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [0.171479, 0.203726, 4.087032], 2 : [0.958606, 0.257511, 4.931464], 3 : [0.838223, 0.255872, 4.973041]}
-    return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.032919, -43.530065, 10.424257]}
+                antennas_phase_hpol_hesse = {0 : [0.500000, 0.500000, 0.500000], 1 : [0.161029, 0.214942, 3.674703], 2 : [0.500000, 0.500000, 0.500000], 3 : [0.825754, 0.271855, 3.198833]}
+
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-8.660638, -44.533474, 5.489838], 3 : [-30.032919, -43.530065, 10.424257]}
+                antennas_phase_vpol_hesse = {0 : [0.500000, 0.500000, 0.500000], 1 : [0.161029, 0.214942, 3.674703], 2 : [0.500000, 0.500000, 0.500000], 3 : [0.825754, 0.271855, 3.198833]}
+            elif deploy_index == 28:
+                #Starting with 27, letting only antenna 2 float.  I had to let the cable delay float a lot and I am not sure why.  Using known source locations ABCD.  Large freedom of movement allowed for antenna 2.
+                #Still no vpol
+                
+                # ------------------------------------------------------------------
+                # | FCN = 4.576                   |     Ncalls=147 (147 total)     |
+                # | EDM = 9.57e-09 (Goal: 0.0002) |            up = 1.0            |
+                # ------------------------------------------------------------------
+                # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
+                # ------------------------------------------------------------------
+                # |     True      |     True      |   False   |       False        |
+                # ------------------------------------------------------------------
+                # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
+                # ------------------------------------------------------------------
+                # |     False     |     True      |   True    |   True    | False  |
+                # ------------------------------------------------------------------
+                # --------------------------------------------------------------------------------------------------
+                # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
+                # --------------------------------------------------------------------------------------------------
+                # | 0 | ant0_x       |     0     |     1     |            |            |   -20   |   20    |  yes  |
+                # | 1 | ant0_y       |     0     |     1     |            |            |   -20   |   20    |  yes  |
+                # | 2 | ant0_z       |     0     |     1     |            |            |   -5    |    5    |  yes  |
+                # | 3 | ant1_x       |   -37.3   |    1.0    |            |            |-57.2814 |-17.2814 |  yes  |
+                # | 4 | ant1_y       |   -18.7   |    1.0    |            |            |-38.7206 | 1.27945 |  yes  |
+                # | 5 | ant1_z       |   18.2    |    1.0    |            |            | 13.1658 | 23.1658 |  yes  |
+                # | 6 | ant2_x       |   -17.3   |    0.9    |    -0.9    |    0.9     |-28.6606 | 11.3394 |       |
+                # | 7 | ant2_y       |  -53.74   |   0.20    |   -0.20    |    0.20    |-64.5335 |-24.5335 |       |
+                # | 8 | ant2_z       |    6.2    |    3.4    |    -2.7    |    3.9     | 3.48984 | 13.4898 |       |
+                # | 9 | ant3_x       |    -30    |     1     |            |            |-50.0329 |-10.0329 |  yes  |
+                # | 10| ant3_y       |   -43.5   |    1.0    |            |            |-63.5301 |-23.5301 |  yes  |
+                # | 11| ant3_z       |   10.4    |    1.0    |            |            | 5.42426 | 15.4243 |  yes  |
+                # | 12| cable_delay0 |    7.9    |    0.5    |            |            |-992.099 | 1007.9  |  yes  |
+                # | 13| cable_delay1 |    8.2    |    0.5    |            |            |-991.843 | 1008.16 |  yes  |
+                # | 14| cable_delay2 |   -47.7   |    3.0    |    -3.0    |    3.0     |  -1000  |  1000   |       |
+                # | 15| cable_delay3 |    9.6    |    0.5    |            |            |-990.409 | 1009.59 |  yes  |
+                # --------------------------------------------------------------------------------------------------
+
+
+                # Copy-Paste Prints:
+                # ------------
+
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-17.337033, -53.740481, 6.177357], 3 : [-30.032919, -43.530065, 10.424257]}
+                antennas_phase_hpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [1.000000, 1.000000, 1.000000], 2 : [0.928322, 0.204631, 3.417158], 3 : [1.000000, 1.000000, 1.000000]}
+
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-37.281439, -18.720550, 18.165817], 2 : [-17.337033, -53.740481, 6.177357], 3 : [-30.032919, -43.530065, 10.424257]}
+                antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [1.000000, 1.000000, 1.000000], 2 : [0.928322, 0.204631, 3.417158], 3 : [1.000000, 1.000000, 1.000000]}
+            elif deploy_index == 29:
+                #Made starting with 28, and letting 1,2,3 vary +- 20m, cable delays fixed.  Using "known source locations" from a,b,c,d,e,f
+                #This "works" well in that it points to all 5 source locations.  Unsure how to sanity check however, as the
+                #determined locations of the antennas do not match with my memory of where they were lcoated particularly well.
+                #Works VERY poorly for the CW signal
+                # ------------------------------------------------------------------
+                # | FCN = 7.084                   |     Ncalls=372 (372 total)     |
+                # | EDM = 0.000198 (Goal: 0.0002) |            up = 1.0            |
+                # ------------------------------------------------------------------
+                # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
+                # ------------------------------------------------------------------
+                # |     True      |     True      |   False   |       False        |
+                # ------------------------------------------------------------------
+                # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
+                # ------------------------------------------------------------------
+                # |     False     |     True      |   True    |   True    | False  |
+                # ------------------------------------------------------------------
+                # --------------------------------------------------------------------------------------------------
+                # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
+                # --------------------------------------------------------------------------------------------------
+                # | 0 | ant0_x       |     0     |     1     |            |            |   -20   |   20    |  yes  |
+                # | 1 | ant0_y       |     0     |     1     |            |            |   -20   |   20    |  yes  |
+                # | 2 | ant0_z       |     0     |     1     |            |            |   -20   |   20    |  yes  |
+                # | 3 | ant1_x       |  -38.10   |   0.23    |   -0.23    |    0.23    |-57.2814 |-17.2814 |       |
+                # | 4 | ant1_y       |  -16.97   |   0.25    |   -0.25    |    0.25    |-38.7206 | 1.27945 |       |
+                # | 5 | ant1_z       |   26.9    |    2.5    |    -2.5    |    2.4     |-1.83418 | 38.1658 |       |
+                # | 6 | ant2_x       |   -5.86   |   0.23    |   -0.23    |    0.23    | -34.337 | 5.66297 |       |
+                # | 7 | ant2_y       |  -45.67   |   0.25    |   -0.25    |    0.25    |-63.7405 |-23.7405 |       |
+                # | 8 | ant2_z       |   -7.6    |    2.5    |    -2.5    |    2.5     |-13.8226 | 26.1774 |       |
+                # | 9 | ant3_x       |  -30.45   |   0.23    |   -0.23    |    0.23    |-50.0329 |-10.0329 |       |
+                # | 10| ant3_y       |  -42.80   |   0.25    |   -0.25    |    0.25    |-63.5301 |-23.5301 |       |
+                # | 11| ant3_z       |   13.1    |    2.5    |    -2.5    |    2.4     |-9.57574 | 30.4243 |       |
+                # | 12| cable_delay0 |    7.9    |    0.5    |            |            |-2.09879 | 17.9012 |  yes  |
+                # | 13| cable_delay1 |    8.2    |    0.5    |            |            |-1.84283 | 18.1572 |  yes  |
+                # | 14| cable_delay2 |    0.0    |    0.5    |            |            |   -10   |   10    |  yes  |
+                # | 15| cable_delay3 |    9.6    |    0.5    |            |            |-0.408563| 19.5914 |  yes  |
+                # --------------------------------------------------------------------------------------------------
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-38.102155, -16.971278, 26.881001], 2 : [-5.862395, -45.670696, -7.619558], 3 : [-30.451192, -42.804655, 13.053250]}
+                antennas_phase_hpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [0.232099, 0.254682, 2.453574], 2 : [0.238776, 0.257414, 2.540291], 3 : [0.233637, 0.255081, 2.488746]}
+
+                #Vpol only uses A,B,D as these have vpol.  This is generated started from 29 hpol (with vpol cable delays) and letting antennas float pm 3 m.
+                # ------------------------------------------------------------------
+                # | FCN = 0.7056                  |    Ncalls=2135 (2135 total)    |
+                # | EDM = 6.69e-05 (Goal: 0.0002) |            up = 1.0            |
+                # ------------------------------------------------------------------
+                # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
+                # ------------------------------------------------------------------
+                # |     False     |     True      |   False   |       False        |
+                # ------------------------------------------------------------------
+                # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
+                # ------------------------------------------------------------------
+                # |     True      |     True      |   False   |   False   | False  |
+                # ------------------------------------------------------------------
+                # --------------------------------------------------------------------------------------------------
+                # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
+                # --------------------------------------------------------------------------------------------------
+                # | 0 | ant0_x       |     0     |     1     |            |            |   -3    |    3    |  yes  |
+                # | 1 | ant0_y       |     0     |     1     |            |            |   -3    |    3    |  yes  |
+                # | 2 | ant0_z       |     0     |     1     |            |            |   -3    |    3    |  yes  |
+                # | 3 | ant1_x       | -3.8684e1 | 0.0000e1  |            |            |-41.1022 |-35.1022 |       |
+                # | 4 | ant1_y       | -1.8606e1 | 0.0000e1  |            |            |-19.9713 |-13.9713 |       |
+                # | 5 | ant1_z       | 2.3881e1  | 0.0000e1  |            |            | 23.881  | 29.881  |       |
+                # | 6 | ant2_x       |  -5.4477  |  0.0000   |            |            |-8.86239 | -2.8624 |       |
+                # | 7 | ant2_y       | -4.5528e1 | 0.0000e1  |            |            |-48.6707 |-42.6707 |       |
+                # | 8 | ant2_z       |  -5.7316  |  0.0000   |            |            |-10.6196 |-4.61956 |       |
+                # | 9 | ant3_x       | -3.0946e1 | 0.0000e1  |            |            |-33.4512 |-27.4512 |       |
+                # | 10| ant3_y       | -4.4897e1 | 0.0000e1  |            |            |-45.8047 |-39.8047 |       |
+                # | 11| ant3_z       | 1.0053e1  | 0.0000e1  |            |            | 10.0533 | 16.0532 |       |
+                # | 12| cable_delay0 |   13.1    |    0.5    |            |            | 3.11563 | 23.1156 |  yes  |
+                # | 13| cable_delay1 |  5.7821   |  0.0000   |            |            | 5.78194 | 25.7819 |       |
+                # | 14| cable_delay2 |  9.1349   |  0.0000   |            |            | 1.09049 | 21.0905 |       |
+                # | 15| cable_delay3 |  4.7912   |  0.0000   |            |            |0.848566 | 20.8486 |       |
+                # --------------------------------------------------------------------------------------------------
+
+                #Currently from hpol only
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-38.684105, -18.606490, 23.881001], 2 : [-5.447701, -45.528246, -5.731552], 3 : [-30.946243, -44.897257, 10.053253]}
+                antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [0.000000, 0.000000, 0.000000], 2 : [0.000000, 0.000000, 0.000000], 3 : [0.000000, 0.000000, 0.000000]}
+
+                # cable_delays_vpol = numpy.array([13.115628,5.782146,9.134935,4.791166])
+                # cable_delays_vpol_hesse = numpy.array([0.500000,0.000000,0.000000,0.000000])
+
+            elif deploy_index == 30:
+                # Using 29, but changing the khsv (TV) signal to different cycles (chosen to be offset/cycle slip for a 
+                # signal that is 57 MHz).  These new TV time delays allow for better TV signal overlap with similar 
+                # calibration found in 29.
+                # ------------------------------------------------------------------
+                # | FCN = 9.477                   |     Ncalls=606 (606 total)     |
+                # | EDM = 5.22e-05 (Goal: 0.0002) |            up = 1.0            |
+                # ------------------------------------------------------------------
+                # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
+                # ------------------------------------------------------------------
+                # |     True      |     True      |   False   |       False        |
+                # ------------------------------------------------------------------
+                # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
+                # ------------------------------------------------------------------
+                # |     False     |     True      |   True    |   True    | False  |
+                # ------------------------------------------------------------------
+                # --------------------------------------------------------------------------------------------------
+                # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
+                # --------------------------------------------------------------------------------------------------
+                # | 0 | ant0_x       |     0     |     1     |            |            |   -20   |   20    |  yes  |
+                # | 1 | ant0_y       |     0     |     1     |            |            |   -20   |   20    |  yes  |
+                # | 2 | ant0_z       |     0     |     1     |            |            |   -20   |   20    |  yes  |
+                # | 3 | ant1_x       |   -41.7   |    0.8    |    -0.8    |    0.8     |-58.1022 |-18.1022 |       |
+                # | 4 | ant1_y       |  -19.02   |   0.25    |   -0.25    |    0.25    |-36.9713 | 3.02872 |       |
+                # | 5 | ant1_z       |   33.4    |    2.6    |    -2.6    |    2.6     |  6.881  | 46.881  |       |
+                # | 6 | ant2_x       |   -11.1   |    0.8    |    -0.8    |    0.8     |-25.8624 | 14.1376 |       |
+                # | 7 | ant2_y       |  -48.55   |   0.25    |   -0.25    |    0.25    |-65.6707 |-25.6707 |       |
+                # | 8 | ant2_z       |    1.7    |    2.6    |    -2.6    |    2.6     |-27.6196 | 12.3804 |       |
+                # | 9 | ant3_x       |   -32.0   |    0.8    |    -0.8    |    0.8     |-50.4512 |-10.4512 |       |
+                # | 10| ant3_y       |  -43.68   |   0.25    |   -0.25    |    0.25    |-62.8047 |-22.8047 |       |
+                # | 11| ant3_z       |   15.8    |    2.6    |    -2.6    |    2.6     |-6.94675 | 33.0532 |       |
+                # | 12| cable_delay0 |    7.9    |    0.5    |            |            |-92.0988 | 107.901 |  yes  |
+                # | 13| cable_delay1 |   -6.2    |    2.5    |    -2.4    |    2.4     |-91.8428 | 108.157 |       |
+                # | 14| cable_delay2 |   -20.5   |    2.4    |    -2.4    |    2.4     |  -100   |   100   |       |
+                # | 15| cable_delay3 |    3.6    |    2.4    |    -2.4    |    2.4     |-90.4086 | 109.591 |       |
+                # --------------------------------------------------------------------------------------------------
+
+
+                #Vpol comes from hpol, with limited movement of 3m around the hpol antennas.
+                # ------------------------------------------------------------------
+                # | FCN = 16.36                   |    Ncalls=1991 (1991 total)    |
+                # | EDM = 0.000187 (Goal: 0.0002) |            up = 1.0            |
+                # ------------------------------------------------------------------
+                # |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
+                # ------------------------------------------------------------------
+                # |     True      |     True      |   False   |       False        |
+                # ------------------------------------------------------------------
+                # | Hesse failed  |   Has cov.    | Accurate  | Pos. def. | Forced |
+                # ------------------------------------------------------------------
+                # |     False     |     True      |   True    |   True    | False  |
+                # ------------------------------------------------------------------
+                # --------------------------------------------------------------------------------------------------
+                # |   | Name         |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
+                # --------------------------------------------------------------------------------------------------
+                # | 0 | ant0_x       |     0     |     1     |            |            |   -3    |    3    |  yes  |
+                # | 1 | ant0_y       |     0     |     1     |            |            |   -3    |    3    |  yes  |
+                # | 2 | ant0_z       |     0     |     1     |            |            |   -3    |    3    |  yes  |
+                # | 3 | ant1_x       |  -38.70   |   0.17    |   -0.17    |    0.17    |-44.6952 |-38.6952 |       |
+                # | 4 | ant1_y       |  -16.32   |   0.20    |   -0.20    |    0.20    |-22.0227 |-16.0227 |       |
+                # | 5 | ant1_z       |   30.4    |    4.1    |    -4.1    |    1.9     | 30.3832 | 36.3832 |       |
+                # | 6 | ant2_x       |   -10.1   |    1.0    |    -1.0    |    1.0     |-14.0539 |-8.05391 |       |
+                # | 7 | ant2_y       |  -47.49   |   0.26    |   -0.26    |    0.26    |-51.5494 |-45.5494 |       |
+                # | 8 | ant2_z       |    2.9    |    5.0    |    -4.1    |    1.9     |-1.25035 | 4.74965 |       |
+                # | 9 | ant3_x       |   -30.5   |    0.9    |    -1.0    |    0.8     | -34.956 | -28.956 |       |
+                # | 10| ant3_y       |  -43.43   |   0.26    |   -0.26    |    0.26    |-46.6801 |-40.6801 |       |
+                # | 11| ant3_z       |    13     |     5     |     -5     |     4      | 12.8067 | 18.8067 |       |
+                # | 12| cable_delay0 |   13.1    |    0.5    |            |            |-86.8844 | 113.116 |  yes  |
+                # | 13| cable_delay1 |    9.3    |    0.4    |    -0.6    |    0.4     |-94.2179 | 105.782 |       |
+                # | 14| cable_delay2 |   -8.1    |    3.2    |    -3.0    |    3.1     |-90.8651 | 109.135 |       |
+                # | 15| cable_delay3 |    8.5    |    2.8    |    -3.2    |    2.3     |-95.2088 | 104.791 |       |
+                # --------------------------------------------------------------------------------------------------
+
+
+                antennas_phase_hpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-41.695157, -19.022663, 33.383186], 2 : [-11.053909, -48.549442, 1.749655], 3 : [-31.956005, -43.680061, 15.806712]}
+                antennas_phase_hpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [0.813590, 0.252366, 2.627863], 2 : [0.792450, 0.252823, 2.624041], 3 : [0.855193, 0.260376, 2.641065]}
+
+                antennas_phase_vpol = {0 : [0.000000, 0.000000, 0.000000], 1 : [-38.695157, -16.320563, 30.383186], 2 : [-10.124559, -47.491375, 2.875563], 3 : [-30.465630, -43.425621, 12.857971]}
+                antennas_phase_vpol_hesse = {0 : [1.000000, 1.000000, 1.000000], 1 : [0.171479, 0.203726, 4.087032], 2 : [0.958606, 0.257511, 4.931464], 3 : [0.838223, 0.255872, 4.973041]}
+        return antennas_physical, antennas_phase_hpol, antennas_phase_vpol
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
 
 def loadCableDelays(deploy_index=default_deploy,return_raw=False, check=False):
     '''
@@ -1944,124 +1951,171 @@ def loadPulserPhaseLocationsENU(deploy_index=default_deploy):
     corresponding to the best known physical locations, and current best fit
     for phase centers.
     '''
-    pulser_locations_ENU = {}
-    pulser_locations = loadPulserLocations(deploy_index=deploy_index)
+    try:
+        pulser_locations_ENU = {}
+        pulser_locations = loadPulserLocations(deploy_index=deploy_index)
 
-    pulser_locations_ENU['physical'] = {}
+        pulser_locations_ENU['physical'] = {}
 
-    origin = loadAntennaZeroLocation(deploy_index=deploy_index)
-    for key, location in pulser_locations.items():
-        pulser_locations_ENU['physical'][key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
+        origin = loadAntennaZeroLocation(deploy_index=deploy_index)
+        for key, location in pulser_locations.items():
+            pulser_locations_ENU['physical'][key] = pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
 
-    if deploy_index <= 9:
-        #pulser_locations_ENU['vpol'] = {'run1507':[275.708465, -372.224572, -82.673435], 'run1509':[1027.431897, -492.547030, -155.078725], 'run1511':[178.030733, 331.491744, -39.509867]}
-        #pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[1.106217, 1.246325, 2.503419], 'run1509':[5.552711, 2.469107, 5.305297], 'run1511':[1.324100, 2.146287, 2.310413]}
-        
-        '''
-        #These are the ones I got by flipping channel 2
-        pulser_locations_ENU['hpol'] = {'run1507':[253.799742, -355.808099, -117.460144], 'run1509':[1137.872525, -534.620695, -189.860634], 'run1511':[117.111896, 303.926298, -74.299903]}                                                         
-        pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[0.501879, 0.520719, 1.090585], 'run1509':[2.701943, 1.187494, 3.423798], 'run1511':[2.560162, 6.026819, 3.490432]}
-        pulser_locations_ENU['vpol'] = {'run1507':[263.002766, -355.657916, -80.473571], 'run1509':[1067.737570, -511.201739, -152.867512], 'run1511':[179.261666, 338.184460, -37.316588]}
-        pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[0.848562, 0.978776, 1.976002], 'run1509':[2.842634, 1.265834, 3.353987], 'run1511':[1.327852, 2.182353, 2.249852]}
-        '''
-
-        #These are the ones I got prior to 11/21/2019
-        pulser_locations_ENU['hpol'] = {'run1507':[259.417378, -353.989882, -84.468321], 'run1509':[1129.874543, -528.948053, -156.869667], 'run1511':[189.018118, 338.618832, -41.302878]}
-        pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[1.335408, 1.471356, 3.081678], 'run1509':[9.068532, 3.966986, 8.780782], 'run1511':[2.157532, 3.556144, 4.533434]}
-        pulser_locations_ENU['vpol'] = {'run1507':[271.225702, -362.785806, -75.741218], 'run1509':[1063.720642, -504.948969, -148.130744], 'run1511':[181.798419, 331.680671, -32.583995]}
-        pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[1.080508, 1.216558, 2.517439], 'run1509':[5.776634, 2.552221, 5.590785], 'run1511':[1.319455, 2.150750, 2.325213]}
-
-        #pulser_locations_ENU['hpol'] = {'run1507':[265.441241, -366.161638, -91.314401], 'run1509':[1065.399706, -508.295499, -163.706607], 'run1511':[178.535899, 344.684624, -48.158593]}
-        #pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[1.384200, 1.534385, 3.015226], 'run1509':[8.512122, 3.788872, 7.223959], 'run1511':[2.282271, 3.801014, 4.190135]}
-    elif deploy_index > 9:
-        #These are using the physical coordinates and are not calibrated phase center positions.
-        print('Using physical location GPS measurements for pulser phase centers.')
-        pulser_locations_ENU['hpol'] = {'run1507':pulser_locations_ENU['physical']['run1507'], 'run1509':pulser_locations_ENU['physical']['run1509'], 'run1511':pulser_locations_ENU['physical']['run1511']}
-        pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[2, 2, 2], 'run1509':[2, 2, 2], 'run1511':[2, 2, 2]}
-        pulser_locations_ENU['vpol'] = {'run1507':pulser_locations_ENU['physical']['run1507'], 'run1509':pulser_locations_ENU['physical']['run1509'], 'run1511':pulser_locations_ENU['physical']['run1511']}
-        pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[2, 2, 2], 'run1509':[2, 2, 2], 'run1511':[2, 2, 2]}
-
-    return pulser_locations_ENU
+        if type(deploy_index) == str:
+            #These are using the physical coordinates and are not calibrated phase center positions.
+            pulser_locations_ENU['hpol'] = {}
+            pulser_locations_ENU['hpol_hesse_error'] = {}
+            pulser_locations_ENU['vpol'] = {}
+            pulser_locations_ENU['vpol_hesse_error'] = {}
+            for key in list(pulser_locations.keys()):
+                pulser_locations_ENU['hpol'][key] = pulser_locations_ENU['physical'][key]
+                pulser_locations_ENU['hpol_hesse_error'][key] = [2, 2, 2]
+                pulser_locations_ENU['vpol'][key] = pulser_locations_ENU['physical'][key]
+                pulser_locations_ENU['vpol_hesse_error'][key] = [2, 2, 2]
 
 
+                pulser_locations['run5191'] = (37.586044, -118.233545, 3765.2 + 1)
+                pulser_locations['run5192'] = (37.586044, -118.233545, 3765.2 + 1)
+                pulser_locations['run5193'] = (37.586044, -118.233545, 3765.2 + 1)
+                pulser_locations['run5194'] = (37.586044, -118.233545, 3765.2 + 1)
+                pulser_locations['run5195'] = (37.586044, -118.233545, 3765.2 + 1)
+                pulser_locations['run5196'] = (37.586044, -118.233545, 3765.2 + 1)
+                pulser_locations['run5197'] = (37.586044, -118.233545, 3765.2 + 1)
+                pulser_locations['run5198'] = (37.586044, -118.233545, 3765.2 + 1)
 
-def plotStationAndPulsers(deploy_index=default_deploy,plot_phase=False):
+                # Pulsing June 2021 Site 2
+                pulser_locations['run5181'] = ( 37.591998, -118.235489, 3805.8 + 1)
+                pulser_locations['run5182'] = ( 37.591998, -118.235489, 3805.8 + 1)
+                pulser_locations['run5183'] = ( 37.591998, -118.235489, 3805.8 + 1)
+                pulser_locations['run5184'] = ( 37.591998, -118.235489, 3805.8 + 1)
+                pulser_locations['run5185'] = ( 37.591998, -118.235489, 3805.8 + 1)
+        elif deploy_index <= 9:
+            #pulser_locations_ENU['vpol'] = {'run1507':[275.708465, -372.224572, -82.673435], 'run1509':[1027.431897, -492.547030, -155.078725], 'run1511':[178.030733, 331.491744, -39.509867]}
+            #pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[1.106217, 1.246325, 2.503419], 'run1509':[5.552711, 2.469107, 5.305297], 'run1511':[1.324100, 2.146287, 2.310413]}
+            
+            '''
+            #These are the ones I got by flipping channel 2
+            pulser_locations_ENU['hpol'] = {'run1507':[253.799742, -355.808099, -117.460144], 'run1509':[1137.872525, -534.620695, -189.860634], 'run1511':[117.111896, 303.926298, -74.299903]}                                                         
+            pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[0.501879, 0.520719, 1.090585], 'run1509':[2.701943, 1.187494, 3.423798], 'run1511':[2.560162, 6.026819, 3.490432]}
+            pulser_locations_ENU['vpol'] = {'run1507':[263.002766, -355.657916, -80.473571], 'run1509':[1067.737570, -511.201739, -152.867512], 'run1511':[179.261666, 338.184460, -37.316588]}
+            pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[0.848562, 0.978776, 1.976002], 'run1509':[2.842634, 1.265834, 3.353987], 'run1511':[1.327852, 2.182353, 2.249852]}
+            '''
+
+            #These are the ones I got prior to 11/21/2019
+            pulser_locations_ENU['hpol'] = {'run1507':[259.417378, -353.989882, -84.468321], 'run1509':[1129.874543, -528.948053, -156.869667], 'run1511':[189.018118, 338.618832, -41.302878]}
+            pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[1.335408, 1.471356, 3.081678], 'run1509':[9.068532, 3.966986, 8.780782], 'run1511':[2.157532, 3.556144, 4.533434]}
+            pulser_locations_ENU['vpol'] = {'run1507':[271.225702, -362.785806, -75.741218], 'run1509':[1063.720642, -504.948969, -148.130744], 'run1511':[181.798419, 331.680671, -32.583995]}
+            pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[1.080508, 1.216558, 2.517439], 'run1509':[5.776634, 2.552221, 5.590785], 'run1511':[1.319455, 2.150750, 2.325213]}
+
+            #pulser_locations_ENU['hpol'] = {'run1507':[265.441241, -366.161638, -91.314401], 'run1509':[1065.399706, -508.295499, -163.706607], 'run1511':[178.535899, 344.684624, -48.158593]}
+            #pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[1.384200, 1.534385, 3.015226], 'run1509':[8.512122, 3.788872, 7.223959], 'run1511':[2.282271, 3.801014, 4.190135]}
+        elif deploy_index > 9:
+            #These are using the physical coordinates and are not calibrated phase center positions.
+            print('Using physical location GPS measurements for pulser phase centers.')
+            pulser_locations_ENU['hpol'] = {'run1507':pulser_locations_ENU['physical']['run1507'], 'run1509':pulser_locations_ENU['physical']['run1509'], 'run1511':pulser_locations_ENU['physical']['run1511']}
+            pulser_locations_ENU['hpol_hesse_error'] = {'run1507':[2, 2, 2], 'run1509':[2, 2, 2], 'run1511':[2, 2, 2]}
+            pulser_locations_ENU['vpol'] = {'run1507':pulser_locations_ENU['physical']['run1507'], 'run1509':pulser_locations_ENU['physical']['run1509'], 'run1511':pulser_locations_ENU['physical']['run1511']}
+            pulser_locations_ENU['vpol_hesse_error'] = {'run1507':[2, 2, 2], 'run1509':[2, 2, 2], 'run1511':[2, 2, 2]}
+
+        return pulser_locations_ENU
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+
+
+
+def plotStationAndPulsers(deploy_index=default_deploy,plot_phase=False, plot_pulsers=False):
     '''
     Currently only intended to plot the most recent station with the three pulsers that we used for it.
     '''
-    antennas_physical, antennas_phase_hpol, antennas_phase_vpol = loadAntennaLocationsENU(deploy_index=deploy_index)
+    try:
+        antennas_physical, antennas_phase_hpol, antennas_phase_vpol = loadAntennaLocationsENU(deploy_index=deploy_index)
 
-    colors = ['b','g','r','c']
-    pulser_colors = ['m','y','k']
+        colors = ['#1f77b4','#ff7f0e','#2ca02c','#d62728']
+        pulser_colors = ['#ffaaff','#55ffff','k']
 
-    fig = plt.figure()
-    fig.canvas.set_window_title('Antenna + Pulser Locations')
-    ax = fig.add_subplot(111, projection='3d')
+        if plot_pulsers == True:
+            fig = plt.figure()
+            fig.canvas.set_window_title(str(deploy_index))#'Antenna + Pulser Locations')
+            plt.suptitle(str(deploy_index))
+            ax = fig.add_subplot(111, projection='3d')
 
-    for i, a in antennas_physical.items():
-        ax.scatter(a[0], a[1], a[2], marker='o',color=colors[i],label='Physical %i'%i,alpha=0.8)
+            for i, a in antennas_physical.items():
+                ax.scatter(a[0], a[1], a[2], marker='o',color=colors[i],label='Physical %i'%i,alpha=0.8)
 
-    if plot_phase == True:
-        for i, a in antennas_phase_hpol.items():
-            ax.plot([antennas_physical[i][0],antennas_phase_hpol[i][0]],[antennas_physical[i][1],antennas_phase_hpol[i][1]],[antennas_physical[i][2],antennas_phase_hpol[i][2]],color=colors[i],linestyle='--',alpha=0.5)
-            ax.scatter(a[0], a[1], a[2], marker='*',color=colors[i],label='%s Phase Center %i'%('Hpol', i),alpha=0.8)
-        for i, a in antennas_phase_vpol.items():
-            ax.plot([antennas_physical[i][0],antennas_phase_vpol[i][0]],[antennas_physical[i][1],antennas_phase_vpol[i][1]],[antennas_physical[i][2],antennas_phase_vpol[i][2]],color=colors[i],linestyle='--',alpha=0.5)
-            ax.scatter(a[0], a[1], a[2], marker='^',color=colors[i],label='%s Phase Center %i'%('Vpol', i),alpha=0.8)
-
-
-
-
-    pulser_locations = loadPulserPhaseLocationsENU()
-    for site, key in enumerate(['run1507','run1509','run1511']):
-        site += 1
-        ax.scatter(pulser_locations['physical'][key][0], pulser_locations['physical'][key][1], pulser_locations['physical'][key][2], color=pulser_colors[site-1], marker='o',label='Physical Pulser Site %i'%site,alpha=0.8)
-
-    if plot_phase == True:
-        ax.plot([pulser_locations['hpol']['run1507'][0],pulser_locations['physical']['run1507'][0]],[pulser_locations['hpol']['run1507'][1],pulser_locations['physical']['run1507'][1]],[pulser_locations['hpol']['run1507'][2],pulser_locations['physical']['run1507'][2]],color=pulser_colors[0],linestyle='--',alpha=0.5)
-        ax.scatter( pulser_locations['hpol']['run1507'][0] , pulser_locations['hpol']['run1507'][1] , pulser_locations['hpol']['run1507'][2] , color=pulser_colors[0] , marker='*',alpha=0.8)
-
-        ax.plot([pulser_locations['hpol']['run1509'][0],pulser_locations['physical']['run1509'][0]],[pulser_locations['hpol']['run1509'][1],pulser_locations['physical']['run1509'][1]],[pulser_locations['hpol']['run1509'][2],pulser_locations['physical']['run1509'][2]],color=pulser_colors[1],linestyle='--',alpha=0.5)
-        ax.scatter( pulser_locations['hpol']['run1509'][0] , pulser_locations['hpol']['run1509'][1] , pulser_locations['hpol']['run1509'][2] , color=pulser_colors[1] , marker='*',alpha=0.8)
-
-        ax.plot([pulser_locations['hpol']['run1511'][0],pulser_locations['physical']['run1511'][0]],[pulser_locations['hpol']['run1511'][1],pulser_locations['physical']['run1511'][1]],[pulser_locations['hpol']['run1511'][2],pulser_locations['physical']['run1511'][2]],color=pulser_colors[2],linestyle='--',alpha=0.5)
-        ax.scatter( pulser_locations['hpol']['run1511'][0] , pulser_locations['hpol']['run1511'][1] , pulser_locations['hpol']['run1511'][2] , color=pulser_colors[2] , marker='*',alpha=0.8)
-
-        ax.plot([pulser_locations['vpol']['run1507'][0],pulser_locations['physical']['run1507'][0]],[pulser_locations['vpol']['run1507'][1],pulser_locations['physical']['run1507'][1]],[pulser_locations['vpol']['run1507'][2],pulser_locations['physical']['run1507'][2]],color=pulser_colors[0],linestyle='--',alpha=0.5)
-        ax.scatter( pulser_locations['vpol']['run1507'][0] , pulser_locations['vpol']['run1507'][1] , pulser_locations['vpol']['run1507'][2] , color=pulser_colors[0] , marker='^',alpha=0.8)
-
-        ax.plot([pulser_locations['vpol']['run1509'][0],pulser_locations['physical']['run1509'][0]],[pulser_locations['vpol']['run1509'][1],pulser_locations['physical']['run1509'][1]],[pulser_locations['vpol']['run1509'][2],pulser_locations['physical']['run1509'][2]],color=pulser_colors[1],linestyle='--',alpha=0.5)
-        ax.scatter( pulser_locations['vpol']['run1509'][0] , pulser_locations['vpol']['run1509'][1] , pulser_locations['vpol']['run1509'][2] , color=pulser_colors[1] , marker='^',alpha=0.8)
-
-        ax.plot([pulser_locations['vpol']['run1511'][0],pulser_locations['physical']['run1511'][0]],[pulser_locations['vpol']['run1511'][1],pulser_locations['physical']['run1511'][1]],[pulser_locations['vpol']['run1511'][2],pulser_locations['physical']['run1511'][2]],color=pulser_colors[2],linestyle='--',alpha=0.5)
-        ax.scatter( pulser_locations['vpol']['run1511'][0] , pulser_locations['vpol']['run1511'][1] , pulser_locations['vpol']['run1511'][2] , color=pulser_colors[2] , marker='^',alpha=0.8)
+            if plot_phase == True:
+                for i, a in antennas_phase_hpol.items():
+                    ax.plot([antennas_physical[i][0],antennas_phase_hpol[i][0]],[antennas_physical[i][1],antennas_phase_hpol[i][1]],[antennas_physical[i][2],antennas_phase_hpol[i][2]],color=colors[i],linestyle='--',alpha=0.5)
+                    ax.scatter(a[0], a[1], a[2], marker='*',color=colors[i],label='%s Phase Center %i'%('Hpol', i),alpha=0.8)
+                for i, a in antennas_phase_vpol.items():
+                    ax.plot([antennas_physical[i][0],antennas_phase_vpol[i][0]],[antennas_physical[i][1],antennas_phase_vpol[i][1]],[antennas_physical[i][2],antennas_phase_vpol[i][2]],color=colors[i],linestyle='--',alpha=0.5)
+                    ax.scatter(a[0], a[1], a[2], marker='^',color=colors[i],label='%s Phase Center %i'%('Vpol', i),alpha=0.8)
 
 
-    ax.set_xlabel('E (m)')
-    ax.set_ylabel('N (m)')
-    ax.set_zlabel('Relative Elevation (m)')
-    plt.legend()
+
+            pulser_locations = loadPulserPhaseLocationsENU()
+            for site, key in enumerate(['run1507','run1509','run1511']):
+                site += 1
+                ax.scatter(pulser_locations['physical'][key][0], pulser_locations['physical'][key][1], pulser_locations['physical'][key][2], color=pulser_colors[site-1], marker='o',label='Physical Pulser Site %i'%site,alpha=0.8)
+
+            if plot_phase == True:
+                ax.plot([pulser_locations['hpol']['run1507'][0],pulser_locations['physical']['run1507'][0]],[pulser_locations['hpol']['run1507'][1],pulser_locations['physical']['run1507'][1]],[pulser_locations['hpol']['run1507'][2],pulser_locations['physical']['run1507'][2]],color=pulser_colors[0],linestyle='--',alpha=0.5)
+                ax.scatter( pulser_locations['hpol']['run1507'][0] , pulser_locations['hpol']['run1507'][1] , pulser_locations['hpol']['run1507'][2] , color=pulser_colors[0] , marker='*',alpha=0.8)
+
+                ax.plot([pulser_locations['hpol']['run1509'][0],pulser_locations['physical']['run1509'][0]],[pulser_locations['hpol']['run1509'][1],pulser_locations['physical']['run1509'][1]],[pulser_locations['hpol']['run1509'][2],pulser_locations['physical']['run1509'][2]],color=pulser_colors[1],linestyle='--',alpha=0.5)
+                ax.scatter( pulser_locations['hpol']['run1509'][0] , pulser_locations['hpol']['run1509'][1] , pulser_locations['hpol']['run1509'][2] , color=pulser_colors[1] , marker='*',alpha=0.8)
+
+                ax.plot([pulser_locations['hpol']['run1511'][0],pulser_locations['physical']['run1511'][0]],[pulser_locations['hpol']['run1511'][1],pulser_locations['physical']['run1511'][1]],[pulser_locations['hpol']['run1511'][2],pulser_locations['physical']['run1511'][2]],color=pulser_colors[2],linestyle='--',alpha=0.5)
+                ax.scatter( pulser_locations['hpol']['run1511'][0] , pulser_locations['hpol']['run1511'][1] , pulser_locations['hpol']['run1511'][2] , color=pulser_colors[2] , marker='*',alpha=0.8)
+
+                ax.plot([pulser_locations['vpol']['run1507'][0],pulser_locations['physical']['run1507'][0]],[pulser_locations['vpol']['run1507'][1],pulser_locations['physical']['run1507'][1]],[pulser_locations['vpol']['run1507'][2],pulser_locations['physical']['run1507'][2]],color=pulser_colors[0],linestyle='--',alpha=0.5)
+                ax.scatter( pulser_locations['vpol']['run1507'][0] , pulser_locations['vpol']['run1507'][1] , pulser_locations['vpol']['run1507'][2] , color=pulser_colors[0] , marker='^',alpha=0.8)
+
+                ax.plot([pulser_locations['vpol']['run1509'][0],pulser_locations['physical']['run1509'][0]],[pulser_locations['vpol']['run1509'][1],pulser_locations['physical']['run1509'][1]],[pulser_locations['vpol']['run1509'][2],pulser_locations['physical']['run1509'][2]],color=pulser_colors[1],linestyle='--',alpha=0.5)
+                ax.scatter( pulser_locations['vpol']['run1509'][0] , pulser_locations['vpol']['run1509'][1] , pulser_locations['vpol']['run1509'][2] , color=pulser_colors[1] , marker='^',alpha=0.8)
+
+                ax.plot([pulser_locations['vpol']['run1511'][0],pulser_locations['physical']['run1511'][0]],[pulser_locations['vpol']['run1511'][1],pulser_locations['physical']['run1511'][1]],[pulser_locations['vpol']['run1511'][2],pulser_locations['physical']['run1511'][2]],color=pulser_colors[2],linestyle='--',alpha=0.5)
+                ax.scatter( pulser_locations['vpol']['run1511'][0] , pulser_locations['vpol']['run1511'][1] , pulser_locations['vpol']['run1511'][2] , color=pulser_colors[2] , marker='^',alpha=0.8)
 
 
-    fig = plt.figure()
-    fig.canvas.set_window_title('Antenna Locations')
-    ax = fig.add_subplot(111, projection='3d')
+            ax.set_xlabel('E (m)')
+            ax.set_ylabel('N (m)')
+            ax.set_zlabel('Relative Elevation (m)')
+            plt.legend()
 
-    for i, a in antennas_physical.items():
-        ax.scatter(a[0], a[1], a[2], marker='o',color=colors[i],label='Physical %i'%i,alpha=0.8)
 
-    if plot_phase == True:
-        for i, a in antennas_phase_hpol.items():
-            ax.plot([antennas_physical[i][0],antennas_phase_hpol[i][0]],[antennas_physical[i][1],antennas_phase_hpol[i][1]],[antennas_physical[i][2],antennas_phase_hpol[i][2]],color=colors[i],linestyle='--',alpha=0.5)
-            ax.scatter(a[0], a[1], a[2], marker='*',color=colors[i],label='%s Phase Center %i'%('Hpol', i),alpha=0.8)
-        for i, a in antennas_phase_vpol.items():
-            ax.plot([antennas_physical[i][0],antennas_phase_vpol[i][0]],[antennas_physical[i][1],antennas_phase_vpol[i][1]],[antennas_physical[i][2],antennas_phase_vpol[i][2]],color=colors[i],linestyle='--',alpha=0.5)
-            ax.scatter(a[0], a[1], a[2], marker='^',color=colors[i],label='%s Phase Center %i'%('Vpol', i),alpha=0.8)
+        fig = plt.figure()
+        fig.canvas.set_window_title(str(deploy_index))#'Antenna Locations')
+        plt.suptitle(str(deploy_index))
+        ax = fig.add_subplot(111, projection='3d')
 
-    ax.set_xlabel('E (m)')
-    ax.set_ylabel('N (m)')
-    ax.set_zlabel('Relative Elevation (m)')
-    plt.legend()
+        for i, a in antennas_physical.items():
+            ax.scatter(a[0], a[1], a[2], marker='o',color=colors[i],label='Physical %i'%i,alpha=0.8)
+
+        if plot_phase == True:
+            for i, a in antennas_phase_hpol.items():
+                ax.plot([antennas_physical[i][0],antennas_phase_hpol[i][0]],[antennas_physical[i][1],antennas_phase_hpol[i][1]],[antennas_physical[i][2],antennas_phase_hpol[i][2]],color=colors[i],linestyle='--',alpha=0.5)
+                ax.scatter(a[0], a[1], a[2], marker='*',color=colors[i],label='%s Phase Center %i'%('Hpol', i),alpha=0.8)
+            for i, a in antennas_phase_vpol.items():
+                ax.plot([antennas_physical[i][0],antennas_phase_vpol[i][0]],[antennas_physical[i][1],antennas_phase_vpol[i][1]],[antennas_physical[i][2],antennas_phase_vpol[i][2]],color=colors[i],linestyle='--',alpha=0.5)
+                ax.scatter(a[0], a[1], a[2], marker='^',color=colors[i],label='%s Phase Center %i'%('Vpol', i),alpha=0.8)
+
+        ax.set_zlim(-1, 16)
+        ax.set_xlim(-40,5)
+        ax.set_ylim(-50,5)
+        ax.set_xlabel('E (m)')
+        ax.set_ylabel('N (m)')
+        ax.set_zlabel('Relative Elevation (m)')
+        plt.legend()
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
 
 
 
@@ -2513,7 +2567,9 @@ if __name__ == '__main__':
         #known_planes, calibrated_trigtime, output_tracks = getKnownPlaneTracks()
 
         print('\n\n\n\n')
-        plotStationAndPulsers(deploy_index=10,plot_phase=False)
+
+        for deploy_index in ['rtk-gps-day3-june22-2021.json', 'theodolite-day3-june22-2021_only_enu.json']:
+            plotStationAndPulsers(deploy_index=deploy_index,plot_phase=False)
 
         if False:
             for deploy_index in [1,2,3]:

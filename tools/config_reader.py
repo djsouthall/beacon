@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from beacon.tools.angle_annotation import AngleAnnotation
 import matplotlib.patheffects as PathEffects
+import inspect
 
 def loadSampleData():
     '''
@@ -28,7 +29,7 @@ def default(obj):
         return obj.tolist()
     raise TypeError('Not serializable')
 
-def configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description="", update_latlonel=False, force_write=True, additional_text=''):
+def configWriter(json_path, origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description="", update_latlonel=True, force_write=True, additional_text=''):
     '''
     The counterpart to configReader, given the normal calibration dictionaries, this will write a calibration file
     that can be loaded for later analysis.
@@ -179,6 +180,7 @@ def updateLatlonelFromENU(data, verbose=True, decimals=8):
             else:
                 if verbose:
                     print(key + ' does not contain ENU data for mast %i %s.'%(mast, key))
+
     return data
 
 def updateENUFromLatlonel(data, verbose=True):
@@ -199,7 +201,8 @@ def updateENUFromLatlonel(data, verbose=True):
                 data['antennas']['ant%i'%mast][key]['enu'] = numpy.asarray(pm.geodetic2enu(data['antennas']['ant%i'%mast][key]['latlonel'][0],data['antennas']['ant%i'%mast][key]['latlonel'][1],data['antennas']['ant%i'%mast][key]['latlonel'][2],origin[0],origin[1],origin[2]))
             else:
                 if verbose:
-                    print(key + ' does not contain ENU data for mast %i %s.'%(mast, key))
+                    print(key + ' does not contain latlonel data for mast %i %s.'%(mast, key))
+
     return data
 
 def configReader(json_path, return_mode='enu', check=True, verbose=True, return_description=False):
@@ -245,48 +248,55 @@ def configReader(json_path, return_mode='enu', check=True, verbose=True, return_
     check : bool
         If True then this will run checkConfigConsistency.  Default is False.
     '''
-    if os.path.split(json_path)[0] == '':
-        print('WARNING!!! No directory path given for json_path, assuming default path of %s'%(os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config')))
-        json_path = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config',json_path)
+    try:
+        if os.path.split(json_path)[0] == '':
+            print('WARNING!!! No directory path given for json_path, assuming default path of %s'%(os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config')))
+            json_path = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config',json_path)
 
-    with open(json_path) as json_file:
-        data = json.load(json_file)
+        with open(json_path) as json_file:
+            data = json.load(json_file)
 
-    description = str(data['description'])
-    if verbose:
-        print('Calibration Description:')
-        print(description)
+        description = str(data['description'])
+        if verbose:
+            print('Calibration Description:')
+            print(description)
 
 
-    origin = data['origin']['latlonel'] #Lat Lon Elevation, use for generating ENU from other latlonel values.     
-    antennas_physical = {}
-    antennas_phase_hpol = {}
-    antennas_phase_vpol = {}
-    cable_delays = {'hpol' : [0.0 , 0.0 , 0.0 , 0.0],'vpol' : [0.0 , 0.0 , 0.0 , 0.0]}
+        origin = data['origin']['latlonel'] #Lat Lon Elevation, use for generating ENU from other latlonel values.     
+        antennas_physical = {}
+        antennas_phase_hpol = {}
+        antennas_phase_vpol = {}
+        cable_delays = {'hpol' : [0.0 , 0.0 , 0.0 , 0.0],'vpol' : [0.0 , 0.0 , 0.0 , 0.0]}
 
-    if check:
-        print('Check before updating values:')
-        checkConfigConsistency(data)
-    if return_mode == 'latlonel':
-        print('WARNING!!! Loading antenna positions as latlonel, which is not the default behaviour and should be done with caution.')
-        print('Done using the ENU data.')
-        data = updateLatlonelFromENU(data, verbose=verbose)
-    elif return_mode == 'enu':
-        data = updateENUFromLatlonel(data, verbose=verbose)
-    if check:
-        print('Check after updating values:')
-        checkConfigConsistency(data)
+        if check:
+            print('Check before updating values:')
+            checkConfigConsistency(data)
+        if return_mode == 'latlonel':
+            print('WARNING!!! Loading antenna positions as latlonel, which is not the default behaviour and should be done with caution.')
+            print('Done using the ENU data.')
+            data = updateLatlonelFromENU(data, verbose=verbose)
+        elif return_mode == 'enu':
+            data = updateENUFromLatlonel(data, verbose=verbose)
+        if check:
+            print('Check after updating values:')
+            checkConfigConsistency(data)
 
-    for mast in range(4):
-        antennas_physical[mast] = data['antennas']['ant%i'%mast]['physical'][return_mode]
-        antennas_phase_hpol[mast] = data['antennas']['ant%i'%mast]['hpol'][return_mode]
-        antennas_phase_vpol[mast] = data['antennas']['ant%i'%mast]['vpol'][return_mode]
-        cable_delays['hpol'][mast] = data['antennas']['ant%i'%mast]['hpol']['cable_delay']
-        cable_delays['vpol'][mast] = data['antennas']['ant%i'%mast]['vpol']['cable_delay']
-    if return_description == True:
-        return origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description
-    else:
-        return origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays
+        for mast in range(4):
+            antennas_physical[mast] = data['antennas']['ant%i'%mast]['physical'][return_mode]
+            antennas_phase_hpol[mast] = data['antennas']['ant%i'%mast]['hpol'][return_mode]
+            antennas_phase_vpol[mast] = data['antennas']['ant%i'%mast]['vpol'][return_mode]
+            cable_delays['hpol'][mast] = data['antennas']['ant%i'%mast]['hpol']['cable_delay']
+            cable_delays['vpol'][mast] = data['antennas']['ant%i'%mast]['vpol']['cable_delay']
+        if return_description == True:
+            return origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays, description
+        else:
+            return origin, antennas_physical, antennas_phase_hpol, antennas_phase_vpol, cable_delays
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
 
 def generateConfigFromDeployIndex(outpath, deploy_index, description=None):
     '''
