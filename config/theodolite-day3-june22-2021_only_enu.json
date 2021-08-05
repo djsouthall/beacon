@@ -1,0 +1,84 @@
+{
+    "description": "Measurements made on June 22nd using a theodolite.  Cable delays come TDR measurements made at the same time, and should account for the several different cables (and their respective material properties) to accurately measure the time delays.",
+    "origin": {
+        "latlonel": [
+            37.589339,
+            -118.23761867,
+            3850.5272
+        ]
+    },
+    "antennas": {
+        "ant0": {
+            "physical": {
+                "latlonel": [],
+                "enu": [ 0.0, 0.0, 0.0 ]
+            },
+            "hpol": {
+                "latlonel": [],
+                "enu": [ 0.0, 0.0, 0.0 ],
+                "cable_delay": 462.5927,
+                "channel": 0
+            },
+            "vpol": {
+                "latlonel": [],
+                "enu": [ 0.0, 0.0, 0.0 ],
+                "cable_delay": 459.1555,
+                "channel": 1
+            }
+        },
+        "ant1": {
+            "physical": {
+                "latlonel": [],
+                "enu": [-31.47511691, -15.94952569,  13.17850709 ]
+            },
+            "hpol": {
+                "latlonel": [],
+                "enu": [-31.47511691, -15.94952569,  13.17850709 ],
+                "cable_delay": 468.2663,
+                "channel": 2
+            },
+            "vpol": {
+                "latlonel": [],
+                "enu": [-31.47511691, -15.94952569,  13.17850709 ],
+                "cable_delay": 469.7423,
+                "channel": 3
+            }
+        },
+        "ant2": {
+            "physical": {
+                "latlonel": [],
+                "enu": [ -8.24238341, -48.48759483,   4.10554407  ]
+            },
+            "hpol": {
+                "latlonel": [],
+                "enu": [ -8.24238341, -48.48759483,   4.10554407  ],
+                "cable_delay": 455.0525,
+                "channel": 4
+            },
+            "vpol": {
+                "latlonel": [],
+                "enu": [ -8.24238341, -48.48759483,   4.10554407  ],
+                "cable_delay": 463.0335,
+                "channel": 5
+            }
+        },
+        "ant3": {
+            "physical": {
+                "latlonel": [],
+                "enu": [-28.8368846,  -40.45655474,  12.89442923 ]
+            },
+            "hpol": {
+                "latlonel": [],
+                "enu": [-28.8368846,  -40.45655474,  12.89442923 ],
+                "cable_delay": 463.0159,
+                "channel": 6
+            },
+            "vpol": {
+                "latlonel": [],
+                "enu": [-28.8368846,  -40.45655474,  12.89442923 ],
+                "cable_delay": 463.1905,
+                "channel": 7
+            }
+        }
+    }
+}

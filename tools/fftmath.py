@@ -1851,11 +1851,13 @@ class TemplateCompareTool(FFTPrepper):
                     for channel in channels:
                         ax = axs[channel]
                         ax.plot(times, rolled_wfs[channel],linestyle='--',c='b',label=str(channel)+' template')
+                        ax.legend()
 
             if plot == True:
                 for channel in channels:
                     ax = axs[channel]
                     ax.plot(times, averaged_waveforms[channel],linestyle='--',c='r',label=str(channel)+' avg')
+                    ax.legend()
 
             if plot == True:
                 fig = plt.figure()
