@@ -11,6 +11,7 @@ import numpy
 from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 import beacon.tools.interpret #Must be imported before matplotlib or else plots don't load.
 from beacon.tools.data_slicer import dataSlicerSingleRun,dataSlicer
+from beacon.tools.correlator import Correlator
 
 import csv
 import scipy.spatial
@@ -40,14 +41,18 @@ from beacon.tools.data_handler import createFile, getTimes, loadTriggerTypes, ge
 from beacon.tools.fftmath import TemplateCompareTool
 
 
-known_pulser_cuts_for_template = {  'run5181':[{'trigger_type':2, 'time_window':[1624496478.4,1624497197.2],'time_window_ns':[9.9997512e8,1.00000547e9]}], \
+known_pulser_cuts_for_template = {  'run5176':[{'trigger_type':2, 'time_window':[1624489853.9598,1624489854.0140]}],\
+                                    'run5181':[{'trigger_type':2, 'time_window':[1624496478.4,1624497197.2],'time_window_ns':[9.9997512e8,1.00000547e9]}], \
                                     'run5182':[{'trigger_type':2, 'time_window':[1624497215.3,1624497569.2],'time_window_ns':[9.9997873e8,9.9998749e9]}], \
                                     'run5183':[{'trigger_type':2, 'time_window':[1624497577.4,1624497887.8],'time_window_ns':[999980056,999984146]}], \
                                     'run5185':[{'trigger_type':2, 'time_window':[1624498820.7,1624499232.7],'time_window_ns':[9.9999e8,1e9]}],\
                                     'run5191':[{'trigger_type':2, 'time_window':[1624546559.9,1624546835.2],'time_window_ns':[1.62070e8,1.62105e8]}],\
                                     'run5195':[{'trigger_type':2, 'time_window':[1624549749.0,1624549879.2],'time_window_ns':[1.618e8,1.620e8]}, {'trigger_type':3, 'time_window':[1624549894.44,1624550506.50]}],\
                                     'run5198':[{'trigger_type':2, 'time_window':[1624552409.76406,1624552409.77920]}],\
+                                    'run5196':[{'trigger_type':2, 'time_window':[1624551426.80823,1624551426.85754]}],\
                                     }
+#known_pulser_cuts_for_template = {}
+#'run5179':[{'trigger_type':2, 'time_window':[1624492539.0,1624492541.0]}],\
 #'run5198':[{'trigger_type':2, 'time_window':[1624552128.18,1624552156.68],'time_window_ns':[2.47e7,2.52e7]}],\                            
 
 # 'run5198':[{'trigger_type':2, 'time_window':[1624552231,1624552232.3969],'time_window_ns':[0.6e8,2.20e8]}] # 60 Hz
@@ -58,20 +63,39 @@ known_pulser_cuts_for_template = {  'run5181':[{'trigger_type':2, 'time_window':
 
 
 class Selector(object):
-    def __init__(self,ax,scatter_data, eventids):
+    def __init__(self,ax,scatter_data, eventids, run):
         self.ax = ax
         self.xys = scatter_data.get_offsets()
         self.eventids = eventids
         self.lasso = LassoSelector(self.ax, onselect=self.onselect)
+        self.run = run
+        self.reader = Reader(os.environ['BEACON_DATA'],run)
+        self.cor = Correlator(self.reader,upsample=len(self.reader.t())*8, n_phi=180*4 + 1, n_theta=360*4 + 1)
     def onselect(self,verts):
         #print(verts)
         path = Path(verts)
         ind = numpy.nonzero(path.contains_points(self.xys))[0]
         pprint(self.eventids[ind])
 
+        if len(self.eventids[ind]) == 1:
+            eventid = self.eventids[ind][0]
+            fig = plt.figure()
+            plt.title('Run %i, Eventid %i'%(self.run, eventid))
+            self.reader.setEntry(eventid)
+            ax = plt.subplot(2,1,1)
+            for channel in [0,2,4,6]:
+                plt.plot(self.reader.t(),self.reader.wf(channel))
+            plt.ylabel('HPol Adu')
+            plt.xlabel('t (ns)')
+            plt.subplot(2,1,2,sharex=ax)
+            plt.xlabel('VPol Adu')
+            plt.ylabel('t (ns)')
+            for channel in [1,3,5,7]:
+                plt.plot(self.reader.t(),self.reader.wf(channel))
+            self.cor.map(eventid,'both',interactive=True)
+
 if __name__ == '__main__':
     plt.close('all')
-    datapath = os.environ['BEACON_DATA']
     time_delays_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     impulsivity_dset_key = time_delays_dset_key
     map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_65536-maxmethod_0-sinesubtract_1-deploy_calibration_30-scope_allsky'
@@ -84,8 +108,12 @@ if __name__ == '__main__':
     '''
     site_2_runs = numpy.arange(5181,5186)
     limit_events = 40000
+    mask_events = True #Will mask events not meeting some minimum z value
 
-    runs = [5167]
+    if len(sys.argv) == 2:
+        runs = [int(sys.argv[1])]
+    else:
+        runs = [5159]
     
 
     #ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7])
@@ -96,7 +124,7 @@ if __name__ == '__main__':
         try:
             run_key = 'run%i'%run
             print(run_key)
-            reader = Reader(datapath,run)
+            reader = Reader(os.environ['BEACON_DATA'],run)
             tct = TemplateCompareTool(reader,apply_phase_response=True)#waveform_index_range=[0,2100]
 
             #Sloppy work around to run code if file isn't loading (i.e. if scratch files aren't available)
@@ -109,7 +137,6 @@ if __name__ == '__main__':
             c = numpy.zeros_like(eventids).astype(float)
 
             if run_key in list(known_pulser_cuts_for_template.keys()):
-                zlim = (0,1)
                 passing_eventids = numpy.array([],dtype=int)
                 for cut_entry in known_pulser_cuts_for_template[run_key]:
                     #Loop over the list of cuts, and append passing events to the list of passing_eventids.
@@ -141,7 +168,7 @@ if __name__ == '__main__':
             else:
                 passing_eventids = None
                 template_eventid = None
-                zlim = (0,128)
+
 
             passing_beams = reader.returnTriggerInfo()[0][passing_eventids]
 
@@ -158,18 +185,27 @@ if __name__ == '__main__':
                 plt.ylabel('Counts')
                 plt.xlabel('Triggered Beam')
 
+            default_c = 'ptp' #Either 'beam' or 'ptp' to select colorscheme when no template is available.
 
-            for event_index, eventid in enumerate(eventids):
-                #print(event_index, '/' , len(eventids))
-                if template_eventid is None:
+            if template_eventid is None and default_c == 'beam':
+                ylabel = 'Beam Number'
+                zlim = (0,21)
+                c = numpy.copy(all_beams)
+            elif template_eventid is None and default_c == 'ptp':
+                ylabel = 'Peak To Peak'
+                zlim = (0,128)
+                for event_index, eventid in enumerate(eventids):
                     reader.setEntry(eventid)
                     c[event_index] = numpy.ptp(reader.wf(0))
-                else:
+            else:
+                ylabel = 'Max Corr Value'
+                zlim = (0,1)
+                for event_index, eventid in enumerate(eventids):
                     corrs, corrs_fft = tct.crossCorrelateWithTemplate(eventid, load_upsampled_waveforms=False,sine_subtract=True)
                     c[event_index] = numpy.max(corrs)
 
             corr_lim = 0.7
-            if template_eventid is None:
+            if template_eventid is not None:
                 all_events_above_corr = numpy.where(c > corr_lim)[0]
 
             for cut_trigger in [1,2,3]:
@@ -186,17 +222,14 @@ if __name__ == '__main__':
                 plt.figure()
                 plt.title('Run %i'%(run))
                 plt.hist(c[load_cut])
-                if template_eventid is None:
-                    plt.ylabel('Peak To Peak')
-                else:
-                    plt.ylabel('Max Corr Value')
+                plt.ylabel(ylabel)
 
                 second_time = numpy.floor(calibrated_trig_time)
                 subsecond_time = calibrated_trig_time - second_time
 
                 #period_factor = 1.0#1/20.0#1.0#1/60.0 #1.0 #In seconds, what the remainder will be taken of.
                 if cut_trigger == 2:
-                    pfs = [1.0,1/20.0,1/60.0,1/100.0]
+                    pfs = [1.0,1/20.0,1/60.0,1/100.0,1/120.0]
                 else:
                     pfs = [1.0]
 
@@ -210,16 +243,24 @@ if __name__ == '__main__':
                     ax = plt.gca()
                     plt.title('Run %i Trigger Type = %i\n%0.2f Hz Expected'%(run, cut_trigger, 1/period_factor))
 
-                    if True:
-                        calibrated_trig_time = numpy.ma.masked_array(calibrated_trig_time, mask = c[load_cut] < corr_lim)
-                        subsecond_time = numpy.ma.masked_array(subsecond_time, mask = c[load_cut] < corr_lim)
+                    if mask_events == True:
+                        if template_eventid is not None:
+                            calibrated_trig_time = numpy.ma.masked_array(calibrated_trig_time, mask = c[load_cut] < corr_lim)
+                            subsecond_time = numpy.ma.masked_array(subsecond_time, mask = c[load_cut] < corr_lim)
+                        else:
+                            if default_c == 'ptp':
+                                colour_lim = 0
+                                zlim = (colour_lim, zlim[1])
+                                calibrated_trig_time = numpy.ma.masked_array(calibrated_trig_time, mask = c[load_cut] < colour_lim)
+                                subsecond_time = numpy.ma.masked_array(subsecond_time, mask = c[load_cut] < colour_lim)
+
 
                     scatter = plt.scatter(calibrated_trig_time, (subsecond_time%period_factor)*1e9,c=c[load_cut])#plt.scatter(calibrated_trig_time, subsecond_time*1e9,marker=',',lw=0, s=1,c=c[load_cut])
                     cbar = fig.colorbar(scatter)
                     plt.clim(zlim[0],zlim[1])
                     plt.ylabel('Subsecond Time (ns)')
                     plt.xlabel('Trigger Time (s)')
-                    _s = Selector(ax,scatter,eventids[load_cut])
+                    _s = Selector(ax,scatter,eventids[load_cut], run)
                     lassos.append(_s)
 
                     if True:
