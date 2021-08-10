@@ -30,6 +30,9 @@ from matplotlib.widgets import LassoSelector
 import pandas as pd
 numpy.set_printoptions(threshold=sys.maxsize)
 def txtToClipboard(txt):
+    '''
+    Seems to bug out on midway.
+    '''
     df=pd.DataFrame([txt])
     df.to_clipboard(index=False,header=False)
 plt.ion()
@@ -51,7 +54,7 @@ known_pulser_cuts_for_template = {  'run5176':[{'trigger_type':2, 'time_window':
                                     'run5198':[{'trigger_type':2, 'time_window':[1624552409.76406,1624552409.77920]}],\
                                     'run5196':[{'trigger_type':2, 'time_window':[1624551426.80823,1624551426.85754]}],\
                                     }
-#known_pulser_cuts_for_template = {}
+known_pulser_cuts_for_template = {}
 #'run5179':[{'trigger_type':2, 'time_window':[1624492539.0,1624492541.0]}],\
 #'run5198':[{'trigger_type':2, 'time_window':[1624552128.18,1624552156.68],'time_window_ns':[2.47e7,2.52e7]}],\                            
 
@@ -75,10 +78,16 @@ class Selector(object):
         #print(verts)
         path = Path(verts)
         ind = numpy.nonzero(path.contains_points(self.xys))[0]
-        pprint(self.eventids[ind])
 
-        if len(self.eventids[ind]) == 1:
-            eventid = self.eventids[ind][0]
+        if type(self.eventids) == numpy.ma.core.MaskedArray:
+            print('Only printing non-masked events:')
+            eventids = self.eventids[ind][~self.eventids.mask[[ind]]]
+            pprint(numpy.asarray(eventids))
+        else:
+            eventids = self.eventids[ind]
+            pprint(eventids)
+        if len(eventids) == 1:
+            eventid = eventids[0]
             fig = plt.figure()
             plt.title('Run %i, Eventid %i'%(self.run, eventid))
             self.reader.setEntry(eventid)
@@ -249,18 +258,29 @@ if __name__ == '__main__':
                             subsecond_time = numpy.ma.masked_array(subsecond_time, mask = c[load_cut] < corr_lim)
                         else:
                             if default_c == 'ptp':
-                                colour_lim = 0
+
+
+
+
+                                colour_lim = 0#124
+
+
+
+
+
+
                                 zlim = (colour_lim, zlim[1])
                                 calibrated_trig_time = numpy.ma.masked_array(calibrated_trig_time, mask = c[load_cut] < colour_lim)
                                 subsecond_time = numpy.ma.masked_array(subsecond_time, mask = c[load_cut] < colour_lim)
-
-
-                    scatter = plt.scatter(calibrated_trig_time, (subsecond_time%period_factor)*1e9,c=c[load_cut])#plt.scatter(calibrated_trig_time, subsecond_time*1e9,marker=',',lw=0, s=1,c=c[load_cut])
+                        _eventids = numpy.ma.masked_array(eventids[load_cut], mask = calibrated_trig_time.mask)
+                    else:
+                        _eventids = eventids[load_cut]
+                    scatter = plt.scatter(calibrated_trig_time, (subsecond_time%period_factor)*1e9 ,c=c[load_cut])#plt.scatter(calibrated_trig_time, subsecond_time*1e9,marker=',',lw=0, s=1,c=c[load_cut])
                     cbar = fig.colorbar(scatter)
                     plt.clim(zlim[0],zlim[1])
                     plt.ylabel('Subsecond Time (ns)')
                     plt.xlabel('Trigger Time (s)')
-                    _s = Selector(ax,scatter,eventids[load_cut], run)
+                    _s = Selector(ax,scatter,_eventids, run)
                     lassos.append(_s)
 
                     if True:
@@ -316,3 +336,4 @@ if __name__ == '__main__':
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+

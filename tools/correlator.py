@@ -715,6 +715,99 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def generateExpectedTimeDelaysFromDir(self, phi_rad, theta_rad, return_indices=False, debug=False):
+        '''
+        This calculates the expected time delays for a signal coming from a source defined by theta and phi (in rad).
+        This uses the source distance specified in the object.
+        '''
+        try:
+            #Source direction is the direction FROM BEACON ANTENNA 0 you look to see the source.
+            #Position is a vector to a distant source
+            #double check shift to center points!!
+            signal_source_position_hpol    = numpy.zeros(3)
+            signal_source_position_hpol[0] = self.map_source_distance_m * numpy.multiply( numpy.cos(phi_rad) , numpy.sin(theta_rad) ) + self.A0_hpol[0] #Shifting points to be centered around antenna 0
+            signal_source_position_hpol[1] = self.map_source_distance_m * numpy.multiply( numpy.sin(phi_rad) , numpy.sin(theta_rad) ) + self.A0_hpol[1] #Shifting points to be centered around antenna 0
+            signal_source_position_hpol[2] = self.map_source_distance_m * numpy.cos(theta_rad) + self.A0_hpol[2] #Shifting points to be centered around antenna 0
+
+            signal_source_position_vpol    = numpy.zeros(3)
+            signal_source_position_vpol[0] = self.map_source_distance_m * numpy.multiply( numpy.cos(phi_rad) , numpy.sin(theta_rad) ) + self.A0_vpol[0] #Shifting points to be centered around antenna 0
+            signal_source_position_vpol[1] = self.map_source_distance_m * numpy.multiply( numpy.sin(phi_rad) , numpy.sin(theta_rad) ) + self.A0_vpol[1] #Shifting points to be centered around antenna 0
+            signal_source_position_vpol[2] = self.map_source_distance_m * numpy.cos(theta_rad) + self.A0_vpol[2] #Shifting points to be centered around antenna 0
+
+            if debug:
+                fig = plt.figure()
+                ax = fig.gca(projection='3d')
+                ax.scatter(signal_source_position_hpol[0],signal_source_position_hpol[1],signal_source_position_hpol[2],marker=',',alpha=0.3)
+                ax.scatter(self.A0_hpol[0],self.A0_hpol[1],self.A0_hpol[2],label='A0',c='tab:blue')
+                ax.scatter(self.A1_hpol[0],self.A1_hpol[1],self.A1_hpol[2],label='A1',c='tab:orange')
+                ax.scatter(self.A2_hpol[0],self.A2_hpol[1],self.A2_hpol[2],label='A2',c='tab:green')
+                ax.scatter(self.A3_hpol[0],self.A3_hpol[1],self.A3_hpol[2],label='A3',c='tab:red')
+                ax.set_xlabel('E (m)')
+                ax.set_ylabel('N (m)')
+                ax.set_zlabel('Relative Elevation (m)')
+                plt.legend()
+
+            #Calculate the expected readout time for each antenna (including cable delays)
+            hpol_arrival_time_ns_0 = self.cable_delays[0] + (numpy.sqrt((signal_source_position_hpol[0] - self.A0_hpol[0])**2 + (signal_source_position_hpol[1] - self.A0_hpol[1])**2 + (signal_source_position_hpol[2] - self.A0_hpol[2])**2 )/self.c)*1.0e9 #ns
+            hpol_arrival_time_ns_1 = self.cable_delays[2] + (numpy.sqrt((signal_source_position_hpol[0] - self.A1_hpol[0])**2 + (signal_source_position_hpol[1] - self.A1_hpol[1])**2 + (signal_source_position_hpol[2] - self.A1_hpol[2])**2 )/self.c)*1.0e9 #ns
+            hpol_arrival_time_ns_2 = self.cable_delays[4] + (numpy.sqrt((signal_source_position_hpol[0] - self.A2_hpol[0])**2 + (signal_source_position_hpol[1] - self.A2_hpol[1])**2 + (signal_source_position_hpol[2] - self.A2_hpol[2])**2 )/self.c)*1.0e9 #ns
+            hpol_arrival_time_ns_3 = self.cable_delays[6] + (numpy.sqrt((signal_source_position_hpol[0] - self.A3_hpol[0])**2 + (signal_source_position_hpol[1] - self.A3_hpol[1])**2 + (signal_source_position_hpol[2] - self.A3_hpol[2])**2 )/self.c)*1.0e9 #ns
+
+            vpol_arrival_time_ns_0 = self.cable_delays[1] + (numpy.sqrt((signal_source_position_vpol[0] - self.A0_vpol[0])**2 + (signal_source_position_vpol[1] - self.A0_vpol[1])**2 + (signal_source_position_vpol[2] - self.A0_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_arrival_time_ns_1 = self.cable_delays[3] + (numpy.sqrt((signal_source_position_vpol[0] - self.A1_vpol[0])**2 + (signal_source_position_vpol[1] - self.A1_vpol[1])**2 + (signal_source_position_vpol[2] - self.A1_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_arrival_time_ns_2 = self.cable_delays[5] + (numpy.sqrt((signal_source_position_vpol[0] - self.A2_vpol[0])**2 + (signal_source_position_vpol[1] - self.A2_vpol[1])**2 + (signal_source_position_vpol[2] - self.A2_vpol[2])**2 )/self.c)*1.0e9 #ns
+            vpol_arrival_time_ns_3 = self.cable_delays[7] + (numpy.sqrt((signal_source_position_vpol[0] - self.A3_vpol[0])**2 + (signal_source_position_vpol[1] - self.A3_vpol[1])**2 + (signal_source_position_vpol[2] - self.A3_vpol[2])**2 )/self.c)*1.0e9 #ns
+
+            t_hpol_0subtract1 = hpol_arrival_time_ns_0 - hpol_arrival_time_ns_1
+            t_hpol_0subtract2 = hpol_arrival_time_ns_0 - hpol_arrival_time_ns_2
+            t_hpol_0subtract3 = hpol_arrival_time_ns_0 - hpol_arrival_time_ns_3
+            t_hpol_1subtract2 = hpol_arrival_time_ns_1 - hpol_arrival_time_ns_2
+            t_hpol_1subtract3 = hpol_arrival_time_ns_1 - hpol_arrival_time_ns_3
+            t_hpol_2subtract3 = hpol_arrival_time_ns_2 - hpol_arrival_time_ns_3
+
+            t_vpol_0subtract1 = vpol_arrival_time_ns_0 - vpol_arrival_time_ns_1
+            t_vpol_0subtract2 = vpol_arrival_time_ns_0 - vpol_arrival_time_ns_2
+            t_vpol_0subtract3 = vpol_arrival_time_ns_0 - vpol_arrival_time_ns_3
+            t_vpol_1subtract2 = vpol_arrival_time_ns_1 - vpol_arrival_time_ns_2
+            t_vpol_1subtract3 = vpol_arrival_time_ns_1 - vpol_arrival_time_ns_3
+            t_vpol_2subtract3 = vpol_arrival_time_ns_2 - vpol_arrival_time_ns_3
+
+            ouput_hpol = numpy.array([t_hpol_0subtract1,t_hpol_0subtract2,t_hpol_0subtract3,t_hpol_1subtract2,t_hpol_1subtract3,t_hpol_2subtract3])
+            ouput_vpol = numpy.array([t_vpol_0subtract1,t_vpol_0subtract2,t_vpol_0subtract3,t_vpol_1subtract2,t_vpol_1subtract3,t_vpol_2subtract3])
+
+            if return_indices == True:
+                #Should double check when using these via rolling signals.
+                #Calculate indices in corr for each direction.
+                center = len(self.times_resampled)
+
+                delay_indices_hpol_0subtract1 = numpy.rint((t_hpol_0subtract1/self.dt_resampled + center)).astype(int)
+                delay_indices_hpol_0subtract2 = numpy.rint((t_hpol_0subtract2/self.dt_resampled + center)).astype(int)
+                delay_indices_hpol_0subtract3 = numpy.rint((t_hpol_0subtract3/self.dt_resampled + center)).astype(int)
+                delay_indices_hpol_1subtract2 = numpy.rint((t_hpol_1subtract2/self.dt_resampled + center)).astype(int)
+                delay_indices_hpol_1subtract3 = numpy.rint((t_hpol_1subtract3/self.dt_resampled + center)).astype(int)
+                delay_indices_hpol_2subtract3 = numpy.rint((t_hpol_2subtract3/self.dt_resampled + center)).astype(int)
+
+                delay_indices_vpol_0subtract1 = numpy.rint((t_vpol_0subtract1/self.dt_resampled + center)).astype(int)
+                delay_indices_vpol_0subtract2 = numpy.rint((t_vpol_0subtract2/self.dt_resampled + center)).astype(int)
+                delay_indices_vpol_0subtract3 = numpy.rint((t_vpol_0subtract3/self.dt_resampled + center)).astype(int)
+                delay_indices_vpol_1subtract2 = numpy.rint((t_vpol_1subtract2/self.dt_resampled + center)).astype(int)
+                delay_indices_vpol_1subtract3 = numpy.rint((t_vpol_1subtract3/self.dt_resampled + center)).astype(int)
+                delay_indices_vpol_2subtract3 = numpy.rint((t_vpol_2subtract3/self.dt_resampled + center)).astype(int)
+
+                ouput2_hpol = numpy.array([delay_indices_hpol_0subtract1,delay_indices_hpol_0subtract2,delay_indices_hpol_0subtract3,delay_indices_hpol_1subtract2,delay_indices_hpol_1subtract3,delay_indices_hpol_2subtract3])
+                ouput2_vpol = numpy.array([delay_indices_vpol_0subtract1,delay_indices_vpol_0subtract2,delay_indices_vpol_0subtract3,delay_indices_vpol_1subtract2,delay_indices_vpol_1subtract3,delay_indices_vpol_2subtract3])
+
+                return (ouput_hpol,ouput_vpol), (ouput2_hpol,ouput2_vpol) 
+            else:
+                return (ouput_hpol,ouput_vpol) 
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
     def generateTimeIndicesPlaneWave(self):
         '''
         This is a deprecated function that assumes the source is sufficiently distant that a plane wave solution applies.

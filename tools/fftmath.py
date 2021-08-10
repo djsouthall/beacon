@@ -1452,9 +1452,9 @@ class TimeDelayCalculator(FFTPrepper):
                             axs[index].axvline(time_shift[index],linewidth=0.5,c='k',label='Max Value at t = %0.2f'%(time_shift[index]))
 
 
-            if plot == True:
-                for ax in axs:
-                    ax.legend()
+            # if plot == True:
+            #     for ax in axs:
+            #         ax.legend()
             sys.stdout.write('\n')
             sys.stdout.flush()
             timeshifts = numpy.array(timeshifts)
