@@ -39,7 +39,6 @@ warnings.filterwarnings("ignore")
 plt.ion()
 
 
-
 class FFTPrepper:
     '''
     Takes a run reader and does the math required to prepare for calculations such as
@@ -101,6 +100,8 @@ class FFTPrepper:
             self.reader = reader
             self.reader.setEntry(0)
             self.buffer_length = reader.header().buffer_length
+
+            # self.use_sinc_interpolation = use_sinc_interpolation #Testing this right now.
 
             self.interpretFiltersPerChannel(crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, low_pass_filter_order, high_pass_filter_order)
             # self.crit_freq_low_pass_MHz = crit_freq_low_pass_MHz
@@ -585,6 +586,25 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    # def sincInterp(self, x, s, u):
+    #     """
+    #     Interpolates x, sampled at "s" instants
+    #     Output y is sampled at "u" instants ("u" for "upsampled")
+        
+    #     from Matlab:
+    #     http://phaseportrait.blogspot.com/2008/06/sinc-interpolation-in-matlab.html        
+    #     """
+        
+    #     # if len(x) != len(s):
+    #     #     raise Exception, 'x and s must be the same length'
+        
+    #     # Find the period    
+    #     T = s[1] - s[0]
+        
+    #     sincM = numpy.tile(u, (len(s), 1)) - numpy.tile(s[:, numpy.newaxis], (1, len(u)))
+    #     y = numpy.dot(x, numpy.sinc(sincM/T))
+    #     return y
+
     def loadFilteredFFTs(self, eventid, hilbert=False, load_upsampled_waveforms=False, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, sine_subtract=False):
         '''
         Loads the waveforms (with pre applied filters) and upsamples them for
@@ -597,10 +617,11 @@ class FFTPrepper:
             if load_upsampled_waveforms:
                 upsampled_waveforms = numpy.zeros((8,self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
             for channel in range(8):
-                if load_upsampled_waveforms:
-                    temp_raw_wf = self.wf(channel,hilbert=False,apply_filter=True,sine_subtract=sine_subtract) #apply hilbert after upsample
-                else:
-                    temp_raw_wf = self.wf(channel,hilbert=hilbert,apply_filter=True,sine_subtract=sine_subtract)
+                # if load_upsampled_waveforms:
+                #     temp_raw_wf = self.wf(channel,hilbert=False,apply_filter=True,sine_subtract=sine_subtract) #apply hilbert after upsample
+                # else:
+                #     temp_raw_wf = self.wf(channel,hilbert=hilbert,apply_filter=True,sine_subtract=sine_subtract)
+                temp_raw_wf = self.wf(channel,hilbert=False,apply_filter=True,sine_subtract=sine_subtract) #Used to be the above, but I think this double hilbert envelopes, as it is done below. 
 
                 if shorten_signals == True:
                     trigger_index = numpy.where(temp_raw_wf/max(temp_raw_wf) > shorten_thresh)[0][0]
@@ -637,6 +658,39 @@ class FFTPrepper:
                     plt.plot(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)])
                 import pdb; pdb.set_trace()
                     
+            # if self.use_sinc_interpolation == True:
+            #     #This was done to test the sinc interpolation that Steven suggested.  It turns out that the way
+            #     #I was doing things is effectively the same, despite sinc likely being more accurate.
+            #     for channel in range(1):
+            #         plt.figure()
+            #         plt.subplot(3,1,1)
+            #         plt.plot(numpy.arange(len(raw_wfs_corr[channel]))*self.dt_ns_original,raw_wfs_corr[channel])
+            #         plt.plot(self.t(),self.wf(channel,hilbert=False,apply_filter=True,sine_subtract=sine_subtract))
+            #         plt.xlim(0,1000)
+            #         plt.subplot(3,1,2)
+            #         test_up = numpy.fft.irfft(numpy.fft.rfft(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)]),n=self.final_corr_length//2) * ((self.final_corr_length//2)/len(self.waveform_times_padded_to_power2))
+            #         plt.plot(numpy.arange(len(test_up))*self.dt_ns_upsampled, test_up)
+            #         plt.xlim(0,1000)
+
+            #         plt.subplot(3,1,3)
+            #         test_sinc = self.sincInterp(self.wf(channel,hilbert=False,apply_filter=True,sine_subtract=sine_subtract), self.t(), numpy.arange(len(test_up))*self.dt_ns_upsampled)
+            #         plt.plot(numpy.arange(len(test_sinc))*self.dt_ns_upsampled, test_sinc)
+            #         plt.xlim(0,1000)
+
+            #         plt.figure()
+            #         plt.subplot(2,1,1)
+            #         plt.plot(numpy.arange(len(test_sinc))*self.dt_ns_upsampled,test_sinc - test_up)
+            #         plt.subplot(2,1,2)
+            #         plt.plot(numpy.arange(len(test_sinc))*self.dt_ns_upsampled,test_sinc)
+            #         plt.plot(numpy.arange(len(test_sinc))*self.dt_ns_upsampled,test_up)
+                    
+
+            #     print(numpy.shape(raw_wfs_corr))
+            #     import pdb; pdb.set_trace()
+
+            #     waveform_ffts_filtered_corr = numpy.fft.rfft(raw_wfs_corr,axis=1) #Now upsampled
+            # else:
+            #     waveform_ffts_filtered_corr = numpy.fft.rfft(raw_wfs_corr,axis=1) #Now upsampled
 
             waveform_ffts_filtered_corr = numpy.fft.rfft(raw_wfs_corr,axis=1) #Now upsampled
 

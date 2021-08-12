@@ -3039,7 +3039,12 @@ class Correlator:
                         #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         plt.hist(all_phi_best - mean_phi, bins=self.phis_deg-mean_phi, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
                         x = numpy.linspace(min(self.phis_deg-mean_phi),max(self.phis_deg-mean_phi),10*self.n_phi)
-                        plt.plot(x,scipy.stats.norm.pdf(x,0,sig_phi)*numpy.diff(self.phis_deg)[0]*len(all_phi_best),label='Gaussian Fit')
+
+                        y = scipy.stats.norm.pdf(x,0,sig_phi)
+                        #y = y*len(all_phi_best)/numpy.sum(y) # y*numpy.diff(self.phis_deg)[0]*len(all_phi_best)
+                        y = y*numpy.diff(self.phis_deg)[0]*len(all_phi_best)
+
+                        plt.plot(x,y,label='Gaussian Fit')
                         plt.xlim(min(all_phi_best - mean_phi) - 1.0,max(all_phi_best - mean_phi) + 1.0)
                         if circle_az is not None:
                             if len(circle_az) == 1:
@@ -3052,7 +3057,12 @@ class Correlator:
                         #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         plt.hist(all_phi_best, bins=self.phis_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
                         x = numpy.linspace(min(self.phis_deg),max(self.phis_deg),10*self.n_phi)
-                        plt.plot(x,scipy.stats.norm.pdf(x,mean_phi,sig_phi)*numpy.diff(self.phis_deg)[0]*len(all_phi_best),label='Gaussian Fit')
+                        
+                        y = scipy.stats.norm.pdf(x,mean_phi,sig_phi)
+                        #y = y*len(all_phi_best)/numpy.sum(y) # y*numpy.diff(self.phis_deg)[0]*len(all_phi_best)
+                        y = y*numpy.diff(self.phis_deg)[0]*len(all_phi_best)
+
+                        plt.plot(x,y,label='Gaussian Fit')
                         plt.xlim(min(all_phi_best) - 1.0,max(all_phi_best) + 1.0)
                         if circle_az is not None:
                             if len(circle_az) == 1:
@@ -3073,6 +3083,11 @@ class Correlator:
                         #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         plt.hist(all_theta_best - mean_theta, bins=self.thetas_deg-mean_theta, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=False)
                         x = numpy.linspace(min(self.thetas_deg-mean_theta),max(self.thetas_deg-mean_theta),10*self.n_theta)
+                        
+                        y = scipy.stats.norm.pdf(x,0,sig_theta)
+                        #y = y*len(all_theta_best)/numpy.sum(y) # y*numpy.diff(self.thetas_deg)[0]*len(all_theta_best)
+                        y = y*numpy.diff(self.thetas_deg)[0]*len(all_theta_best)
+
                         plt.plot(x,scipy.stats.norm.pdf(x,0,sig_theta)*numpy.diff(self.thetas_deg)[0]*len(all_theta_best),label='Gaussian Fit')
                         plt.xlim(min(all_theta_best - mean_theta) - 1.0,max(all_theta_best - mean_theta) + 1.0)
                         if circle_zenith is not None:
@@ -3084,7 +3099,12 @@ class Correlator:
                         #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         plt.hist(all_theta_best, bins=self.thetas_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=False)
                         x = numpy.linspace(min(self.thetas_deg),max(self.thetas_deg),10*self.n_theta)
-                        plt.plot(x,scipy.stats.norm.pdf(x,mean_theta,sig_theta)*numpy.diff(self.thetas_deg)[0]*len(all_theta_best),label='Gaussian Fit')
+
+                        y = scipy.stats.norm.pdf(x,mean_theta,sig_theta)
+                        #y = y*len(all_theta_best)/numpy.sum(y) # y*numpy.diff(self.thetas_deg)[0]*len(all_theta_best)
+                        y = y*numpy.diff(self.thetas_deg)[0]*len(all_theta_best)
+
+                        plt.plot(x,y,label='Gaussian Fit')
                         plt.xlim(min(all_theta_best) - 1.0,max(all_theta_best) + 1.0)
                         if circle_zenith is not None:
                             if len(circle_zenith) == 1:

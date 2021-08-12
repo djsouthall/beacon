@@ -34,18 +34,18 @@ plt.ion()
 
 import beacon.tools.info as info
 from beacon.tools.data_handler import createFile, getTimes, loadTriggerTypes, getEventTimes
-from beacon.tools.fftmath import TimeDelayCalculator
+from beacon.tools.fftmath import TimeDelayCalculator, TemplateCompareTool
 
 from beacon.analysis.find_pulsing_signals_june2021_deployment import Selector
 
-if False:
+if True:
     pulsing_sites = {}
     pulsing_sites['Site 1 SE'] = ['run5167','run5168','run5169','run5170','run5171','run5172','run5173','run5190','run5191','run5195','run5196','run5198']#,'run5176' <- removed because the map data is not present :(
     pulsing_sites['Close Site N of Ant 1'] = ['run5179','run5180']
     pulsing_sites['Site 2 NE'] = ['run5182','run5183','run5185']
-elif True:
+elif False:
     pulsing_sites = {}
-    pulsing_sites['Site 1 SE'] = ['run5195','run5196','run5198']#,'run5176' <- removed because the map data is not present :(
+    pulsing_sites['Site 1 SE'] = ['run5176']#,'run5176' <- removed because the map data is not present :(
     pulsing_sites['Close Site N of Ant 1'] = ['run5179','run5180']
     pulsing_sites['Site 2 NE'] = ['run5182','run5183','run5185']
 else:
@@ -64,14 +64,11 @@ if __name__ == '__main__':
         #sites = [list(pulsing_sites.keys())[0]]
         sites = numpy.array(list(pulsing_sites.keys()))[[0,2]]
 
+
         deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021.json')
 
         # Time Delay and Map Prep
-        crit_freq_low_pass_MHz = None#85
-        low_pass_filter_order = None#6
-
-        crit_freq_high_pass_MHz = None#25
-        high_pass_filter_order = None#8
+        
 
         sine_subtract = True
         sine_subtract_min_freq_GHz = 0.03
@@ -81,12 +78,107 @@ if __name__ == '__main__':
         apply_phase_response = True
 
         hilbert=False
-        final_corr_length = 2**14
-        waveform_index_range = {'Site 1 SE':(0,450),'Close Site N of Ant 1':(None, None), 'Site 2 NE':(0,450)}
+        final_corr_length = 2**15
+        #waveform_index_range = {'Site 1 SE':(0,450),'Close Site N of Ant 1':(None, None), 'Site 2 NE':(0,450)}
+        if False:
 
-        limit_eventids_per_run = 20000 #For testing purposes
-        align_method = 0
-        align_method_10_window_ns = 10
+            crit_freq_low_pass_MHz = None#85
+            low_pass_filter_order = None#6
+
+            crit_freq_high_pass_MHz = None#25
+            high_pass_filter_order = None#8
+
+
+            waveform_index_range = {'run5167':(0,275),\
+                                    'run5168':(0,280),\
+                                    'run5169':(0,280),\
+                                    'run5170':(0,280),\
+                                    'run5171':(0,280),\
+                                    'run5172':(0,280),\
+                                    'run5173':(0,300),\
+                                    'run5190':(0,150),\
+                                    'run5191':(None,None),\
+                                    'run5195':(None,None),\
+                                    'run5196':(None,None),\
+                                    'run5198':(0,450),\
+                                    'run5176':(None,None),\
+                                    'run5179':(0,280),\
+                                    'run5180':(None,None),\
+                                    'run5182':(None,None),\
+                                    'run5183':(None,None),\
+                                    'run5185':(0,500)}
+            shorten_signals = False
+            shorten_thresh  = 0.7
+            shorten_delay   = 10.0
+            shorten_length  = 90.0
+
+        elif True:
+
+            crit_freq_low_pass_MHz = 85
+            low_pass_filter_order = 6
+
+            crit_freq_high_pass_MHz = 25
+            high_pass_filter_order = 8
+
+
+            waveform_index_range = {'run5167':(0,275),\
+                                    'run5168':(0,280),\
+                                    'run5169':(0,280),\
+                                    'run5170':(0,280),\
+                                    'run5171':(0,280),\
+                                    'run5172':(0,280),\
+                                    'run5173':(0,300),\
+                                    'run5190':(0,150),\
+                                    'run5191':(None,None),\
+                                    'run5195':(None,None),\
+                                    'run5196':(None,None),\
+                                    'run5198':(0,450),\
+                                    'run5176':(None,None),\
+                                    'run5179':(0,280),\
+                                    'run5180':(None,None),\
+                                    'run5182':(None,None),\
+                                    'run5183':(None,None),\
+                                    'run5185':(0,500)}
+            shorten_signals = True
+            shorten_thresh  = 0.4
+            shorten_delay   = 0.0
+            shorten_length  = 150.0
+
+        else:
+            crit_freq_low_pass_MHz = None#85
+            low_pass_filter_order = None#6
+
+            crit_freq_high_pass_MHz = None#25
+            high_pass_filter_order = None#8
+
+
+            waveform_index_range = {'run5167':(None, None),\
+                                    'run5168':(None, None),\
+                                    'run5169':(None, None),\
+                                    'run5170':(None, None),\
+                                    'run5171':(None, None),\
+                                    'run5172':(None, None),\
+                                    'run5173':(None, None),\
+                                    'run5190':(None, None),\
+                                    'run5191':(None, None),\
+                                    'run5195':(None, None),\
+                                    'run5196':(None, None),\
+                                    'run5198':(None, None),\
+                                    'run5176':(None, None),\
+                                    'run5179':(None, None),\
+                                    'run5180':(None, None),\
+                                    'run5182':(None, None),\
+                                    'run5183':(None, None),\
+                                    'run5185':(None, None)}
+
+            shorten_signals = True
+            shorten_thresh  = 0.7
+            shorten_delay   = 10.0
+            shorten_length  = 90.0
+
+        limit_eventids_per_run = 10000 #For testing purposes
+        align_method = 10
+        align_method_10_window_ns = 6
 
         n_phi = 901 #Used in dataSlicer
         range_phi_deg = (-90,90) #Used in dataSlicer
@@ -98,13 +190,27 @@ if __name__ == '__main__':
         # Plotting Flags
         plot_multiple_per_run = False #Will plot time delay A LOT of histograms for every individual run
         plot_time_delays = False
-        plot_maps = False
-        plot_trig_times = True
+        plot_maps = True
+        plot_trig_times = False
 
         #Load pulser data
         pulser_locations = info.loadPulserLocationsENU(deploy_index=deploy_index)
         origin = info.loadAntennaZeroLocation(deploy_index=deploy_index)
         known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
+
+        used_eventids = {}
+        for site in sites:
+            used_eventids[site] = {}
+            pulsing_sites_cut = numpy.ones(len(pulsing_sites[site])).astype(bool)
+            for run_index, run_string in enumerate(pulsing_sites[site]):
+                if numpy.isin(run_string, list(known_pulser_ids.keys())):
+                    eventids = numpy.sort(numpy.unique(numpy.append(known_pulser_ids[run_string]['hpol'],known_pulser_ids[run_string]['vpol'])))
+                    eventids = numpy.sort(numpy.random.choice(eventids,size=min(len(eventids),limit_eventids_per_run),replace=False))
+                    used_eventids[site][run_string] = eventids
+                else:
+                    pulsing_sites_cut[run_index] = False
+            pulsing_sites[site] = numpy.array(pulsing_sites[site])[pulsing_sites_cut] #Cutting out any runs that have no eventids after ignored events are removed.
+
 
         # Make correlators and store them.  The readers are stored in those correlators.
         correlators = {}
@@ -134,10 +240,11 @@ if __name__ == '__main__':
                                             p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
                                             snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,\
                                             n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg,remove_incomplete_runs=False)
-            if site == 'Site 1 SE':
-                data_slicers[site].addROI('Pulser Direction',{'phi_best_h':[-100,-30],'elevation_best_h':[-15,0]})
-            elif site == 'Site 2 NE':
-                data_slicers[site].addROI('Pulser Direction',{'phi_best_h':[40,100],'elevation_best_h':[-15,0]})
+            if False:
+                if site == 'Site 1 SE':
+                    data_slicers[site].addROI('Pulser Direction',{'phi_best_h':[-100,-30],'elevation_best_h':[-15,0]})
+                elif site == 'Site 2 NE':
+                    data_slicers[site].addROI('Pulser Direction',{'phi_best_h':[40,100],'elevation_best_h':[-15,0]})
 
 
             for run_string in pulsing_sites[site]:
@@ -148,8 +255,8 @@ if __name__ == '__main__':
                 print(run_string + ' az: %0.2f, zen: %0.2f'%(azimuth_deg,zenith_deg))
                 run = int(run_string.replace('run',''))
                 reader = Reader(os.environ['BEACON_DATA'],run)
-                correlators[site][run_string] = Correlator(reader,waveform_index_range=waveform_index_range[site],upsample=len(reader.t())*8, n_phi=180*4 + 1, n_theta=360*4 + 1, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, apply_phase_response=apply_phase_response, tukey=True, sine_subtract=True, map_source_distance_m=source_distance_m, deploy_index=deploy_index)
-                tdcs[site][run_string] = TimeDelayCalculator(reader,waveform_index_range=waveform_index_range[site], final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,apply_phase_response=apply_phase_response)
+                correlators[site][run_string] = Correlator(reader,waveform_index_range=waveform_index_range[run_string],upsample=len(reader.t())*8, n_phi=180*4 + 1, n_theta=360*4 + 1, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, apply_phase_response=apply_phase_response, tukey=True, sine_subtract=True, map_source_distance_m=source_distance_m, deploy_index=deploy_index)
+                tdcs[site][run_string] = TimeDelayCalculator(reader,waveform_index_range=waveform_index_range[run_string], final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,apply_phase_response=apply_phase_response)
                 if sine_subtract == True:
                     tdcs[site][run_string].addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
                 
@@ -181,8 +288,29 @@ if __name__ == '__main__':
                         plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
                     for run_index, run_string in enumerate(pulsing_sites[site]):
-                        eventids = numpy.sort(numpy.unique(numpy.append(known_pulser_ids[run_string]['hpol'],known_pulser_ids[run_string]['vpol'])))
-                        eventids = numpy.sort(numpy.random.choice(eventids,size=min(len(eventids),limit_eventids_per_run),replace=False))
+                        eventids = used_eventids[site][run_string]
+                        for eventid in eventids:
+                            tdcs[site][run_string].reader.setEntry(eventid)
+                            for channel in channel_set:
+                                plt.subplot(4,1,channel//2 + 1)
+                                plt.plot(tdcs[site][run_string].reader.wf(channel),alpha = 0.4)
+        elif False:
+            #Plot waveforms.  Helpful for windowing waveforms.
+            for site_index, site in enumerate(sites):
+
+                for run_index, run_string in enumerate(pulsing_sites[site]):
+                    for channel_set in [[0,1,2,3,4,5,6,7]]:#,[1,3,5,7]]:
+                        fig = plt.figure()
+                        fig.canvas.set_window_title(run_string)
+                        plt.title(run_string)
+                        for channel in channel_set:
+                            plt.subplot(4,1,channel//2 + 1)
+                            plt.ylabel('adu')
+                            plt.xlabel('time index')
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                        eventids = used_eventids[site][run_string]
                         for eventid in eventids:
                             tdcs[site][run_string].reader.setEntry(eventid)
                             for channel in channel_set:
@@ -199,24 +327,38 @@ if __name__ == '__main__':
             for site in sites:
                 tds[site] = {}
                 corr_values[site] = {}
-
                 for run_index, run_string in enumerate(pulsing_sites[site]):
-                    eventids = numpy.sort(numpy.unique(numpy.append(known_pulser_ids[run_string]['hpol'],known_pulser_ids[run_string]['vpol'])))
-                    eventids = numpy.sort(numpy.random.choice(eventids,size=min(len(eventids),limit_eventids_per_run),replace=False))
+                    eventids = used_eventids[site][run_string]
                     print('%s Time Delay Calculations'%run_string)
+                    # if run_index == 0:
+                    #     plot_multiple_per_run = True
+                    # else:
+                    #     plot_multiple_per_run = False
                     if align_method == 10:
-                        time_shifts, corrs, pairs = tdcs[site][run_string].calculateMultipleTimeDelays(eventids,align_method=10,hilbert=hilbert,plot=plot_multiple_per_run, sine_subtract=sine_subtract, align_method_10_estimates=expected_tdcs[site], align_method_10_window_ns=align_method_10_window_ns)
+                        time_shifts, corrs, pairs = tdcs[site][run_string].calculateMultipleTimeDelays(eventids,align_method=10,hilbert=hilbert,plot=plot_multiple_per_run, sine_subtract=sine_subtract, align_method_10_estimates=expected_tdcs[site], align_method_10_window_ns=align_method_10_window_ns, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length)
                     else:
-                        time_shifts, corrs, pairs = tdcs[site][run_string].calculateMultipleTimeDelays(eventids,align_method=0,hilbert=hilbert,plot=plot_multiple_per_run, sine_subtract=sine_subtract)
+                        time_shifts, corrs, pairs = tdcs[site][run_string].calculateMultipleTimeDelays(eventids,align_method=0,hilbert=hilbert,plot=plot_multiple_per_run, sine_subtract=sine_subtract, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length)
                     bin_dt = min(bin_dt, tdcs[site][run_string].dt_ns_upsampled)
-                    if run_index == 0:
-                        tds[site] = time_shifts
-                        corr_values[site] = corrs
-                    else:
-                        tds[site] = numpy.hstack((tds[site],time_shifts)) #will be 12 x n , with odd rows being vpol and even hpol
-                        corr_values[site] = numpy.hstack((corr_values[site],corrs)) #will be 12 x n , with odd rows being vpol and even hpol
 
-            if True:
+                    tds[site][run_string] = time_shifts
+                    corr_values[site][run_string] = corrs
+
+            # for site in sites:
+            #     for run_index, run_string in enumerate(pulsing_sites[site]):
+            #         if run_index == 0:
+            #             _tds = tds[site][run_string]
+            #             _corrs = corr_values[site][run_string]
+            #         else:
+            #             _tds = numpy.hstack((_tds,tds[site][run_string])) #will be 12 x n , with odd rows being vpol and even hpol
+            #             _corrs = numpy.hstack((_corrs,corr_values[site][run_string])) #will be 12 x n , with odd rows being vpol and even hpol
+
+            # if True:
+            #     for site in sites:
+            #         for run_string in pulsing_sites[site]:
+            #             eventids = used_eventids[site][run_string]
+            #             residuals = tds[site] - expected_tdcs[site]
+
+            if False:
                 #Plot correlation values
                 for pair_index, pair in enumerate(pairs):
                     fig = plt.figure()
@@ -232,41 +374,132 @@ if __name__ == '__main__':
                     plt.grid(b=True, which='major', color='k', linestyle='-')
                     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
                     for site_index, site in enumerate(sites):
+                        for site_index, site in enumerate(sites):                
+                            for run_index, run_string in enumerate(pulsing_sites[site]):
+                                if run_index == 0:
+                                    _corrs = corr_values[site][run_string]
+
+                                else:
+                                    _corrs = numpy.hstack((_corrs,corr_values[site][run_string])) #will be 12 x n , with odd rows being vpol and even hpol
                         bins = numpy.arange(-0.1,1.2,0.05)
-                        plt.hist(corr_values[site][pair_index],bins=bins,alpha=0.7,edgecolor='black',linewidth=1.2,color = plt.rcParams['axes.prop_cycle'].by_key()['color'][site_index],label=site)
+                        plt.hist(_corrs[pair_index],bins=bins,alpha=0.7,edgecolor='black',linewidth=1.2,color = plt.rcParams['axes.prop_cycle'].by_key()['color'][site_index],label=site)
                     plt.axvline(corr_threshold,c = 'r', label='Plotting Threshold for TD', linestyle='--')
                     plt.legend()
 
+            if False:
+                #This will sift out eventids that might be ignored.
+                for site_index, site in enumerate(sites):
+                    for run_index, run_string in enumerate(pulsing_sites[site]):
+                        if len(tds[site][run_string]) == 0:
+                            continue
+                        residuals = (tds[site][run_string].T - expected_tdcs[site]).T
+                        residual_limit = 5
+                        necessary_baselines = 3 #Hpol only
+                        cut = numpy.sum(numpy.abs(residuals[0:6]) < residual_limit,axis=0) >= necessary_baselines
+                        if False:
+                            if numpy.sum(cut) > 0:
+                                print(run_string)
+                                print('Eventids with at least %i hpol baseline residuals < %.1f ns from expected'%(necessary_baselines,residual_limit))
+                                pprint(used_eventids[site][run_string][cut])
+                        else:
+                            if numpy.sum(~cut) > 0:
+                                print('Eventids which DONT have %i hpol baseline residuals < %.1f ns from expected'%(necessary_baselines,residual_limit))
+                                print('ignore_eventids[\'%s\'] = numpy.'%(run_string))
+                                pprint(used_eventids[site][run_string][~cut])
+
+
             if True:
                 # Plot time delays
+                plot_residuals = True
                 for pair_index, pair in enumerate(pairs):
                     fig = plt.figure()
+                    if plot_residuals:
+                        plt.subplot(2,1,1)
                     if pair[0]%2 == 0:
                         fig.canvas.set_window_title('H %i - %i'%(int(pair[0]/2),int(pair[1]/2)))
-                        plt.title('Hpol Baseline Ant %i - Ant %i\nOnly max(xc) > %0.1f'%(int(pair[0]/2),int(pair[1]/2),corr_threshold))
+                        plt.suptitle('Hpol Baseline Ant %i - Ant %i\nOnly max(xc) > %0.1f'%(int(pair[0]/2),int(pair[1]/2),corr_threshold))
                     else:
                         fig.canvas.set_window_title('V %i - %i'%(int(pair[0]/2),int(pair[1]/2)))
-                        plt.title('Vpol Baseline Ant %i - Ant %i\nOnly max(xc) > %0.1f'%(int(pair[0]/2),int(pair[1]/2),corr_threshold))
+                        plt.suptitle('Vpol Baseline Ant %i - Ant %i\nOnly max(xc) > %0.1f'%(int(pair[0]/2),int(pair[1]/2),corr_threshold))
                     plt.ylabel('Counts')
-                    plt.xlabel('Time Delay')
+                    plt.xlabel('Time Delay (ns)')
                     plt.minorticks_on()
                     plt.grid(b=True, which='major', color='k', linestyle='-')
                     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    for site_index, site in enumerate(sites):
-                        _tds = tds[site][pair_index][corr_values[site][pair_index] >= corr_threshold]
-                        if len(_tds) == 0:
+                    for site_index, site in enumerate(sites):                
+                        for run_index, run_string in enumerate(pulsing_sites[site]):
+                            if run_index == 0:
+                                _tds = tds[site][run_string]
+                                _corrs = corr_values[site][run_string]
+
+                            else:
+                                _tds = numpy.hstack((_tds,tds[site][run_string])) #will be 12 x n , with odd rows being vpol and even hpol
+                                _corrs = numpy.hstack((_corrs,corr_values[site][run_string])) #will be 12 x n , with odd rows being vpol and even hpol
+
+                        thresh_cut = _corrs[pair_index] >= corr_threshold
+                        _tds = _tds[pair_index][thresh_cut]
+                        
+                        if numpy.sum(thresh_cut) == 0:
                             continue
+
                         middle = numpy.mean([numpy.median(_tds),numpy.mean(_tds)])
                         bins = numpy.arange(middle - 50, middle + 50, 2*bin_dt)
                         #bins = numpy.arange(-200, 200, bin_dt)
                         #bins = numpy.arange(100)*bin_dt - numpy.median(_tds) - bin_dt/2.0
                         overflow = numpy.sum(numpy.logical_or(_tds < min(bins), _tds > max(bins)))
-                        plt.hist(_tds,bins=bins,alpha=0.7,edgecolor='black',linewidth=1.2,color = plt.rcParams['axes.prop_cycle'].by_key()['color'][site_index],label=site + '\nOverflow: %i/%i'%(overflow, len(tds[site][pair_index])))
+                        counts, bins, patches = plt.hist(_tds,bins=bins,alpha=0.7,edgecolor='black',linewidth=1.2,color = plt.rcParams['axes.prop_cycle'].by_key()['color'][site_index],label=site + '\nOverflow: %i/%i'%(overflow, len(_tds)))
+                        x = 0.5*(bins[1:]+bins[:-1])
+                        y = scipy.stats.norm.pdf(x,numpy.mean(_tds),numpy.std(_tds))
+                        y = y*(numpy.sum(counts)/numpy.sum(y))
+                        plt.plot(x,y,label=site + ' mean = %0.3f, sig = %0.3f'%(numpy.mean(_tds),numpy.std(_tds)))
+
+
+                        # stacked_variables = numpy.vstack((all_phi_best,all_theta_best)) #x,y
+                        # covariance_matrix = numpy.cov(stacked_variables)
+                        # sig_phi = numpy.sqrt(covariance_matrix[0,0])
+                        # sig_theta = numpy.sqrt(covariance_matrix[1,1])
+                        # rho_phi_theta = covariance_matrix[0,1]/(sig_phi*sig_theta)
+                        # mean_phi = numpy.mean(all_phi_best)
+                        # mean_theta = numpy.mean(all_theta_best)
+
+                        # y = scipy.stats.norm.pdf(x,0,sig_phi)
+
                     
                     for site_index, site in enumerate(sites):
                         #Seperated so on top
                         plt.axvline(expected_tdcs[site][pair_index],c = plt.rcParams['axes.prop_cycle'].by_key()['color'][site_index], label=site + ' Expected td = %0.2f'%expected_tdcs[site][pair_index], linestyle='--')
+                    
                     plt.legend()
+
+                    if plot_residuals:
+                        plt.subplot(2,1,2)
+                        plt.ylabel('Counts')
+                        plt.xlabel('Time Delay - Expected Time Delay (ns)')
+                        plt.minorticks_on()
+                        plt.grid(b=True, which='major', color='k', linestyle='-')
+                        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                        for site_index, site in enumerate(sites):
+                            for run_index, run_string in enumerate(pulsing_sites[site]):
+                                if run_index == 0:
+                                    _tds = tds[site][run_string]
+                                    _corrs = corr_values[site][run_string]
+
+                                else:
+                                    _tds = numpy.hstack((_tds,tds[site][run_string])) #will be 12 x n , with odd rows being vpol and even hpol
+                                    _corrs = numpy.hstack((_corrs,corr_values[site][run_string])) #will be 12 x n , with odd rows being vpol and even hpol
+
+                            thresh_cut = _corrs[pair_index] >= corr_threshold
+                            
+                            if numpy.sum(thresh_cut) == 0:
+                                continue
+
+                            _tds = _tds[pair_index][thresh_cut] - expected_tdcs[site][pair_index]
+
+                            middle = numpy.mean([numpy.median(_tds),numpy.mean(_tds)])
+                            bins = numpy.arange(middle - 10, middle + 10, 2*bin_dt)
+                            overflow = numpy.sum(numpy.logical_or(_tds < min(bins), _tds > max(bins)))
+                            plt.hist(_tds,bins=bins,alpha=0.7,edgecolor='black',linewidth=1.2,color = plt.rcParams['axes.prop_cycle'].by_key()['color'][site_index],label=site + '\nOverflow: %i/%i'%(overflow, len(_tds)))
 
         if plot_maps == True:
             for site in sites:
@@ -274,15 +507,21 @@ if __name__ == '__main__':
                     #Do data slicer maps
                     plot_param_pairs = [['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['p2p_h', 'p2p_v']]
                     contour_eventids_dict = {}
-                    _roi_eventid_dict = data_slicers[site].getCutsFromROI('Pulser Direction',load=False,save=False,verbose=False)
+                    if len(list(data_slicers[site].roi.keys())) > 0:
+                        try:
+                            _roi_eventid_dict = data_slicers[site].getCutsFromROI('Pulser Direction',load=False,save=False,verbose=False)
+                        except Exception as e:
+                            print(e)
+                            print('Expected ROI likely was not added.')
                     for run_index, run_string in enumerate(pulsing_sites[site]):
-                        eventids = numpy.sort(numpy.unique(numpy.append(known_pulser_ids[run_string]['hpol'],known_pulser_ids[run_string]['vpol'])))
-
-                        if True:
-                            eventids = eventids[numpy.isin(eventids, _roi_eventid_dict[int(run_string.replace('run',''))])]
-
-
-                        eventids = numpy.sort(numpy.random.choice(eventids,size=min(len(eventids),limit_eventids_per_run),replace=False))
+                        eventids = used_eventids[site][run_string]
+                        if False:
+                            try:
+                                eventids = eventids[numpy.isin(eventids, _roi_eventid_dict[int(run_string.replace('run',''))])]
+                            except Exception as e:
+                                print(e)
+                                print('Expected ROI likely was not added.')
+                            
                         contour_eventids_dict[int(run_string.replace('run',''))] = eventids
 
 
@@ -301,7 +540,7 @@ if __name__ == '__main__':
                             ax.set_ylim(-30,10)
                             ax.set_xlim(-100,100)
 
-                if False:
+                if True:
                     #Do correlator maps
                     for pol in ['hpol', 'vpol']:
                         for run_index, run_string in enumerate(pulsing_sites[site]):
@@ -310,18 +549,18 @@ if __name__ == '__main__':
                             azimuth_deg = numpy.rad2deg(numpy.arctan2(p[1],p[0]))
                             zenith_deg = numpy.rad2deg(numpy.arccos(p[2]/source_distance_m))
 
-                            eventids = numpy.sort(numpy.unique(numpy.append(known_pulser_ids[run_string]['hpol'],known_pulser_ids[run_string]['vpol'])))
-                            eventids = numpy.sort(numpy.random.choice(eventids,size=min(len(eventids),limit_eventids_per_run),replace=False))
+                            eventids = used_eventids[site][run_string]
 
                             if run_index == 0:
                                 hist, all_phi_best, all_theta_best = correlators[site][run_string].histMapPeak(eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=run_index == len(pulsing_sites[site]) - 1, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=(90,180), zenith_cut_array_plane=(0,90), circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title=site + ' Map Hist',radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False)
                             else:
-                                hist, all_phi_best, all_theta_best = correlators[site][run_string].histMapPeak(eventids, pol, initial_hist=hist, initial_thetas=all_phi_best, initial_phis=all_theta_best, plot_map=run_index == len(pulsing_sites[site]) - 1, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=(90,180), zenith_cut_array_plane=(0,90), circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title=site + ' Map Hist',radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False)
+                                hist, all_phi_best, all_theta_best = correlators[site][run_string].histMapPeak(eventids, pol, initial_hist=hist, initial_thetas=all_theta_best, initial_phis=all_phi_best, plot_map=run_index == len(pulsing_sites[site]) - 1, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=(90,180), zenith_cut_array_plane=(0,90), circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title=site + ' Map Hist',radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False)
 
         if plot_trig_times == True:
             for site in sites:
                 for run_index, run_string in enumerate(pulsing_sites[site]):
-                    eventids = numpy.sort(numpy.unique(numpy.append(known_pulser_ids[run_string]['hpol'],known_pulser_ids[run_string]['vpol'])))
+                    eventids = used_eventids[site][run_string]
+
                     if run_index == 0:
                         calibrated_trig_time = getEventTimes(correlators[site][run_string].reader)[eventids]
                         c = run_index*numpy.ones_like(eventids)

@@ -486,7 +486,7 @@ if __name__=="__main__":
             eventids['hpol'] = numpy.sort(known_pulser_ids['run%i'%run]['hpol'])
             eventids['vpol'] = numpy.sort(known_pulser_ids['run%i'%run]['vpol'])
             waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
-        else:
+        elif False:
             # run = 1645
             # eventids = {}
             # eventids['hpol'] = [45]
@@ -495,6 +495,13 @@ if __name__=="__main__":
             eventids = {}
             eventids['hpol'] = [57507] #The 75th percentile in impulsivity_h event for events with impulsivity in BOTH h and v > 0.5 for run 1650
             eventids['vpol'] = [72789] #The 75th percentile in impulsivity_v event for events with impulsivity in BOTH h and v > 0.5 for run 1650
+
+            waveform_index_range = (None,None) #Looking at the later bit of the waveform only, 10000 will cap off. 
+        else:
+            run = 5528
+            eventids = {}
+            eventids['hpol'] = [4016] #What Zach was using
+            eventids['vpol'] = [4016]
 
             waveform_index_range = (None,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
 
@@ -699,7 +706,7 @@ if __name__=="__main__":
                 sample_delays[mode][beam_index][5], \
                 sample_delays[mode][beam_index][6] = bm.makeFakeBeamMap(eventid, mode, \
                                                         numpy.deg2rad(beam_thetas_deg[beam_index]), numpy.deg2rad(beam_phis_deg[beam_index]), \
-                                                        plot_map=False, plot_corr=False, hilbert=hilbert, \
+                                                        plot_map=True, plot_corr=False, hilbert=hilbert, \
                                                         normalize=normalize,savefig=True, \
                                                         savefig_text='beam%i'%beam_index,turnoff_ants=turnoff_ants,
                                                         forced_deltats = forced_deltats)
