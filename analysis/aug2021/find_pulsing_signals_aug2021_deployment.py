@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 '''
-Pulsing was conducted over 2 days during the June 2021 deployment.  On the day it was unclear if signals were actually
-being seen.  This script is a playground for the work needed to find those signals in the data such that they can be
-used in calibration.
+This script is intended to be used to determine if pulsing signals are visible in the current (directed to) run of data.
+It will do so mostly by creating a subsecond v.s. second plot.  Events from this plot can be circled, and their event
+ids will be printed.  These can be copy-pasted into another document or somewhere for saving.
 '''
 import os
 import sys
@@ -43,90 +43,24 @@ from beacon.tools.data_handler import createFile, getTimes, loadTriggerTypes, ge
 # from beacon.analysis.background_identify_60hz import plotSubVSec, plotSubVSecHist, alg1, diffFromPeriodic, get60HzEvents2, get60HzEvents3, get60HzEvents
 from beacon.tools.fftmath import TemplateCompareTool
 
+from beacon.analysis.find_pulsing_signals_june2021_deployment import Selector
 
-known_pulser_cuts_for_template = {  'run5176':[{'trigger_type':2, 'time_window':[1624489853.9598,1624489854.0140]}],\
-                                    'run5181':[{'trigger_type':2, 'time_window':[1624496478.4,1624497197.2],'time_window_ns':[9.9997512e8,1.00000547e9]}], \
-                                    'run5182':[{'trigger_type':2, 'time_window':[1624497215.3,1624497569.2],'time_window_ns':[9.9997873e8,9.9998749e9]}], \
-                                    'run5183':[{'trigger_type':2, 'time_window':[1624497577.4,1624497887.8],'time_window_ns':[999980056,999984146]}], \
-                                    'run5185':[{'trigger_type':2, 'time_window':[1624498820.7,1624499232.7],'time_window_ns':[9.9999e8,1e9]}],\
-                                    'run5191':[{'trigger_type':2, 'time_window':[1624546559.9,1624546835.2],'time_window_ns':[1.62070e8,1.62105e8]}],\
-                                    'run5195':[{'trigger_type':2, 'time_window':[1624549749.0,1624549879.2],'time_window_ns':[1.618e8,1.620e8]}, {'trigger_type':3, 'time_window':[1624549894.44,1624550506.50]}],\
-                                    'run5198':[{'trigger_type':2, 'time_window':[1624552409.76406,1624552409.77920]}],\
-                                    'run5196':[{'trigger_type':2, 'time_window':[1624551426.80823,1624551426.85754]}],\
-                                    }
 known_pulser_cuts_for_template = {}
-#'run5179':[{'trigger_type':2, 'time_window':[1624492539.0,1624492541.0]}],\
-#'run5198':[{'trigger_type':2, 'time_window':[1624552128.18,1624552156.68],'time_window_ns':[2.47e7,2.52e7]}],\                            
-
-# 'run5198':[{'trigger_type':2, 'time_window':[1624552231,1624552232.3969],'time_window_ns':[0.6e8,2.20e8]}] # 60 Hz
-# 'run5196':[{'trigger_type':2, 'time_window':[1624551082.933,1624551089.886],'time_window_ns':[3.9e8,4.20e8]}],\ #60 Hz events                                    
-# 'run5190':[{'trigger_type':2, 'time_window':[1624546184.6,1624546293.4],'time_window_ns':[7.3e8,7.45e8]}],\ # All just 60 hz
-# 'run5185':{'trigger_type':2, 'time_window':[1624498820.7,1624499232.7],'time_window_ns':[9.9999e8,1e9]},\
-# 'run5185':{'trigger_type':2, 'time_window':[1624502721.86,1624502758.76],'time_window_ns':[5.2847e8,5.4067e8]},\
-
-
-class Selector(object):
-    def __init__(self,ax,scatter_data, eventids, run):
-        self.ax = ax
-        self.xys = scatter_data.get_offsets()
-        self.eventids = eventids
-        self.lasso = LassoSelector(self.ax, onselect=self.onselect)
-        self.run = run
-        self.reader = Reader(os.environ['BEACON_DATA'],run)
-        self.cor = Correlator(self.reader,upsample=len(self.reader.t())*8, n_phi=180*4 + 1, n_theta=360*4 + 1)
-    def onselect(self,verts):
-        #print(verts)
-        path = Path(verts)
-        ind = numpy.nonzero(path.contains_points(self.xys))[0]
-
-        if type(self.eventids) == numpy.ma.core.MaskedArray:
-            print('Only printing non-masked events:')
-            eventids = self.eventids[ind][~self.eventids.mask[[ind]]]
-            pprint(numpy.asarray(eventids))
-        else:
-            eventids = self.eventids[ind]
-            pprint(eventids)
-        if len(eventids) == 1:
-            eventid = eventids[0]
-            fig = plt.figure()
-            plt.title('Run %i, Eventid %i'%(self.run, eventid))
-            self.reader.setEntry(eventid)
-            ax = plt.subplot(2,1,1)
-            for channel in [0,2,4,6]:
-                plt.plot(self.reader.t(),self.reader.wf(channel))
-            plt.ylabel('HPol Adu')
-            plt.xlabel('t (ns)')
-            plt.subplot(2,1,2,sharex=ax)
-            plt.ylabel('VPol Adu')
-            plt.xlabel('t (ns)')
-            for channel in [1,3,5,7]:
-                plt.plot(self.reader.t(),self.reader.wf(channel))
-            self.cor.map(eventid,'both',interactive=True)
-        self.eventids = eventids #write most recent eventids
 
 if __name__ == '__main__':
     plt.close('all')
-    time_delays_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
-    impulsivity_dset_key = time_delays_dset_key
-    map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_65536-maxmethod_0-sinesubtract_1-deploy_calibration_30-scope_allsky'
-
-
     #### Initial Search ####
     '''
     This run should be the easiest to find a signal, though it is not the first run.  I may use this to get a template
     and then use that template to get everything else.
     '''
-    site_2_runs = numpy.arange(5181,5186)
     limit_events = 40000
-    mask_events = True #Will mask events not meeting some minimum z value
+    mask_events = False #Will mask events not meeting some minimum z value
 
     if len(sys.argv) == 2:
-        runs = [int(sys.argv[1])]
+        runs = numpy.array([int(sys.argv[1])])
     else:
-        runs = [5159]
-    
-
-    #ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7])
+        runs = numpy.array([5608])#numpy.arange(5181,5186)
 
     lassos = []
 
@@ -134,14 +68,13 @@ if __name__ == '__main__':
         try:
             run_key = 'run%i'%run
             print(run_key)
-            reader = Reader(os.environ['BEACON_DATA'],run)
+            reader = Reader('/home/dsouthall/Projects/Beacon/beacon/analysis/aug2021/data/',run)#Reader(os.environ['BEACON_DATA'],run)
             tct = TemplateCompareTool(reader,apply_phase_response=True)#waveform_index_range=[0,2100]
 
             #Sloppy work around to run code if file isn't loading (i.e. if scratch files aren't available)
             print('Running script in mode not requiring access to file.')
             trigger_type = loadTriggerTypes(reader)
             eventids = numpy.arange(len(trigger_type))
-            #event_limit_cut = eventids < limit_events
             all_beams = reader.returnTriggerInfo()[0][eventids]
 
             c = numpy.zeros_like(eventids).astype(float)
@@ -218,7 +151,7 @@ if __name__ == '__main__':
             if template_eventid is not None:
                 all_events_above_corr = numpy.where(c > corr_lim)[0]
 
-            for cut_trigger in [1,2,3]:
+            for cut_trigger in [3]:#[1,2,3]:
                 load_cut = trigger_type == cut_trigger
                 calibrated_trig_time = getEventTimes(reader)[load_cut]
                 #passing_load_cut = numpy.sort(numpy.where(load_cut)[0] in passing_eventids)
@@ -232,14 +165,16 @@ if __name__ == '__main__':
                 plt.figure()
                 plt.title('Run %i'%(run))
                 plt.hist(c[load_cut])
-                plt.ylabel(ylabel)
+                plt.title('Trigtype = %i'%cut_trigger)
+                plt.xlabel(ylabel)
+                plt.ylabel('Counts')
 
                 second_time = numpy.floor(calibrated_trig_time)
                 subsecond_time = calibrated_trig_time - second_time
 
                 #period_factor = 1.0#1/20.0#1.0#1/60.0 #1.0 #In seconds, what the remainder will be taken of.
                 if cut_trigger == 2:
-                    pfs = [1.0,1/20.0,1/60.0,1/100.0,1/120.0]
+                    pfs = [1.0]#[1.0,1/20.0,1/60.0,1/100.0,1/120.0]
                 else:
                     pfs = [1.0]
 
@@ -273,10 +208,27 @@ if __name__ == '__main__':
                                 zlim = (colour_lim, zlim[1])
                                 calibrated_trig_time = numpy.ma.masked_array(calibrated_trig_time, mask = c[load_cut] < colour_lim)
                                 subsecond_time = numpy.ma.masked_array(subsecond_time, mask = c[load_cut] < colour_lim)
+
                         _eventids = numpy.ma.masked_array(eventids[load_cut], mask = calibrated_trig_time.mask)
                     else:
                         _eventids = eventids[load_cut]
                     scatter = plt.scatter(calibrated_trig_time, (subsecond_time%period_factor)*1e9 ,c=c[load_cut])#plt.scatter(calibrated_trig_time, subsecond_time*1e9,marker=',',lw=0, s=1,c=c[load_cut])
+                    if True:
+                        # plt.axvline(1629248191,c='r',label='0dB Sat Cut On')
+                        # plt.axvline(1629248550,c='b',label='0dB Sat Cut Off')
+                        #plt.axvline(1629325054,c='b',label='Set GPS Delay to 2.29 us')
+                        # plt.axvline(1629326556,c='r',label='Andrew returned pulser delay to 0 us (from 5 us)')
+                        # plt.axvline(1629326662,c='b',label='Andrew returned pulser delay to 5 us (from 0 us)')
+                        # plt.axvline(1629327560 , c='b',label='20 db Attenuation Started')
+                        # plt.axvline(1629328334 , c='g',label='10 db Attenuation Started')
+                        #plt.axvline(1629330230 , c='g',label='30 db Attenuation Started (From 13 dB before)')
+                        plt.axvline(1629332414 , c='g',label='10 db Attenuation Started (From 13 dB before)')
+                        plt.axvline(1629333157 , c='r',label='20 db Attenuation Started (From 10 dB before)')
+                        
+                        
+
+                        plt.legend()
+
                     cbar = fig.colorbar(scatter)
                     plt.clim(zlim[0],zlim[1])
                     plt.ylabel('Subsecond Time (ns)')
