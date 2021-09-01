@@ -154,8 +154,8 @@ def predictAlignment(phi_deg, theta_deg, cor, pol='hpol'):
     time delays to determine how to shift the waveforms from that source direction.
     '''
     try:
-        theta_index = numpy.argmin( abs((90.0 - cor.thetas_deg) - theta_deg) ) #Data plotted with elevation angles, not zenith.
-        phi_index = numpy.argmin( abs(cor.phis_deg - (phi_deg)) ) 
+        theta_index = numpy.argmin( abs(cor.thetas_deg - theta_deg) ) #Data plotted with elevation angles, not zenith.
+        phi_index = numpy.argmin( abs(cor.phis_deg - phi_deg) ) 
 
         if pol == 'hpol':
             channels = numpy.array([0,2,4,6])
@@ -194,6 +194,7 @@ class PulserInfo():
     def __init__(self):
         try:
             self.event_dtype = numpy.dtype([('run','i'),('eventid','i'),('calibrated_trig_time','float64'),('attenuation_dB','f')])
+            self.event_dtype_reduced = numpy.dtype([('run','i'),('eventid','i'),('attenuation_dB','f')])
 
             self.timing_dict = {}
 
@@ -203,10 +204,9 @@ class PulserInfo():
             self.timing_dict['d2sa']['runs'] = [5630, 5631,5632] #day 2
             self.timing_dict['d2sa']['latlonel'] = (37.5859361, -118.233918056, 3762.9)
 
-            #BAD REFERENCE EVENT NOT YET SET
             self.timing_dict['d2sa']['reference_event'] = {}
-            self.timing_dict['d2sa']['reference_event']['hpol'] = (5659 , 3247)
-            self.timing_dict['d2sa']['reference_event']['vpol'] = (5660 , 2869)
+            self.timing_dict['d2sa']['reference_event']['hpol'] = (5630 , 1585)
+            self.timing_dict['d2sa']['reference_event']['vpol'] = (5632 , 2105)
             
             self.timing_dict['d2sa']['times_of_interest'] = {}
             self.timing_dict['d2sa']['times_of_interest']['hpol'] = {}
@@ -225,19 +225,18 @@ class PulserInfo():
             # Day 3
             # Site a
             self.timing_dict['d3sa'] = {}
-            self.timing_dict['d3sa']['runs'] = [5639,5640,5641,5642] #day 3
+            self.timing_dict['d3sa']['runs'] = [5638,5639,5640,5641,5642] #day 3
             self.timing_dict['d3sa']['latlonel'] = ( 37.58575767,-118.22592267, 3697.4)
 
-            #BAD REFERENCE EVENT NOT YET SET
             self.timing_dict['d3sa']['reference_event'] = {}
-            self.timing_dict['d3sa']['reference_event']['hpol'] = (5659 , 3247)
-            self.timing_dict['d3sa']['reference_event']['vpol'] = (5660 , 2869)
+            self.timing_dict['d3sa']['reference_event']['hpol'] = (5641 , 1527)
+            self.timing_dict['d3sa']['reference_event']['vpol'] = (5642 , 2918)
 
             self.timing_dict['d3sa']['times_of_interest'] = {}
             self.timing_dict['d3sa']['times_of_interest']['hpol'] = {}
             self.timing_dict['d3sa']['times_of_interest']['vpol'] = {}
 
-            self.timing_dict['d3sa']['times_of_interest']['hpol']['0dB'] = (1629393793 , 1629394031.53)
+            self.timing_dict['d3sa']['times_of_interest']['hpol']['0dB'] = (1629393054.5 , 1629394031.53)
             self.timing_dict['d3sa']['times_of_interest']['hpol']['3dB'] = (1629394089.98 , 1629395178.25)
             self.timing_dict['d3sa']['times_of_interest']['hpol']['6dB'] = (1629395221.716 , 1629396041.16)
             self.timing_dict['d3sa']['times_of_interest']['hpol']['10dB'] = (1629396104.76 , 1629396686.18)
@@ -247,7 +246,7 @@ class PulserInfo():
             self.timing_dict['d3sa']['times_of_interest']['vpol']['13dB'] = (1629398876.5 , 1629399598.5)
             self.timing_dict['d3sa']['times_of_interest']['vpol']['10dB'] = (1629399685.9 , 1629400519.2)
             self.timing_dict['d3sa']['times_of_interest']['vpol']['6dB'] = (1629400584.7 , 1629401182.2)
-            self.timing_dict['d3sa']['times_of_interest']['vpol']['20dB'] = (1629401233.8 , 1629401321.18)
+            self.timing_dict['d3sa']['times_of_interest']['vpol']['20dB'] = (1629401233.8 , 1629402310.5)
 
             # Site b
             self.timing_dict['d3sb'] = {}
@@ -256,8 +255,8 @@ class PulserInfo():
 
             #BAD REFERENCE EVENT NOT YET SET
             self.timing_dict['d3sb']['reference_event'] = {}
-            self.timing_dict['d3sb']['reference_event']['hpol'] = (5659 , 3247)
-            self.timing_dict['d3sb']['reference_event']['vpol'] = (5660 , 2869)
+            self.timing_dict['d3sb']['reference_event']['hpol'] = (5644 , 6278)
+            self.timing_dict['d3sb']['reference_event']['vpol'] = (5646 , 4500)
 
             self.timing_dict['d3sb']['times_of_interest'] = {}
             self.timing_dict['d3sb']['times_of_interest']['hpol'] = {}
@@ -282,10 +281,9 @@ class PulserInfo():
             self.timing_dict['d3sc']['runs'] = [5648,5649] #day 3
             self.timing_dict['d3sc']['latlonel'] = (37.58885717,-118.22786317,3605.9)
 
-            #BAD REFERENCE EVENT NOT YET SET
             self.timing_dict['d3sc']['reference_event'] = {}
-            self.timing_dict['d3sc']['reference_event']['hpol'] = (5659 , 3247)
-            self.timing_dict['d3sc']['reference_event']['vpol'] = (5660 , 2869)
+            self.timing_dict['d3sc']['reference_event']['hpol'] = (5648 , 2419) #This is a peaking event
+            self.timing_dict['d3sc']['reference_event']['vpol'] = (5648 , 14683)
 
             self.timing_dict['d3sc']['times_of_interest'] = {}
             self.timing_dict['d3sc']['times_of_interest']['hpol'] = {}
@@ -308,11 +306,11 @@ class PulserInfo():
             # Day 4
             # Site a
             self.timing_dict['d4sa'] = {}
-            self.timing_dict['d4sa']['runs'] = [5655, 5656,5657,5659,5660] #day 4
+            self.timing_dict['d4sa']['runs'] = [5655, 5656, 5657, 5659, 5660] #day 4
             self.timing_dict['d4sa']['latlonel'] = (37.59264500,-118.22765817,3741.7)
             self.timing_dict['d4sa']['reference_event'] = {}
-            self.timing_dict['d4sa']['reference_event']['hpol'] = (5659 , 3247)
-            self.timing_dict['d4sa']['reference_event']['vpol'] = (5660 , 2869)
+            self.timing_dict['d4sa']['reference_event']['hpol'] = (5656 , 3021)
+            self.timing_dict['d4sa']['reference_event']['vpol'] = (5657 , 4411)
 
             self.timing_dict['d4sa']['times_of_interest'] = {}
             self.timing_dict['d4sa']['times_of_interest']['hpol'] = {}
@@ -395,7 +393,7 @@ class PulserInfo():
             for att in list(self.timing_dict[site]['times_of_interest'][pol].keys()):
                 cut = numpy.logical_and(info['calibrated_trig_time'] >= self.timing_dict[site]['times_of_interest'][pol][att][0], info['calibrated_trig_time'] <= self.timing_dict[site]['times_of_interest'][pol][att][1])
                 info['attenuation_dB'][cut] = float(att.replace('dB',''))
-                
+
             if attenuation is not None:
                 if attenuation in list(self.timing_dict[site]['times_of_interest'][pol].keys()):
                     cut = info['attenuation_dB'] == float(att.replace('dB',''))
@@ -403,12 +401,63 @@ class PulserInfo():
                 else:
                     print('Given attenuation not in dict, returning all.')
                     return info
+            else:
+                return info
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+    def getPulserCandidates(self, site, pol, attenuation=None):
+        '''
+        This will grab the run and eventid of each event that has been selected to be a likely pulsing event.  This
+        selection was done using the correlate_against_template.py script by circling events in the dominent cluster
+        of the cross correlation and map max value plot.
+        '''
+        # Prepare arrays for output data
+        try:
+            info = numpy.array([],dtype=self.event_dtype)
+            self.timing_dict[site]['runs']
+
+            for run_index, run in enumerate(self.timing_dict[site]['runs']):
+                sys.stdout.write('(%i/%i)\r'%(run_index + 1,len(self.timing_dict[site]['runs'])))
+                sys.stdout.flush()
+                reader = Reader(os.environ['BEACON_DATA'],run)
+                trigger_type = loadTriggerTypes(reader)
+                eventids = numpy.arange(len(trigger_type))
+                trigtype_cut = trigger_type == 3
+
+                _info = numpy.ones(sum(trigtype_cut),dtype=self.event_dtype)
+                _info['run'] = run
+                _info['eventid'] = eventids[trigtype_cut]
+                _info['calibrated_trig_time'] = getEventTimes(reader)[trigtype_cut]
+
+                info = numpy.append(info,_info)
+
+            for att in list(self.timing_dict[site]['times_of_interest'][pol].keys()):
+                cut = numpy.logical_and(info['calibrated_trig_time'] >= self.timing_dict[site]['times_of_interest'][pol][att][0], info['calibrated_trig_time'] <= self.timing_dict[site]['times_of_interest'][pol][att][1])
+                info['attenuation_dB'][cut] = float(att.replace('dB',''))
+
+            if attenuation is not None:
+                if attenuation in list(self.timing_dict[site]['times_of_interest'][pol].keys()):
+                    cut = info['attenuation_dB'] == float(att.replace('dB',''))
+                    return info[cut]
+                else:
+                    print('Given attenuation not in dict, returning all.')
+                    return info
+            else:
+                return info
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def returnRuns(self,site):
+        return self.timing_dict[site]['runs']
 
     def getPulserReferenceEvent(self, site, pol):
         '''
@@ -488,10 +537,11 @@ if __name__ == '__main__':
         #Sort through trigtype == 3 events and plot p2p as a function of time in a large scatter plot.
         # Just a simple list of runs with pulses.  As yet unparsed.  
 
-        day = 4
+        day = 3
         site = 'filler'
         if day == 2:
             pulsing_run_list = [5630, 5631,5632] #day 2
+            source_latlonel = (37.5859361, -118.233918056, 3762.9)
             #30dB are estimates, basically no signal visible
             times_of_interest = {
                                 'HPol 20 dB starts' :   1629327563.72,\
@@ -510,10 +560,10 @@ if __name__ == '__main__':
                                 'VPol 20 dB stops':     1629333653
                                 }
         elif day == 3:
-            site = ['d3sa','d3sb','d3sc'][2]
+            site = ['d3sa','d3sb','d3sc'][0]
             if site == 'd3sa':
                 source_latlonel = ( 37.58575767,-118.22592267, 3697.4)
-                pulsing_run_list = [5639,5640,5641,5642]
+                pulsing_run_list = [5638,5639,5640,5641,5642]
                 # 5639    8/19/2021   Pulsing SE Hpol 1 Hz no attenuation at Site 2
                 # 5640    8/19/2021   Pulsing SE Site 2 Hpol 1 Hz 3dB attenuation; 10:47 AM 6 dB 1 Hz Hpol; 11:02 pulsing at 10db HPol
                 # 5641    8/19/2021   11:02 pulsing at 10db Hpol; 11:12 AM 20 dB attenaution hpol ; 11:26 pulsing with 13 dB attenuation
@@ -611,8 +661,8 @@ if __name__ == '__main__':
             if site == 'd4sa':
                 source_latlonel = (37.59264500,-118.22765817,3741.7)
 
-                reference_event_hpol = (5659 , 3247)
-                reference_event_vpol = (5660 , 2869)
+                reference_event_hpol = (5656 , 3021)
+                reference_event_vpol = (5657 , 4411)
 
                 pulsing_run_list = [5655, 5656,5657] #day 4
                 times_of_interest = {   'HPol 0 dB starts' :    1629481652.5,\
