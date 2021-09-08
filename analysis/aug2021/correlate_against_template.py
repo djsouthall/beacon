@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
         sites_day2 = ['d2sa']
         sites_day3 = ['d3sa','d3sb','d3sc']
-        sites_day4 = ['d4sa','d4sb']
+        sites_day4 = ['d4sb']#['d4sa','d4sb']
         cors_list = [] #To keep interactive live
         lassos = []
         for site in sites_day4:

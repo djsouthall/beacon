@@ -230,7 +230,7 @@ class PulserInfo():
 
             self.timing_dict['d3sa']['reference_event'] = {}
             self.timing_dict['d3sa']['reference_event']['hpol'] = (5641 , 1527)
-            self.timing_dict['d3sa']['reference_event']['vpol'] = (5642 , 2918)
+            self.timing_dict['d3sa']['reference_event']['vpol'] = (5642 , 4496)
 
             self.timing_dict['d3sa']['times_of_interest'] = {}
             self.timing_dict['d3sa']['times_of_interest']['hpol'] = {}

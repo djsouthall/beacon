@@ -605,7 +605,7 @@ class FFTPrepper:
     #     y = numpy.dot(x, numpy.sinc(sincM/T))
     #     return y
 
-    def loadFilteredFFTs(self, eventid, hilbert=False, load_upsampled_waveforms=False, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, sine_subtract=False):
+    def loadFilteredFFTs(self, eventid, channels=[0,1,2,3,4,5,6,7], hilbert=False, load_upsampled_waveforms=False, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, sine_subtract=False):
         '''
         Loads the waveforms (with pre applied filters) and upsamples them for
         for the cross correlation. 
@@ -613,10 +613,10 @@ class FFTPrepper:
         try:
             self.reader.setEntry(eventid)
             self.eventid = eventid
-            raw_wfs_corr = numpy.zeros((8,len(self.waveform_times_corr))) #upsampled to nearest power of 2 then by 2 for correlation.
+            raw_wfs_corr = numpy.zeros((len(channels),len(self.waveform_times_corr))) #upsampled to nearest power of 2 then by 2 for correlation.
             if load_upsampled_waveforms:
-                upsampled_waveforms = numpy.zeros((8,self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
-            for channel in range(8):
+                upsampled_waveforms = numpy.zeros((len(channels),self.final_corr_length//2)) #These are the waveforms with the same dt as the cross correlation.
+            for channel_index, channel in enumerate(channels):
                 # if load_upsampled_waveforms:
                 #     temp_raw_wf = self.wf(channel,hilbert=False,apply_filter=True,sine_subtract=sine_subtract) #apply hilbert after upsample
                 # else:
@@ -632,30 +632,30 @@ class FFTPrepper:
                     temp_raw_wf = numpy.multiply(temp_raw_wf,weights)
 
                 if hilbert == True:
-                    raw_wfs_corr[channel][0:self.buffer_length] = numpy.abs(scipy.signal.hilbert(temp_raw_wf))
+                    raw_wfs_corr[channel_index][0:self.buffer_length] = numpy.abs(scipy.signal.hilbert(temp_raw_wf))
                 else:
-                    raw_wfs_corr[channel][0:self.buffer_length] = temp_raw_wf
+                    raw_wfs_corr[channel_index][0:self.buffer_length] = temp_raw_wf
                 
 
                 if load_upsampled_waveforms:
-                    temp_upsampled = numpy.fft.irfft(numpy.fft.rfft(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)]),n=self.final_corr_length//2) * ((self.final_corr_length//2)/len(self.waveform_times_padded_to_power2))
+                    temp_upsampled = numpy.fft.irfft(numpy.fft.rfft(raw_wfs_corr[channel_index][0:len(self.waveform_times_padded_to_power2)]),n=self.final_corr_length//2) * ((self.final_corr_length//2)/len(self.waveform_times_padded_to_power2))
                     if hilbert == True:
-                        upsampled_waveforms[channel] = numpy.abs(scipy.signal.hilbert(temp_upsampled))
+                        upsampled_waveforms[channel_index] = numpy.abs(scipy.signal.hilbert(temp_upsampled))
                     else:
-                        upsampled_waveforms[channel] = temp_upsampled
+                        upsampled_waveforms[channel_index] = temp_upsampled
             
             if False:
                 plt.figure()
                 plt.title(str(eventid))
                 raw_wfs_corr_t = numpy.arange(numpy.shape(raw_wfs_corr)[1])*(self.t()[1] - self.t()[0])
-                for channel in range(8):
+                for channel_index, channel in enumerate(channels):
                     plt.subplot(4,2,channel+1)
                     plt.plot(self.t(),self.wf(channel,sine_subtract=sine_subtract),alpha=0.7)
-                    plt.plot(raw_wfs_corr_t,raw_wfs_corr[channel])
+                    plt.plot(raw_wfs_corr_t,raw_wfs_corr[channel_index])
                 plt.figure()
                 plt.title(str(eventid))
-                for channel in range(8):
-                    plt.plot(raw_wfs_corr[channel][0:len(self.waveform_times_padded_to_power2)])
+                for channel_index, channel in enumerate(channels):
+                    plt.plot(raw_wfs_corr[channel_index][0:len(self.waveform_times_padded_to_power2)])
                 import pdb; pdb.set_trace()
                     
             # if self.use_sinc_interpolation == True:
@@ -949,7 +949,7 @@ class FFTPrepper:
                     plt.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel)
                     plt.legend(loc = 'upper right')
                     plt.xlim(10,110)
-                    plt.ylim(-50,30)
+                    plt.ylim(-20,30)
                 else:
                     plt.subplot(3,1,1)
                     plt.plot(t_ns,wf)
@@ -1200,9 +1200,9 @@ class TimeDelayCalculator(FFTPrepper):
 
 
                 time_delays = numpy.zeros(len(pairs))
-                display_half_time_window = 200
+                display_half_time_window = 1000
                 display_half_time_window_index = int(display_half_time_window/self.dt_ns_upsampled) #In indices
-                slider_half_time_window = 300
+                slider_half_time_window = 500
                 slider_half_time_window_index = int(slider_half_time_window/self.dt_ns_upsampled) #In indices
 
                 t = numpy.arange(upsampled_waveforms.shape[1])*self.dt_ns_upsampled
@@ -1756,7 +1756,7 @@ class TemplateCompareTool(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def crossCorrelateWithTemplate(self, eventid, load_upsampled_waveforms=False,sine_subtract=False):
+    def crossCorrelateWithTemplate(self, eventid, channels=[0,1,2,3,4,5,6,7],load_upsampled_waveforms=False,sine_subtract=False):
         '''
         Performs a cross correlation between the waveforms for eventid and the
         internally defined template.
@@ -1764,12 +1764,13 @@ class TemplateCompareTool(FFTPrepper):
         try:
             #Load events waveforms
             if load_upsampled_waveforms:
-                ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid, load_upsampled_waveforms=load_upsampled_waveforms,sine_subtract=sine_subtract)
+                ffts, upsampled_waveforms = self.loadFilteredFFTs(eventid, channels=channels, load_upsampled_waveforms=load_upsampled_waveforms,sine_subtract=sine_subtract)
             else:
-                ffts = self.loadFilteredFFTs(eventid, load_upsampled_waveforms=load_upsampled_waveforms,sine_subtract=sine_subtract)
+                ffts = self.loadFilteredFFTs(eventid, channels=channels, load_upsampled_waveforms=load_upsampled_waveforms,sine_subtract=sine_subtract)
 
             #Perform cross correlations with the template.
-            corrs_fft = numpy.multiply((ffts.T/numpy.std(ffts,axis=1)).T,(self.scaled_conj_template_ffts_filtered)) / (len(self.waveform_times_corr)//2 + 1)
+            # import pdb; pdb.set_trace()
+            corrs_fft = numpy.multiply((ffts.T/numpy.std(ffts,axis=1)).T,(self.scaled_conj_template_ffts_filtered[channels])) / (len(self.waveform_times_corr)//2 + 1)
             corrs = numpy.fft.fftshift(numpy.fft.irfft(corrs_fft,axis=1,n=self.final_corr_length),axes=1) * (self.final_corr_length//2 ) #Upsampling and keeping scale might be an off by 1 in scaling.  Should be small effect.
 
             if load_upsampled_waveforms:
@@ -1784,7 +1785,7 @@ class TemplateCompareTool(FFTPrepper):
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def alignToTemplate(self, eventid, align_method=0,sine_subtract=False):
+    def alignToTemplate(self, eventid, channels=[0,1,2,3,4,5,6,7],align_method=0,sine_subtract=False, return_delays=False):
         '''
         Attempts to align the waveforms from eventid with the internally
         defined template.  This may use one of several methods of aligning
@@ -1794,7 +1795,7 @@ class TemplateCompareTool(FFTPrepper):
         but are not the double length ones that are used for the correlation.
         '''
         try:
-            corrs, corrs_fft, upsampled_waveforms = self.crossCorrelateWithTemplate(eventid,load_upsampled_waveforms=True,sine_subtract=sine_subtract)
+            corrs, corrs_fft, upsampled_waveforms = self.crossCorrelateWithTemplate(eventid,channels=channels,load_upsampled_waveforms=True,sine_subtract=sine_subtract)
 
             if align_method == 0:
                 #Align to maximum correlation value.
@@ -1839,7 +1840,10 @@ class TemplateCompareTool(FFTPrepper):
             for index, wf in enumerate(upsampled_waveforms):
                 rolled_wfs[index] = numpy.roll(wf,self.corr_index_to_delay_index[index_delays[index]])
             
-            return max_corrs, upsampled_waveforms, rolled_wfs
+            if return_delays == False:
+                return max_corrs, upsampled_waveforms, rolled_wfs
+            else:
+                return max_corrs, upsampled_waveforms, rolled_wfs, index_delays, self.corr_time_shifts[index_delays]
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -1899,21 +1903,17 @@ class TemplateCompareTool(FFTPrepper):
             if plot == True:
                 #Repeat for template and plot on top. 
                 max_corrs, upsampled_waveforms, rolled_wfs = self.alignToTemplate(template_eventid, align_method=align_method)
-                averaged_waveforms += rolled_wfs/len(eventids)
 
-                if plot == True:
-                    for channel in channels:
-                        ax = axs[channel]
-                        ax.plot(times, rolled_wfs[channel],linestyle='--',c='b',label=str(channel)+' template')
-                        ax.legend()
+                for channel in channels:
+                    ax = axs[channel]
+                    ax.plot(times, rolled_wfs[channel],linestyle='--',c='b',label=str(channel)+' template')
+                    ax.legend()
 
-            if plot == True:
                 for channel in channels:
                     ax = axs[channel]
                     ax.plot(times, averaged_waveforms[channel],linestyle='--',c='r',label=str(channel)+' avg')
                     ax.legend()
 
-            if plot == True:
                 fig = plt.figure()
                 fig.canvas.set_window_title('Average Waveforms')
                 plt.minorticks_on()
@@ -1932,6 +1932,60 @@ class TemplateCompareTool(FFTPrepper):
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+    def returnTemplateTimeDelays(self):
+        '''
+        Using the template FFTs as they exist, this will return the time delays using the simplest method.
+        '''
+        try:
+            #Handle scenario where waveform has all zeros (which results in 0 SNR which messes up FFT/correlation)
+            bad_channels = numpy.where(numpy.std(self.template_ffts_filtered,axis=1) == 0)[0] 
+            bad_pairs = numpy.any(numpy.isin(self.pairs,bad_channels),axis=1) #Calculation will proceed as normal (nan's will exist), but the output of these channel will be overwritten.
+
+            corrs_fft = numpy.multiply((self.template_ffts_filtered[self.pairs[:,0]].T/numpy.std(self.template_ffts_filtered[self.pairs[:,0]],axis=1)).T,(numpy.conj(self.template_ffts_filtered[self.pairs[:,1]]).T/numpy.std(numpy.conj(self.template_ffts_filtered[self.pairs[:,1]]),axis=1)).T) / (len(self.waveform_times_corr)//2 + 1)
+            corrs = numpy.fft.fftshift(numpy.fft.irfft(corrs_fft,axis=1,n=self.final_corr_length),axes=1) * (self.final_corr_length//2) #Upsampling and keeping scale
+            corrs[bad_pairs] = 0.0
+
+            indices = numpy.argmax(corrs,axis=1)
+            max_corrs = numpy.max(corrs,axis=1)
+            return indices, self.corr_time_shifts[indices], max_corrs, self.pairs, corrs
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    # def perChannelTimeDelays(self, eventids, channels=[0,1,2,3,4,5,6,7] align_method=0, template_eventid=None, plot=False,event_type=None,sine_subtract=None):
+    #     '''
+    #     This will align each eventids waveforms to the waveform set as the template.  The output will then be the
+    #     measured time delays between each waveform and the template within the given channels.  This does not do
+    #     any comparison between antennas and is thus not baseline dependant. 
+
+    #     Note that the template is stored as a conjugated fft cross-correlation ready version of the template.
+    #     '''
+    #     try:
+    #         if template_eventid is not None:
+    #             self.setTemplateToEvent(template_eventid,sine_subtract=sine_subtract)
+
+    #         averaged_waveforms = numpy.zeros((len(channels),self.final_corr_length//2))
+    #         times = numpy.arange(self.final_corr_length//2)*self.dt_ns_upsampled
+
+    #         for event_index, eventid in enumerate(eventids):
+    #             sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
+    #             max_corrs, upsampled_waveforms, rolled_wfs, index_delays, time_shifts = self.alignToTemplate(eventid, channels=[0,1,2,3,4,5,6,7],align_method=align_method,sine_subtract=sine_subtract, return_delays=True)
+
+
+
+
+
+    #         return times, averaged_waveforms
+    #     except Exception as e:
+    #         print('\nError in %s'%inspect.stack()[0][3])
+    #         print(e)
+    #         exc_type, exc_obj, exc_tb = sys.exc_info()
+    #         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    #         print(exc_type, fname, exc_tb.tb_lineno)
         
 
 if __name__ == '__main__':
