@@ -1237,7 +1237,7 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def interactivePlotter(self, event, mollweide = False, center_dir='E', all_alignments=True):
+    def interactivePlotter(self, event, mollweide = False, center_dir='E', all_alignments=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0):
         '''
         This hopefully will make a plot when called by a double click in the map.
         '''
@@ -1287,6 +1287,8 @@ class Correlator:
                     channels = numpy.array([0,2,4,6])
 
                     waveforms = self.wf(eventid, channels, div_std=False, hilbert=hilbert, apply_filter=self.apply_filter, tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract)
+                    if shorten_signals == True:
+                        waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
                     t_best_0subtract1 = self.t_hpol_0subtract1[theta_index,phi_index]
                     t_best_0subtract2 = self.t_hpol_0subtract2[theta_index,phi_index]
                     t_best_0subtract3 = self.t_hpol_0subtract3[theta_index,phi_index]
@@ -1296,6 +1298,8 @@ class Correlator:
                 elif pol == 'vpol':
                     channels = numpy.array([1,3,5,7])
                     waveforms = self.wf(eventid, channels, div_std=False, hilbert=hilbert, apply_filter=self.apply_filter, tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract)
+                    if shorten_signals == True:
+                        waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
                     t_best_0subtract1 = self.t_vpol_0subtract1[theta_index,phi_index]
                     t_best_0subtract2 = self.t_vpol_0subtract2[theta_index,phi_index]
                     t_best_0subtract3 = self.t_vpol_0subtract3[theta_index,phi_index]
@@ -1965,7 +1969,32 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True):
+    def shortenSignals(self, waveforms, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0,shorten_keep_leading=100):
+        '''
+        Given waveforms this will reduce time window to suround just the main signal pulses.
+
+        waveforms should be a 2d array where each row is a waveform, with timestamp determined by self.dt_resampled.
+        '''
+        try:
+            for wf_index, wf in enumerate(waveforms):
+                trigger_index = numpy.where(wf/max(wf) > shorten_thresh)[0][0]
+                weights = numpy.ones_like(wf)
+                cut = numpy.arange(len(wf)) < trigger_index + int(shorten_delay/self.dt_resampled)
+                slope = -1.0/(shorten_length/self.dt_resampled) #Go to zero by 100ns after initial dampening.
+                weights[~cut] = numpy.max(numpy.vstack((slope * numpy.arange(sum(~cut)) + 1,numpy.zeros(sum(~cut)))),axis=0) #Max so no negative weights
+                cut2 = numpy.arange(len(wf)) < trigger_index - int(shorten_keep_leading/self.dt_resampled)
+                weights[cut2] = numpy.max(numpy.vstack((numpy.zeros(sum(cut2)) , slope * numpy.arange(sum(cut2))[::-1] + 1)),axis=0)
+                wf = numpy.multiply(wf,weights)
+                waveforms[wf_index] = wf
+            return waveforms
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)  
+
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -2060,6 +2089,9 @@ class Correlator:
                 if waveforms is None:
                     waveforms = self.wf(eventid, numpy.array([0,2,4,6]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter,tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract) #Div by std and resampled waveforms normalizes the correlations
 
+                    if shorten_signals == True:
+                        waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+
                 corr01 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[1])))/(len(self.times_resampled))
                 corr02 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[2])))/(len(self.times_resampled))
                 corr03 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[3])))/(len(self.times_resampled))
@@ -2091,6 +2123,9 @@ class Correlator:
             elif pol == 'vpol':
                 if waveforms is None:
                     waveforms = self.wf(eventid, numpy.array([1,3,5,7]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter,tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract) #Div by std and resampled waveforms normalizes the correlations
+
+                    if shorten_signals == True:
+                        waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
 
                 corr01 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[1])))/(len(self.times_resampled))
                 corr02 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[2])))/(len(self.times_resampled))
@@ -2352,7 +2387,7 @@ class Correlator:
                 #Enable Interactive Portion
                 if interactive == True:
                     print('Map should be interactive')
-                    fig.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event,  mollweide=mollweide, center_dir=center_dir, all_alignments=self.all_alignments))
+                    fig.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event,  mollweide=mollweide, center_dir=center_dir, all_alignments=self.all_alignments, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading))
 
                 #ax.legend(loc='lower left')
                 self.figs.append(fig)
@@ -2816,7 +2851,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False):
+    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False, return_map_peaks=False, return_peak_to_sidelobe=False, initial_peaks=None, initial_peak_to_sidelobes=None):
         '''
         This will loop over eventids and makes a histogram from of location of maximum correlation
         value in the corresponding correlation maps. 
@@ -2874,6 +2909,10 @@ class Correlator:
 
             all_theta_best = numpy.zeros(len(eventids))
             all_phi_best = numpy.zeros(len(eventids))
+            if return_peak_to_sidelobe == True:
+                all_peak_to_sidelobes = numpy.zeros(len(eventids))
+            if return_map_peaks == True:
+                all_map_peaks = numpy.zeros(len(eventids))
             if iterate_sub_baselines is None:
                 iterate_sub_baselines = len(include_baselines)
             elif iterate_sub_baselines > len(include_baselines):
@@ -2887,17 +2926,28 @@ class Correlator:
                 sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
                 sys.stdout.flush()
                 for _include_baselines in include_baselines_all:
-                    m = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=_include_baselines, hilbert=hilbert)/len(eventids)
-                    if max_method is not None:
-                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+                    m = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=_include_baselines, hilbert=hilbert)
+                    if return_peak_to_sidelobe == True:
+                        if max_method is not None:
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=return_peak_to_sidelobe)
+                        else:
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=return_peak_to_sidelobe)
+
+                        all_peak_to_sidelobes[event_index] = peak_to_sidelobe
                     else:
-                        linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+                        if max_method is not None:
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
+                        else:
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol)
 
                     all_theta_best[event_index] = theta_best
                     all_phi_best[event_index] = phi_best
 
+                    if return_map_peaks == True:
+                        all_map_peaks[event_index] = m.flat[linear_max_index]
+
                     if use_weight == True:
-                        hist.flat[linear_max_index] += m.flat[linear_max_index]
+                        hist.flat[linear_max_index] += m.flat[linear_max_index]/len(eventids)
                     else:
                         hist.flat[linear_max_index] += 1
 
@@ -2908,6 +2958,14 @@ class Correlator:
                 all_theta_best = numpy.append(initial_thetas,all_theta_best)
             if initial_phis is not None:
                 all_phi_best = numpy.append(initial_phis,all_phi_best)
+
+            if return_map_peaks == True:
+                if initial_peaks is not None:
+                    all_map_peaks = numpy.append(initial_peaks,all_map_peaks)
+            if return_peak_to_sidelobe == True:
+                if initial_peak_to_sidelobes is not None:
+                    all_peak_to_sidelobes = numpy.append(initial_peak_to_sidelobes,all_peak_to_sidelobes)
+
 
             if plot_map:
                 if numpy.logical_or(~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))),iterate_sub_baselines != len(include_baselines)):
@@ -3117,7 +3175,16 @@ class Correlator:
                     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
                     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.25)
 
-            return hist, all_phi_best, all_theta_best
+            if return_map_peaks == True:
+                if return_peak_to_sidelobe == True:
+                    return hist, all_phi_best, all_theta_best, all_map_peaks, all_peak_to_sidelobes
+                else:
+                    return hist, all_phi_best, all_theta_best, all_map_peaks
+            else:
+                if return_peak_to_sidelobe == True:
+                    return hist, all_phi_best, all_theta_best, all_peak_to_sidelobes
+                else:
+                    return hist, all_phi_best, all_theta_best
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)

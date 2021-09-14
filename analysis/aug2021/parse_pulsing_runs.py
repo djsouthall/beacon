@@ -256,7 +256,7 @@ class PulserInfo():
             #BAD REFERENCE EVENT NOT YET SET
             self.timing_dict['d3sb']['reference_event'] = {}
             self.timing_dict['d3sb']['reference_event']['hpol'] = (5644 , 6278)
-            self.timing_dict['d3sb']['reference_event']['vpol'] = (5646 , 4500)
+            self.timing_dict['d3sb']['reference_event']['vpol'] = (5647 , 517)#(5646 , 4500)
 
             self.timing_dict['d3sb']['times_of_interest'] = {}
             self.timing_dict['d3sb']['times_of_interest']['hpol'] = {}
@@ -282,7 +282,7 @@ class PulserInfo():
             self.timing_dict['d3sc']['latlonel'] = (37.58885717,-118.22786317,3605.9)
 
             self.timing_dict['d3sc']['reference_event'] = {}
-            self.timing_dict['d3sc']['reference_event']['hpol'] = (5648 , 2419) #This is a peaking event
+            self.timing_dict['d3sc']['reference_event']['hpol'] = (5648 , 9500) 
             self.timing_dict['d3sc']['reference_event']['vpol'] = (5648 , 14683)
 
             self.timing_dict['d3sc']['times_of_interest'] = {}
@@ -309,7 +309,7 @@ class PulserInfo():
             self.timing_dict['d4sa']['runs'] = [5655, 5656, 5657, 5659, 5660] #day 4
             self.timing_dict['d4sa']['latlonel'] = (37.59264500,-118.22765817,3741.7)
             self.timing_dict['d4sa']['reference_event'] = {}
-            self.timing_dict['d4sa']['reference_event']['hpol'] = (5656 , 3021)
+            self.timing_dict['d4sa']['reference_event']['hpol'] = (5656 , 8500)
             self.timing_dict['d4sa']['reference_event']['vpol'] = (5657 , 4411)
 
             self.timing_dict['d4sa']['times_of_interest'] = {}

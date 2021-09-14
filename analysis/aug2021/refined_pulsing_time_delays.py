@@ -73,7 +73,8 @@ align_method = 1 #0,1,2
 shorten_signals = False
 shorten_thresh = 0.7
 shorten_delay = 10.0
-shorten_length = 90.0
+shorten_length = 40.0
+shorten_keep_leading = 100.0
 
 
 
@@ -81,6 +82,36 @@ def gaus(x,a,x0,sigma):
     return a*numpy.exp(-(x-x0)**2.0/(2.0*sigma**2.0))
 
 '''
+Baselines for Site d2sa hpol:
+Delays in ns:
+array([-63.14130048,  99.38889723,  15.64368973, 162.3543261 ,
+        78.65923556, -83.85536426])
+Sigma:
+array([0.17644782, 0.1987261 , 0.1869557 , 0.17651783, 0.20839108,
+       0.16655057])
+Baselines:
+array([[0, 2],
+       [0, 4],
+       [0, 6],
+       [2, 4],
+       [2, 6],
+       [4, 6]])
+
+Baselines for Site d2sa vpol:
+Delays in ns:
+array([-70.02166451,  86.85031485,  11.30731964, 156.85079363,
+        81.30439472, -75.52956864])
+Sigma:
+array([0.11617623, 0.10046536, 0.14437393, 0.12835038, 0.13399128,
+       0.11643392])
+Baselines:
+array([[1, 3],
+       [1, 5],
+       [1, 7],
+       [3, 5],
+       [3, 7],
+       [5, 7]])
+
 Baselines for Site d3sa hpol:
 Delays in ns:
 array([-100.9643034 ,   39.12872542,  -52.79778144,  140.02931026,
@@ -121,12 +152,179 @@ array([[1, 3],
        [3, 5],
        [3, 7],
        [5, 7]])
+
+Baselines for Site d3sb hpol:
+Delays in ns:
+array([-118.24860437,    3.11211276,  -89.96367379,  121.1021402 ,
+         28.22563402,  -93.03585489])
+Sigma:
+array([0.07043019, 0.07144881, 0.11915923, 0.06628051, 0.11001272,
+       0.11761661])
+Baselines:
+array([[0, 2],
+       [0, 4],
+       [0, 6],
+       [2, 4],
+       [2, 6],
+       [4, 6]])
+
+
+Event 517 set as template
+Event 517 set as template   
+Event 517 set as template   
+Event 517 set as template   
+Event 517 set as template   
+Event 517 set as template   
+(576/576)           
+
+Baselines for Site d3sb vpol:
+Delays in ns:
+array([-124.30123945,   -9.2209266 ,  -93.83340383,  115.03118086,
+         30.68261666,  -84.49031588])
+Sigma:
+array([0.19245565, 0.25414605, 0.31903936, 0.29155481, 0.37501811,
+       0.37506079])
+Baselines:
+array([[1, 3],
+       [1, 5],
+       [1, 7],
+       [3, 5],
+       [3, 7],
+       [5, 7]])
+
+Baselines for Site d3sc hpol:
+Delays in ns:
+array([-124.50656734,  -12.67950929, -105.88945604,  111.74108185,
+         18.69346089,  -93.14504255])
+Sigma:
+array([0.09842963, 0.10768558, 0.09280989, 0.07931319, 0.10520202,
+       0.11498814])
+Baselines:
+array([[0, 2],
+       [0, 4],
+       [0, 6],
+       [2, 4],
+       [2, 6],
+       [4, 6]])
+
+#THESE ONES ARE WITH SHORTENED SIGNALS
+Baselines for Site d3sc hpol:
+Delays in ns:
+array([-124.91391579,  -13.15003191, -105.93984956,  111.70737811,
+         19.02486885,  -92.80343433])
+Sigma:
+array([0.22920522, 0.19421038, 0.21978905, 0.14111465, 0.21970912,
+       0.24054242])
+Baselines:
+array([[0, 2],
+       [0, 4],
+       [0, 6],
+       [2, 4],
+       [2, 6],
+       [4, 6]])
+
+
+
+Event 14683 set as template
+Event 14683 set as template 
+Event 14683 set as template 
+Event 14683 set as template 
+Event 14683 set as template 
+Event 14683 set as template 
+(533/533)           
+
+Baselines for Site d3sc vpol:
+Delays in ns:
+array([-131.23459943,  -25.33789367, -109.8755877 ,  105.97147853,
+         21.44267034,  -84.53585933])
+Sigma:
+array([0.09881008, 0.13022104, 0.13173773, 0.12295037, 0.13130819,
+       0.12364438])
+Baselines:
+array([[1, 3],
+       [1, 5],
+       [1, 7],
+       [3, 5],
+       [3, 7],
+       [5, 7]])
+
+Baselines for Site d4sa hpol:
+Delays in ns:
+array([-131.05787774,  -80.48935891, -156.11747805,   50.37710341,
+        -25.22189312,  -75.68285714])
+Sigma:
+array([0.11962765, 0.13788958, 0.22954265, 0.13345461, 0.22534428,
+       0.28682674])
+Baselines:
+array([[0, 2],
+       [0, 4],
+       [0, 6],
+       [2, 4],
+       [2, 6],
+       [4, 6]])
+Baselines for Site d4sa vpol:
+Delays in ns:
+array([-137.63837021,  -93.07503106, -160.44372872,   44.55829189,
+        -22.84918766,  -67.41484311])
+Sigma:
+array([0.19247366, 0.09339184, 0.22085245, 0.19228158, 0.23594743,
+       0.22635479])
+Baselines:
+array([[1, 3],
+       [1, 5],
+       [1, 7],
+       [3, 5],
+       [3, 7],
+       [5, 7]])
+
+
+
+Baselines for Site d4sb hpol:
+Delays in ns:
+array([-108.48271003, -145.52936836, -182.42420984,  -37.07392944,
+        -74.3088871 ,  -50.74909569])
+Sigma:
+array([0.14458919, 0.12773987, 0.23587384, 0.10636644, 0.28704927,
+       0.28072363])
+Baselines:
+array([[0, 2],
+       [0, 4],
+       [0, 6],
+       [2, 4],
+       [2, 6],
+       [4, 6]])
+
+#Redid this one because the cross corr is weird.  Did it windowing around the first half of the signal. 
+Baselines for Site d4sb hpol:
+Delays in ns:
+array([-36.91059479])
+Sigma:
+array([0.17559892])
+Baselines:
+array([[4, 6]])
+
+
+Baselines for Site d4sb vpol:
+Delays in ns:
+array([-115.07169322, -157.99423434, -186.63177201,  -43.00198129,
+        -71.51992424,  -28.60474262])
+Sigma:
+array([0.17114803, 0.16868515, 0.21001127, 0.23489705, 0.157785  ,
+       0.3050704 ])
+Baselines:
+array([[1, 3],
+       [1, 5],
+       [1, 7],
+       [3, 5],
+       [3, 7],
+       [5, 7]])
+
 '''
 
 if __name__ == '__main__':
     plt.close('all')
     try:
-        origin = info.loadAntennaZeroLocation()
+        origin = info.loadAntennaZeroLocation(deploy_index=deploy_index)
         pulser_info = PulserInfo()
 
         sites_day2 = ['d2sa']
@@ -136,25 +334,25 @@ if __name__ == '__main__':
         lassos = []
 
         #Set Baseline
-        sites = [sites_day3[0]]
-        pols = ['vpol']
-        limit_eventids = 50000
-        baseline_antennas = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
+        sites = [sites_day3[1]]
+        pols = ['hpol']#,'vpol']
+        limit_eventids = 100
+        baseline_antennas = [[0,1]]#[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]#[[2,3]]#[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
 
         #The attenuations to include for each site and polarization
-        attenuations_dict = {'hpol':{   'd2sa' : [10],
+        attenuations_dict = {'hpol':{   'd2sa' : [20],
                                         'd3sa' : [10],
                                         'd3sb' : [6],
-                                        'd3sc' : [10],
-                                        'd4sa' : [6],
+                                        'd3sc' : [20],
+                                        'd4sa' : [20],
                                         'd4sb' : [6]
                                     },
                              'vpol':{   'd2sa' : [10],
                                         'd3sa' : [6],
                                         'd3sb' : [20],
-                                        'd3sc' : [10],
-                                        'd4sa' : [6],
-                                        'd4sb' : [6]
+                                        'd3sc' : [20],
+                                        'd4sa' : [10],
+                                        'd4sb' : [10]
                                     }
                             }
 
@@ -203,6 +401,10 @@ if __name__ == '__main__':
                 finalized_time_delays = []
                 finalized_sigma = []
                 reference_event = pulser_info.getPulserReferenceEvent(site, pol)
+
+                if reference_event['attenuation_dB'] != attenuations_dict[pol][site][0]:
+                    print('WARNING!!! THE REFERENCE EVENT IS NOT THE SAME ATTENUATION LEVEL AS THE ATTENUATION SETTING CURRENTLY BEING USED.')
+
                 for baseline in baseline_antennas:
                     if pol == 'hpol':
                         channels = [min(baseline)*2, max(baseline)*2]
@@ -210,7 +412,7 @@ if __name__ == '__main__':
                         channels = [min(baseline)*2 + 1, max(baseline)*2 + 1]
                     
                     #Set appropriate template for reference event run
-                    tcts[int(reference_event['run'])].setTemplateToEvent(int(reference_event['eventid']),sine_subtract=sine_subtract)
+                    tcts[int(reference_event['run'])].setTemplateToEvent(int(reference_event['eventid']),sine_subtract=sine_subtract, hilbert=hilbert, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
                     if False:
                         if sine_subtract == True:
                             tcts[int(reference_event['run'])].plotEvent(int(reference_event['eventid']), channels=channels, apply_filter=True, hilbert=hilbert, sine_subtract=False, apply_tukey=None, additional_title_text=None, time_delays=None, verbose=False)
@@ -263,7 +465,7 @@ if __name__ == '__main__':
 
                     for event_index, event_info in enumerate(all_event_info[cut]):
                         sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(cut)))
-                        max_corrs, upsampled_waveforms, rolled_wfs = tcts[event_info['run']].alignToTemplate(event_info['eventid'], channels=channels, align_method=align_method, sine_subtract=sine_subtract)
+                        max_corrs, upsampled_waveforms, rolled_wfs = tcts[event_info['run']].alignToTemplate(event_info['eventid'], channels=channels, align_method=align_method,sine_subtract=sine_subtract, hilbert=hilbert, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
                         averaged_waveforms += rolled_wfs/len(cut)
 
                         if plot_averaged == True:
@@ -273,7 +475,7 @@ if __name__ == '__main__':
 
                     if plot_averaged == True:
                         #Repeat for template and plot on top. 
-                        max_corrs, upsampled_waveforms, rolled_wfs = tcts[int(reference_event['run'])].alignToTemplate(int(reference_event['eventid']), channels=channels, align_method=align_method)
+                        max_corrs, upsampled_waveforms, rolled_wfs = tcts[int(reference_event['run'])].alignToTemplate(int(reference_event['eventid']), channels=channels, align_method=align_method,sine_subtract=sine_subtract, hilbert=hilbert, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
 
                         for channel_index, channel in enumerate(channels):
                             ax = axs[channel_index]
@@ -336,7 +538,7 @@ if __name__ == '__main__':
                         if plot_averaged == True:
                             for channel_index, channel in enumerate(channels):
                                 ax = axs2[channel_index]
-                                ax.plot(times, rolled_wfs[channel_index],alpha=0.2)
+                                ax.plot(times, upsampled_waveforms[channel_index],alpha=0.2)
 
                     if plot_averaged == True:
                         #Repeat for template and plot on top. 
@@ -351,10 +553,12 @@ if __name__ == '__main__':
                     template_baseline_time_delay = template_corr_time_shifts[numpy.where(numpy.all(template_pairs == channels,axis=1))[0]]
                     all_time_delays = template_baseline_time_delay + all_time_shifts[0] - all_time_shifts[1] #sign may be off of difference here but it just flips the error so doesn't matter
 
-                    #REMOVE OUTLIERS
-                    all_time_delays = all_time_delays[numpy.abs(all_time_delays - numpy.median(all_time_delays)) < 20]
-
                     predicted_time_delay = numpy.append(expected_time_delays_hpol,expected_time_delays_vpol)[numpy.where(numpy.all(template_pairs == channels,axis=1))[0]]
+
+                    #REMOVE OUTLIERS
+                    all_time_delays = all_time_delays[numpy.abs(all_time_delays - predicted_time_delay) < 100] #Filter anything WAY off
+                    all_time_delays = all_time_delays[numpy.abs(all_time_delays - numpy.median(all_time_delays)) < 20] #Of the remainng. filter nased on the median of remaining
+
 
                     fig = plt.figure(figsize=(16,9))
                     plt.title('Channels %s Time Delays\n%s %s'%(str(channels), pol, site))
