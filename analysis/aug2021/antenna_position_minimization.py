@@ -593,10 +593,10 @@ if __name__ == '__main__':
         initial_step_y = 0.1#2.0 #m
         initial_step_z = 0.1#0.75 #m
         initial_step_cable_delay = 3 #ns
-        cable_delay_guess_range = 30 #ns
-        antenna_position_guess_range_x = 0.75 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_y = 0.75 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_z = 0.75 #Limit to how far from input phase locations to limit the parameter space to
+        cable_delay_guess_range = None#30 #ns
+        antenna_position_guess_range_x = None#0.75 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = None#0.75 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_z = None#0.75 #Limit to how far from input phase locations to limit the parameter space to
 
         #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
         manual_offset_ant0_x = 0
@@ -619,15 +619,15 @@ if __name__ == '__main__':
         fix_ant0_x = True
         fix_ant0_y = True
         fix_ant0_z = True
-        fix_ant1_x = True
-        fix_ant1_y = True
-        fix_ant1_z = True
-        fix_ant2_x = True
-        fix_ant2_y = True
-        fix_ant2_z = True
-        fix_ant3_x = True
-        fix_ant3_y = True
-        fix_ant3_z = True
+        fix_ant1_x = False
+        fix_ant1_y = False
+        fix_ant1_z = False
+        fix_ant2_x = False
+        fix_ant2_y = False
+        fix_ant2_z = False
+        fix_ant3_x = False
+        fix_ant3_y = False
+        fix_ant3_z = False
         fix_cable_delay0 = True
         fix_cable_delay1 = False
         fix_cable_delay2 = False
@@ -1612,7 +1612,7 @@ if __name__ == '__main__':
                     adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                     adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-                    adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU_hpol,ant1_ENU_hpol,ant2_ENU_hpol,ant3_ENU_hpol,adjusted_cor.A0_vpol,adjusted_cor.A1_vpol,adjusted_cor.A2_vpol,adjusted_cor.A3_vpol,verbose=False)
+                    adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU_hpol,ant1_ENU_hpol,ant2_ENU_hpol,ant3_ENU_hpol,ant0_ENU_vpol,ant1_ENU_vpol,ant2_ENU_vpol,ant3_ENU_vpol,verbose=False)
                     adjusted_cor.overwriteCableDelays(m.values['cable_delay0_hpol'], m.values['cable_delay0_vpol'], m.values['cable_delay1_hpol'], m.values['cable_delay1_vpol'], m.values['cable_delay2_hpol'], m.values['cable_delay2_vpol'], m.values['cable_delay3_hpol'], m.values['cable_delay3_vpol'])
 
                     if plot_expected_direction == False:
@@ -1654,91 +1654,91 @@ if __name__ == '__main__':
                         adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                         adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-                        adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU_hpol,ant1_ENU_hpol,ant2_ENU_hpol,ant3_ENU_hpol,adjusted_cor.A0_vpol,adjusted_cor.A1_vpol,adjusted_cor.A2_vpol,adjusted_cor.A3_vpol,verbose=False)
+                        adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU_hpol,ant1_ENU_hpol,ant2_ENU_hpol,ant3_ENU_hpol,ant0_ENU_vpol,ant1_ENU_vpol,ant2_ENU_vpol,ant3_ENU_vpol,verbose=False)
                         adjusted_cor.overwriteCableDelays(m.values['cable_delay0_hpol'], m.values['cable_delay0_vpol'], m.values['cable_delay1_hpol'], m.values['cable_delay1_vpol'], m.values['cable_delay2_hpol'], m.values['cable_delay2_vpol'], m.values['cable_delay3_hpol'], m.values['cable_delay3_vpol'])
                         
                         run_cut = known_pulser_ids['run'] == reader.run #Make sure all eventids in same run
                         hist = adjusted_cor.histMapPeak(numpy.sort(numpy.random.choice(known_pulser_ids[run_cut],min(limit_events,len(known_pulser_ids[run_cut]))))['eventid'], _pol, plot_map=True, hilbert=False, max_method=0, use_weight=False, mollweide=False, center_dir='E', radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90],circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='Hist ' + key, include_baselines=include_baselines,iterate_sub_baselines=iterate_sub_baselines)
 
-        # Finalized Output 
+            # Finalized Output 
 
-        print('Estimated degrees of freedom: %i'%sum([not v for k, v in m.fixed.items()]))
-        print('Estimated input measured values: %i'%(len(cm.am_hpol.include_baselines)*len(cm.am_hpol.use_sites) + len(cm.am_hpol.include_baselines)*len(cm.am_hpol.use_sites) + len(cm.am_vpol.include_baselines)*len(cm.am_vpol.use_sites) + len(cm.am_vpol.include_baselines)*len(cm.am_vpol.use_sites)))
-
-
-        print('\n')
-        print('STARTING CONDITION INPUT VALUES HERE')
-        print('\n')
-        print('')
-
-        print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('hpol', cm.am_hpol.initial_ant0_x,cm.am_hpol.initial_ant0_y,cm.am_hpol.initial_ant0_z ,  cm.am_hpol.initial_ant1_x,cm.am_hpol.initial_ant1_y,cm.am_hpol.initial_ant1_z,  cm.am_hpol.initial_ant2_x,cm.am_hpol.initial_ant2_y,cm.am_hpol.initial_ant2_z,  cm.am_hpol.initial_ant3_x,cm.am_hpol.initial_ant3_y,cm.am_hpol.initial_ant3_z))
-        print('')
-        print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%('hpol',cm.am_hpol.cable_delays[0],cm.am_hpol.cable_delays[1],cm.am_hpol.cable_delays[2],cm.am_hpol.cable_delays[3]))
-
-        print('\n')
-        print(result)
-        print('\n')
-        print('Copy-Paste Prints:\n------------')
-        print('')
-
-        print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('hpol', ant0_ENU_hpol[0] , ant0_ENU_hpol[1] , ant0_ENU_hpol[2] , ant1_ENU_hpol[0] , ant1_ENU_hpol[1] , ant1_ENU_hpol[2],  ant2_ENU_hpol[0] , ant2_ENU_hpol[1] , ant2_ENU_hpol[2],  ant3_ENU_hpol[0] , ant3_ENU_hpol[1] , ant3_ENU_hpol[2]))
-        print('antennas_phase_%s_hesse = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('hpol', m.errors['ant0_x_hpol'],m.errors['ant0_y_hpol'],m.errors['ant0_z_hpol'] ,  m.errors['ant1_x_hpol'],m.errors['ant1_y_hpol'],m.errors['ant1_z_hpol'],  m.errors['ant2_x_hpol'],m.errors['ant2_y_hpol'],m.errors['ant2_z_hpol'],  m.errors['ant3_x_hpol'],m.errors['ant3_y_hpol'],m.errors['ant3_z_hpol']))
-        print('')
-        print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%('hpol',m.values['cable_delay0_hpol'],m.values['cable_delay1_hpol'],m.values['cable_delay2_hpol'],m.values['cable_delay3_hpol']))
-        print('cable_delays_%s_hesse = numpy.array([%f,%f,%f,%f])'%('hpol',m.errors['cable_delay0_hpol'],m.errors['cable_delay1_hpol'],m.errors['cable_delay2_hpol'],m.errors['cable_delay3_hpol']))
+            print('Estimated degrees of freedom: %i'%sum([not v for k, v in m.fixed.items()]))
+            print('Estimated input measured values: %i'%(len(cm.am_hpol.include_baselines)*len(cm.am_hpol.use_sites) + len(cm.am_hpol.include_baselines)*len(cm.am_hpol.use_sites) + len(cm.am_vpol.include_baselines)*len(cm.am_vpol.use_sites) + len(cm.am_vpol.include_baselines)*len(cm.am_vpol.use_sites)))
 
 
+            print('\n')
+            print('STARTING CONDITION INPUT VALUES HERE')
+            print('\n')
+            print('')
 
-        print('\n')
-        print('STARTING CONDITION INPUT VALUES HERE')
-        print('\n')
-        print('')
+            print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('hpol', cm.am_hpol.initial_ant0_x,cm.am_hpol.initial_ant0_y,cm.am_hpol.initial_ant0_z ,  cm.am_hpol.initial_ant1_x,cm.am_hpol.initial_ant1_y,cm.am_hpol.initial_ant1_z,  cm.am_hpol.initial_ant2_x,cm.am_hpol.initial_ant2_y,cm.am_hpol.initial_ant2_z,  cm.am_hpol.initial_ant3_x,cm.am_hpol.initial_ant3_y,cm.am_hpol.initial_ant3_z))
+            print('')
+            print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%('hpol',cm.am_hpol.cable_delays[0],cm.am_hpol.cable_delays[1],cm.am_hpol.cable_delays[2],cm.am_hpol.cable_delays[3]))
 
-        print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('vpol', cm.am_vpol.initial_ant0_x,cm.am_vpol.initial_ant0_y,cm.am_vpol.initial_ant0_z ,  cm.am_vpol.initial_ant1_x,cm.am_vpol.initial_ant1_y,cm.am_vpol.initial_ant1_z,  cm.am_vpol.initial_ant2_x,cm.am_vpol.initial_ant2_y,cm.am_vpol.initial_ant2_z,  cm.am_vpol.initial_ant3_x,cm.am_vpol.initial_ant3_y,cm.am_vpol.initial_ant3_z))
-        print('')
-        print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%('vpol',cm.am_vpol.cable_delays[0],cm.am_vpol.cable_delays[1],cm.am_vpol.cable_delays[2],cm.am_vpol.cable_delays[3]))
+            print('\n')
+            print(result)
+            print('\n')
+            print('Copy-Paste Prints:\n------------')
+            print('')
 
-        print('\n')
-        print(result)
-        print('\n')
-        print('Copy-Paste Prints:\n------------')
-        print('')
-
-        print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('vpol', ant0_ENU_vpol[0] , ant0_ENU_vpol[1] , ant0_ENU_vpol[2] , ant1_ENU_vpol[0] , ant1_ENU_vpol[1] , ant1_ENU_vpol[2],  ant2_ENU_vpol[0] , ant2_ENU_vpol[1] , ant2_ENU_vpol[2],  ant3_ENU_vpol[0] , ant3_ENU_vpol[1] , ant3_ENU_vpol[2]))
-        print('antennas_phase_%s_hesse = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('vpol', m.errors['ant0_x_hpol'],m.errors['ant0_y_hpol'],m.errors['ant0_z_hpol'] ,  m.errors['ant1_x_hpol'],m.errors['ant1_y_hpol'],m.errors['ant1_z_hpol'],  m.errors['ant2_x_hpol'],m.errors['ant2_y_hpol'],m.errors['ant2_z_hpol'],  m.errors['ant3_x_hpol'],m.errors['ant3_y_hpol'],m.errors['ant3_z_hpol'])) #Hpol errors because vpol don't move independently
-        print('')
-        print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%('vpol',m.values['cable_delay0_vpol'],m.values['cable_delay1_vpol'],m.values['cable_delay2_vpol'],m.values['cable_delay3_vpol']))
-        print('cable_delays_%s_hesse = numpy.array([%f,%f,%f,%f])'%('vpol',m.errors['cable_delay0_vpol'],m.errors['cable_delay1_vpol'],m.errors['cable_delay2_vpol'],m.errors['cable_delay3_vpol']))
+            print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('hpol', ant0_ENU_hpol[0] , ant0_ENU_hpol[1] , ant0_ENU_hpol[2] , ant1_ENU_hpol[0] , ant1_ENU_hpol[1] , ant1_ENU_hpol[2],  ant2_ENU_hpol[0] , ant2_ENU_hpol[1] , ant2_ENU_hpol[2],  ant3_ENU_hpol[0] , ant3_ENU_hpol[1] , ant3_ENU_hpol[2]))
+            print('antennas_phase_%s_hesse = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('hpol', m.errors['ant0_x_hpol'],m.errors['ant0_y_hpol'],m.errors['ant0_z_hpol'] ,  m.errors['ant1_x_hpol'],m.errors['ant1_y_hpol'],m.errors['ant1_z_hpol'],  m.errors['ant2_x_hpol'],m.errors['ant2_y_hpol'],m.errors['ant2_z_hpol'],  m.errors['ant3_x_hpol'],m.errors['ant3_y_hpol'],m.errors['ant3_z_hpol']))
+            print('')
+            print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%('hpol',m.values['cable_delay0_hpol'],m.values['cable_delay1_hpol'],m.values['cable_delay2_hpol'],m.values['cable_delay3_hpol']))
+            print('cable_delays_%s_hesse = numpy.array([%f,%f,%f,%f])'%('hpol',m.errors['cable_delay0_hpol'],m.errors['cable_delay1_hpol'],m.errors['cable_delay2_hpol'],m.errors['cable_delay3_hpol']))
 
 
-        print('Code completed.')
-        print('\a')
 
-        if True:
-            #This code is intended to save the output configuration produced by this script. 
-            initial_deploy_index = str(info.returnDefaultDeploy())
-            initial_origin, initial_antennas_physical, initial_antennas_phase_hpol, initial_antennas_phase_vpol, initial_cable_delays, initial_description = bcr.configReader(initial_deploy_index,return_description=True)
+            print('\n')
+            print('STARTING CONDITION INPUT VALUES HERE')
+            print('\n')
+            print('')
 
-            output_origin = initial_origin
-            output_antennas_physical = initial_antennas_physical
-            output_antennas_phase_hpol = output_antennas_phase_hpol
-            output_antennas_phase_vpol = output_antennas_phase_vpol
+            print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('vpol', cm.am_vpol.initial_ant0_x,cm.am_vpol.initial_ant0_y,cm.am_vpol.initial_ant0_z ,  cm.am_vpol.initial_ant1_x,cm.am_vpol.initial_ant1_y,cm.am_vpol.initial_ant1_z,  cm.am_vpol.initial_ant2_x,cm.am_vpol.initial_ant2_y,cm.am_vpol.initial_ant2_z,  cm.am_vpol.initial_ant3_x,cm.am_vpol.initial_ant3_y,cm.am_vpol.initial_ant3_z))
+            print('')
+            print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%('vpol',cm.am_vpol.cable_delays[0],cm.am_vpol.cable_delays[1],cm.am_vpol.cable_delays[2],cm.am_vpol.cable_delays[3]))
 
-            output_cable_delays = {}
-            output_cable_delays['hpol'] = resulting_cable_delays_hpol
-            output_cable_delays['vpol'] = resulting_cable_delays_vpol
-            output_description = 'Automatically generated description for a calibration starting from deploy_index: %s.  This config has updated %s values based on a calibration that was performed.  Initial description: %s'%(initial_deploy_index, pol, initial_description)
+            print('\n')
+            print(result)
+            print('\n')
+            print('Copy-Paste Prints:\n------------')
+            print('')
 
-            if len(os.path.split(initial_deploy_index)) == 2:
-                json_path = initial_deploy_index
-            else:
-                json_path = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'config','automatically_generated_config_0.json')
-            
-            with open('./antenna_position_minimization.py', "r") as this_file:
-                #read whole file to a string
-                script_string = this_file.read()
+            print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('vpol', ant0_ENU_vpol[0] , ant0_ENU_vpol[1] , ant0_ENU_vpol[2] , ant1_ENU_vpol[0] , ant1_ENU_vpol[1] , ant1_ENU_vpol[2],  ant2_ENU_vpol[0] , ant2_ENU_vpol[1] , ant2_ENU_vpol[2],  ant3_ENU_vpol[0] , ant3_ENU_vpol[1] , ant3_ENU_vpol[2]))
+            print('antennas_phase_%s_hesse = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('vpol', m.errors['ant0_x_hpol'],m.errors['ant0_y_hpol'],m.errors['ant0_z_hpol'] ,  m.errors['ant1_x_hpol'],m.errors['ant1_y_hpol'],m.errors['ant1_z_hpol'],  m.errors['ant2_x_hpol'],m.errors['ant2_y_hpol'],m.errors['ant2_z_hpol'],  m.errors['ant3_x_hpol'],m.errors['ant3_y_hpol'],m.errors['ant3_z_hpol'])) #Hpol errors because vpol don't move independently
+            print('')
+            print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%('vpol',m.values['cable_delay0_vpol'],m.values['cable_delay1_vpol'],m.values['cable_delay2_vpol'],m.values['cable_delay3_vpol']))
+            print('cable_delays_%s_hesse = numpy.array([%f,%f,%f,%f])'%('vpol',m.errors['cable_delay0_vpol'],m.errors['cable_delay1_vpol'],m.errors['cable_delay2_vpol'],m.errors['cable_delay3_vpol']))
 
-            bcr.configWriter(json_path, output_origin, output_antennas_physical, output_antennas_phase_hpol, output_antennas_phase_vpol, output_cable_delays, description=output_description,update_latlonel=True,force_write=True, additional_text=script_string) #does not overwrite.
+
+            print('Code completed.')
+            print('\a')
+
+            if True:
+                #This code is intended to save the output configuration produced by this script. 
+                initial_deploy_index = str(info.returnDefaultDeploy())
+                initial_origin, initial_antennas_physical, initial_antennas_phase_hpol, initial_antennas_phase_vpol, initial_cable_delays, initial_description = bcr.configReader(initial_deploy_index,return_description=True)
+
+                output_origin = initial_origin
+                output_antennas_physical = initial_antennas_physical
+                output_antennas_phase_hpol = output_antennas_phase_hpol
+                output_antennas_phase_vpol = output_antennas_phase_vpol
+
+                output_cable_delays = {}
+                output_cable_delays['hpol'] = resulting_cable_delays_hpol
+                output_cable_delays['vpol'] = resulting_cable_delays_vpol
+                output_description = 'Automatically generated description for a calibration starting from deploy_index: %s.  This config has updated %s values based on a calibration that was performed.  Initial description: %s'%(initial_deploy_index, pol, initial_description)
+
+                if len(os.path.split(initial_deploy_index)) == 2:
+                    json_path = initial_deploy_index
+                else:
+                    json_path = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'config','automatically_generated_config_0.json')
+                
+                with open('./antenna_position_minimization.py', "r") as this_file:
+                    #read whole file to a string
+                    script_string = this_file.read()
+
+                bcr.configWriter(json_path, output_origin, output_antennas_physical, output_antennas_phase_hpol, output_antennas_phase_vpol, output_cable_delays, description=output_description,update_latlonel=True,force_write=True, additional_text=script_string) #does not overwrite.
 
 
 
