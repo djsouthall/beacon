@@ -134,6 +134,324 @@ attenuations_dict = {'hpol':{           'd2sa' : [20],
                                     }
                             }
 
+
+class AntennaMinimizer:
+    '''
+    This is the minimizer to be used for a single polarization.  It is intended to readily encapsulate all of the
+    necessary prepwork for a single pol, such that the 2 could be readily combined easily into a single minimization.
+
+    This doesn't actually include the minimizer itself, but rather the meta data for the chi^2 function that will
+    be minimized.  How that function is handled is still done externally.
+    '''
+    def __init__(self, pol, deploy_index, origin=None, use_sites=['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb'], 
+                    random_offset_amount=0.05,
+                    included_antennas_lumped=[0,1,2,3],
+                    include_baselines=[0,1,2,3,4,5],
+                    initial_step_x=0.1,
+                    initial_step_y=0.1,
+                    initial_step_z=0.1,
+                    initial_step_cable_delay=3,
+                    cable_delay_guess_range=30,
+                    antenna_position_guess_range_x=0.75,
+                    antenna_position_guess_range_y=0.75,
+                    antenna_position_guess_range_z=0.75,
+                    manual_offset_ant0_x=0,
+                    manual_offset_ant0_y=0,
+                    manual_offset_ant0_z=0,
+                    manual_offset_ant1_x=0,
+                    manual_offset_ant1_y=0,
+                    manual_offset_ant1_z=0,
+                    manual_offset_ant2_x=0,
+                    manual_offset_ant2_y=0,
+                    manual_offset_ant2_z=0,
+                    manual_offset_ant3_x=0,
+                    manual_offset_ant3_y=0,
+                    manual_offset_ant3_z=0,
+                    fix_ant0_x=True,
+                    fix_ant0_y=True,
+                    fix_ant0_z=True,
+                    fix_ant1_x=False,
+                    fix_ant1_y=False,
+                    fix_ant1_z=False,
+                    fix_ant2_x=False,
+                    fix_ant2_y=False,
+                    fix_ant2_z=False,
+                    fix_ant3_x=False,
+                    fix_ant3_y=False,
+                    fix_ant3_z=False,
+                    fix_cable_delay0=True,
+                    fix_cable_delay1=False,
+                    fix_cable_delay2=False,
+                    fix_cable_delay3=False):
+        try:
+            self.included_antennas_lumped = included_antennas_lumped
+            self.include_baselines = include_baselines
+            self.included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in self.included_antennas_lumped])
+            self.deploy_index = deploy_index
+            self.pol = pol
+            self.use_sites = use_sites
+
+
+            #Force antennas not to be included to be fixed.  
+            if not(0 in included_antennas_lumped):
+                fix_ant0_x = True
+                fix_ant0_y = True
+                fix_ant0_z = True
+                fix_cable_delay0 = True
+
+            if not(1 in included_antennas_lumped):
+                fix_ant1_x = True
+                fix_ant1_y = True
+                fix_ant1_z = True
+                fix_cable_delay1 = True
+            if not(2 in included_antennas_lumped):
+                fix_ant2_x = True
+                fix_ant2_y = True
+                fix_ant2_z = True
+                fix_cable_delay2 = True
+            if not(3 in included_antennas_lumped):
+                fix_ant3_x = True
+                fix_ant3_y = True
+                fix_ant3_z = True
+                fix_cable_delay3 = True
+
+            #This math is to set the pairs to include in the calculation.  Typically it will be all of them, but if the option is enabled to remove some
+            #from the calculation then this will allow for that to be done.
+            self.pairs = numpy.array(list(itertools.combinations((0,1,2,3), 2)))
+            self.pairs_cut = []
+            for pair_index, pair in enumerate(numpy.array(list(itertools.combinations((0,1,2,3), 2)))):
+                self.pairs_cut.append(numpy.logical_and(numpy.all(numpy.isin(numpy.array(pair),included_antennas_lumped)), pair_index in include_baselines)) #include_baselines Overwritten when antennas removed.
+            include_baselines = numpy.where(self.pairs_cut)[0] #Effectively the same as the self.pairs_cut but index based for baselines.
+            #include_baselines = numpy.arange(4)
+            print('Including baseline self.pairs:')
+            print(self.pairs[self.pairs_cut])
+
+            #I think adding an absolute time offset for each antenna and letting that vary could be interesting.  It could be used to adjust the cable delays.
+            self.cable_delays = info.loadCableDelays(deploy_index=self.deploy_index,return_raw=True)[pol]
+
+            if origin is None:
+                self.origin = info.loadAntennaZeroLocation(deploy_index=self.deploy_index)
+            else:
+                self.origin = origin
+
+            antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=self.deploy_index)
+
+            pulser_info = PulserInfo()
+
+            self.pulser_locations_ENU = {}
+
+            for site in use_sites:        
+                #Prepare correlators for future use on a per event basis
+                source_latlonel = pulser_info.getPulserLatLonEl(site)
+                
+                # Prepare expected angle and arrival times
+                self.pulser_locations_ENU[site] = pm.geodetic2enu(source_latlonel[0],source_latlonel[1],source_latlonel[2],self.origin[0],self.origin[1],self.origin[2])
+
+
+            if True:
+                if pol == 'hpol':
+                    self.antennas_phase_start = antennas_phase_hpol
+                else:
+                    self.antennas_phase_start = antennas_phase_vpol
+            else:
+                print('WARNING, USING PHYSICAL LOCATIONS TO START')
+                self.antennas_phase_start = antennas_physical            
+
+            colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+
+
+            if cable_delay_guess_range is not None:
+
+                limit_cable_delay0 = (cable_delays[0] - cable_delay_guess_range , cable_delays[0] + cable_delay_guess_range)
+                limit_cable_delay1 = (cable_delays[1] - cable_delay_guess_range , cable_delays[1] + cable_delay_guess_range)
+                limit_cable_delay2 = (cable_delays[2] - cable_delay_guess_range , cable_delays[2] + cable_delay_guess_range)
+                limit_cable_delay3 = (cable_delays[3] - cable_delay_guess_range , cable_delays[3] + cable_delay_guess_range)
+            else:
+                limit_cable_delay0 = None
+                limit_cable_delay1 = None
+                limit_cable_delay2 = None
+                limit_cable_delay3 = None
+
+            if antenna_position_guess_range_x is not None:
+                ant0_physical_limits_x = (antennas_phase_start[0][0] + manual_offset_ant0_x - antenna_position_guess_range_x ,antennas_phase_start[0][0] + manual_offset_ant0_x + antenna_position_guess_range_x)
+                ant1_physical_limits_x = (antennas_phase_start[1][0] + manual_offset_ant1_x - antenna_position_guess_range_x ,antennas_phase_start[1][0] + manual_offset_ant1_x + antenna_position_guess_range_x)
+                ant2_physical_limits_x = (antennas_phase_start[2][0] + manual_offset_ant2_x - antenna_position_guess_range_x ,antennas_phase_start[2][0] + manual_offset_ant2_x + antenna_position_guess_range_x)
+                ant3_physical_limits_x = (antennas_phase_start[3][0] + manual_offset_ant3_x - antenna_position_guess_range_x ,antennas_phase_start[3][0] + manual_offset_ant3_x + antenna_position_guess_range_x)
+            else:
+                ant0_physical_limits_x = None
+                ant1_physical_limits_x = None
+                ant2_physical_limits_x = None
+                ant3_physical_limits_x = None
+
+            if antenna_position_guess_range_y is not None:
+                ant0_physical_limits_y = (antennas_phase_start[0][1] + manual_offset_ant0_y - antenna_position_guess_range_y ,antennas_phase_start[0][1] + manual_offset_ant0_y + antenna_position_guess_range_y)
+                ant1_physical_limits_y = (antennas_phase_start[1][1] + manual_offset_ant1_y - antenna_position_guess_range_y ,antennas_phase_start[1][1] + manual_offset_ant1_y + antenna_position_guess_range_y)
+                ant2_physical_limits_y = (antennas_phase_start[2][1] + manual_offset_ant2_y - antenna_position_guess_range_y ,antennas_phase_start[2][1] + manual_offset_ant2_y + antenna_position_guess_range_y)
+                ant3_physical_limits_y = (antennas_phase_start[3][1] + manual_offset_ant3_y - antenna_position_guess_range_y ,antennas_phase_start[3][1] + manual_offset_ant3_y + antenna_position_guess_range_y)
+            else:
+                ant0_physical_limits_y = None
+                ant1_physical_limits_y = None
+                ant2_physical_limits_y = None
+                ant3_physical_limits_y = None
+
+            if antenna_position_guess_range_z is not None:
+                ant0_physical_limits_z = (antennas_phase_start[0][2] + manual_offset_ant0_z - antenna_position_guess_range_z ,antennas_phase_start[0][2] + manual_offset_ant0_z + antenna_position_guess_range_z)
+                ant1_physical_limits_z = (antennas_phase_start[1][2] + manual_offset_ant1_z - antenna_position_guess_range_z ,antennas_phase_start[1][2] + manual_offset_ant1_z + antenna_position_guess_range_z)
+                ant2_physical_limits_z = (antennas_phase_start[2][2] + manual_offset_ant2_z - antenna_position_guess_range_z ,antennas_phase_start[2][2] + manual_offset_ant2_z + antenna_position_guess_range_z)
+                ant3_physical_limits_z = (antennas_phase_start[3][2] + manual_offset_ant3_z - antenna_position_guess_range_z ,antennas_phase_start[3][2] + manual_offset_ant3_z + antenna_position_guess_range_z)
+            else:
+                ant0_physical_limits_z = None
+                ant1_physical_limits_z = None
+                ant2_physical_limits_z = None
+                ant3_physical_limits_z = None
+
+            if random_offset_amount > 0:
+                print('RANDOMLY SHIFTING INPUT POSITIONS BY SPECIFIED AMOUNT:%0.2f m'%random_offset_amount)
+
+            initial_ant0_x = manual_offset_ant0_x + antennas_phase_start[0][0] + float(not fix_ant0_x)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+            initial_ant0_y = manual_offset_ant0_y + antennas_phase_start[0][1] + float(not fix_ant0_y)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+            initial_ant0_z = manual_offset_ant0_z + antennas_phase_start[0][2] + float(not fix_ant0_z)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+            initial_ant1_x = manual_offset_ant1_x + antennas_phase_start[1][0] + float(not fix_ant1_x)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+            initial_ant1_y = manual_offset_ant1_y + antennas_phase_start[1][1] + float(not fix_ant1_y)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+            initial_ant1_z = manual_offset_ant1_z + antennas_phase_start[1][2] + float(not fix_ant1_z)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+            initial_ant2_x = manual_offset_ant2_x + antennas_phase_start[2][0] + float(not fix_ant2_x)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+            initial_ant2_y = manual_offset_ant2_y + antennas_phase_start[2][1] + float(not fix_ant2_y)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+            initial_ant2_z = manual_offset_ant2_z + antennas_phase_start[2][2] + float(not fix_ant2_z)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+            initial_ant3_x = manual_offset_ant3_x + antennas_phase_start[3][0] + float(not fix_ant3_x)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+            initial_ant3_y = manual_offset_ant3_y + antennas_phase_start[3][1] + float(not fix_ant3_y)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+            initial_ant3_z = manual_offset_ant3_z + antennas_phase_start[3][2] + float(not fix_ant3_z)*numpy.random.uniform(low=-random_offset_amount, high=random_offset_amount,size=1)[0]
+
+            initial_ant0_ENU = numpy.array([initial_ant0_x, initial_ant0_y, initial_ant0_z])
+            initial_ant1_ENU = numpy.array([initial_ant1_x, initial_ant1_y, initial_ant1_z])
+            initial_ant2_ENU = numpy.array([initial_ant2_x, initial_ant2_y, initial_ant2_z])
+            initial_ant3_ENU = numpy.array([initial_ant3_x, initial_ant3_y, initial_ant3_z])
+
+            if True:
+                #Initial baselines just to be printed out
+                initial_baselines = {   '01':numpy.sqrt((initial_ant0_x - initial_ant1_x)**2 + (initial_ant0_y - initial_ant1_y)**2 + (initial_ant0_z - initial_ant1_z)**2),\
+                                        '02':numpy.sqrt((initial_ant0_x - initial_ant2_x)**2 + (initial_ant0_y - initial_ant2_y)**2 + (initial_ant0_z - initial_ant2_z)**2),\
+                                        '03':numpy.sqrt((initial_ant0_x - initial_ant3_x)**2 + (initial_ant0_y - initial_ant3_y)**2 + (initial_ant0_z - initial_ant3_z)**2),\
+                                        '12':numpy.sqrt((initial_ant1_x - initial_ant2_x)**2 + (initial_ant1_y - initial_ant2_y)**2 + (initial_ant1_z - initial_ant2_z)**2),\
+                                        '13':numpy.sqrt((initial_ant1_x - initial_ant3_x)**2 + (initial_ant1_y - initial_ant3_y)**2 + (initial_ant1_z - initial_ant3_z)**2),\
+                                        '23':numpy.sqrt((initial_ant2_x - initial_ant3_x)**2 + (initial_ant2_y - initial_ant3_y)**2 + (initial_ant2_z - initial_ant3_z)**2)}
+                print(self.pol)
+                print('The initial baselines (specified by deploy_index = %s) with random offsets and manual adjustsments in meters are:'%(str(info.returnDefaultDeploy())))
+                print(initial_baselines)
+
+                for key in use_sites:
+                    d0 = numpy.sqrt((self.pulser_locations_ENU[key][0] - initial_ant0_x)**2 + (self.pulser_locations_ENU[key][1] - initial_ant0_y)**2 + (self.pulser_locations_ENU[key][2] - initial_ant0_z)**2 ) #m
+                    print('Pulser %s is %0.2f m away from Antenna 0'%(key, d0))
+
+
+            self.ant0_x=initial_ant0_x
+            self.ant0_y=initial_ant0_y
+            self.ant0_z=initial_ant0_z
+            self.ant1_x=initial_ant1_x
+            self.ant1_y=initial_ant1_y
+            self.ant1_z=initial_ant1_z
+            self.ant2_x=initial_ant2_x
+            self.ant2_y=initial_ant2_y
+            self.ant2_z=initial_ant2_z
+            self.ant3_x=initial_ant3_x
+            self.ant3_y=initial_ant3_y
+            self.ant3_z=initial_ant3_z
+            self.cable_delay0=cable_delays[0]
+            self.cable_delay1=cable_delays[1]
+            self.cable_delay2=cable_delays[2]
+            self.cable_delay3=cable_delays[3]
+
+            self.errors = {}
+            self.limits = {}
+            self.errors['ant0_x'] = initial_step_x
+            self.errors['ant0_y'] = initial_step_y
+            self.errors['ant0_z'] = initial_step_z
+            self.errors['ant1_x'] = initial_step_x
+            self.errors['ant1_y'] = initial_step_y
+            self.errors['ant1_z'] = initial_step_z
+            self.errors['ant2_x'] = initial_step_x
+            self.errors['ant2_y'] = initial_step_y
+            self.errors['ant2_z'] = initial_step_z
+            self.errors['ant3_x'] = initial_step_x
+            self.errors['ant3_y'] = initial_step_y
+            self.errors['ant3_z'] = initial_step_z
+            self.errors['cable_delay0'] = initial_step_cable_delay
+            self.errors['cable_delay1'] = initial_step_cable_delay
+            self.errors['cable_delay2'] = initial_step_cable_delay
+            self.errors['cable_delay3'] = initial_step_cable_delay
+            self.errordef = 1.0
+            self.limits['ant0_x'] = ant0_physical_limits_x
+            self.limits['ant0_y'] = ant0_physical_limits_y
+            self.limits['ant0_z'] = ant0_physical_limits_z
+            self.limits['ant1_x'] = ant1_physical_limits_x
+            self.limits['ant1_y'] = ant1_physical_limits_y
+            self.limits['ant1_z'] = ant1_physical_limits_z
+            self.limits['ant2_x'] = ant2_physical_limits_x
+            self.limits['ant2_y'] = ant2_physical_limits_y
+            self.limits['ant2_z'] = ant2_physical_limits_z
+            self.limits['ant3_x'] = ant3_physical_limits_x
+            self.limits['ant3_y'] = ant3_physical_limits_y
+            self.limits['ant3_z'] = ant3_physical_limits_z
+            self.limits['cable_delay0'] = limit_cable_delay0
+            self.limits['cable_delay1'] = limit_cable_delay1
+            self.limits['cable_delay2'] = limit_cable_delay2
+            self.limits['cable_delay3'] = limit_cable_delay3
+            self.fixed['ant0_x'] = fix_ant0_x
+            self.fixed['ant0_y'] = fix_ant0_y
+            self.fixed['ant0_z'] = fix_ant0_z
+            self.fixed['ant1_x'] = fix_ant1_x
+            self.fixed['ant1_y'] = fix_ant1_y
+            self.fixed['ant1_z'] = fix_ant1_z
+            self.fixed['ant2_x'] = fix_ant2_x
+            self.fixed['ant2_y'] = fix_ant2_y
+            self.fixed['ant2_z'] = fix_ant2_z
+            self.fixed['ant3_x'] = fix_ant3_x
+            self.fixed['ant3_y'] = fix_ant3_y
+            self.fixed['ant3_z'] = fix_ant3_z
+            self.fixed['cable_delay0'] = fix_cable_delay0
+            self.fixed['cable_delay1'] = fix_cable_delay1
+            self.fixed['cable_delay2'] = fix_cable_delay2
+            self.fixed['cable_delay3'] = fix_cable_delay3
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def rawChi2(self, ant0_x, ant0_y, ant0_z, ant1_x, ant1_y, ant1_z, ant2_x, ant2_y, ant2_z, ant3_x, ant3_y, ant3_z, cable_delay0, cable_delay1, cable_delay2, cable_delay3):
+        '''
+        This is a chi^2 that loops over locations from potential RFI, calculating expected time delays for those locations.  Then
+        it will compares those to the calculated time delays for suspected corresponding events.  
+        '''
+        try:
+            #Calculate distances (already converted to ns) from pulser to each antenna
+            chi_2 = 0.0
+            _cable_delays = [cable_delay0,cable_delay1,cable_delay2,cable_delay3]
+
+            for key in use_sites:
+                d0 = (numpy.sqrt((self.pulser_locations_ENU[key][0] - ant0_x)**2 + (self.pulser_locations_ENU[key][1] - ant0_y)**2 + (self.pulser_locations_ENU[key][2] - ant0_z)**2 )/c)*1.0e9 #ns
+                d1 = (numpy.sqrt((self.pulser_locations_ENU[key][0] - ant1_x)**2 + (self.pulser_locations_ENU[key][1] - ant1_y)**2 + (self.pulser_locations_ENU[key][2] - ant1_z)**2 )/c)*1.0e9 #ns
+                d2 = (numpy.sqrt((self.pulser_locations_ENU[key][0] - ant2_x)**2 + (self.pulser_locations_ENU[key][1] - ant2_y)**2 + (self.pulser_locations_ENU[key][2] - ant2_z)**2 )/c)*1.0e9 #ns
+                d3 = (numpy.sqrt((self.pulser_locations_ENU[key][0] - ant3_x)**2 + (self.pulser_locations_ENU[key][1] - ant3_y)**2 + (self.pulser_locations_ENU[key][2] - ant3_z)**2 )/c)*1.0e9 #ns
+
+                d = [d0,d1,d2,d3]
+
+                for pair_index, pair in enumerate(self.pairs):
+                    if pairs_cut[pair_index]:
+                        geometric_time_delay = (d[pair[0]] + _cable_delays[pair[0]]) - (d[pair[1]] + _cable_delays[pair[1]])
+                        vals = ((geometric_time_delay - measured_time_delays[key][self.pol]['delays_ns'][pair_index])**2)/(measured_time_delays[key][self.pol]['sigma_ns'][pair_index]**2)
+                        chi_2 += numpy.sum(vals)
+
+            #print(chi_2)
+            return chi_2
+        except Exception as e:
+            print('Error in rawChi2')
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+
 if __name__ == '__main__':
     try:
         plt.close('all')
@@ -153,9 +471,6 @@ if __name__ == '__main__':
                 use_sites = ['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']
             elif pol == 'vpol':
                 use_sites = ['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']
-
-        only_plot = use_sites
-
 
         plot_histograms = False
         limit_events = 100
@@ -201,14 +516,14 @@ if __name__ == '__main__':
         include_baselines = [0,1,2,3,4,5]#[1,3,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
 
         #Limits 
-        initial_step_x = 0.5#2.0 #m
-        initial_step_y = 0.5#2.0 #m
-        initial_step_z = 0.5#0.75 #m
+        initial_step_x = 0.1#2.0 #m
+        initial_step_y = 0.1#2.0 #m
+        initial_step_z = 0.1#0.75 #m
         initial_step_cable_delay = 3 #ns
         cable_delay_guess_range = 30 #ns
-        antenna_position_guess_range_x = 4.0 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_y = 4.0 #Limit to how far from input phase locations to limit the parameter space to
-        antenna_position_guess_range_z = 4.0 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_x = 0.75 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_y = 0.75 #Limit to how far from input phase locations to limit the parameter space to
+        antenna_position_guess_range_z = 0.75 #Limit to how far from input phase locations to limit the parameter space to
 
         #Manually shifting input of antenna 0 around so that I can find a fit that has all of its baselines visible for valley sources. 
         manual_offset_ant0_x = 0
@@ -231,15 +546,15 @@ if __name__ == '__main__':
         fix_ant0_x = True
         fix_ant0_y = True
         fix_ant0_z = True
-        fix_ant1_x = False
-        fix_ant1_y = False
-        fix_ant1_z = False
-        fix_ant2_x = False
-        fix_ant2_y = False
-        fix_ant2_z = False
-        fix_ant3_x = False
-        fix_ant3_y = False
-        fix_ant3_z = False
+        fix_ant1_x = True
+        fix_ant1_y = True
+        fix_ant1_z = True
+        fix_ant2_x = True
+        fix_ant2_y = True
+        fix_ant2_z = True
+        fix_ant3_x = True
+        fix_ant3_y = True
+        fix_ant3_z = True
         fix_cable_delay0 = True
         fix_cable_delay1 = False
         fix_cable_delay2 = False
@@ -281,6 +596,7 @@ if __name__ == '__main__':
 
         #I think adding an absolute time offset for each antenna and letting that vary could be interesting.  It could be used to adjust the cable delays.
         cable_delays = info.loadCableDelays(deploy_index=deploy_index,return_raw=True)[pol]
+
         origin = info.loadAntennaZeroLocation(deploy_index=deploy_index)
         antennas_physical, antennas_phase_hpol, antennas_phase_vpol = info.loadAntennaLocationsENU(deploy_index=deploy_index)
 
@@ -455,7 +771,6 @@ if __name__ == '__main__':
                             vals = ((geometric_time_delay - measured_time_delays[key][pol]['delays_ns'][pair_index])**2)/(measured_time_delays[key][pol]['sigma_ns'][pair_index]**2)
                             chi_2 += numpy.sum(vals)
 
-                #print(chi_2)
                 return chi_2
             except Exception as e:
                 print('Error in rawChi2')
@@ -463,7 +778,6 @@ if __name__ == '__main__':
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 print(exc_type, fname, exc_tb.tb_lineno)
-
 
         
         #-12 ft on pulser locations relative to antennas to account for additional mast elevation.
@@ -772,7 +1086,13 @@ if __name__ == '__main__':
                 azimuth_deg = None
 
             if plot_time_delays_on_maps:
-                td_dict = {pol:{'[0, 1]' :  [measured_time_delays[key][pol]['delays_ns'][0]], '[0, 2]' : [measured_time_delays[key][pol]['delays_ns'][1]], '[0, 3]' : [measured_time_delays[key][pol]['delays_ns'][2]], '[1, 2]' : [measured_time_delays[key][pol]['delays_ns'][3]], '[1, 3]' : [measured_time_delays[key][pol]['delays_ns'][4]], '[2, 3]' : [measured_time_delays[key][pol]['delays_ns'][5]]}}
+                if False:
+                    #Good for troubleshooting if a cycle slipped.
+                    cycle_slip_estimate_ns = 15
+                    n_cycles = 1
+                    td_dict = {pol:{'[0, 1]' :  measured_time_delays[key][pol]['delays_ns'][0] + numpy.arange(-n_cycles, n_cycles + 1)*cycle_slip_estimate_ns, '[0, 2]' : measured_time_delays[key][pol]['delays_ns'][1] + numpy.arange(-n_cycles, n_cycles + 1)*cycle_slip_estimate_ns, '[0, 3]' : measured_time_delays[key][pol]['delays_ns'][2] + numpy.arange(-n_cycles, n_cycles + 1)*cycle_slip_estimate_ns, '[1, 2]' : measured_time_delays[key][pol]['delays_ns'][3] + numpy.arange(-n_cycles, n_cycles + 1)*cycle_slip_estimate_ns, '[1, 3]' : measured_time_delays[key][pol]['delays_ns'][4] + numpy.arange(-n_cycles, n_cycles + 1)*cycle_slip_estimate_ns, '[2, 3]' : measured_time_delays[key][pol]['delays_ns'][5] + numpy.arange(-n_cycles, n_cycles + 1)*cycle_slip_estimate_ns}}
+                else:
+                    td_dict = {pol:{'[0, 1]' :  [measured_time_delays[key][pol]['delays_ns'][0]], '[0, 2]' : [measured_time_delays[key][pol]['delays_ns'][1]], '[0, 3]' : [measured_time_delays[key][pol]['delays_ns'][2]], '[1, 2]' : [measured_time_delays[key][pol]['delays_ns'][3]], '[1, 3]' : [measured_time_delays[key][pol]['delays_ns'][4]], '[2, 3]' : [measured_time_delays[key][pol]['delays_ns'][5]]}}
             else:
                 td_dict = {}
 
