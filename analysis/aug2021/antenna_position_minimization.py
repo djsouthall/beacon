@@ -589,9 +589,9 @@ if __name__ == '__main__':
         include_baselines = [0,1,2,3,4,5]#[1,3,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
 
         #Limits 
-        initial_step_x = 0.1#2.0 #m
-        initial_step_y = 0.1#2.0 #m
-        initial_step_z = 0.1#0.75 #m
+        initial_step_x = 0.2#2.0 #m
+        initial_step_y = 0.2#2.0 #m
+        initial_step_z = 2#0.75 #m
         initial_step_cable_delay = 3 #ns
         cable_delay_guess_range = None#30 #ns
         antenna_position_guess_range_x = None#0.75 #Limit to how far from input phase locations to limit the parameter space to
@@ -616,20 +616,20 @@ if __name__ == '__main__':
         manual_offset_ant3_z = 0#2
 
 
-        fix_ant0_x = True
-        fix_ant0_y = True
-        fix_ant0_z = True
-        fix_ant1_x = False
-        fix_ant1_y = False
-        fix_ant1_z = False
+        fix_ant0_x = False
+        fix_ant0_y = False
+        fix_ant0_z = False
+        fix_ant1_x = True
+        fix_ant1_y = True
+        fix_ant1_z = True
         fix_ant2_x = False
         fix_ant2_y = False
         fix_ant2_z = False
         fix_ant3_x = False
         fix_ant3_y = False
         fix_ant3_z = False
-        fix_cable_delay0 = True
-        fix_cable_delay1 = False
+        fix_cable_delay0 = False
+        fix_cable_delay1 = True
         fix_cable_delay2 = False
         fix_cable_delay3 = False
 

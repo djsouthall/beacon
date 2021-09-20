@@ -205,7 +205,7 @@ def updateENUFromLatlonel(data, verbose=True):
 
     return data
 
-def configReader(json_path, return_mode='enu', check=True, verbose=True, return_description=False):
+def configReader(json_path, return_mode='enu', check=True, verbose=False, return_description=False):
     '''
     This will read in the custom config files and return them in a usable format that allows the json files to
     interface readily with existing analysis code.

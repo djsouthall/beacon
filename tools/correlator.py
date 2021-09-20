@@ -2851,7 +2851,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False, return_map_peaks=False, return_peak_to_sidelobe=False, initial_peaks=None, initial_peak_to_sidelobes=None):
+    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, return_fig=False, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False, return_max_possible_map_values=False, initial_max_possible_map_values=None, return_map_peaks=False, return_peak_to_sidelobe=False, initial_peaks=None, initial_peak_to_sidelobes=None):
         '''
         This will loop over eventids and makes a histogram from of location of maximum correlation
         value in the corresponding correlation maps. 
@@ -2864,6 +2864,9 @@ class Correlator:
             The polarization you wish to plot.  Options: 'hpol', 'vpol', 'both'
         plot_map : bool
             Whether to actually plot the results.  
+        return_fig : bool
+            If True AND plot_map is True then the matplotlib figure will be returned.  Note that this does not return
+            the correlation plots if plot_corr is enabled (though they will still be plotted).
         plot_corr : bool
             Plot the cross-correlations for each baseline.
         hilbert : bool
@@ -2909,6 +2912,8 @@ class Correlator:
 
             all_theta_best = numpy.zeros(len(eventids))
             all_phi_best = numpy.zeros(len(eventids))
+            if return_max_possible_map_values == True:
+                all_max_possible_map_values = numpy.zeros(len(eventids))
             if return_peak_to_sidelobe == True:
                 all_peak_to_sidelobes = numpy.zeros(len(eventids))
             if return_map_peaks == True:
@@ -2926,7 +2931,11 @@ class Correlator:
                 sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
                 sys.stdout.flush()
                 for _include_baselines in include_baselines_all:
-                    m = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=_include_baselines, hilbert=hilbert)
+                    if return_max_possible_map_values:
+                        m, max_possible_map_value = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=_include_baselines, hilbert=hilbert, return_max_possible_map_value=True)
+                    else:
+                        m = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=_include_baselines, hilbert=hilbert, return_max_possible_map_value=False)
+
                     if return_peak_to_sidelobe == True:
                         if max_method is not None:
                             linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=return_peak_to_sidelobe)
@@ -2942,6 +2951,9 @@ class Correlator:
 
                     all_theta_best[event_index] = theta_best
                     all_phi_best[event_index] = phi_best
+
+                    if return_max_possible_map_values == True:
+                        all_max_possible_map_values[event_index] = max_possible_map_value
 
                     if return_map_peaks == True:
                         all_map_peaks[event_index] = m.flat[linear_max_index]
@@ -2959,6 +2971,9 @@ class Correlator:
             if initial_phis is not None:
                 all_phi_best = numpy.append(initial_phis,all_phi_best)
 
+            if return_max_possible_map_values:
+                if initial_max_possible_map_values is not None:
+                    all_max_possible_map_values = numpy.append(initial_max_possible_map_values,all_max_possible_map_values)
             if return_map_peaks == True:
                 if initial_peaks is not None:
                     all_map_peaks = numpy.append(initial_peaks,all_map_peaks)
@@ -3064,7 +3079,7 @@ class Correlator:
                             if len(_circle_zenith) == len(_circle_az):
                                 additional_circles = []
                                 for i in range(len(_circle_az)):
-                                    ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=radius, crosshair=False, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
+                                    ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=radius, crosshair=True, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
                                     additional_circles.append(_circ)
                             plt.title('%s Difference from reconstructed \nand expected peaks is %0.2f'%( window_title,  numpy.sqrt( (_circle_az[i] - phi_best)**2 + (_circle_zenith[i] - theta_best)**2 ) ))
                             print('%s\nDifference in degrees from reconstructed and expected peaks is %0.2f'%( window_title,  numpy.sqrt( (_circle_az[i] - phi_best)**2 + (_circle_zenith[i] - theta_best)**2 ) ))
@@ -3175,16 +3190,52 @@ class Correlator:
                     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
                     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.25)
 
-            if return_map_peaks == True:
-                if return_peak_to_sidelobe == True:
-                    return hist, all_phi_best, all_theta_best, all_map_peaks, all_peak_to_sidelobes
+            if plot_map == True and return_fig == True:
+                if return_max_possible_map_values == True:
+                    if return_map_peaks == True:
+                        if return_peak_to_sidelobe == True:
+                            return hist, all_phi_best, all_theta_best, all_max_possible_map_values, all_map_peaks, all_peak_to_sidelobes, fig
+                        else:
+                            return hist, all_phi_best, all_theta_best, all_max_possible_map_values, all_map_peaks, fig
+                    else:
+                        if return_peak_to_sidelobe == True:
+                            return hist, all_phi_best, all_theta_best, all_max_possible_map_values, all_peak_to_sidelobes, fig
+                        else:
+                            return hist, all_phi_best, all_theta_best, all_max_possible_map_values, fig
                 else:
-                    return hist, all_phi_best, all_theta_best, all_map_peaks
+                    if return_map_peaks == True:
+                        if return_peak_to_sidelobe == True:
+                            return hist, all_phi_best, all_theta_best, all_map_peaks, all_peak_to_sidelobes, fig
+                        else:
+                            return hist, all_phi_best, all_theta_best, all_map_peaks, fig
+                    else:
+                        if return_peak_to_sidelobe == True:
+                            return hist, all_phi_best, all_theta_best, all_peak_to_sidelobes, fig
+                        else:
+                            return hist, all_phi_best, all_theta_best, fig
             else:
-                if return_peak_to_sidelobe == True:
-                    return hist, all_phi_best, all_theta_best, all_peak_to_sidelobes
+                if return_max_possible_map_values == True:
+                    if return_map_peaks == True:
+                        if return_peak_to_sidelobe == True:
+                            return hist, all_phi_best, all_theta_best, all_max_possible_map_values, all_map_peaks, all_peak_to_sidelobes
+                        else:
+                            return hist, all_phi_best, all_theta_best, all_max_possible_map_values, all_map_peaks
+                    else:
+                        if return_peak_to_sidelobe == True:
+                            return hist, all_phi_best, all_theta_best, all_max_possible_map_values, all_peak_to_sidelobes
+                        else:
+                            return hist, all_phi_best, all_theta_best, all_max_possible_map_values
                 else:
-                    return hist, all_phi_best, all_theta_best
+                    if return_map_peaks == True:
+                        if return_peak_to_sidelobe == True:
+                            return hist, all_phi_best, all_theta_best, all_map_peaks, all_peak_to_sidelobes
+                        else:
+                            return hist, all_phi_best, all_theta_best, all_map_peaks
+                    else:
+                        if return_peak_to_sidelobe == True:
+                            return hist, all_phi_best, all_theta_best, all_peak_to_sidelobes
+                        else:
+                            return hist, all_phi_best, all_theta_best
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
