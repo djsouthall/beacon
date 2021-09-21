@@ -261,6 +261,13 @@ if __name__=="__main__":
 
                             map_times_subsets = list(file['map_times'][filter_string].keys())
 
+                            if not numpy.isin(filter_string,map_properties_dsets):
+                                file['map_properties'].create_group(filter_string)
+                            else:
+                                print('%s group already exists in file %s'%(filter_string,filename))
+
+                            map_properties_subsets = list(file['map_properties'][filter_string].keys())
+
 
                             #Directions
                             if not numpy.isin('hpol_ENU_azimuth',map_direction_subsets):
@@ -352,16 +359,26 @@ if __name__=="__main__":
 
 
                             #Map Properties
-
-                            if not numpy.isin(filter_string,peak_to_sidelobe_dsets):
-                                file['peak_to_sidelobe'].create_dataset(filter_string, (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            if not numpy.isin('hpol_peak_to_sidelobe',map_properties_subsets):
+                                file['map_properties'][filter_string].create_dataset('hpol_peak_to_sidelobe', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in peak_to_sidelobe[%s] of %s will be overwritten by this analysis script.'%(filter_string, filename))
+                                print('Values in hpol_peak_to_sidelobe of %s will be overwritten by this analysis script.'%filename)
 
-                            if not numpy.isin(filter_string,max_possible_map_value_dsets):
-                                file['max_possible_map_value'].create_dataset(filter_string, (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            if not numpy.isin('vpol_peak_to_sidelobe',map_properties_subsets):
+                                file['map_times'][filter_string].create_dataset('vpol_peak_to_sidelobe', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in max_possible_map_value[%s] of %s will be overwritten by this analysis script.'%(filter_string, filename))
+                                print('Values in vpol_peak_to_sidelobe of %s will be overwritten by this analysis script.'%filename)
+
+                            if not numpy.isin('hpol_max_possible_map_value',map_properties_subsets):
+                                file['map_properties'][filter_string].create_dataset('hpol_max_possible_map_value', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in hpol_max_possible_map_value of %s will be overwritten by this analysis script.'%filename)
+
+                            if not numpy.isin('vpol_max_possible_map_value',map_properties_subsets):
+                                file['map_times'][filter_string].create_dataset('vpol_max_possible_map_value', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in vpol_max_possible_map_value of %s will be overwritten by this analysis script.'%filename)
+
 
 
 
@@ -398,7 +415,7 @@ if __name__=="__main__":
                                 m, max_possible_map_value = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert,return_max_possible_map_value=True)
 
                                 for filter_string_index, filter_string in enumerate(filter_strings):
-                                    file['max_possible_map_value'][filter_string][eventid] = max_possible_map_value #doesn't really depend on filter_string but would depend on calibration, so keeping it sorted.
+                                    file['map_properties'][filter_string]['%s_max_possible_map_value'%mode][eventid] = max_possible_map_value #doesn't really depend on filter_string but would depend on calibration, so keeping it sorted.
                                     #Determine cut values
                                     if mapmax_cut_modes[filter_string_index] == 'abovehorizon':
                                         # print('abovehorizon')
@@ -466,7 +483,7 @@ if __name__=="__main__":
                                     file['map_times'][filter_string]['%s_1subtract2'%mode][eventid] = t_1subtract2 
                                     file['map_times'][filter_string]['%s_1subtract3'%mode][eventid] = t_1subtract3 
                                     file['map_times'][filter_string]['%s_2subtract3'%mode][eventid] = t_2subtract3 
-                                    file['peak_to_sidelobe'][filter_string][eventid] = peak_to_sidelobe
+                                    file['map_properties'][filter_string]['%s_peak_to_sidelobe'%mode][eventid] = peak_to_sidelobe
 
                         file.close()
                     except Exception as e:
