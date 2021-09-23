@@ -535,9 +535,9 @@ if __name__ == '__main__':
         if True:
             deploy_index = 'rtk-gps-day3-june22-2021.json'#'theodolite-day3-june22-2021_only_enu.json'#'rtk-gps-day3-june22-2021.json'
             if pol == 'hpol':
-                use_sites = ['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']
+                use_sites = ['d3sa','d3sb','d3sc','d4sa','d4sb']#['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']
             elif pol == 'vpol':
-                use_sites = ['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']
+                use_sites = ['d3sa','d3sb','d3sc','d4sa','d4sb']#['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']
             elif pol == 'both':
                 use_sites = {}
                 use_sites['hpol'] = ['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']
@@ -616,20 +616,20 @@ if __name__ == '__main__':
         manual_offset_ant3_z = 0#2
 
 
-        fix_ant0_x = False
-        fix_ant0_y = False
-        fix_ant0_z = False
-        fix_ant1_x = True
-        fix_ant1_y = True
-        fix_ant1_z = True
+        fix_ant0_x = True
+        fix_ant0_y = True
+        fix_ant0_z = True
+        fix_ant1_x = False
+        fix_ant1_y = False
+        fix_ant1_z = False
         fix_ant2_x = False
         fix_ant2_y = False
         fix_ant2_z = False
         fix_ant3_x = False
         fix_ant3_y = False
         fix_ant3_z = False
-        fix_cable_delay0 = False
-        fix_cable_delay1 = True
+        fix_cable_delay0 = True
+        fix_cable_delay1 = False
         fix_cable_delay2 = False
         fix_cable_delay3 = False
 

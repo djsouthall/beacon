@@ -9,3 +9,4 @@ data/*/pictures
 slurmout
 tools/slurmout
 tools/slurm*.out
+tools/beam_definitions

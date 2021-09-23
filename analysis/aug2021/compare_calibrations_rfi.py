@@ -150,8 +150,13 @@ def prepPlots(pol, normalize_map_peaks, runs, calibrations, calibrations_shortha
 if __name__ == '__main__':
     plt.close('all')
     try:
-        calibrations = calibrations = ['/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/theodolite-day3-june22-2021_only_enu.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_cables.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_nolim.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_joint_ants_nolim.json']#['rtk-gps-day3-june22-2021.json' , 'rtk-gps-day3-2021-09-13_both_minimized_wide_range_3_antennas_move.json']#['rtk-gps-day3-june22-2021.json' , 'rtk-gps-day3-2021-09-13_both_minimized_wide_range_3_antennas_move.json', 'theodolite-day3-june22-2021_only_enu.json']
-        calibrations_shorthand = ['GPS', 'Theodolite', 'Cable Float', 'Cable + Ant Float', 'Cable + Locked Pols Float']
+        if False:
+            calibrations = calibrations = ['/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/theodolite-day3-june22-2021_only_enu.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_cables.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_nolim.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_joint_ants_nolim.json']#['rtk-gps-day3-june22-2021.json' , 'rtk-gps-day3-2021-09-13_both_minimized_wide_range_3_antennas_move.json']#['rtk-gps-day3-june22-2021.json' , 'rtk-gps-day3-2021-09-13_both_minimized_wide_range_3_antennas_move.json', 'theodolite-day3-june22-2021_only_enu.json']
+            calibrations_shorthand = ['GPS', 'Theodolite', 'Cable Float', 'Cable + Ant Float', 'Cable + Locked Pols Float']
+        elif True:
+            calibrations = ['/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_nolim.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_joint_ants_nolim.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-22_nolim_ignore_d2sa.json']#['rtk-gps-day3-june22-2021.json' , 'rtk-gps-day3-2021-09-13_both_minimized_wide_range_3_antennas_move.json']#['rtk-gps-day3-june22-2021.json' , 'rtk-gps-day3-2021-09-13_both_minimized_wide_range_3_antennas_move.json', 'theodolite-day3-june22-2021_only_enu.json'] # ,'/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/theodolite-day3-june22-2021_only_enu.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_cables.json'
+            calibrations_shorthand = ['GPS',  'Cable + Ant Float', 'Cable + Locked Pols Float', 'Cable + Ant Float Ignore First Site']#'Theodolite', 'Cable Float',
+
         runs = numpy.arange(5800,5841)
         cors_list = [] #To keep interactive live
         lassos = []
@@ -159,7 +164,7 @@ if __name__ == '__main__':
 
         #Set Baseline
         pols = ['hpol','vpol']
-        limit_eventids = 1000
+        limit_eventids = 10000
         trigger_types = [2]
 
         include_p2p = False

@@ -80,13 +80,13 @@ hilbert = False #Apply hilbert envelope to wf before correlating
 align_method = 1 #0,1,2 
 
 
-shorten_signals = False
+shorten_signals = True
 shorten_thresh = 0.7
 shorten_delay = 10.0
-shorten_length = 40.0
-shorten_keep_leading = 10.0
+shorten_length = 1500.0
+shorten_keep_leading = 500.0
 
-map_resolution = 0.25 #degrees
+map_resolution = 0.1 #degrees
 range_phi_deg = (-90, 90)
 range_theta_deg = (80,120)
 n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
@@ -141,18 +141,22 @@ if __name__ == '__main__':
     plt.close('all')
     try:
         initial_state = numpy.random.get_state() #Such that each site will look at the same subset of randomly selected events
-        calibrations = ['/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_nolim.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_joint_ants_nolim.json']#['rtk-gps-day3-june22-2021.json' , 'rtk-gps-day3-2021-09-13_both_minimized_wide_range_3_antennas_move.json']#['rtk-gps-day3-june22-2021.json' , 'rtk-gps-day3-2021-09-13_both_minimized_wide_range_3_antennas_move.json', 'theodolite-day3-june22-2021_only_enu.json'] # ,'/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/theodolite-day3-june22-2021_only_enu.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_cables.json'
-        calibrations_shorthand = ['GPS',  'Cable + Ant Float', 'Cable + Locked Pols Float']#'Theodolite', 'Cable Float',
+        if True:
+            calibrations = ['/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_nolim.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_joint_ants_nolim.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-22_nolim_ignore_d2sa.json']#['rtk-gps-day3-june22-2021.json' , 'rtk-gps-day3-2021-09-13_both_minimized_wide_range_3_antennas_move.json']#['rtk-gps-day3-june22-2021.json' , 'rtk-gps-day3-2021-09-13_both_minimized_wide_range_3_antennas_move.json', 'theodolite-day3-june22-2021_only_enu.json'] # ,'/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/theodolite-day3-june22-2021_only_enu.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_cables.json'
+            calibrations_shorthand = ['GPS',  'Cable + Ant Float', 'Cable + Locked Pols Float', 'Cable + Ant Float Ignore First Site']#'Theodolite', 'Cable Float',
+        else:
+            calibrations = ['/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-22_nolim_ignore_d2sa.json']
+            calibrations_shorthand = ['GPS',  'Cable + Ant Float Ignore First Site']#'Theodolite', 'Cable Float',
         stacked = False
         sites_day2 = ['d2sa']
         sites_day3 = ['d3sa','d3sb','d3sc']
         sites_day4 = ['d4sa','d4sb']
         all_sites = ['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']
+        sites = all_sites
         cors_list = [] #To keep interactive live
         lassos = []
         normalize_map_peaks = True #This will use the maximum possible map value for a given signal to normalize the map peak value.
         #Set Baseline
-        sites = all_sites#[sites_day3[1]]
         pols = ['hpol','vpol']
         limit_eventids = 10000
         use_hatches = False
@@ -284,13 +288,24 @@ if __name__ == '__main__':
                         eventids = eventids[eventids['run'] == run]['eventid']
                         if run_index == 0:
                             if len(runs) == 1:
-                                hist, phi_best, theta_best, max_possible_map_values, map_peaks, peak_to_sidelobes, fig_map = cors[run].histMapPeak(eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, return_fig=True, hilbert=hilbert, max_method=max_method, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=[90,120], zenith_cut_array_plane=[0,90], circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='%s %s'%(calibrations_shorthand[calibration_index_value] , site),radius=1.0,iterate_sub_baselines=None, shift_1d_hists=True, return_map_peaks=True, return_peak_to_sidelobe=True, initial_peaks=None, initial_peak_to_sidelobes=None, return_max_possible_map_values=True, initial_max_possible_map_values=None)
+                                hist, phi_best, theta_best, max_possible_map_values, map_peaks, peak_to_sidelobes, fig_map = cors[run].histMapPeak(eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, return_fig=True, hilbert=hilbert, max_method=max_method, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=[90,120], zenith_cut_array_plane=[0,90], circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='%s %s'%(calibrations_shorthand[calibration_index_value] , site),radius=1.0,iterate_sub_baselines=None, shift_1d_hists=True, return_map_peaks=True, return_peak_to_sidelobe=True, initial_peaks=None, initial_peak_to_sidelobes=None, return_max_possible_map_values=True, initial_max_possible_map_values=None, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading,acceptable_fit_range=8.0)
                             else:
-                                hist, phi_best, theta_best, max_possible_map_values, map_peaks, peak_to_sidelobes = cors[run].histMapPeak(eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=False, hilbert=hilbert, max_method=max_method, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=[90,120], zenith_cut_array_plane=[0,90], circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False, return_map_peaks=True, return_peak_to_sidelobe=True, initial_peaks=None, initial_peak_to_sidelobes=None, return_max_possible_map_values=True, initial_max_possible_map_values=None)
+                                hist, phi_best, theta_best, max_possible_map_values, map_peaks, peak_to_sidelobes = cors[run].histMapPeak(eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=False, hilbert=hilbert, max_method=max_method, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=[90,120], zenith_cut_array_plane=[0,90], circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False, return_map_peaks=True, return_peak_to_sidelobe=True, initial_peaks=None, initial_peak_to_sidelobes=None, return_max_possible_map_values=True, initial_max_possible_map_values=None, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading,acceptable_fit_range=8.0)
                         elif run_index != len(runs) - 1:
-                            hist, phi_best, theta_best, max_possible_map_values, map_peaks, peak_to_sidelobes = cors[run].histMapPeak(eventids, pol, initial_hist=hist, initial_thetas=theta_best, initial_phis=phi_best, plot_map=False, hilbert=hilbert, max_method=max_method, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=[90,120], zenith_cut_array_plane=[0,90], circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False, return_map_peaks=True, return_peak_to_sidelobe=True, initial_peaks=map_peaks, initial_peak_to_sidelobes=peak_to_sidelobes, return_max_possible_map_values=True, initial_max_possible_map_values=max_possible_map_values)
+                            hist, phi_best, theta_best, max_possible_map_values, map_peaks, peak_to_sidelobes = cors[run].histMapPeak(eventids, pol, initial_hist=hist, initial_thetas=theta_best, initial_phis=phi_best, plot_map=False, hilbert=hilbert, max_method=max_method, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=[90,120], zenith_cut_array_plane=[0,90], circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False, return_map_peaks=True, return_peak_to_sidelobe=True, initial_peaks=map_peaks, initial_peak_to_sidelobes=peak_to_sidelobes, return_max_possible_map_values=True, initial_max_possible_map_values=max_possible_map_values, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading,acceptable_fit_range=8.0)
                         else:
-                            hist, phi_best, theta_best, max_possible_map_values, map_peaks, peak_to_sidelobes, fig_map = cors[run].histMapPeak(eventids, pol, initial_hist=hist, initial_thetas=theta_best, initial_phis=phi_best, plot_map=True, return_fig=True, hilbert=hilbert, max_method=max_method, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=[90,120], zenith_cut_array_plane=[0,90], circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='%s %s'%(calibrations_shorthand[calibration_index_value] , site),radius=1.0,iterate_sub_baselines=None, shift_1d_hists=True, return_map_peaks=True, return_peak_to_sidelobe=True, initial_peaks=map_peaks, initial_peak_to_sidelobes=peak_to_sidelobes, return_max_possible_map_values=True, initial_max_possible_map_values=max_possible_map_values)
+                            hist, phi_best, theta_best, max_possible_map_values, map_peaks, peak_to_sidelobes, fig_map = cors[run].histMapPeak(eventids, pol, initial_hist=hist, initial_thetas=theta_best, initial_phis=phi_best, plot_map=True, return_fig=True, hilbert=hilbert, max_method=max_method, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=[90,120], zenith_cut_array_plane=[0,90], circle_zenith=zenith_deg, circle_az=azimuth_deg, window_title='%s %s'%(calibrations_shorthand[calibration_index_value] , site),radius=1.0,iterate_sub_baselines=None, shift_1d_hists=True, return_map_peaks=True, return_peak_to_sidelobe=True, initial_peaks=map_peaks, initial_peak_to_sidelobes=peak_to_sidelobes, return_max_possible_map_values=True, initial_max_possible_map_values=max_possible_map_values, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading,acceptable_fit_range=8.0)
+
+                        if False:
+                            if numpy.any(numpy.abs(phi_best-azimuth_deg) > 5):
+                                bad_cut = numpy.where(numpy.abs(phi_best-azimuth_deg) > 5)[0]
+                                test_figs = []
+                                for event_index in bad_cut:
+                                    mean_corr_values_a, fig_a, ax_a, max_possible_map_value_a = cors[run].map(eventids[event_index], pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=True, mollweide=False, center_dir='E', zenith_cut_ENU=[90,120], zenith_cut_array_plane=[0,90], circle_zenith=zenith_deg, circle_az=azimuth_deg, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=True, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+                                    mean_corr_values_b, fig_b, ax_b, max_possible_map_value_b = cors[run].map(eventids[event_index], pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=True, mollweide=False, center_dir='E', zenith_cut_ENU=[90,120], zenith_cut_array_plane=[0,90], circle_zenith=zenith_deg, circle_az=azimuth_deg, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=True, plot_peak_to_sidelobe=True, shorten_signals=True, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+                                    test_figs.append(fig_a)
+                                    test_figs.append(fig_b)
+                                    import pdb; pdb.set_trace()
 
                     fig_map.set_size_inches(16,9)
                     plt.sca(fig_map.axes[0])

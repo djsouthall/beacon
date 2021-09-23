@@ -67,13 +67,25 @@ def getEventIds(reader, trigger_type=None):
         return e
 
 
+datapath = os.environ['BEACON_DATA']
 if __name__=="__main__":
-    if len(sys.argv) == 2:
+    debug = False#THIS IS A TEST, WILL POPULATE ALL VALUES WITH 0, JUST TO MAKE DEBUGGING QUICKER.
+    if len(sys.argv) > 1:
         run = int(sys.argv[1])
+        if len(sys.argv) == 3:
+            deploy_index = int(sys.argv[2])
+        elif run in numpy.arange(1643,1729):
+            deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config', 'chi2_optimized_deploy_from_rtk-gps-day1-june20-2021.json')
+        else:
+            # elif run > 5050:
+            #     deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021.json')
+            deploy_index = None
     else:
         run = 1701
+        deploy_index = None
 
-    datapath = os.environ['BEACON_DATA']
+
+
     plot_filter=False
 
     crit_freq_low_pass_MHz = 85
@@ -98,12 +110,6 @@ if __name__=="__main__":
     polarizations = ['hpol','vpol'] #Will loop over both if hpol and vpol present
     hilbert_modes = [False]#[True,False] #Will loop over both if True and False present
 
-    if run in numpy.arange(1643,1729):
-        deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config', 'chi2_optimized_deploy_from_rtk-gps-day1-june20-2021.json')
-    elif run > 5050:
-        deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021.json')
-    else:
-        deploy_index = None
     #Note that the below values set the angular resolution of the plot, while the presets from mapmax_cut_modes limit where in the generated plots will be considered for max values.
 
     map_resolution_theta = 0.25 #degrees
@@ -238,6 +244,13 @@ if __name__=="__main__":
 
                         max_possible_map_value_dsets = list(file['max_possible_map_value'].keys())
 
+                        if not numpy.isin('map_properties',dsets):
+                            file.create_group('map_properties')
+                        else:
+                            print('map_properties group already exists in file %s'%filename)
+
+                        map_properties_dsets = list(file['map_properties'].keys())
+
 
                         
                         for filter_string in filter_strings:
@@ -358,6 +371,7 @@ if __name__=="__main__":
                                 print('Values in vpol_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
 
+                            #import pdb; pdb.set_trace()
                             #Map Properties
                             if not numpy.isin('hpol_peak_to_sidelobe',map_properties_subsets):
                                 file['map_properties'][filter_string].create_dataset('hpol_peak_to_sidelobe', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
@@ -365,7 +379,7 @@ if __name__=="__main__":
                                 print('Values in hpol_peak_to_sidelobe of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_peak_to_sidelobe',map_properties_subsets):
-                                file['map_times'][filter_string].create_dataset('vpol_peak_to_sidelobe', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                                file['map_properties'][filter_string].create_dataset('vpol_peak_to_sidelobe', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
                                 print('Values in vpol_peak_to_sidelobe of %s will be overwritten by this analysis script.'%filename)
 
@@ -375,7 +389,7 @@ if __name__=="__main__":
                                 print('Values in hpol_max_possible_map_value of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_max_possible_map_value',map_properties_subsets):
-                                file['map_times'][filter_string].create_dataset('vpol_max_possible_map_value', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                                file['map_properties'][filter_string].create_dataset('vpol_max_possible_map_value', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
                                 print('Values in vpol_max_possible_map_value of %s will be overwritten by this analysis script.'%filename)
 
@@ -407,12 +421,35 @@ if __name__=="__main__":
 
                         for mode in polarizations:
                             print('Performing calculations for %s'%mode)
+
+                            print('Performing access sanity check:')
+                            try:
+                                file['map_properties'][filter_string]['%s_max_possible_map_value'%mode][0] = file['map_properties'][filter_string]['%s_max_possible_map_value'%mode][0]
+                                file['map_direction'][filter_string]['%s_ENU_zenith'%mode][0] = file['map_direction'][filter_string]['%s_ENU_zenith'%mode][0]
+                                file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][0] = file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][0]
+                                file['map_times'][filter_string]['%s_0subtract1'%mode][0] = file['map_times'][filter_string]['%s_0subtract1'%mode][0]
+                                file['map_times'][filter_string]['%s_0subtract2'%mode][0] = file['map_times'][filter_string]['%s_0subtract2'%mode][0]
+                                file['map_times'][filter_string]['%s_0subtract3'%mode][0] = file['map_times'][filter_string]['%s_0subtract3'%mode][0]
+                                file['map_times'][filter_string]['%s_1subtract2'%mode][0] = file['map_times'][filter_string]['%s_1subtract2'%mode][0]
+                                file['map_times'][filter_string]['%s_1subtract3'%mode][0] = file['map_times'][filter_string]['%s_1subtract3'%mode][0]
+                                file['map_times'][filter_string]['%s_2subtract3'%mode][0] = file['map_times'][filter_string]['%s_2subtract3'%mode][0]
+                                file['map_properties'][filter_string]['%s_peak_to_sidelobe'%mode][0] = file['map_properties'][filter_string]['%s_peak_to_sidelobe'%mode][0]
+                                print('Test successful for %s'%mode)
+                            except Exception as e:
+                                print('Print Failed')
+                                print(e)
+
+
                             for event_index, eventid in enumerate(eventids):
                                 if (event_index + 1) % 1000 == 0:
                                     sys.stdout.write('(%i/%i)\t\t\t\n'%(event_index+1,len(eventids)))
                                     sys.stdout.flush()
                                 
-                                m, max_possible_map_value = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert,return_max_possible_map_value=True)
+                                if debug == True:
+                                    if event_index == 0:
+                                        m, max_possible_map_value = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert,return_max_possible_map_value=True)
+                                else:
+                                    m, max_possible_map_value = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert,return_max_possible_map_value=True)
 
                                 for filter_string_index, filter_string in enumerate(filter_strings):
                                     file['map_properties'][filter_string]['%s_max_possible_map_value'%mode][eventid] = max_possible_map_value #doesn't really depend on filter_string but would depend on calibration, so keeping it sorted.
@@ -470,20 +507,40 @@ if __name__=="__main__":
                                         file['map_times'][filter_string].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane 
 
                                     #Calculate best reconstruction direction
-                                    if max_method is not None:
-                                        linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
+                                    if debug == True:
+                                        if event_index == 0:
+                                            if max_method is not None:
+                                                linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
+                                            else:
+                                                linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
                                     else:
-                                        linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
-                                    
-                                    file['map_direction'][filter_string]['%s_ENU_zenith'%mode][eventid] = theta_best 
-                                    file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][eventid] = phi_best 
-                                    file['map_times'][filter_string]['%s_0subtract1'%mode][eventid] = t_0subtract1 
-                                    file['map_times'][filter_string]['%s_0subtract2'%mode][eventid] = t_0subtract2 
-                                    file['map_times'][filter_string]['%s_0subtract3'%mode][eventid] = t_0subtract3 
-                                    file['map_times'][filter_string]['%s_1subtract2'%mode][eventid] = t_1subtract2 
-                                    file['map_times'][filter_string]['%s_1subtract3'%mode][eventid] = t_1subtract3 
-                                    file['map_times'][filter_string]['%s_2subtract3'%mode][eventid] = t_2subtract3 
-                                    file['map_properties'][filter_string]['%s_peak_to_sidelobe'%mode][eventid] = peak_to_sidelobe
+                                        if max_method is not None:
+                                            linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
+                                        else:
+                                            linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
+
+                                    if debug == True:
+                                        if event_index == 0:
+                                            file['map_direction'][filter_string]['%s_ENU_zenith'%mode][eventid] = theta_best 
+                                            file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][eventid] = phi_best 
+                                            file['map_times'][filter_string]['%s_0subtract1'%mode][eventid] = t_0subtract1 
+                                            file['map_times'][filter_string]['%s_0subtract2'%mode][eventid] = t_0subtract2 
+                                            file['map_times'][filter_string]['%s_0subtract3'%mode][eventid] = t_0subtract3 
+                                            file['map_times'][filter_string]['%s_1subtract2'%mode][eventid] = t_1subtract2 
+                                            file['map_times'][filter_string]['%s_1subtract3'%mode][eventid] = t_1subtract3 
+                                            file['map_times'][filter_string]['%s_2subtract3'%mode][eventid] = t_2subtract3
+                                            file['map_properties'][filter_string]['%s_peak_to_sidelobe'%mode][eventid] = peak_to_sidelobe
+                                    else:
+                                        file['map_direction'][filter_string]['%s_ENU_zenith'%mode][eventid] = theta_best 
+                                        file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][eventid] = phi_best 
+                                        file['map_times'][filter_string]['%s_0subtract1'%mode][eventid] = t_0subtract1 
+                                        file['map_times'][filter_string]['%s_0subtract2'%mode][eventid] = t_0subtract2 
+                                        file['map_times'][filter_string]['%s_0subtract3'%mode][eventid] = t_0subtract3 
+                                        file['map_times'][filter_string]['%s_1subtract2'%mode][eventid] = t_1subtract2 
+                                        file['map_times'][filter_string]['%s_1subtract3'%mode][eventid] = t_1subtract3 
+                                        file['map_times'][filter_string]['%s_2subtract3'%mode][eventid] = t_2subtract3
+                                        file['map_properties'][filter_string]['%s_peak_to_sidelobe'%mode][eventid] = peak_to_sidelobe
+
 
                         file.close()
                     except Exception as e:

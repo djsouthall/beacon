@@ -57,15 +57,15 @@ if __name__=="__main__":
     datapath = os.environ['BEACON_DATA']
     align_method_13_n = 2
 
-    crit_freq_low_pass_MHz = 85
-    low_pass_filter_order = 6
+    crit_freq_low_pass_MHz = 80
+    low_pass_filter_order = 14
 
-    crit_freq_high_pass_MHz = 25
-    high_pass_filter_order = 8
+    crit_freq_high_pass_MHz = 20
+    high_pass_filter_order = 4
 
     sine_subtract = True
-    sine_subtract_min_freq_GHz = 0.03
-    sine_subtract_max_freq_GHz = 0.13
+    sine_subtract_min_freq_GHz = 0.02
+    sine_subtract_max_freq_GHz = 0.20
     sine_subtract_percent = 0.03
 
     apply_phase_response = True

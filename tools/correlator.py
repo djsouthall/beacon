@@ -28,6 +28,9 @@ from mpl_toolkits.mplot3d import Axes3D
 import scipy.stats
 import scipy.signal
 import scipy.stats
+from scipy.optimize import curve_fit
+def gaus(x,a,x0,sigma):
+    return a*numpy.exp(-(x-x0)**2.0/(2.0*sigma**2.0))
 from scipy.linalg import lstsq
 import scipy.ndimage
 import numpy
@@ -2851,7 +2854,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, return_fig=False, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False, return_max_possible_map_values=False, initial_max_possible_map_values=None, return_map_peaks=False, return_peak_to_sidelobe=False, initial_peaks=None, initial_peak_to_sidelobes=None):
+    def histMapPeak(self, eventids, pol, initial_hist=None, initial_thetas=None, initial_phis=None, plot_map=True, return_fig=False, hilbert=False, max_method=None, plot_max=True, use_weight=False, mollweide=False, include_baselines=[0,1,2,3,4,5], center_dir='E', zenith_cut_ENU=None, zenith_cut_array_plane=None, circle_zenith=None, circle_az=None, window_title=None,radius=1.0,iterate_sub_baselines=None, shift_1d_hists=False, acceptable_fit_range=None, return_max_possible_map_values=False, initial_max_possible_map_values=None, return_map_peaks=False, return_peak_to_sidelobe=False, initial_peaks=None, initial_peak_to_sidelobes=None, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0):
         '''
         This will loop over eventids and makes a histogram from of location of maximum correlation
         value in the corresponding correlation maps. 
@@ -2932,9 +2935,9 @@ class Correlator:
                 sys.stdout.flush()
                 for _include_baselines in include_baselines_all:
                     if return_max_possible_map_values:
-                        m, max_possible_map_value = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=_include_baselines, hilbert=hilbert, return_max_possible_map_value=True)
+                        m, max_possible_map_value = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=_include_baselines, hilbert=hilbert, return_max_possible_map_value=True, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
                     else:
-                        m = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=_include_baselines, hilbert=hilbert, return_max_possible_map_value=False)
+                        m = self.map(eventid, pol, verbose=False, plot_map=False, plot_corr=False, include_baselines=_include_baselines, hilbert=hilbert, return_max_possible_map_value=False, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
 
                     if return_peak_to_sidelobe == True:
                         if max_method is not None:
@@ -3031,14 +3034,16 @@ class Correlator:
                     else:
                         im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=0.1, vmax=numpy.max(rolled_values),cmap=plt.cm.Reds,norm=matplotlib.colors.LogNorm())
 
+                    mean_phi = numpy.mean(all_phi_best)
+                    mean_theta = numpy.mean(all_theta_best)
+
                     stacked_variables = numpy.vstack((all_phi_best,all_theta_best)) #x,y
                     covariance_matrix = numpy.cov(stacked_variables)
                     sig_phi = numpy.sqrt(covariance_matrix[0,0])
                     sig_theta = numpy.sqrt(covariance_matrix[1,1])
                     rho_phi_theta = covariance_matrix[0,1]/(sig_phi*sig_theta)
-                    mean_phi = numpy.mean(all_phi_best)
-                    mean_theta = numpy.mean(all_theta_best)
 
+                    #import pdb; pdb.set_trace()
                     
                     
                     cbar = fig.colorbar(im)
@@ -3056,7 +3061,7 @@ class Correlator:
                     if plot_max:
                         #Added circles as specified.
                         if self.conference_mode == False:
-                            ax, peak_circle = self.addCircleToMap(ax, phi_best, 90.0 - theta_best, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+                            ax, peak_circle = self.addCircleToMap(ax, mean_phi, 90.0 - mean_theta, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius=radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
                         else:
                             pass
 
@@ -3110,15 +3115,42 @@ class Correlator:
                     if shift_1d_hists == True:
                         plt.xlabel('Azimuth Distribution (Degrees)\nCentered on Mean')
                         #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
-                        plt.hist(all_phi_best - mean_phi, bins=self.phis_deg-mean_phi, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
-                        x = numpy.linspace(min(self.phis_deg-mean_phi),max(self.phis_deg-mean_phi),10*self.n_phi)
+                        phi_n, phi_bins, phi_patches = plt.hist(all_phi_best - mean_phi, bins=self.phis_deg-mean_phi, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
+                        
+                        #Fit Gaussian
+                        x = (phi_bins[1:len(phi_bins)] + phi_bins[0:len(phi_bins)-1] )/2.0
+                        if acceptable_fit_range is not None:
+                            x_cut = numpy.abs(x - numpy.mean(all_phi_best - mean_phi)) <= acceptable_fit_range
+                        else:
+                            x_cut = numpy.ones(len(x),dtype=bool)
 
-                        y = scipy.stats.norm.pdf(x,0,sig_phi)
-                        #y = y*len(all_phi_best)/numpy.sum(y) # y*numpy.diff(self.phis_deg)[0]*len(all_phi_best)
-                        y = y*numpy.diff(self.phis_deg)[0]*len(all_phi_best)
+                        try:
+                            popt, pcov = curve_fit(gaus,x[x_cut],phi_n[x_cut],p0=[numpy.max(phi_n[x_cut]),numpy.mean(all_phi_best - mean_phi),1.5*numpy.std(all_phi_best - mean_phi)])
+                            popt[2] = abs(popt[2]) #I want positive sigma.
 
-                        plt.plot(x,y,label='Gaussian Fit')
-                        plt.xlim(min(all_phi_best - mean_phi) - 1.0,max(all_phi_best - mean_phi) + 1.0)
+                            if acceptable_fit_range is not None:
+                                plt.axvline(min(x[x_cut]),linestyle='-',c='b',label='Range Considered in Fit %0.2f +- %0.2f'%(mean_phi,acceptable_fit_range))
+                                plt.axvline(max(x[x_cut]),linestyle='-',c='b')
+                                plt.xlim(-4.0, 4.0)
+                                #plt.xlim(min(x[x_cut]) - 1.0, max(x[x_cut]) + 1.0)
+
+                            plot_x = numpy.linspace(min(x[x_cut]),max(x[x_cut]),1000)
+                            plt.plot(plot_x,gaus(plot_x,*popt),'-',c='k',label='Fit Sigma = %f ns'%popt[2])
+                            plt.axvline(popt[1],linestyle='-',c='k',label='Fit Center = %f'%(popt[1] + mean_phi))
+                        except Exception as e:
+                            print('Failed to fit histogram')
+                            print(e)
+                            print('Trying to add info without fit.')
+                            try:
+                                range_cut = numpy.abs(numpy.mean(all_phi_best) - all_phi_best) <= acceptable_fit_range
+                                if acceptable_fit_range is not None:
+                                    plt.axvline(numpy.mean(all_phi_best[range_cut]),linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns\nRange Considered in Fit %0.2f +- %0.2f'%(numpy.std(all_phi_best[range_cut]) , numpy.mean(all_phi_best[range_cut]), mean_phi,acceptable_fit_range))
+                                else:
+                                    plt.axvline(numpy.mean(all_phi_best),linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns'%(numpy.std(all_phi_best) , numpy.mean(all_phi_best)))    
+                            except Exception as e:
+                                print('Failed here too.')
+                                print(e)                         
+
                         if circle_az is not None:
                             if len(circle_az) == 1:
                                 plt.axvline(circle_az[0] - mean_phi,color='fuchsia',label='Highlighted Azimuth')
@@ -3128,15 +3160,45 @@ class Correlator:
                     else:
                         plt.xlabel('Azimuth Distribution (Degrees)')
                         #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
-                        plt.hist(all_phi_best, bins=self.phis_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
-                        x = numpy.linspace(min(self.phis_deg),max(self.phis_deg),10*self.n_phi)
+                        phi_n, phi_bins, phi_patches = plt.hist(all_phi_best, bins=self.phis_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
                         
-                        y = scipy.stats.norm.pdf(x,mean_phi,sig_phi)
-                        #y = y*len(all_phi_best)/numpy.sum(y) # y*numpy.diff(self.phis_deg)[0]*len(all_phi_best)
-                        y = y*numpy.diff(self.phis_deg)[0]*len(all_phi_best)
+                        #Fit Gaussian
+                        x = (phi_bins[1:len(phi_bins)] + phi_bins[0:len(phi_bins)-1] )/2.0
 
-                        plt.plot(x,y,label='Gaussian Fit')
-                        plt.xlim(min(all_phi_best) - 1.0,max(all_phi_best) + 1.0)
+
+                        try:
+                            if acceptable_fit_range is not None:
+                                x_cut = numpy.abs(x - numpy.mean(all_phi_best)) <= acceptable_fit_range
+                            else:
+                                x_cut = numpy.ones(len(x),dtype=bool)
+
+                            popt, pcov = curve_fit(gaus,x[x_cut],phi_n[x_cut],p0=[numpy.max(phi_n[x_cut]),numpy.mean(all_phi_best),1.5*numpy.std(all_phi_best)])
+                            popt[2] = abs(popt[2]) #I want positive sigma.
+                            
+                            if acceptable_fit_range is not None:
+                                plt.axvline(min(x[x_cut]),linestyle='-',c='b',label='Range Considered in Fit %0.2f +- %0.2f'%(mean_phi,acceptable_fit_range))
+                                plt.axvline(max(x[x_cut]),linestyle='-',c='b')
+                                plt.xlim(mean_phi - 4.0, mean_phi + 4.0)
+                                #plt.xlim(min(x[x_cut]) - 1.0, max(x[x_cut]) + 1.0)
+
+                            plot_x = numpy.linspace(min(x[x_cut]),max(x[x_cut]),1000)
+                            plt.plot(plot_x,gaus(plot_x,*popt),'-',c='k',label='Fit Sigma = %f ns'%popt[2])
+                            plt.axvline(popt[1],linestyle='-',c='k',label='Fit Center = %f'%popt[1])
+                            
+
+                        except Exception as e:
+                            print('Failed to fit histogram')
+                            print(e)
+                            print('Trying to add info without fit.')
+                            try:
+                                if acceptable_fit_range is not None:
+                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns\nRange Considered in Fit %0.2f +- %0.2f'%(numpy.std(all_phi_best[x_cut]) , numpy.mean(all_phi_best[x_cut]), mean_phi,acceptable_fit_range))
+                                else:
+                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns'%(numpy.std(all_phi_best[x_cut]) , numpy.mean(all_phi_best[x_cut])))
+                            except Exception as e:
+                                print('Failed here too.')
+                                print(e)
+                                
                         if circle_az is not None:
                             if len(circle_az) == 1:
                                 plt.axvline(circle_az[0],color='fuchsia',label='Highlighted Azimuth')
@@ -3154,15 +3216,49 @@ class Correlator:
                     if shift_1d_hists == True:
                         plt.xlabel('Zenith Distribution (Degrees)\nCentered on Mean')
                         #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
-                        plt.hist(all_theta_best - mean_theta, bins=self.thetas_deg-mean_theta, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=False)
-                        x = numpy.linspace(min(self.thetas_deg-mean_theta),max(self.thetas_deg-mean_theta),10*self.n_theta)
+                        theta_n, theta_bins, theta_patches = plt.hist(all_theta_best - mean_theta, bins=self.thetas_deg-mean_theta, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=False)
                         
-                        y = scipy.stats.norm.pdf(x,0,sig_theta)
-                        #y = y*len(all_theta_best)/numpy.sum(y) # y*numpy.diff(self.thetas_deg)[0]*len(all_theta_best)
-                        y = y*numpy.diff(self.thetas_deg)[0]*len(all_theta_best)
+                        #Fit Gaussian
+                        x = (theta_bins[1:len(theta_bins)] + theta_bins[0:len(theta_bins)-1] )/2.0
+                        if acceptable_fit_range is not None:
+                            x_cut = numpy.abs(x - numpy.mean(all_theta_best - mean_theta)) <= acceptable_fit_range
+                            #plt.xlim(min(x[x_cut]) - 1.0, max(x[x_cut]) + 1.0)
+                        else:
+                            x_cut = numpy.ones(len(x),dtype=bool)
 
-                        plt.plot(x,scipy.stats.norm.pdf(x,0,sig_theta)*numpy.diff(self.thetas_deg)[0]*len(all_theta_best),label='Gaussian Fit')
-                        plt.xlim(min(all_theta_best - mean_theta) - 1.0,max(all_theta_best - mean_theta) + 1.0)
+                        try:
+                            popt, pcov = curve_fit(gaus,x[x_cut],theta_n[x_cut],p0=[numpy.max(theta_n[x_cut]),numpy.mean(all_theta_best - mean_theta),1.5*numpy.std(all_theta_best - mean_theta)])
+                            popt[2] = abs(popt[2]) #I want positive sigma.
+
+                            if acceptable_fit_range is not None:
+                                plt.axvline(min(x[x_cut]),linestyle='-',c='b',label='Range Considered in Fit %0.2f +- %0.2f'%(mean_theta,acceptable_fit_range))
+                                plt.axvline(max(x[x_cut]),linestyle='-',c='b')
+                                plt.xlim(-4.0, 4.0)
+
+                            plot_x = numpy.linspace(min(x[x_cut]),max(x[x_cut]),1000)
+                            plt.plot(plot_x,gaus(plot_x,*popt),'-',c='k',label='Fit Sigma = %f ns'%popt[2])
+                            plt.axvline(popt[1],linestyle='-',c='k',label='Fit Center = %f'%(popt[1] + mean_theta))
+                        except Exception as e:
+                            print('Failed to fit histogram')
+                            print(e)
+                            print('Trying to add info without fit.')
+                            try:
+                                if acceptable_fit_range is not None:
+                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns\nRange Considered in Fit %0.2f +- %0.2f'%(numpy.std(all_theta_best[x_cut]) , numpy.mean(all_theta_best[x_cut]), mean_theta,acceptable_fit_range))
+                                else:
+                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns'%(numpy.std(all_theta_best[x_cut]) , numpy.mean(all_theta_best[x_cut])))
+                            except Exception as e:
+                                print('Failed here too.')
+                                print(e)
+                            # x = numpy.linspace(min(self.thetas_deg-mean_theta),max(self.thetas_deg-mean_theta),10*self.n_theta)                               
+                        
+                        # y = scipy.stats.norm.pdf(x,0,sig_theta)
+                        # #y = y*len(all_theta_best)/numpy.sum(y) # y*numpy.diff(self.thetas_deg)[0]*len(all_theta_best)
+                        # y = y*numpy.diff(self.thetas_deg)[0]*len(all_theta_best)
+
+                        # plt.plot(x,scipy.stats.norm.pdf(x,0,sig_theta)*numpy.diff(self.thetas_deg)[0]*len(all_theta_best),label='Gaussian Fit')
+                        
+                        #plt.xlim(min(all_theta_best - mean_theta) - 1.0,max(all_theta_best - mean_theta) + 1.0)
                         if circle_zenith is not None:
                             if len(circle_zenith) == 1:
                                 plt.axvline(circle_zenith[0] - mean_theta,color='fuchsia',label='Highlighted Zenith')
@@ -3170,15 +3266,49 @@ class Correlator:
                     else:
                         plt.xlabel('Zenith Distribution (Degrees)')
                         #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
-                        plt.hist(all_theta_best, bins=self.thetas_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=False)
-                        x = numpy.linspace(min(self.thetas_deg),max(self.thetas_deg),10*self.n_theta)
+                        theta_n, theta_bins, theta_patches = plt.hist(all_theta_best, bins=self.thetas_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=False)
+                        
+                        #Fit Gaussian
+                        x = (theta_bins[1:len(theta_bins)] + theta_bins[0:len(theta_bins)-1] )/2.0
+                        if acceptable_fit_range is not None:
+                            x_cut = numpy.abs(x - numpy.mean(all_theta_best)) <= acceptable_fit_range
+                        else:
+                            x_cut = numpy.ones(len(x),dtype=bool)
 
-                        y = scipy.stats.norm.pdf(x,mean_theta,sig_theta)
-                        #y = y*len(all_theta_best)/numpy.sum(y) # y*numpy.diff(self.thetas_deg)[0]*len(all_theta_best)
-                        y = y*numpy.diff(self.thetas_deg)[0]*len(all_theta_best)
+                        try:
+                            popt, pcov = curve_fit(gaus,x[x_cut],theta_n[x_cut],p0=[numpy.max(theta_n[x_cut]),numpy.mean(all_theta_best),1.5*numpy.std(all_theta_best)])
+                            popt[2] = abs(popt[2]) #I want positive sigma.
 
-                        plt.plot(x,y,label='Gaussian Fit')
-                        plt.xlim(min(all_theta_best) - 1.0,max(all_theta_best) + 1.0)
+                            if acceptable_fit_range is not None:
+                                plt.axvline(min(x[x_cut]),linestyle='-',c='b',label='Range Considered in Fit %0.2f +- %0.2f'%(mean_theta,acceptable_fit_range))
+                                plt.axvline(max(x[x_cut]),linestyle='-',c='b')
+                                plt.xlim(mean_theta - 4.0, mean_theta + 4.0)
+                                #plt.xlim(min(x[x_cut]) - 1.0, max(x[x_cut]) + 1.0)
+
+                            plot_x = numpy.linspace(min(x[x_cut]),max(x[x_cut]),1000)
+                            plt.plot(plot_x,gaus(plot_x,*popt),'-',c='k',label='Fit Sigma = %f ns'%popt[2])
+                            plt.axvline(popt[1],linestyle='-',c='k',label='Fit Center = %f'%popt[1])
+                        except Exception as e:
+                            print('Failed to fit histogram')
+                            print(e)
+                            print('Trying to add info without fit.')
+                            try:
+                                if acceptable_fit_range is not None:
+                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns\nRange Considered in Fit %0.2f +- %0.2f'%(numpy.std(all_theta_best[x_cut]) , numpy.mean(all_theta_best[x_cut]), mean_theta,acceptable_fit_range))
+                                else:
+                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns'%(numpy.std(all_theta_best[x_cut]) , numpy.mean(all_theta_best[x_cut])))
+                            except Exception as e:
+                                print('Failed here too.')
+                                print(e)
+                                
+                        # x = numpy.linspace(min(self.thetas_deg),max(self.thetas_deg),10*self.n_theta)
+
+                        # y = scipy.stats.norm.pdf(x,mean_theta,sig_theta)
+                        # #y = y*len(all_theta_best)/numpy.sum(y) # y*numpy.diff(self.thetas_deg)[0]*len(all_theta_best)
+                        # y = y*numpy.diff(self.thetas_deg)[0]*len(all_theta_best)
+
+                        # plt.plot(x,y,label='Gaussian Fit')
+                        #plt.xlim(min(all_theta_best) - 1.0,max(all_theta_best) + 1.0)
                         if circle_zenith is not None:
                             if len(circle_zenith) == 1:
                                 plt.axvline(circle_zenith[0],color='fuchsia',label='Highlighted Zenith')
