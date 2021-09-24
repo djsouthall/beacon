@@ -535,9 +535,9 @@ if __name__ == '__main__':
         if True:
             deploy_index = 'rtk-gps-day3-june22-2021.json'#'theodolite-day3-june22-2021_only_enu.json'#'rtk-gps-day3-june22-2021.json'
             if pol == 'hpol':
-                use_sites = ['d3sa','d3sb','d3sc','d4sa','d4sb']#['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']
+                use_sites = ['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']#['d3sa','d3sb','d3sc','d4sa','d4sb']#
             elif pol == 'vpol':
-                use_sites = ['d3sa','d3sb','d3sc','d4sa','d4sb']#['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']
+                use_sites = ['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']#['d3sa','d3sb','d3sc','d4sa','d4sb']#
             elif pol == 'both':
                 use_sites = {}
                 use_sites['hpol'] = ['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']
@@ -583,17 +583,17 @@ if __name__ == '__main__':
 
         waveform_index_range = (None,None)
 
-        random_offset_amount = 0.05#m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
+        random_offset_amount = 0.0#0.05#m (every antenna will be stepped randomly by this amount.  Set to 0 if you don't want this. ), Note that this is applied to 
         included_antennas_lumped = [0,1,2,3]#[0,1,2,3] #If an antenna is not in this list then it will not be included in the chi^2 (regardless of if it is fixed or not)  Lumped here imlies that antenna 0 in this list means BOTH channels 0 and 1 (H and V of crossed dipole antenna 0).
         included_antennas_channels = numpy.concatenate([[2*i,2*i+1] for i in included_antennas_lumped])
         include_baselines = [0,1,2,3,4,5]#[1,3,5] #Basically sets the starting condition of which baselines to include, then the lumped channels and antennas will cut out further from that.  The above options of excluding antennas will override this to exclude baselines, but if both antennas are included but the baseline is not then it will not be included.  Overwritten when antennas removed.
 
         #Limits 
-        initial_step_x = 0.2#2.0 #m
-        initial_step_y = 0.2#2.0 #m
-        initial_step_z = 2#0.75 #m
-        initial_step_cable_delay = 3 #ns
-        cable_delay_guess_range = None#30 #ns
+        initial_step_x = 0.1#2.0 #m
+        initial_step_y = 0.1#2.0 #m
+        initial_step_z = 0.1#0.75 #m
+        initial_step_cable_delay = 0.05 #ns
+        cable_delay_guess_range = 1#30 #ns
         antenna_position_guess_range_x = None#0.75 #Limit to how far from input phase locations to limit the parameter space to
         antenna_position_guess_range_y = None#0.75 #Limit to how far from input phase locations to limit the parameter space to
         antenna_position_guess_range_z = None#0.75 #Limit to how far from input phase locations to limit the parameter space to
@@ -1337,6 +1337,17 @@ if __name__ == '__main__':
             print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%(pol,am.cable_delays[0],am.cable_delays[1],am.cable_delays[2],am.cable_delays[3]))
 
 
+            print('\n')
+            print('DIFFERENCES HERE')
+            print('\n')
+            print('')
+
+            print('Offset of final result from initial conditions:')
+            print('antennas_phase_%s final - initial = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%(pol, m.values['ant0_x'] - am.initial_ant0_x,m.values['ant0_y'] - am.initial_ant0_y,m.values['ant0_z'] - am.initial_ant0_z ,  m.values['ant1_x'] - am.initial_ant1_x,m.values['ant1_y'] - am.initial_ant1_y,m.values['ant1_z'] - am.initial_ant1_z,  m.values['ant2_x'] - am.initial_ant2_x,m.values['ant2_y'] - am.initial_ant2_y,m.values['ant2_z'] - am.initial_ant2_z,  m.values['ant3_x'] - am.initial_ant3_x,m.values['ant3_y'] - am.initial_ant3_y,m.values['ant3_z'] - am.initial_ant3_z))
+            print('')
+            print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%(pol,m.values['cable_delay0'] - am.cable_delays[0],m.values['cable_delay1'] - am.cable_delays[1],m.values['cable_delay2'] - am.cable_delays[2],m.values['cable_delay3'] - am.cable_delays[3]))
+
+
 
             print('\n')
             print(result)
@@ -1676,6 +1687,16 @@ if __name__ == '__main__':
             print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%('hpol',cm.am_hpol.cable_delays[0],cm.am_hpol.cable_delays[1],cm.am_hpol.cable_delays[2],cm.am_hpol.cable_delays[3]))
 
             print('\n')
+            print('DIFFERENCES HERE')
+            print('\n')
+            print('')
+
+            print('Offset of final result from initial conditions:')
+            print('antennas_phase_%s final - initial = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('hpol', ant0_ENU_hpol[0] - cm.am_hpol.initial_ant0_x,ant0_ENU_hpol[1] - cm.am_hpol.initial_ant0_y,ant0_ENU_hpol[2] - cm.am_hpol.initial_ant0_z ,  ant1_ENU_hpol[0] - cm.am_hpol.initial_ant1_x,ant1_ENU_hpol[1] - cm.am_hpol.initial_ant1_y,ant1_ENU_hpol[2] - cm.am_hpol.initial_ant1_z,  ant2_ENU_hpol[0] - cm.am_hpol.initial_ant2_x,ant2_ENU_hpol[1] - cm.am_hpol.initial_ant2_y,ant2_ENU_hpol[2] - cm.am_hpol.initial_ant2_z,  ant3_ENU_hpol[0] - cm.am_hpol.initial_ant3_x,ant3_ENU_hpol[1] - cm.am_hpol.initial_ant3_y,ant3_ENU_hpol[2] - cm.am_hpol.initial_ant3_z))
+            print('')
+            print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%('hpol',m.values['cable_delay0_hpol'] - cm.am_hpol.cable_delays[0],m.values['cable_delay1_hpol'] - cm.am_hpol.cable_delays[1],m.values['cable_delay2_hpol'] - cm.am_hpol.cable_delays[2],m.values['cable_delay3_hpol'] - cm.am_hpol.cable_delays[3]))
+
+            print('\n')
             print(result)
             print('\n')
             print('Copy-Paste Prints:\n------------')
@@ -1697,6 +1718,18 @@ if __name__ == '__main__':
             print('antennas_phase_%s = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('vpol', cm.am_vpol.initial_ant0_x,cm.am_vpol.initial_ant0_y,cm.am_vpol.initial_ant0_z ,  cm.am_vpol.initial_ant1_x,cm.am_vpol.initial_ant1_y,cm.am_vpol.initial_ant1_z,  cm.am_vpol.initial_ant2_x,cm.am_vpol.initial_ant2_y,cm.am_vpol.initial_ant2_z,  cm.am_vpol.initial_ant3_x,cm.am_vpol.initial_ant3_y,cm.am_vpol.initial_ant3_z))
             print('')
             print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%('vpol',cm.am_vpol.cable_delays[0],cm.am_vpol.cable_delays[1],cm.am_vpol.cable_delays[2],cm.am_vpol.cable_delays[3]))
+
+            print('\n')
+            print('DIFFERENCES HERE')
+            print('\n')
+            print('')
+
+            print('Offset of final result from initial conditions:')
+            print('antennas_phase_%s final - initial = {0 : [%f, %f, %f], 1 : [%f, %f, %f], 2 : [%f, %f, %f], 3 : [%f, %f, %f]}'%('vpol', ant0_ENU_vpol[0] - cm.am_vpol.initial_ant0_x,ant0_ENU_vpol[1] - cm.am_vpol.initial_ant0_y,ant0_ENU_vpol[2] - cm.am_vpol.initial_ant0_z ,  ant1_ENU_vpol[0] - cm.am_vpol.initial_ant1_x,ant1_ENU_vpol[1] - cm.am_vpol.initial_ant1_y,ant1_ENU_vpol[2] - cm.am_vpol.initial_ant1_z,  ant2_ENU_vpol[0] - cm.am_vpol.initial_ant2_x,ant2_ENU_vpol[1] - cm.am_vpol.initial_ant2_y,ant2_ENU_vpol[2] - cm.am_vpol.initial_ant2_z,  ant3_ENU_vpol[0] - cm.am_vpol.initial_ant3_x,ant3_ENU_vpol[1] - cm.am_vpol.initial_ant3_y,ant3_ENU_vpol[2] - cm.am_vpol.initial_ant3_z))
+            print('')
+            print('cable_delays_%s = numpy.array([%f,%f,%f,%f])'%('vpol',m.values['cable_delay0_vpol'] - cm.am_vpol.cable_delays[0],m.values['cable_delay1_vpol'] - cm.am_vpol.cable_delays[1],m.values['cable_delay2_vpol'] - cm.am_vpol.cable_delays[2],m.values['cable_delay3_vpol'] - cm.am_vpol.cable_delays[3]))
+
+
 
             print('\n')
             print(result)

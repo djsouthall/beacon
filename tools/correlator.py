@@ -3142,8 +3142,8 @@ class Correlator:
                             print(e)
                             print('Trying to add info without fit.')
                             try:
-                                range_cut = numpy.abs(numpy.mean(all_phi_best) - all_phi_best) <= acceptable_fit_range
                                 if acceptable_fit_range is not None:
+                                    range_cut = numpy.abs(numpy.mean(all_phi_best) - all_phi_best) <= acceptable_fit_range
                                     plt.axvline(numpy.mean(all_phi_best[range_cut]),linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns\nRange Considered in Fit %0.2f +- %0.2f'%(numpy.std(all_phi_best[range_cut]) , numpy.mean(all_phi_best[range_cut]), mean_phi,acceptable_fit_range))
                                 else:
                                     plt.axvline(numpy.mean(all_phi_best),linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns'%(numpy.std(all_phi_best) , numpy.mean(all_phi_best)))    
@@ -3192,9 +3192,10 @@ class Correlator:
                             print('Trying to add info without fit.')
                             try:
                                 if acceptable_fit_range is not None:
-                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns\nRange Considered in Fit %0.2f +- %0.2f'%(numpy.std(all_phi_best[x_cut]) , numpy.mean(all_phi_best[x_cut]), mean_phi,acceptable_fit_range))
+                                    range_cut = numpy.abs(numpy.mean(all_phi_best) - all_phi_best) <= acceptable_fit_range
+                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns\nRange Considered in Fit %0.2f +- %0.2f'%(numpy.std(all_phi_best[range_cut]) , numpy.mean(all_phi_best[range_cut]), mean_phi,acceptable_fit_range))
                                 else:
-                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns'%(numpy.std(all_phi_best[x_cut]) , numpy.mean(all_phi_best[x_cut])))
+                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns'%(numpy.std(all_phi_best) , numpy.mean(all_phi_best)))
                             except Exception as e:
                                 print('Failed here too.')
                                 print(e)
@@ -3244,9 +3245,10 @@ class Correlator:
                             print('Trying to add info without fit.')
                             try:
                                 if acceptable_fit_range is not None:
-                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns\nRange Considered in Fit %0.2f +- %0.2f'%(numpy.std(all_theta_best[x_cut]) , numpy.mean(all_theta_best[x_cut]), mean_theta,acceptable_fit_range))
+                                    range_cut = numpy.abs(numpy.mean(all_theta_best) - all_theta_best) <= acceptable_fit_range
+                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns\nRange Considered in Fit %0.2f +- %0.2f'%(numpy.std(all_theta_best[range_cut]) , numpy.mean(all_theta_best[range_cut]), mean_theta,acceptable_fit_range))
                                 else:
-                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns'%(numpy.std(all_theta_best[x_cut]) , numpy.mean(all_theta_best[x_cut])))
+                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns'%(numpy.std(all_theta_best) , numpy.mean(all_theta_best)))
                             except Exception as e:
                                 print('Failed here too.')
                                 print(e)
@@ -3294,9 +3296,10 @@ class Correlator:
                             print('Trying to add info without fit.')
                             try:
                                 if acceptable_fit_range is not None:
-                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns\nRange Considered in Fit %0.2f +- %0.2f'%(numpy.std(all_theta_best[x_cut]) , numpy.mean(all_theta_best[x_cut]), mean_theta,acceptable_fit_range))
+                                    range_cut = numpy.abs(numpy.mean(all_theta_best) - all_theta_best) <= acceptable_fit_range
+                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns\nRange Considered in Fit %0.2f +- %0.2f'%(numpy.std(all_theta_best[range_cut]) , numpy.mean(all_theta_best[range_cut]), mean_theta,acceptable_fit_range))
                                 else:
-                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns'%(numpy.std(all_theta_best[x_cut]) , numpy.mean(all_theta_best[x_cut])))
+                                    plt.axvline(popt[1],linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns'%(numpy.std(all_theta_best) , numpy.mean(all_theta_best)))
                             except Exception as e:
                                 print('Failed here too.')
                                 print(e)

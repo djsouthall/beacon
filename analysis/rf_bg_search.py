@@ -73,7 +73,7 @@ if __name__=="__main__":
     if len(sys.argv) > 1:
         run = int(sys.argv[1])
         if len(sys.argv) == 3:
-            deploy_index = int(sys.argv[2])
+            deploy_index = str(sys.argv[2])
         elif run in numpy.arange(1643,1729):
             deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config', 'chi2_optimized_deploy_from_rtk-gps-day1-june20-2021.json')
         else:

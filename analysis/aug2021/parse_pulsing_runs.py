@@ -202,7 +202,7 @@ class PulserInfo():
 
             self.timing_dict['d2sa'] = {}
             self.timing_dict['d2sa']['runs'] = [5630, 5631,5632] #day 2
-            self.timing_dict['d2sa']['latlonel'] = (37.5859361, -118.233918056, 3762.9)
+            self.timing_dict['d2sa']['latlonel'] = (37.58602450,-118.23354200,3768.1)#(37.5859361, -118.233918056, 3762.9)
 
             self.timing_dict['d2sa']['reference_event'] = {}
             self.timing_dict['d2sa']['reference_event']['hpol'] = (5630 , 1585)
