@@ -20,7 +20,7 @@ if __name__ == "__main__":
     #mem = '16G'
     partition = 'broadwl'
     #Approximately the First week of september: numpy.array(5733,5790) 
-    runs = numpy.array(5733,5790)#numpy.arange(5159,5200)#numpy.arange(1643,1729)#numpy.arange(5150,5250)#numpy.arange(1643,1729)#numpy.arange(5150,5250)#numpy.array([1663])#numpy.arange(1643,1729)
+    runs = numpy.arange(5733,5790)#numpy.arange(5159,5200)#numpy.arange(1643,1729)#numpy.arange(5150,5250)#numpy.arange(1643,1729)#numpy.arange(5150,5250)#numpy.array([1663])#numpy.arange(1643,1729)
     deploy_index = '/home/dsouthall/Projects/Beacon/beacon/config/september_2021_minimized_calibration.json'
     done_runs = numpy.array([])
 
