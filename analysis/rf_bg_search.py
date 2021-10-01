@@ -18,7 +18,7 @@ import sys
 import math
 import matplotlib
 from scipy.fftpack import fft
-import datetime as dt
+from datetime import datetime
 import inspect
 from ast import literal_eval
 import astropy.units as apu
@@ -28,6 +28,12 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from tools.correlator import Correlator
+
+# import multiprocessing
+# import concurrent.futures
+# from multiprocessing import cpu_count
+# import threading
+# n_cores = cpu_count()
 
 
 font = {'weight' : 'bold',
@@ -68,11 +74,97 @@ def getEventIds(reader, trigger_type=None):
 
 
 datapath = os.environ['BEACON_DATA']
+
+
+
+# def batchedMapMax(filter_string, map_max_mode, event_index, cor, eventid, lock, debug=False):
+#     '''
+#     This is to allow multiprocessing specifically on the portion of the code where the maximum value and peak to
+#     sidelobe is calculated for each of the different filter strings.
+#     '''
+#     if debug == True:
+#         if event_index == 0:
+#             m, max_possible_map_value = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert,return_max_possible_map_value=True)
+#     else:
+#         m, max_possible_map_value = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert,return_max_possible_map_value=True)
+
+#     for filter_string_index, filter_string in enumerate(filter_strings):
+#         file['map_properties'][filter_string]['%s_max_possible_map_value'%mode][eventid] = max_possible_map_value #doesn't really depend on filter_string but would depend on calibration, so keeping it sorted.
+#         #Determine cut values
+#         if mapmax_cut_modes[filter_string_index] == 'abovehorizon':
+#             # print('abovehorizon')
+#             zenith_cut_ENU=[0,90] #leaving some tolerance
+#             zenith_cut_array_plane=None
+#         elif mapmax_cut_modes[filter_string_index] == 'belowhorizon':
+#             # print('belowhorizon')
+#             zenith_cut_ENU=[90,180]
+#             zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
+#         elif mapmax_cut_modes[filter_string_index] == 'allsky':
+#             # print('allsky')
+#             zenith_cut_ENU=None
+#             zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
+#         else:
+#             zenith_cut_ENU=None
+#             zenith_cut_array_plane=None
+
+#         #Calculate best reconstruction direction
+#         if debug == True:
+#             if event_index == 0:
+#                 if max_method is not None:
+#                     linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
+#                 else:
+#                     linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
+#         else:
+#             if max_method is not None:
+#                 linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
+#             else:
+#                 linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
+
+#         if debug == True:
+#             if event_index == 0:
+#                 file['map_direction'][filter_string]['%s_ENU_zenith'%mode][eventid] = theta_best 
+#                 file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][eventid] = phi_best 
+#                 file['map_times'][filter_string]['%s_0subtract1'%mode][eventid] = t_0subtract1 
+#                 file['map_times'][filter_string]['%s_0subtract2'%mode][eventid] = t_0subtract2 
+#                 file['map_times'][filter_string]['%s_0subtract3'%mode][eventid] = t_0subtract3 
+#                 file['map_times'][filter_string]['%s_1subtract2'%mode][eventid] = t_1subtract2 
+#                 file['map_times'][filter_string]['%s_1subtract3'%mode][eventid] = t_1subtract3 
+#                 file['map_times'][filter_string]['%s_2subtract3'%mode][eventid] = t_2subtract3
+#                 file['map_properties'][filter_string]['%s_peak_to_sidelobe'%mode][eventid] = peak_to_sidelobe
+#         else:
+#             file['map_direction'][filter_string]['%s_ENU_zenith'%mode][eventid] = theta_best 
+#             file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][eventid] = phi_best 
+#             file['map_times'][filter_string]['%s_0subtract1'%mode][eventid] = t_0subtract1 
+#             file['map_times'][filter_string]['%s_0subtract2'%mode][eventid] = t_0subtract2 
+#             file['map_times'][filter_string]['%s_0subtract3'%mode][eventid] = t_0subtract3 
+#             file['map_times'][filter_string]['%s_1subtract2'%mode][eventid] = t_1subtract2 
+#             file['map_times'][filter_string]['%s_1subtract3'%mode][eventid] = t_1subtract3 
+#             file['map_times'][filter_string]['%s_2subtract3'%mode][eventid] = t_2subtract3
+#             file['map_properties'][filter_string]['%s_peak_to_sidelobe'%mode][eventid] = peak_to_sidelobe
+
+
+
+
+
+
 if __name__=="__main__":
+
+
+    '''
+    NEED TO ADD IN SOMETHING TO HANDLED TIME WINDOWED SIGNALS FOR SPECIFIED RUNS SUCH AS PULSING EVENTS.  
+    SPECIFICALLY USING THE WINDOW INDEX RANGE RATHER THAN THE SHORTEN SIGNALS METRIC. 
+    '''
+
+
+
+
+
+    starting_timestamp = datetime.timestamp(datetime.now())
+    #multithread = True
     debug = False#THIS IS A TEST, WILL POPULATE ALL VALUES WITH 0, JUST TO MAKE DEBUGGING QUICKER.
     if len(sys.argv) > 1:
         run = int(sys.argv[1])
-        if len(sys.argv) == 3:
+        if len(sys.argv) >= 3:
             deploy_index = str(sys.argv[2])
         elif run in numpy.arange(1643,1729):
             deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config', 'chi2_optimized_deploy_from_rtk-gps-day1-june20-2021.json')
@@ -80,11 +172,22 @@ if __name__=="__main__":
             # elif run > 5050:
             #     deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021.json')
             deploy_index = None
+
+        if len(sys.argv) == 4:
+            polarizations = [str(sys.argv[3])]
+        else:
+            polarizations = ['hpol', 'vpol']
     else:
         run = 1701
         deploy_index = None
+        polarizations = ['hpol', 'vpol']
 
+    print('Running rf_bg_search.py')
+    print('Performing calculations for %s'%str(polarizations))
+    if len(polarizations) > 1:
+        print('WARNING, THIS SCRIPT TAKES A LOT OF TIME TO RUN.  IF BOTH POLARIZATIONS ARE ENABLE IT MAY REACH JOB TIME LIMIT.  IT IS RECOMMENDED TO SUBMIT THE DIFFERENT POLARIZATIONS SEPERATELY AND SEQUENTIALLY.')
 
+    impose_time_limit = 35.0 #hours.  If the script is running longer then this time limit then it will attempt to close the file without corrupting it (by having the job cut off.)  To desiable set to None
 
     plot_filter=False
 
@@ -106,8 +209,8 @@ if __name__=="__main__":
 
 
     #This code will loop over all options included here, and they will be stored as seperate dsets.  Each of these applies different cuts to mapmax when it is attempting to select the best reconstruction direction.
-    mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky'] 
-    polarizations = ['hpol','vpol'] #Will loop over both if hpol and vpol present
+    mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky']
+    #['hpol','vpol'] #Will loop over both if hpol and vpol present
     hilbert_modes = [False]#[True,False] #Will loop over both if True and False present
 
     #Note that the below values set the angular resolution of the plot, while the presets from mapmax_cut_modes limit where in the generated plots will be considered for max values.
@@ -251,9 +354,23 @@ if __name__=="__main__":
 
                         map_properties_dsets = list(file['map_properties'].keys())
 
+                        file['map_direction'].attrs['sine_subtract_min_freq_GHz']   = sine_subtract_min_freq_GHz 
+                        file['map_direction'].attrs['sine_subtract_max_freq_GHz']   = sine_subtract_max_freq_GHz 
+                        file['map_direction'].attrs['sine_subtract_percent']        = sine_subtract_percent
+                        file['map_times'].attrs['sine_subtract_min_freq_GHz']       = sine_subtract_min_freq_GHz 
+                        file['map_times'].attrs['sine_subtract_max_freq_GHz']       = sine_subtract_max_freq_GHz 
+                        file['map_times'].attrs['sine_subtract_percent']            = sine_subtract_percent
+
+                        file['map_direction'].attrs['n_phi']        = n_phi
+                        file['map_direction'].attrs['min_phi']      = min_phi
+                        file['map_direction'].attrs['max_phi']      = max_phi
+
+                        file['map_direction'].attrs['n_theta']      = n_theta
+                        file['map_direction'].attrs['min_theta']    = min_theta
+                        file['map_direction'].attrs['max_theta']    = max_theta
 
                         
-                        for filter_string in filter_strings:
+                        for filter_string_index, filter_string in enumerate(filter_strings):
                             '''
                             Prepares output file for data.
                             '''
@@ -393,34 +510,77 @@ if __name__=="__main__":
                             else:
                                 print('Values in vpol_max_possible_map_value of %s will be overwritten by this analysis script.'%filename)
 
+                            #Fill in attributes for the different map cuts
+                            #Determine cut values
+                            if mapmax_cut_modes[filter_string_index] == 'abovehorizon':
+                                # print('abovehorizon')
+                                zenith_cut_ENU=[0,90] #leaving some tolerance
+                                zenith_cut_array_plane=None
+                            elif mapmax_cut_modes[filter_string_index] == 'belowhorizon':
+                                # print('belowhorizon')
+                                zenith_cut_ENU=[90,180]
+                                zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
+                            elif mapmax_cut_modes[filter_string_index] == 'allsky':
+                                # print('allsky')
+                                zenith_cut_ENU=None
+                                zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
+                            else:
+                                zenith_cut_ENU=None
+                                zenith_cut_array_plane=None
+
+                            #Record cut values, only needs to be done once, not per event                        
+                            if zenith_cut_ENU is None:
+                                file['map_direction'][filter_string].attrs['zenith_cut_ENU'] = 'None' 
+                                file['map_times'][filter_string].attrs['zenith_cut_ENU'] = 'None' 
+                            else:
+                                _zenith_cut_ENU = []
+                                if zenith_cut_ENU[0] is None:
+                                    _zenith_cut_ENU.append('None')
+                                else:
+                                    _zenith_cut_ENU.append(zenith_cut_ENU[0])
+                                if zenith_cut_ENU[1] is None:
+                                    _zenith_cut_ENU.append('None')
+                                else:
+                                    _zenith_cut_ENU.append(zenith_cut_ENU[1])
+
+                                file['map_direction'][filter_string].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
+                                file['map_times'][filter_string].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
+
+                            if zenith_cut_array_plane is None:
+                                file['map_direction'][filter_string].attrs['zenith_cut_array_plane'] = 'None'
+                                file['map_times'][filter_string].attrs['zenith_cut_array_plane'] = 'None' 
+                            else:
+                                _zenith_cut_array_plane = []
+                                if zenith_cut_array_plane[0] is None:
+                                    _zenith_cut_array_plane.append('None')
+                                else:
+                                    _zenith_cut_array_plane.append(zenith_cut_array_plane[0])
+                                if zenith_cut_array_plane[1] is None:
+                                    _zenith_cut_array_plane.append('None')
+                                else:
+                                    _zenith_cut_array_plane.append(zenith_cut_array_plane[1])
 
 
-
-                        file['map_direction'].attrs['sine_subtract_min_freq_GHz']   = sine_subtract_min_freq_GHz 
-                        file['map_direction'].attrs['sine_subtract_max_freq_GHz']   = sine_subtract_max_freq_GHz 
-                        file['map_direction'].attrs['sine_subtract_percent']        = sine_subtract_percent
-                        file['map_times'].attrs['sine_subtract_min_freq_GHz']       = sine_subtract_min_freq_GHz 
-                        file['map_times'].attrs['sine_subtract_max_freq_GHz']       = sine_subtract_max_freq_GHz 
-                        file['map_times'].attrs['sine_subtract_percent']            = sine_subtract_percent
-
-                        file['map_direction'].attrs['n_phi']        = n_phi
-                        file['map_direction'].attrs['min_phi']      = min_phi
-                        file['map_direction'].attrs['max_phi']      = max_phi
-
-                        file['map_direction'].attrs['n_theta']      = n_theta
-                        file['map_direction'].attrs['min_theta']    = min_theta
-                        file['map_direction'].attrs['max_theta']    = max_theta
+                                file['map_direction'][filter_string].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane
+                                file['map_times'][filter_string].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane
 
 
-                        cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract, deploy_index=deploy_index)
-
-                        print('Cor setup to use deploy index %s'%str(cor.deploy_index))
-
-                        if sine_subtract:
-                            cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                         for mode in polarizations:
+                            if impose_time_limit is not None:
+                                if datetime.timestamp(datetime.now()) - starting_timestamp >= 3600*impose_time_limit:
+                                    print('\n\n')
+                                    print('SELF IMPOSED TIME LIMIT REACHED, ENDING SCRIPT EARLY.  ENDING BEFORE CALCULATING MAPS FOR %s'%(mode))
+                                    break
+
                             print('Performing calculations for %s'%mode)
+
+                            cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract, deploy_index=deploy_index)
+
+                            print('Cor setup to use deploy index %s'%str(cor.deploy_index))
+
+                            if sine_subtract:
+                                cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                             print('Performing access sanity check:')
                             try:
@@ -439,12 +599,16 @@ if __name__=="__main__":
                                 print('Print Failed')
                                 print(e)
 
-
                             for event_index, eventid in enumerate(eventids):
                                 if (event_index + 1) % 1000 == 0:
                                     sys.stdout.write('(%i/%i)\t\t\t\n'%(event_index+1,len(eventids)))
                                     sys.stdout.flush()
-                                
+                                    if impose_time_limit is not None:
+                                        if datetime.timestamp(datetime.now()) - starting_timestamp >= 3600*impose_time_limit:
+                                            print('\n\n')
+                                            print('SELF IMPOSED TIME LIMIT REACHED, ENDING SCRIPT EARLY.  MOST REVENT EVENTID COMPLETED IS %i'%(eventids[event_index-1]))
+                                            break 
+
                                 if debug == True:
                                     if event_index == 0:
                                         m, max_possible_map_value = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert,return_max_possible_map_value=True)
@@ -469,42 +633,6 @@ if __name__=="__main__":
                                     else:
                                         zenith_cut_ENU=None
                                         zenith_cut_array_plane=None
-
-                                    #Record cut values                                    
-                                    if zenith_cut_ENU is None:
-                                        file['map_direction'][filter_string].attrs['zenith_cut_ENU'] = 'None' 
-                                        file['map_times'][filter_string].attrs['zenith_cut_ENU'] = 'None' 
-                                    else:
-                                        _zenith_cut_ENU = []
-                                        if zenith_cut_ENU[0] is None:
-                                            _zenith_cut_ENU.append('None')
-                                        else:
-                                            _zenith_cut_ENU.append(zenith_cut_ENU[0])
-                                        if zenith_cut_ENU[1] is None:
-                                            _zenith_cut_ENU.append('None')
-                                        else:
-                                            _zenith_cut_ENU.append(zenith_cut_ENU[1])
-
-                                        file['map_direction'][filter_string].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
-                                        file['map_times'][filter_string].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
-
-                                    if zenith_cut_array_plane is None:
-                                        file['map_direction'][filter_string].attrs['zenith_cut_array_plane'] = 'None'
-                                        file['map_times'][filter_string].attrs['zenith_cut_array_plane'] = 'None' 
-                                    else:
-                                        _zenith_cut_array_plane = []
-                                        if zenith_cut_array_plane[0] is None:
-                                            _zenith_cut_array_plane.append('None')
-                                        else:
-                                            _zenith_cut_array_plane.append(zenith_cut_array_plane[0])
-                                        if zenith_cut_array_plane[1] is None:
-                                            _zenith_cut_array_plane.append('None')
-                                        else:
-                                            _zenith_cut_array_plane.append(zenith_cut_array_plane[1])
-
-
-                                        file['map_direction'][filter_string].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane
-                                        file['map_times'][filter_string].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane 
 
                                     #Calculate best reconstruction direction
                                     if debug == True:

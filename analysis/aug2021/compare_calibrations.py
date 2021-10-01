@@ -58,7 +58,7 @@ for c in colors_hex:
 
 #Filter settings
 max_method = 0
-final_corr_length = 2**18
+final_corr_length = 2**15
 apply_phase_response = True
 
 crit_freq_low_pass_MHz = 80
@@ -86,11 +86,7 @@ shorten_delay = 10.0
 shorten_length = 1500.0
 shorten_keep_leading = 500.0
 
-map_resolution = 0.1 #degrees
-range_phi_deg = (-90, 90)
-range_theta_deg = (80,120)
-n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
-n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
+
 
 
 def prepPlots(pol, normalize_map_peaks, additional_window_title_text=''):
@@ -141,9 +137,12 @@ if __name__ == '__main__':
     plt.close('all')
     try:
         initial_state = numpy.random.get_state() #Such that each site will look at the same subset of randomly selected events
-        if True:
+        if False:
             calibrations = ['/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_nolim.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_joint_ants_nolim.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-22_nolim_ignore_d2sa.json']#['rtk-gps-day3-june22-2021.json' , 'rtk-gps-day3-2021-09-13_both_minimized_wide_range_3_antennas_move.json']#['rtk-gps-day3-june22-2021.json' , 'rtk-gps-day3-2021-09-13_both_minimized_wide_range_3_antennas_move.json', 'theodolite-day3-june22-2021_only_enu.json'] # ,'/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/theodolite-day3-june22-2021_only_enu.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-15_cables.json'
             calibrations_shorthand = ['GPS',  'Cable + Ant Float', 'Cable + Locked Pols Float', 'Cable + Ant Float Ignore First Site']#'Theodolite', 'Cable Float',
+        elif True:
+            calibrations = ['/home/dsouthall/Projects/Beacon/beacon/config/september_2021_minimized_calibration.json']
+            calibrations_shorthand = ['All Site Calibration']
         else:
             calibrations = ['/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021.json','/home/dsouthall/Projects/Beacon/beacon/config/for_comparison_9_15_2021/rtk-gps-day3-june22-2021_2021-09-22_nolim_ignore_d2sa.json']
             calibrations_shorthand = ['GPS',  'Cable + Ant Float Ignore First Site']#'Theodolite', 'Cable Float',
@@ -251,11 +250,18 @@ if __name__ == '__main__':
                     azimuth_deg = numpy.rad2deg(numpy.arctan2(enu[1],enu[0]))
                     zenith_deg = numpy.rad2deg(numpy.arccos(enu[2]/source_distance_m))
                     
+                    map_resolution = 0.1 #degrees
+                    range_phi_deg = (azimuth_deg - 2.0, azimuth_deg + 2.0)#(-90, 90)
+                    range_theta_deg = (zenith_deg - 10.0, zenith_deg + 10.0)#(80,120)
+                    n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
+                    n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
+
+
                     # Prepare correlators for later calculations for this site.
                     cors = {}
                     for run in runs:
                         cor_reader = Reader(os.environ['BEACON_DATA'],run)
-                        cors[run] = Correlator(cor_reader,upsample=len(cor_reader.t())*8, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True, deploy_index=deploy_index, map_source_distance_m = source_distance_m)
+                        cors[run] = Correlator(cor_reader,upsample=len(cor_reader.t())*4, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True, deploy_index=deploy_index, map_source_distance_m = source_distance_m)
                         if sine_subtract:
                             cors[run].prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 

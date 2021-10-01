@@ -333,8 +333,9 @@ if __name__ == '__main__':
         cors_list = [] #To keep interactive live
         lassos = []
 
+
         #Set Baseline
-        sites = [sites_day3[1]]
+        sites = [sites_day3[1]]#['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']#
         pols = ['hpol']#,'vpol']
         limit_eventids = 100
         baseline_antennas = [[0,1]]#[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]#[[2,3]]#[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
@@ -373,6 +374,11 @@ if __name__ == '__main__':
             source_distance_m = numpy.sqrt(enu[0]**2 + enu[1]**2 + enu[2]**2)
             azimuth_deg = numpy.rad2deg(numpy.arctan2(enu[1],enu[0]))
             zenith_deg = numpy.rad2deg(numpy.arccos(enu[2]/source_distance_m))
+
+            print(site)
+            print(source_latlonel[0],source_latlonel[1],source_latlonel[2])
+            print(azimuth_deg , 90.0 - zenith_deg, source_distance_m)
+            #continue
             
             #Calculate Expected Time Delays
             cor_reader = Reader(os.environ['BEACON_DATA'],runs[0])

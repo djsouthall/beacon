@@ -150,6 +150,7 @@ class dataSlicerSingleRun():
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
                         impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                         time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-200,max_time_delays_val=200,\
+                        max_corr_n_bins=200,\
                         std_n_bins_h=200,std_n_bins_v=200,max_std_val=None,\
                         p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=None,\
@@ -168,7 +169,10 @@ class dataSlicerSingleRun():
                 #Should add triggered beam to this list of params. 
                 self.known_param_keys = [   'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
                                             'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
-                                            'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',
+                                            'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',\
+                                            'mean_max_corr_h', 'max_max_corr_h','mean_max_corr_v', 'max_max_corr_v',\
+                                            'max_corr_0subtract1_h','max_corr_0subtract2_h','max_corr_0subtract3_h','max_corr_1subtract2_h','max_corr_1subtract3_h','max_corr_2subtract3_h',\
+                                            'max_corr_0subtract1_v','max_corr_0subtract2_v','max_corr_0subtract3_v','max_corr_1subtract2_v','max_corr_1subtract3_v','max_corr_2subtract3_v',\
                                             'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','phi_best_h','phi_best_v',\
                                             'calibrated_trigtime','triggered_beams','beam_power','hpol_peak_to_sidelobe','vpol_peak_to_sidelobe','hpol_max_possible_map_value','vpol_max_possible_map_value',\
                                             'map_max_time_delay_0subtract1_h','map_max_time_delay_0subtract2_h','map_max_time_delay_0subtract3_h',\
@@ -202,7 +206,15 @@ class dataSlicerSingleRun():
                 self.time_delays_n_bins_h = time_delays_n_bins_h
                 self.time_delays_n_bins_v = time_delays_n_bins_v
                 self.min_time_delays_val = min_time_delays_val
-                self.max_time_delays_val = max_time_delays_val            
+                self.max_time_delays_val = max_time_delays_val
+
+                #Cross correlation max values
+                self.min_max_corr_val = 0.0
+                self.max_max_corr_val = 1.0
+                self.max_corr_n_bins = max_corr_n_bins
+
+
+
 
                 #std Plot Params:
                 self.min_std_val = 1.0 #To be rewritten, setting a reasonable lower bound for when max_std_val is given. 
@@ -229,6 +241,8 @@ class dataSlicerSingleRun():
                 self.max_peak_to_sidelobe_val = max_peak_to_sidelobe_val
                 self.peak_to_sidelobe_n_bins_h = peak_to_sidelobe_n_bins_h
                 self.peak_to_sidelobe_n_bins_v = peak_to_sidelobe_n_bins_v
+                self.peak_to_sidelobe_max_val = 5.0
+
 
                 #Unknown, will be calculated as needed.
                 self.max_beam_power = None
@@ -391,7 +405,7 @@ class dataSlicerSingleRun():
                 initial_scope = None
 
             with h5py.File(self.analysis_filename, 'r') as file:
-                map_direction_keys = list(file['map_direction'].keys())
+                map_direction_keys = [key for key in file['map_direction'].keys()]#list(file['map_direction'].keys())
 
                 #Check for map counterpart not assuming any premade scope.  This will be self.hilbert_map and self.normal_map
                 
@@ -694,10 +708,24 @@ class dataSlicerSingleRun():
                             p2p = file['p2p'][...][eventids]
                             param_2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
                             param = numpy.divide(param_2, param_1)
-                        elif 'time_delay_' in param_key:
+                        elif 'time_delay_' in param_key and 'map' not in param_key:
                             split_param_key = param_key.split('_')
                             dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
                             param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
+                        elif 'max_corr_' in param_key and 'map' not in param_key:
+                            if param_key == 'mean_max_corr_h':
+                                param = numpy.mean(numpy.vstack((self.getDataFromParam(eventids,'max_corr_0subtract1_h'),self.getDataFromParam(eventids,'max_corr_0subtract2_h'),self.getDataFromParam(eventids,'max_corr_0subtract3_h'),self.getDataFromParam(eventids,'max_corr_1subtract2_h'),self.getDataFromParam(eventids,'max_corr_1subtract3_h'),self.getDataFromParam(eventids,'max_corr_2subtract3_h'))),axis=0)
+                            elif param_key == 'max_max_corr_h':
+                                param = numpy.max(numpy.vstack((self.getDataFromParam(eventids,'max_corr_0subtract1_h'),self.getDataFromParam(eventids,'max_corr_0subtract2_h'),self.getDataFromParam(eventids,'max_corr_0subtract3_h'),self.getDataFromParam(eventids,'max_corr_1subtract2_h'),self.getDataFromParam(eventids,'max_corr_1subtract3_h'),self.getDataFromParam(eventids,'max_corr_2subtract3_h'))),axis=0)
+                            elif param_key == 'mean_max_corr_v':
+                                param = numpy.mean(numpy.vstack((self.getDataFromParam(eventids,'max_corr_0subtract1_v'),self.getDataFromParam(eventids,'max_corr_0subtract2_v'),self.getDataFromParam(eventids,'max_corr_0subtract3_v'),self.getDataFromParam(eventids,'max_corr_1subtract2_v'),self.getDataFromParam(eventids,'max_corr_1subtract3_v'),self.getDataFromParam(eventids,'max_corr_2subtract3_v'))),axis=0)
+                            elif param_key == 'max_max_corr_v':
+                                param = numpy.max(numpy.vstack((self.getDataFromParam(eventids,'max_corr_0subtract1_v'),self.getDataFromParam(eventids,'max_corr_0subtract2_v'),self.getDataFromParam(eventids,'max_corr_0subtract3_v'),self.getDataFromParam(eventids,'max_corr_1subtract2_v'),self.getDataFromParam(eventids,'max_corr_1subtract3_v'),self.getDataFromParam(eventids,'max_corr_2subtract3_v'))),axis=0)
+                            else:
+                                split_param_key = param_key.split('_')
+                                dset = '%spol_max_corr_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
+                                param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
+
                         elif 'cw_present' == param_key:
                             param = file['cw']['has_cw'][...][eventids].astype(int)
                         elif 'cw_freq_Mhz' == param_key:
@@ -831,14 +859,16 @@ class dataSlicerSingleRun():
                         elif 'beam_power' == param_key:
                             param = self.reader.returnTriggerInfo()[1][eventids]
 
-
-
+                        elif 'hilbert' not in param_key and 'hpol_peak_to_sidelobe' in param_key:
+                            param = file['map_properties'][self.map_dset_key]['hpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' not in param_key and 'hpol_peak_to_sidelobe_allsky' in param_key:
                             param = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' not in param_key and 'hpol_peak_to_sidelobe_abovehorizon' in param_key:
                             param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' not in param_key and 'hpol_peak_to_sidelobe_belowhorizon' in param_key:
                             param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_peak_to_sidelobe'][...][eventids]
+                        elif 'hilbert' in param_key and 'hpol_peak_to_sidelobe' in param_key:
+                            param = file['map_properties'][self.map_dset_key_hilbert]['hpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_peak_to_sidelobe_allsky' in param_key:
                             param = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_peak_to_sidelobe_abovehorizon' in param_key:
@@ -846,12 +876,16 @@ class dataSlicerSingleRun():
                         elif 'hilbert' in param_key and 'hpol_peak_to_sidelobe_belowhorizon' in param_key:
                             param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_peak_to_sidelobe'][...][eventids]
 
+                        elif 'hilbert' not in param_key and 'vpol_peak_to_sidelobe' in param_key:
+                            param = file['map_properties'][self.map_dset_key]['vpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' not in param_key and 'vpol_peak_to_sidelobe_allsky' in param_key:
                             param = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' not in param_key and 'vpol_peak_to_sidelobe_abovehorizon' in param_key:
                             param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' not in param_key and 'vpol_peak_to_sidelobe_belowhorizon' in param_key:
                             param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_peak_to_sidelobe'][...][eventids]
+                        elif 'hilbert' in param_key and 'vpol_peak_to_sidelobe' in param_key:
+                            param = file['map_properties'][self.map_dset_key_hilbert]['vpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_peak_to_sidelobe_allsky' in param_key:
                             param = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_peak_to_sidelobe_abovehorizon' in param_key:
@@ -1212,7 +1246,8 @@ class dataSlicerSingleRun():
                         self.current_label_x = label_x
                         self.current_bin_edges_y = bin_edges_y
                         self.current_label_y = label_y
-                        self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
+                        self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2) # Use for contours
+                        self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y = numpy.meshgrid(self.current_bin_edges_x , self.current_bin_edges_y)#use for pcolormesh
 
                     counts = numpy.zeros(self.current_bin_centers_mesh_x.shape, dtype=int)
                     #Add counts based on stored indices.
@@ -1308,6 +1343,7 @@ class dataSlicerSingleRun():
             if param_key not in self.known_param_keys:
                 print('WARNING!!!')
                 print('Given key [%s] is not listed in known_param_keys:\n%s'%(param_key,str(self.known_param_keys)))
+                import pdb; pdb.set_trace()
                 return
             else:
                 if verbose:
@@ -1409,6 +1445,20 @@ class dataSlicerSingleRun():
                             x_max_val = max(time_delays) + 1
                         else:
                             x_max_val = self.max_time_delays_val
+                elif 'max_corr_' in param_key and 'map' not in param_key:
+                    split_param_key = param_key.split('_')
+                    if 'mean_max_corr' in param_key:
+                        label = '%spol All Baselines Mean Value From XCorr'%(split_param_key[3].title())
+                    elif param_key == 'max_max_corr':
+                        label = '%spol All Baselines Max Value From XCorr'%(split_param_key[3].title())
+                    else:
+                        split_param_key = param_key.split('_')
+                        label = '%spol Max Value From XCorr\n Ant %s - Ant %s'%(split_param_key[3].title(),split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1])
+
+                    x_n_bins = self.max_corr_n_bins
+                    x_min_val = self.min_max_corr_val
+                    x_max_val = self.max_max_corr_val
+
                 elif 'cw_present' == param_key:
                     label = 'CW Detected Removed (1) or Not (0)'
                     calculate_bins_from_min_max = False
@@ -1568,22 +1618,27 @@ class dataSlicerSingleRun():
                     label = 'Triggered Beam'
                 elif 'beam_power' == param_key:
                     label = 'Beam Power Sum (arb)'
-                    x_min_val
+                    x_min_val = 0
                     x_max_val = self.max_beam_power
                     x_n_bins = 2*128 #Unsure what is reasonable for this number.  
 
                 elif 'peak_to_sidelobe' in param_key:
-                    if 'hilbert_' in param_keys:
-                        label = 'All Sky Peak to Sidelobe Ratio (Hilbert Envelope Applied)'
+                    if 'hilbert_' in param_key:
+                        label = '%s All Sky Peak to Sidelobe Ratio (Hilbert Envelope Applied)'%(param_key.split('_')[0].title())
                     else:
-                        label = 'All Sky Peak to Sidelobe Ratio'
+                        label = '%s All Sky Peak to Sidelobe Ratio'%(param_key.split('_')[0].title())
                     if 'hpol' in param_key:
                         x_n_bins = self.peak_to_sidelobe_n_bins_h
                     else:
                         x_n_bins = self.peak_to_sidelobe_n_bins_v
 
+                    x_max_val = self.peak_to_sidelobe_max_val
+                    x_min_val = 1.0
+
+
+
                 elif 'max_possible_map_value' in param_key:
-                    if 'hilbert_' in param_keys:
+                    if 'hilbert_' in param_key:
                         label = 'Maximum Possible Map Value Per Event (Hilbert Envelope Applied)'
                         x_max_val = 10.0 #Set high because I don't know if hilbert will max out differently
                     else:
@@ -1618,7 +1673,8 @@ class dataSlicerSingleRun():
         self.current_bin_edges_x, self.current_label_x = self.getSingleParamPlotBins(main_param_key_x, eventids)
         self.current_bin_edges_y, self.current_label_y = self.getSingleParamPlotBins(main_param_key_y, eventids)
 
-        self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
+        self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2) # Use for contours
+        self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y = numpy.meshgrid(self.current_bin_edges_x , self.current_bin_edges_y)#use for pcolormesh
         
 
     def returnMaskedArray(self,data,mask_top_N_bins,fill_value=None,fallback_mode=None):
@@ -1716,9 +1772,9 @@ class dataSlicerSingleRun():
             plt.title(title)
 
             if lognorm == True:
-                _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+                _im = _ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
             else:
-                _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,cmap=cmap)
+                _im = _ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts,cmap=cmap)
             if 'theta_best_' in main_param_key_y:
                 _ax.invert_yaxis()
             if True:
@@ -2224,7 +2280,7 @@ class dataSlicer():
                 print('\nWARNING!!! No runs worked on dataSlicer preperations.\n')
 
             print('\ndataSlicer Peparations Complete.  Excluding Runs:')
-            print(runs[~numpy.isin(runs,self.runs)])
+            print(numpy.array(runs)[~numpy.isin(runs,self.runs)])
             print('\n')
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -2459,8 +2515,11 @@ class dataSlicer():
             self.current_bin_edges_x = numpy.linspace(x_bin_min,x_bin_max,int(numpy.mean(len_x)))
             self.current_bin_edges_y = numpy.linspace(y_bin_min,y_bin_max,int(numpy.mean(len_y)))
 
-            self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2)
-                   
+            #These are centered on what WOULD be a 2d histogram bin because the hist is being calculated seperate from the plot.  
+            #import pdb; pdb.set_trace()
+            self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y = numpy.meshgrid((self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2, (self.current_bin_edges_y[:-1] + self.current_bin_edges_y[1:]) / 2) # Use for contours
+            self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y = numpy.meshgrid(self.current_bin_edges_x , self.current_bin_edges_y)#use for pcolormesh
+
             for ds in self.data_slicers:
                 ds.current_bin_edges_x = self.current_bin_edges_x
                 ds.current_bin_edges_y = self.current_bin_edges_y
@@ -2513,11 +2572,10 @@ class dataSlicer():
                 if mask_top_N_bins > 0:
                     title += ', masked_bins = %i'%masked_bins
             plt.title(title)
-
             if lognorm == True:
-                _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+                _im = _ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
             else:
-                _im = _ax.pcolormesh(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts,cmap=cmap)#cmap=plt.cm.coolwarm
+                _im = _ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts,cmap=cmap)#cmap=plt.cm.coolwarm
             if 'theta_best_' in main_param_key_y:
                 _ax.invert_yaxis()
             if True:
@@ -2652,6 +2710,8 @@ class dataSlicer():
             #     print(level)
             #     cs = ax.contour(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts, colors=[contour_color],levels=[level],alpha=_alpha, antialiased=True)
             # print(levels)
+            if numpy.shape(counts != numpy.shape(self.current_bin_centers_mesh_x)):
+                import pdb; pdb.set_trace()
             cs = ax.contour(self.current_bin_centers_mesh_x, self.current_bin_centers_mesh_y, counts, colors=[contour_color],levels=levels,alpha=alpha, antialiased=True)
 
             return ax, cs
@@ -2661,7 +2721,7 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', include_roi=True, lognorm=True, mask_top_N_bins=0, fill_value=0, suppress_legend=False):
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', return_counts=False, include_roi=True, lognorm=True, mask_top_N_bins=0, fill_value=0, suppress_legend=False):
         '''
         This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
         calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
@@ -2710,7 +2770,10 @@ class dataSlicer():
                 if suppress_legend == False:
                     plt.legend(legend_properties,legend_labels,loc='upper left')
 
-            return fig, ax
+            if return_counts == True:
+                return fig, ax, counts
+            else:
+                return fig, ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -2846,6 +2909,35 @@ if __name__ == '__main__':
     
     #runs = [1642,1643,1644,1645,1646,1647]
     if True:
+        for runs in [[5733,5735,5734,5741,5742,5736,5740,5763,5750,5757,5749,5751,5743,5773,5739,5758,5756,5774,5775,5738,5746,5776,5789,5771]]:
+
+            impulsivity_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+            time_delays_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+            map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'
+            print("Preparing dataSlicer")
+
+            map_resolution_theta = 0.25 #degrees
+            min_theta   = 0
+            max_theta   = 120
+            n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
+
+            map_resolution_phi = 0.1 #degrees
+            min_phi     = -180
+            max_phi     = 180
+            n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
+
+            ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
+                            cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                            std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                            snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
+                            n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta))
+
+            print('Generating plots:')
+            for key_x, key_y in [['impulsivity_h','impulsivity_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['p2p_h', 'p2p_v']]:#[['p2p_h','p2p_v'],['impulsivity_h','impulsivity_v'],['p2p_h','impulsivity_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h']]:#ds.known_param_keys:
+                print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                print('Testing plot for calculating %s and %s'%(key_x,key_y))
+                ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+    elif False:
         for runs in [[1644],[1645],[1644,1645]]:
             impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
             time_delays_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'

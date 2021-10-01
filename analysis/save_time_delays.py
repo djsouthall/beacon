@@ -149,6 +149,8 @@ if __name__=="__main__":
     vpol_pairs  = numpy.array(list(itertools.combinations((1,3,5,7), 2)))
     pairs       = numpy.vstack((hpol_pairs,vpol_pairs)) 
 
+    known_pulsing_runs = numpy.array([5630, 5631, 5632, 5638, 5639, 5640, 5641, 5642, 5643, 5644, 5645, 5646, 5647, 5648, 5649, 5656, 5657, 5659, 5660], dtype=int)
+
     try:
         run = int(run)
 
@@ -159,8 +161,13 @@ if __name__=="__main__":
                 eventids = file['eventids'][...]
 
 
+                if numpy.isin(run, known_pulsing_runs):
+                    print('Given run is known to be a pulsing run, including calculations for force triggers.')
+                    rf_cut = numpy.ones_like(file['trigger_type'][...] == 2)
+                else:
+                    rf_cut = file['trigger_type'][...] == 2
 
-                rf_cut = file['trigger_type'][...] == 2
+
                 # print('TEMPORARY HARDCODE') #debugging an error that occurred in run 1663 due to a zero valued waveform
                 # rf_cut[numpy.cumsum(file['trigger_type'][...] == 2) < 10000] = False #TEMPORARY
 

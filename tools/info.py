@@ -15422,3 +15422,11 @@ if __name__ == '__main__':
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
+
+
+
+# event_info = info.load2021PulserEventids()
+# all_runs = []
+# for site in list(event_info.keys()):
+#     all_runs.append(numpy.unique(numpy.append(event_info[site]['hpol']['run'],event_info[site]['vpol']['run'])))
+# all_runs = numpy.sort(numpy.unique(numpy.concatenate(all_runs)))
