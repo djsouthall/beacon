@@ -1,0 +1,412 @@
+#!/usr/bin/env python3
+'''
+This is a simple script designed to get an intitial impression of the data in-order to determine an appropriate
+analysis trajectory. 
+'''
+
+import sys
+import os
+import inspect
+import h5py
+import copy
+
+import numpy
+import scipy
+import scipy.signal
+import scipy.signal
+
+from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from beacon.tools.data_handler import createFile
+from beacon.tools.fftmath import TemplateCompareTool
+from beacon.tools.fftmath import FFTPrepper
+from beacon.tools.correlator import Correlator
+from beacon.tools.data_slicer import dataSlicer
+from beacon.tools.line_of_sight import circleSource
+
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+from matplotlib import cm, ticker
+from matplotlib.patches import Rectangle
+plt.ion()
+
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.filterwarnings("ignore")
+
+raw_datapath = os.environ['BEACON_DATA']
+processed_datapath = os.environ['BEACON_PROCESSED_DATA']
+
+from scipy.optimize import curve_fit
+def gaus(x,a,x0,sigma, normalize=False):
+    out = a*numpy.exp(-(x-x0)**2.0/(2.0*(sigma**2.0)))
+    if normalize == False:
+        return out
+    else:
+        return out/(numpy.sum(out)*numpy.diff(x)[0])
+
+def bivariateGaus(xy ,x0,sigma_x, y0,sigma_y, rho, scale_factor=1.0, return_2d=False):
+    '''
+    This calculation is already normalized as a pdf?  So I need to reverse normalize when fitting I guess?
+    '''
+
+    x, y = xy
+
+    mu = numpy.array([sigma_x,sigma_y])
+    sigma = numpy.array([[sigma_x**2, rho*sigma_x*sigma_y],[rho*sigma_x*sigma_y,sigma_y**2]])
+
+    z = 1.0/(2*numpy.pi*sigma_x*sigma_y*numpy.sqrt(1-rho**2)) * numpy.exp( -1.0 / ( 2 * ( 1 - rho**2 ) ) * ( ((x - x0)/sigma_x)**2 - 2*rho*((x - x0)/sigma_x)*((y - y0)/sigma_y) + ((y - y0)/sigma_y)**2 ) )
+
+    if return_2d:
+        '''
+        Useful when using in curve_fit, which expects a 1d output.
+        '''
+        return z*scale_factor
+    else:
+        '''
+        Useful for plotting, which expects a 2d output.
+        '''
+        return z.ravel()*scale_factor
+
+
+
+def fitGaus(x, _counts, _ax, add_label=False, center=False, normalize=False, debug=False, **kwargs):
+    try:
+        p0 = [numpy.max(_counts),x[numpy.argmax(_counts)],2*numpy.abs(x[numpy.argmax(_counts[_counts != 0])] - x[numpy.argmin(_counts[_counts != 0])])]
+        if debug == True:
+            import pdb; pdb.set_trace()
+        popt, pcov = curve_fit(gaus,x,_counts,p0=p0) #Only want to use normalize when plotting not fitting.
+        popt[2] = abs(popt[2]) #I want positive sigma.
+
+        plot_x = numpy.linspace(min(x),max(x),100*len(x))
+
+
+        if center == False:
+            if add_label == True:
+                _ax.plot(plot_x,gaus(plot_x,*popt),label='Center = %0.4f,  Sigma = %0.4f deg'%(popt[1],popt[2]), **kwargs)
+                _ax.axvline(popt[1], **kwargs)
+            else:
+                _ax.plot(plot_x,gaus(plot_x,*popt), **kwargs)
+        else:
+            if add_label == True:
+                _ax.plot(plot_x - popt[1],gaus(plot_x,*popt, normalize=normalize),label='Center = %0.4f,  Sigma = %0.4f deg'%(popt[1],popt[2]), **kwargs)
+            else:
+                _ax.plot(plot_x - popt[1],gaus(plot_x,*popt, normalize=normalize), **kwargs)
+
+        return popt
+
+
+    except Exception as e:
+        print('Failed to fit histogram')
+        print(e)
+        print('Trying to add info without fit.')
+
+'''
+'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
+'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
+'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',
+'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','phi_best_h','phi_best_v',\
+'calibrated_trigtime','triggered_beams','beam_power','hpol_peak_to_sidelobe','vpol_peak_to_sidelobe','hpol_max_possible_map_value','vpol_max_possible_map_value',\
+'map_max_time_delay_0subtract1_h','map_max_time_delay_0subtract2_h','map_max_time_delay_0subtract3_h',\
+'map_max_time_delay_1subtract2_h','map_max_time_delay_1subtract3_h','map_max_time_delay_2subtract3_h',\
+'map_max_time_delay_0subtract1_v','map_max_time_delay_0subtract2_v','map_max_time_delay_0subtract3_v',\
+'map_max_time_delay_1subtract2_v','map_max_time_delay_1subtract3_v','map_max_time_delay_2subtract3_v'
+'''
+
+
+
+
+if __name__ == '__main__':
+    plt.close('all')
+    impulsivity_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+    time_delays_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+    map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'
+    
+    #'hpol_max_possible_map_value', 
+    runs = numpy.arange(5733,5790)
+    runs = runs[~numpy.isin(runs,[5762,5764])]
+    runs = numpy.arange(5733,5736)
+    #runs = numpy.arange(5788,5790)
+    print("Preparing dataSlicer")
+
+    map_resolution_theta = 0.25 #degrees
+    min_theta   = 0
+    max_theta   = 120
+    n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
+
+    map_resolution_phi = 0.1 #degrees
+    min_phi     = -180
+    max_phi     = 180
+    n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
+
+    ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
+                    cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
+                    std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
+                    snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
+                    n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta))
+
+    # ds.addROI('p2s',{'elevation_best_h':[0,90],'elevation_best_v':[0,90], 'hpol_peak_to_sidelobe':[1.5,10]})
+    # roi_eventid_dict = ds.getCutsFromROI('p2s',load=False,save=False,verbose=False)
+    print('Generating plots:')
+
+    #ds.addROI('ROI 1',{'phi_best_h':[-9,-7.0],      'elevation_best_h':[-7.2,1.8],  'phi_best_v':[-9,-7.0],'elevation_best_v':[-7.2,1.8],'std_h':[1,10], 'std_v':[1,5]})
+    ds.addROI('ROI 2',{'phi_best_h':[-7.5,-3.7] ,   'elevation_best_h':[-6.3,-3.7], 'p2p_v':[0,40],'impulsivity_v':[0,0.35]})
+    # ds.addROI('ROI 3',{'phi_best_h':[-3,-1.6] ,     'elevation_best_h':[-7.2,-4],   'cr_template_search_v':[0.25,0.5],'impulsivity_v':[0.2,1]})
+    # ds.addROI('ROI 4',{'phi_best_h':[-1.7,0.0] ,    'elevation_best_h':[-10,-2.25], 'mean_max_corr_h':[0.65,1.1],'mean_max_corr_v':[0.775,1.1],'impulsivity_v':[0.4,0.6]})
+    # ds.addROI('ROI 5',{'phi_best_h':[17,18.5] ,     'elevation_best_h':[-6,-2.0],   'std_v':[0,4],'mean_max_corr_v':[0.3,1.0]})
+    # ds.addROI('ROI 6',{'phi_best_h':[22.35,23.6] ,  'elevation_best_h':[-5,-0.5],   'p2p_v':[0,40]})
+    # ds.addROI('ROI 7',{'phi_best_h':[40.75,42] ,    'elevation_best_h':[-5,-0.5],   'std_v':[2.5,8],'std_h':[4,9.5], 'cr_template_search_v':[0.775,1.0],'vpol_peak_to_sidelobe':[2.05,3.5]})
+
+    if False:
+        plot_list = [['mean_max_corr_h','mean_max_corr_v'], ['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['hpol_peak_to_sidelobe','elevation_best_h'],['impulsivity_h','impulsivity_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['p2p_h', 'p2p_v'],['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v']]
+        for key_x, key_y in plot_list:
+            print('Generating %s plot'%(key_x + ' vs ' + key_y))
+            print('Testing plot for calculating %s and %s'%(key_x,key_y))
+            ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+            #ds.plotROI2dHist('snr_h', 'snr_v', cmap='coolwarm', include_roi=True)
+    else:
+        #ds.addROI('ROI 1',{'elevation_best_h':[-7.2,1.8],'phi_best_h':[-9,-7.0],'elevation_best_v':[-7.2,1.8],'phi_best_v':[-9,-7.0],'std_h':[1,10], 'std_v':[1,5]})
+        plot_list = [['phi_best_h','elevation_best_h']]#,['phi_best_v','elevation_best_v']
+
+
+        if False:
+            plotter = plt.semilogy
+            logscale = True
+        elif True:
+            plotter = plt.scatter
+            logscale = False
+        else:
+            plotter = plt.plot
+            logscale = False
+
+        for key_x, key_y in plot_list:
+            ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=False)
+            ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+            fig = plt.figure()
+            fig.canvas.set_window_title('All Fits')
+            all_fits_ax_1 = plt.subplot(2,1,1)
+            all_fits_ax_2 = plt.subplot(2,1,2)
+            plt.suptitle('Resolutions for %s vs %s'%(key_x, key_y)  )
+
+            fig = plt.figure()
+            fig.canvas.set_window_title('All Fits')
+            all_fits_ax_1_summed = plt.subplot(2,1,1)
+            all_fits_ax_2_summed = plt.subplot(2,1,2)
+            plt.suptitle('Resolutions for %s vs %s'%(key_x, key_y)  )
+
+
+            for roi_index, roi_key in enumerate(list(ds.roi.keys())):
+                roi_eventid_dict = ds.getCutsFromROI(roi_key,load=False,save=False,verbose=False)
+                print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                print('Testing plot for calculating %s and %s'%(key_x,key_y))
+                fig, ax_2d, counts = ds.plotROI2dHist(key_x, key_y, eventids_dict=roi_eventid_dict, return_counts=True, cmap='coolwarm', include_roi=False)
+                # Bins must be called after plotROI2dHist
+                current_bin_edges_x = ds.current_bin_edges_x
+                current_bin_centers_x = (current_bin_edges_x[:-1] + current_bin_edges_x[1:])/2
+                current_label_x = ds.current_label_x
+
+                current_bin_edges_y = ds.current_bin_edges_y
+                current_bin_centers_y = (current_bin_edges_y[:-1] + current_bin_edges_y[1:])/2
+                current_label_y  = ds.current_label_y
+
+                max_x_column = numpy.argmax(numpy.max(counts,axis=0))
+                max_x_value = current_bin_centers_x[max_x_column]
+                #numpy.isin(numpy.max(counts), counts[:,max_x_column])
+
+                max_y_row = numpy.argmax(numpy.max(counts,axis=1))
+                max_y_value = current_bin_centers_y[max_y_row]
+
+                cut_range = 2.5
+                rows = range(numpy.shape(counts)[0])#[max_y_row]
+                x_range_cut = numpy.where(numpy.abs(current_bin_centers_x - max_x_value) < cut_range)[0]
+
+                fig = plt.figure()
+                fig.canvas.set_window_title(roi_key + ' Fits')
+                ax = plt.subplot(2,1,1)
+                plt.suptitle('%s , Resolutions for %s vs %s'%(roi_key, key_x, key_y)  )
+
+                for row in rows:
+                    if sum(counts[row,:]) > 0:
+                        if row == max_y_row:
+                            plotter(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], color=ds.roi_colors[roi_index], alpha = 1.0, label='Max Bin Row')
+                            popt = fitGaus(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], ax, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True)
+
+                            max_row_popt = fitGaus(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], all_fits_ax_1, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, center=True, normalize=True)
+                            best_azimuth = max_row_popt[1]
+                            best_azimuth_sigma = max_row_popt[2]
+                        else:
+                            plotter(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], c='k', alpha = 0.3)
+                            popt = fitGaus(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], ax, c='k', alpha = 0.3, add_label=False)
+
+                plotter(current_bin_centers_x[x_range_cut], numpy.sum(counts[:,x_range_cut], axis=0), color=ds.roi_colors[roi_index], alpha = 1.0, label='All Rows Summed',marker='*')
+                popt = fitGaus(current_bin_centers_x[x_range_cut], numpy.sum(counts[:,x_range_cut], axis=0), ax, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, linestyle='--')
+                popt = fitGaus(current_bin_centers_x[x_range_cut], numpy.sum(counts[:,x_range_cut], axis=0), all_fits_ax_1_summed, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, center=True, normalize=True, linestyle='--')
+
+                ax_2d.set_xlim(max_x_value-cut_range,max_x_value+cut_range)
+                plt.sca(ax)
+                plt.xlim(max_x_value-0.5*cut_range,max_x_value+cut_range)
+                plt.ylabel('Counts')
+                plt.xlabel('Azimuthal Bin Centers (deg)')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.legend(loc='upper right')
+
+                if logscale == True:
+                    ax.set_yscale('log')
+                    ax.set_ylim(1, ax.get_ylim()[1])
+                else:
+                    ax.ticklabel_format(axis='y',style='sci', scilimits=(0,3),useMathText=True)
+
+
+                ax = plt.subplot(2,1,2)
+                columns = range(numpy.shape(counts)[1])#[max_x_column]
+                y_range_cut = numpy.where(numpy.abs(current_bin_centers_y - max_y_value) < cut_range)[0]
+                for column in columns:
+                    if sum(counts[:,column]) > 0:
+                        if column == max_x_column:
+                            plotter(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], color=ds.roi_colors[roi_index], alpha = 1.0, label='Max Bin Column')
+                            popt = fitGaus(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], ax, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True)
+
+                            max_column_popt = fitGaus(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], all_fits_ax_2, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, center=True, normalize=True)
+                            best_elevation = max_column_popt[1]
+                            best_elevation_sigma = max_column_popt[2]
+                        else:
+                            plotter(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], c='k', alpha = 0.3)
+                            popt = fitGaus(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], ax, c='k', alpha = 0.3, add_label=False)
+
+                plotter(current_bin_centers_y[y_range_cut], numpy.sum(counts[y_range_cut,:], axis=1), color=ds.roi_colors[roi_index], alpha = 1.0, label='All Columns Summed',marker='*')
+                popt = fitGaus(current_bin_centers_y[y_range_cut], numpy.sum(counts[y_range_cut,:], axis=1), ax, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, linestyle='--')
+                popt = fitGaus(current_bin_centers_y[y_range_cut], numpy.sum(counts[y_range_cut,:], axis=1), all_fits_ax_2_summed, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, center=True, normalize=True, linestyle='--')
+
+
+                ax_2d.set_ylim(max_y_value-cut_range,max_y_value+cut_range)
+                plt.sca(ax)
+                plt.xlim(max_y_value-0.5*cut_range,max_y_value+cut_range)
+                plt.ylabel('Counts')
+                plt.xlabel('Elevation Bin Centers (deg)')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.legend(loc='upper right')
+                if logscale == True:
+                    ax.set_yscale('log')
+                    ax.set_ylim(1, ax.get_ylim()[1])
+                else:
+                    ax.ticklabel_format(axis='y',style='sci', scilimits=(0,3),useMathText=True)
+
+                circleSource(best_azimuth, best_elevation, [best_azimuth_sigma,best_elevation_sigma, 1.0], n_points=1000, spread_limit=5, save_kml=True, save_name=None, save_description=roi_key, color_rgba=(numpy.array(ds.roi_colors[roi_index])*255).astype(int))
+
+                '''
+                ATTEMPTING A 2D GAUSSIAN FIT
+                '''
+
+                #Will want to switch to interpolated grid for actual final plotting, but this is fine for testing.
+                x, y = ds.current_bin_centers_mesh_x, ds.current_bin_centers_mesh_y #Used for calculating, but pcolormesh expects bin edges.
+
+                fit_guess_params =  [max_row_popt[1], max_row_popt[2], max_column_popt[1], max_column_popt[2], 0.0]#x0,sigma_x, y0,sigma_y, rho 
+
+                xy_range_cut = numpy.where(numpy.logical_and(numpy.abs(x - max_x_value) < cut_range , numpy.abs(y - max_y_value) < cut_range).ravel())[0]
+
+                popt, pcov = curve_fit(bivariateGaus,(x.ravel()[xy_range_cut], y.ravel()[xy_range_cut]),counts.ravel()[xy_range_cut] / (numpy.sum(counts.ravel()[xy_range_cut])*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]),p0=fit_guess_params) #Only want to use normalize when plotting not fitting.
+                
+                print('Comparing Initial and Fit Values')
+                
+                print('x0 :         initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[0], popt[0], popt[0] - fit_guess_params[0]))
+                print('sigma_x :    initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[1], popt[1], popt[1] - fit_guess_params[1]))
+                print('y0 :         initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[2], popt[2], popt[2] - fit_guess_params[2]))
+                print('sigma_y :    initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[3], popt[3], popt[3] - fit_guess_params[3]))
+                print('rho :        initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[4], popt[4], popt[4] - fit_guess_params[4]))
+
+
+                #popt[2] = abs(popt[2]) #I want positive sigma.
+
+                initial_z = bivariateGaus( (x, y) ,fit_guess_params[0], fit_guess_params[1], fit_guess_params[2], fit_guess_params[3], fit_guess_params[4], scale_factor = (numpy.sum(counts)*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]), return_2d=True)
+                fit_z = bivariateGaus( (x, y) ,popt[0], popt[1], popt[2], popt[3], popt[4], scale_factor = (numpy.sum(counts)*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]), return_2d=True)
+
+
+                fig_2dgaus = plt.figure()
+                ax_2dgaus_a = plt.subplot(2,1,1)
+                im = ax_2dgaus_a.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap='coolwarm')
+                ax_2dgaus_a.set_ylim(max_column_popt[1] - cut_range, max_column_popt[1] + cut_range)
+                ax_2dgaus_a.set_xlim(max_row_popt[1] - cut_range, max_row_popt[1] + cut_range)
+
+                try:
+                    cbar = fig_2dgaus.colorbar(im)
+                    cbar.set_label('Counts')
+                except Exception as e:
+                    print('Error in colorbar, often caused by no events.')
+                    print(e)
+
+                plt.xlabel(ds.current_label_x)
+                plt.ylabel(ds.current_label_y)
+                plt.grid(which='both', axis='both')
+                ax_2dgaus_a.minorticks_on()
+                ax_2dgaus_a.grid(b=True, which='major', color='k', linestyle='-')
+                ax_2dgaus_a.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                ax_2dgaus_b = plt.subplot(2,1,2, sharex=ax_2dgaus_a, sharey=ax_2dgaus_a)
+                im = ax_2dgaus_b.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, fit_z,norm=colors.LogNorm(vmin=0.5, vmax=fit_z.max()),cmap='coolwarm')
+
+                try:
+                    cbar = fig_2dgaus.colorbar(im)
+                    cbar.set_label('Counts')
+                except Exception as e:
+                    print('Error in colorbar, often caused by no events.')
+                    print(e)
+
+                plt.xlabel(ds.current_label_x)
+                plt.ylabel(ds.current_label_y)
+                plt.grid(which='both', axis='both')
+                ax_2dgaus_b.minorticks_on()
+                ax_2dgaus_b.grid(b=True, which='major', color='k', linestyle='-')
+                ax_2dgaus_b.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                
+
+
+
+            for ax in [all_fits_ax_1, all_fits_ax_1_summed]:
+                # Set display settings for total plot
+                plt.sca(ax)
+                plt.xlim(-0.5*cut_range,cut_range)
+                plt.ylabel('Normalized Counts')
+                plt.xlabel('Azimuthal Bin Centers (deg)')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.legend(loc='upper right')
+
+                if logscale == True:
+                    ax.set_yscale('log')
+                    ax.set_ylim(1, ax.get_ylim()[1])
+                else:
+                    ax.ticklabel_format(axis='y',style='sci', scilimits=(0,3),useMathText=True)
+
+
+            for ax in [all_fits_ax_2, all_fits_ax_2_summed]:
+                # Set display settings for total plot
+                plt.sca(ax)
+                plt.xlim(-0.5*cut_range,cut_range)
+                plt.ylabel('Normalized Counts')
+                plt.xlabel('Elevation Bin Centers (deg)')
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.legend(loc='upper right')
+                if logscale == True:
+                    ax.set_yscale('log')
+                    ax.set_ylim(1, ax.get_ylim()[1])
+                else:
+                    ax.ticklabel_format(axis='y',style='sci', scilimits=(0,3),useMathText=True)
+
+
+                        
+
+
+                    
+
+                    
+
+
+

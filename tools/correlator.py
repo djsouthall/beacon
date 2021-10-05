@@ -4061,12 +4061,12 @@ if __name__=="__main__":
 
     crit_freq_high_pass_MHz = None#30#None
     high_pass_filter_order = None#5#None
-    plot_filter=False
+    plot_filter=True
 
     apply_phase_response=True
     sine_subtract = True
     sine_subtract_min_freq_GHz = 0.03
-    sine_subtract_max_freq_GHz = 0.09
+    sine_subtract_max_freq_GHz = 0.250
     sine_subtract_percent = 0.05
 
     n_phi = 720

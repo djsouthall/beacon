@@ -46,9 +46,9 @@ def circleSource(azimuth_deg, elevation_deg, radius_deg, n_points=1000, spread_l
         if save_name is None:
             if numpy.size(radius_deg) == 1:
                 if azimuth_deg < 0:
-                    save_name = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'tools','map_data','output',str('az_E%0.3fS_elevation_%0.3f+-%0.3f'%(abs(azimuth_deg), elevation_deg, rad)).replace('.','p') + '.kml') 
+                    save_name = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'tools','map_data','output',str('az_E%0.3fS_elevation_%0.3f+-%s'%(abs(azimuth_deg), elevation_deg, str(radius_deg))).replace('.','p') + '.kml') 
                 else:
-                    save_name = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'tools','map_data','output',str('az_E%0.3fN_elevation_%0.3f+-%0.3f'%(azimuth_deg, elevation_deg, rad)).replace('.','p') + '.kml') 
+                    save_name = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'tools','map_data','output',str('az_E%0.3fN_elevation_%0.3f+-%s'%(azimuth_deg, elevation_deg, str(radius_deg))).replace('.','p') + '.kml') 
             else:
                 if azimuth_deg < 0:
                     save_name = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'tools','map_data','output',str('az_E%0.3fS_elevation_%0.3f'%(abs(azimuth_deg), elevation_deg)).replace('.','p') + '.kml') 
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         if len(sys.argv) > 3:
             radius_deg = float(sys.argv[3])
         else:
-            radius_deg = 1
+            radius_deg = numpy.array([1])
 
 
         lat_map, lon_map = interpolateLatLon(azimuth_deg, elevation_deg)
