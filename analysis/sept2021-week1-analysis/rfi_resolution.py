@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib import cm, ticker
 from matplotlib.patches import Rectangle
-plt.ion()
+
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -49,7 +49,6 @@ def bivariateGaus(xy ,x0,sigma_x, y0,sigma_y, rho, scale_factor=1.0, return_2d=F
     '''
     This calculation is already normalized as a pdf?  So I need to reverse normalize when fitting I guess?
     '''
-
     x, y = xy
 
     mu = numpy.array([sigma_x,sigma_y])
@@ -114,6 +113,66 @@ def fitGaus(x, _counts, _ax, add_label=False, center=False, normalize=False, deb
 '''
 
 
+def mahalanobisDistanceThreshold(p):
+    '''
+    This calculates the threshold value t to achieve a particular probability p.
+    '''
+    return numpy.sqrt(-2*numpy.log(1-p))
+
+
+def covarianceMatrixEllipse(sigma):
+    '''
+    This follows the guide found at https://cookierobotics.com/007/
+
+    Given a covariance matrix of form [[a,b],[c,d]] this will determine the values of lambda_1 and lambda_2
+    where sqrt(lambda_1) is the semi-major axis of the ellipse and sqrt(lambda_2) is the semiminor axis.  It will also
+    calculate theta_rad, which is the counter-clockwise offset from the positive x-axis in which the semi-major axis
+    is rotated.  
+    '''
+    a = sigma[0][0]
+    b = sigma[0][1]
+    c = sigma[1][1]
+    
+    lambda_1 = (a + c)/2.0 + numpy.sqrt(((a - c)/2)**2 + b**2)
+    lambda_2 = (a + c)/2.0 - numpy.sqrt(((a - c)/2)**2 + b**2)
+
+    if b == 0 and a >= c:
+        theta_rad = 0
+    elif b == 0 and a < c:
+        theta_rad = numpy.pi/2
+    else:
+        theta_rad = numpy.arctan2(lambda_1 - a , b)
+
+    return lambda_1, lambda_2, theta_rad
+
+def parametricCovarianceEllipse(sigma, mean, confidence_interval_value, n=10000):
+    '''
+    This calculate the parameterized vertices of an ellipse by passing sigma to covarianceMatrixEllipse.  
+    '''
+    scale_factor = mahalanobisDistanceThreshold(confidence_interval_value)
+    lambda_1, lambda_2, theta_rad = covarianceMatrixEllipse(sigma)
+    t = numpy.linspace(0,2*numpy.pi, n)
+    x = numpy.sqrt(lambda_1) * numpy.cos(theta_rad) * numpy.cos(t) - numpy.sqrt(lambda_2) * numpy.sin(theta_rad) * numpy.sin(t)
+    y = numpy.sqrt(lambda_1) * numpy.sin(theta_rad) * numpy.cos(t) - numpy.sqrt(lambda_2) * numpy.cos(theta_rad) * numpy.sin(t)
+
+    #unsure if this is the correct way to apply the scale factor yet.  Maybe under the sqrt above?
+    x = x*scale_factor + mean[0]
+    y = y*scale_factor + mean[1]
+
+    return numpy.vstack((x,y)).T
+
+
+
+def contourArea(vs):
+    a = 0
+    x0,y0 = vs[0]
+    for [x1,y1] in vs[1:]:
+        dx = x1-x0
+        dy = y1-y0
+        a += 0.5*(y0*dx - x0*dy)
+        x0 = x1
+        y0 = y1
+    return abs(a)
 
 
 if __name__ == '__main__':
@@ -124,10 +183,12 @@ if __name__ == '__main__':
     
     #'hpol_max_possible_map_value', 
     runs = numpy.arange(5733,5790)
-    runs = runs[~numpy.isin(runs,[5762,5764])]
-    runs = numpy.arange(5733,5736)
+    #runs = runs[~numpy.isin(runs,[5762,5764])]
+    #runs = numpy.arange(5733,5736)
     #runs = numpy.arange(5788,5790)
     print("Preparing dataSlicer")
+
+    confidence_integral_value = 0.9
 
     map_resolution_theta = 0.25 #degrees
     min_theta   = 0
@@ -149,13 +210,13 @@ if __name__ == '__main__':
     # roi_eventid_dict = ds.getCutsFromROI('p2s',load=False,save=False,verbose=False)
     print('Generating plots:')
 
-    #ds.addROI('ROI 1',{'phi_best_h':[-9,-7.0],      'elevation_best_h':[-7.2,1.8],  'phi_best_v':[-9,-7.0],'elevation_best_v':[-7.2,1.8],'std_h':[1,10], 'std_v':[1,5]})
-    ds.addROI('ROI 2',{'phi_best_h':[-7.5,-3.7] ,   'elevation_best_h':[-6.3,-3.7], 'p2p_v':[0,40],'impulsivity_v':[0,0.35]})
-    # ds.addROI('ROI 3',{'phi_best_h':[-3,-1.6] ,     'elevation_best_h':[-7.2,-4],   'cr_template_search_v':[0.25,0.5],'impulsivity_v':[0.2,1]})
-    # ds.addROI('ROI 4',{'phi_best_h':[-1.7,0.0] ,    'elevation_best_h':[-10,-2.25], 'mean_max_corr_h':[0.65,1.1],'mean_max_corr_v':[0.775,1.1],'impulsivity_v':[0.4,0.6]})
-    # ds.addROI('ROI 5',{'phi_best_h':[17,18.5] ,     'elevation_best_h':[-6,-2.0],   'std_v':[0,4],'mean_max_corr_v':[0.3,1.0]})
-    # ds.addROI('ROI 6',{'phi_best_h':[22.35,23.6] ,  'elevation_best_h':[-5,-0.5],   'p2p_v':[0,40]})
-    # ds.addROI('ROI 7',{'phi_best_h':[40.75,42] ,    'elevation_best_h':[-5,-0.5],   'std_v':[2.5,8],'std_h':[4,9.5], 'cr_template_search_v':[0.775,1.0],'vpol_peak_to_sidelobe':[2.05,3.5]})
+    ds.addROI('ROI 0',{'phi_best_h':[-9,-7.0],      'elevation_best_h':[-7.2,1.8],  'phi_best_v':[-9,-7.0],'elevation_best_v':[-7.2,1.8],'std_h':[1,10], 'std_v':[1,5]})
+    ds.addROI('ROI 1',{'phi_best_h':[-7.5,-3.7] ,   'elevation_best_h':[-6.3,-3.7], 'p2p_v':[0,40],'impulsivity_v':[0,0.35]})
+    ds.addROI('ROI 2',{'phi_best_h':[-3,-1.6] ,     'elevation_best_h':[-7.2,-4],   'cr_template_search_v':[0.25,0.5],'impulsivity_v':[0.2,1]})
+    ds.addROI('ROI 3',{'phi_best_h':[-1.7,0.0] ,    'elevation_best_h':[-10,-2.25], 'mean_max_corr_h':[0.65,1.1],'mean_max_corr_v':[0.775,1.1],'impulsivity_v':[0.4,0.6]})
+    ds.addROI('ROI 4',{'phi_best_h':[17,18.5] ,     'elevation_best_h':[-6,-2.0],   'std_v':[0,4],'mean_max_corr_v':[0.3,1.0]})
+    ds.addROI('ROI 5',{'phi_best_h':[22.35,23.6] ,  'elevation_best_h':[-5,-0.5],   'p2p_v':[0,40]})
+    ds.addROI('ROI 6',{'phi_best_h':[40.75,42] ,    'elevation_best_h':[-5,-0.5],   'std_v':[2.5,8],'std_h':[4,9.5], 'cr_template_search_v':[0.775,1.0],'vpol_peak_to_sidelobe':[2.05,3.5]})
 
     if False:
         plot_list = [['mean_max_corr_h','mean_max_corr_v'], ['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['hpol_peak_to_sidelobe','elevation_best_h'],['impulsivity_h','impulsivity_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['p2p_h', 'p2p_v'],['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v']]
@@ -166,8 +227,10 @@ if __name__ == '__main__':
             #ds.plotROI2dHist('snr_h', 'snr_v', cmap='coolwarm', include_roi=True)
     else:
         #ds.addROI('ROI 1',{'elevation_best_h':[-7.2,1.8],'phi_best_h':[-9,-7.0],'elevation_best_v':[-7.2,1.8],'phi_best_v':[-9,-7.0],'std_h':[1,10], 'std_v':[1,5]})
-        plot_list = [['phi_best_h','elevation_best_h']]#,['phi_best_v','elevation_best_v']
-
+        pols = ['hpol','vpol']
+        save_fig_dir = '/home/dsouthall/Projects/Beacon/beacon/analysis/sept2021-week1-analysis/resolution_plots/' #Set to None for interactive mode
+        fullsize_fig_dims = (20,10)
+        halfsize_fig_dims = (10,10)
 
         if False:
             plotter = plt.semilogy
@@ -179,226 +242,308 @@ if __name__ == '__main__':
             plotter = plt.plot
             logscale = False
 
-        for key_x, key_y in plot_list:
-            ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=False)
-            ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
-            fig = plt.figure()
-            fig.canvas.set_window_title('All Fits')
-            all_fits_ax_1 = plt.subplot(2,1,1)
-            all_fits_ax_2 = plt.subplot(2,1,2)
-            plt.suptitle('Resolutions for %s vs %s'%(key_x, key_y)  )
+        # The python terminal may need to be restarted if you want to change this after running once.
+        if save_fig_dir is not None:
+            plt.ioff()
+        else:
+            plt.ion()
+        
+        for pol in pols:
+            if pol == 'hpol':
+                plot_list = [['phi_best_h','elevation_best_h']]#,['phi_best_v','elevation_best_v']
+            else:
+                plot_list = [['phi_best_v','elevation_best_v']]
 
-            fig = plt.figure()
-            fig.canvas.set_window_title('All Fits')
-            all_fits_ax_1_summed = plt.subplot(2,1,1)
-            all_fits_ax_2_summed = plt.subplot(2,1,2)
-            plt.suptitle('Resolutions for %s vs %s'%(key_x, key_y)  )
+            for key_x, key_y in plot_list:
+                if True:
+                    fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=False)
+                    ax.set_ylim((-25, 10))
+                    ax.set_xlim((-90, 90))
+                    if save_fig_dir is not None:
+                        fig.set_size_inches(fullsize_fig_dims)
+                        fig.set_tight_layout(True)
+                        fig.savefig(os.path.join(save_fig_dir, 'sky_map_no_roi_%s.png'%pol), dpi=180,transparent=False)
 
-
-            for roi_index, roi_key in enumerate(list(ds.roi.keys())):
-                roi_eventid_dict = ds.getCutsFromROI(roi_key,load=False,save=False,verbose=False)
-                print('Generating %s plot'%(key_x + ' vs ' + key_y))
-                print('Testing plot for calculating %s and %s'%(key_x,key_y))
-                fig, ax_2d, counts = ds.plotROI2dHist(key_x, key_y, eventids_dict=roi_eventid_dict, return_counts=True, cmap='coolwarm', include_roi=False)
-                # Bins must be called after plotROI2dHist
-                current_bin_edges_x = ds.current_bin_edges_x
-                current_bin_centers_x = (current_bin_edges_x[:-1] + current_bin_edges_x[1:])/2
-                current_label_x = ds.current_label_x
-
-                current_bin_edges_y = ds.current_bin_edges_y
-                current_bin_centers_y = (current_bin_edges_y[:-1] + current_bin_edges_y[1:])/2
-                current_label_y  = ds.current_label_y
-
-                max_x_column = numpy.argmax(numpy.max(counts,axis=0))
-                max_x_value = current_bin_centers_x[max_x_column]
-                #numpy.isin(numpy.max(counts), counts[:,max_x_column])
-
-                max_y_row = numpy.argmax(numpy.max(counts,axis=1))
-                max_y_value = current_bin_centers_y[max_y_row]
-
-                cut_range = 2.5
-                rows = range(numpy.shape(counts)[0])#[max_y_row]
-                x_range_cut = numpy.where(numpy.abs(current_bin_centers_x - max_x_value) < cut_range)[0]
-
-                fig = plt.figure()
-                fig.canvas.set_window_title(roi_key + ' Fits')
-                ax = plt.subplot(2,1,1)
-                plt.suptitle('%s , Resolutions for %s vs %s'%(roi_key, key_x, key_y)  )
-
-                for row in rows:
-                    if sum(counts[row,:]) > 0:
-                        if row == max_y_row:
-                            plotter(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], color=ds.roi_colors[roi_index], alpha = 1.0, label='Max Bin Row')
-                            popt = fitGaus(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], ax, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True)
-
-                            max_row_popt = fitGaus(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], all_fits_ax_1, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, center=True, normalize=True)
-                            best_azimuth = max_row_popt[1]
-                            best_azimuth_sigma = max_row_popt[2]
-                        else:
-                            plotter(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], c='k', alpha = 0.3)
-                            popt = fitGaus(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], ax, c='k', alpha = 0.3, add_label=False)
-
-                plotter(current_bin_centers_x[x_range_cut], numpy.sum(counts[:,x_range_cut], axis=0), color=ds.roi_colors[roi_index], alpha = 1.0, label='All Rows Summed',marker='*')
-                popt = fitGaus(current_bin_centers_x[x_range_cut], numpy.sum(counts[:,x_range_cut], axis=0), ax, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, linestyle='--')
-                popt = fitGaus(current_bin_centers_x[x_range_cut], numpy.sum(counts[:,x_range_cut], axis=0), all_fits_ax_1_summed, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, center=True, normalize=True, linestyle='--')
-
-                ax_2d.set_xlim(max_x_value-cut_range,max_x_value+cut_range)
-                plt.sca(ax)
-                plt.xlim(max_x_value-0.5*cut_range,max_x_value+cut_range)
-                plt.ylabel('Counts')
-                plt.xlabel('Azimuthal Bin Centers (deg)')
-                plt.minorticks_on()
-                plt.grid(b=True, which='major', color='k', linestyle='-')
-                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                plt.legend(loc='upper right')
-
-                if logscale == True:
-                    ax.set_yscale('log')
-                    ax.set_ylim(1, ax.get_ylim()[1])
-                else:
-                    ax.ticklabel_format(axis='y',style='sci', scilimits=(0,3),useMathText=True)
-
-
-                ax = plt.subplot(2,1,2)
-                columns = range(numpy.shape(counts)[1])#[max_x_column]
-                y_range_cut = numpy.where(numpy.abs(current_bin_centers_y - max_y_value) < cut_range)[0]
-                for column in columns:
-                    if sum(counts[:,column]) > 0:
-                        if column == max_x_column:
-                            plotter(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], color=ds.roi_colors[roi_index], alpha = 1.0, label='Max Bin Column')
-                            popt = fitGaus(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], ax, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True)
-
-                            max_column_popt = fitGaus(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], all_fits_ax_2, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, center=True, normalize=True)
-                            best_elevation = max_column_popt[1]
-                            best_elevation_sigma = max_column_popt[2]
-                        else:
-                            plotter(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], c='k', alpha = 0.3)
-                            popt = fitGaus(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], ax, c='k', alpha = 0.3, add_label=False)
-
-                plotter(current_bin_centers_y[y_range_cut], numpy.sum(counts[y_range_cut,:], axis=1), color=ds.roi_colors[roi_index], alpha = 1.0, label='All Columns Summed',marker='*')
-                popt = fitGaus(current_bin_centers_y[y_range_cut], numpy.sum(counts[y_range_cut,:], axis=1), ax, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, linestyle='--')
-                popt = fitGaus(current_bin_centers_y[y_range_cut], numpy.sum(counts[y_range_cut,:], axis=1), all_fits_ax_2_summed, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, center=True, normalize=True, linestyle='--')
-
-
-                ax_2d.set_ylim(max_y_value-cut_range,max_y_value+cut_range)
-                plt.sca(ax)
-                plt.xlim(max_y_value-0.5*cut_range,max_y_value+cut_range)
-                plt.ylabel('Counts')
-                plt.xlabel('Elevation Bin Centers (deg)')
-                plt.minorticks_on()
-                plt.grid(b=True, which='major', color='k', linestyle='-')
-                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                plt.legend(loc='upper right')
-                if logscale == True:
-                    ax.set_yscale('log')
-                    ax.set_ylim(1, ax.get_ylim()[1])
-                else:
-                    ax.ticklabel_format(axis='y',style='sci', scilimits=(0,3),useMathText=True)
-
-                circleSource(best_azimuth, best_elevation, [best_azimuth_sigma,best_elevation_sigma, 1.0], n_points=1000, spread_limit=5, save_kml=True, save_name=None, save_description=roi_key, color_rgba=(numpy.array(ds.roi_colors[roi_index])*255).astype(int))
-
-                '''
-                ATTEMPTING A 2D GAUSSIAN FIT
-                '''
-
-                #Will want to switch to interpolated grid for actual final plotting, but this is fine for testing.
-                x, y = ds.current_bin_centers_mesh_x, ds.current_bin_centers_mesh_y #Used for calculating, but pcolormesh expects bin edges.
-
-                fit_guess_params =  [max_row_popt[1], max_row_popt[2], max_column_popt[1], max_column_popt[2], 0.0]#x0,sigma_x, y0,sigma_y, rho 
-
-                xy_range_cut = numpy.where(numpy.logical_and(numpy.abs(x - max_x_value) < cut_range , numpy.abs(y - max_y_value) < cut_range).ravel())[0]
-
-                popt, pcov = curve_fit(bivariateGaus,(x.ravel()[xy_range_cut], y.ravel()[xy_range_cut]),counts.ravel()[xy_range_cut] / (numpy.sum(counts.ravel()[xy_range_cut])*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]),p0=fit_guess_params) #Only want to use normalize when plotting not fitting.
-                
-                print('Comparing Initial and Fit Values')
-                
-                print('x0 :         initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[0], popt[0], popt[0] - fit_guess_params[0]))
-                print('sigma_x :    initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[1], popt[1], popt[1] - fit_guess_params[1]))
-                print('y0 :         initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[2], popt[2], popt[2] - fit_guess_params[2]))
-                print('sigma_y :    initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[3], popt[3], popt[3] - fit_guess_params[3]))
-                print('rho :        initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[4], popt[4], popt[4] - fit_guess_params[4]))
-
-
-                #popt[2] = abs(popt[2]) #I want positive sigma.
-
-                initial_z = bivariateGaus( (x, y) ,fit_guess_params[0], fit_guess_params[1], fit_guess_params[2], fit_guess_params[3], fit_guess_params[4], scale_factor = (numpy.sum(counts)*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]), return_2d=True)
-                fit_z = bivariateGaus( (x, y) ,popt[0], popt[1], popt[2], popt[3], popt[4], scale_factor = (numpy.sum(counts)*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]), return_2d=True)
-
-
-                fig_2dgaus = plt.figure()
-                ax_2dgaus_a = plt.subplot(2,1,1)
-                im = ax_2dgaus_a.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap='coolwarm')
-                ax_2dgaus_a.set_ylim(max_column_popt[1] - cut_range, max_column_popt[1] + cut_range)
-                ax_2dgaus_a.set_xlim(max_row_popt[1] - cut_range, max_row_popt[1] + cut_range)
-
-                try:
-                    cbar = fig_2dgaus.colorbar(im)
-                    cbar.set_label('Counts')
-                except Exception as e:
-                    print('Error in colorbar, often caused by no events.')
-                    print(e)
-
-                plt.xlabel(ds.current_label_x)
-                plt.ylabel(ds.current_label_y)
-                plt.grid(which='both', axis='both')
-                ax_2dgaus_a.minorticks_on()
-                ax_2dgaus_a.grid(b=True, which='major', color='k', linestyle='-')
-                ax_2dgaus_a.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                ax_2dgaus_b = plt.subplot(2,1,2, sharex=ax_2dgaus_a, sharey=ax_2dgaus_a)
-                im = ax_2dgaus_b.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, fit_z,norm=colors.LogNorm(vmin=0.5, vmax=fit_z.max()),cmap='coolwarm')
-
-                try:
-                    cbar = fig_2dgaus.colorbar(im)
-                    cbar.set_label('Counts')
-                except Exception as e:
-                    print('Error in colorbar, often caused by no events.')
-                    print(e)
-
-                plt.xlabel(ds.current_label_x)
-                plt.ylabel(ds.current_label_y)
-                plt.grid(which='both', axis='both')
-                ax_2dgaus_b.minorticks_on()
-                ax_2dgaus_b.grid(b=True, which='major', color='k', linestyle='-')
-                ax_2dgaus_b.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-                
+                    fig, ax = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+                    ax.set_ylim((-25, 10))
+                    ax.set_xlim((-90, 90))
+                    if save_fig_dir is not None:
+                        fig.set_size_inches(fullsize_fig_dims)
+                        fig.set_tight_layout(True)
+                        fig.savefig(os.path.join(save_fig_dir, 'sky_map_all_roi_%s.png'%pol), dpi=180,transparent=False)
 
 
 
-            for ax in [all_fits_ax_1, all_fits_ax_1_summed]:
-                # Set display settings for total plot
-                plt.sca(ax)
-                plt.xlim(-0.5*cut_range,cut_range)
-                plt.ylabel('Normalized Counts')
-                plt.xlabel('Azimuthal Bin Centers (deg)')
-                plt.minorticks_on()
-                plt.grid(b=True, which='major', color='k', linestyle='-')
-                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                plt.legend(loc='upper right')
+                fig_all_fits_slice = plt.figure(figsize=fullsize_fig_dims)
+                fig_all_fits_slice.canvas.set_window_title('All Fits')
+                all_fits_ax_1 = plt.subplot(2,1,1)
+                all_fits_ax_2 = plt.subplot(2,1,2)
+                plt.suptitle('Resolutions for %s vs %s'%(key_x, key_y)  )
 
-                if logscale == True:
-                    ax.set_yscale('log')
-                    ax.set_ylim(1, ax.get_ylim()[1])
-                else:
-                    ax.ticklabel_format(axis='y',style='sci', scilimits=(0,3),useMathText=True)
+                fig_all_fits_summed = plt.figure(figsize=fullsize_fig_dims)
+                fig_all_fits_summed.canvas.set_window_title('All Fits')
+                all_fits_ax_1_summed = plt.subplot(2,1,1)
+                all_fits_ax_2_summed = plt.subplot(2,1,2)
+                plt.suptitle('Resolutions for %s vs %s'%(key_x, key_y)  )
 
 
-            for ax in [all_fits_ax_2, all_fits_ax_2_summed]:
-                # Set display settings for total plot
-                plt.sca(ax)
-                plt.xlim(-0.5*cut_range,cut_range)
-                plt.ylabel('Normalized Counts')
-                plt.xlabel('Elevation Bin Centers (deg)')
-                plt.minorticks_on()
-                plt.grid(b=True, which='major', color='k', linestyle='-')
-                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                plt.legend(loc='upper right')
-                if logscale == True:
-                    ax.set_yscale('log')
-                    ax.set_ylim(1, ax.get_ylim()[1])
-                else:
-                    ax.ticklabel_format(axis='y',style='sci', scilimits=(0,3),useMathText=True)
+                for roi_index, roi_key in enumerate(list(ds.roi.keys())):
+                    roi_eventid_dict = ds.getCutsFromROI(roi_key,load=False,save=False,verbose=False)
+                    print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                    print('Testing plot for calculating %s and %s'%(key_x,key_y))
+                    fig, ax_2d, counts = ds.plotROI2dHist(key_x, key_y, eventids_dict=roi_eventid_dict, return_counts=True, cmap='coolwarm', include_roi=False)
+                    # Bins must be called after plotROI2dHist
+                    current_bin_edges_x = ds.current_bin_edges_x
+                    current_bin_centers_x = (current_bin_edges_x[:-1] + current_bin_edges_x[1:])/2
+                    current_label_x = ds.current_label_x
+
+                    current_bin_edges_y = ds.current_bin_edges_y
+                    current_bin_centers_y = (current_bin_edges_y[:-1] + current_bin_edges_y[1:])/2
+                    current_label_y  = ds.current_label_y
+
+                    max_x_column = numpy.argmax(numpy.max(counts,axis=0))
+                    max_x_value = current_bin_centers_x[max_x_column]
+                    #numpy.isin(numpy.max(counts), counts[:,max_x_column])
+
+                    max_y_row = numpy.argmax(numpy.max(counts,axis=1))
+                    max_y_value = current_bin_centers_y[max_y_row]
+
+                    cut_range = 2.5
+                    rows = range(numpy.shape(counts)[0])#[max_y_row]
+                    x_range_cut = numpy.where(numpy.abs(current_bin_centers_x - max_x_value) < cut_range)[0]
+
+                    fig = plt.figure()
+                    fig.canvas.set_window_title(roi_key + ' Fits')
+                    ax = plt.subplot(2,1,1)
+                    plt.suptitle('%s , Resolutions for %s vs %s'%(roi_key, key_x, key_y)  )
+
+                    for row in rows:
+                        if sum(counts[row,:]) > 0:
+                            if row == max_y_row:
+                                plotter(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], color=ds.roi_colors[roi_index], alpha = 1.0, label='Max Bin Row')
+                                popt = fitGaus(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], ax, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True)
+
+                                max_row_popt = fitGaus(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], all_fits_ax_1, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, center=True, normalize=True)
+                                best_azimuth = max_row_popt[1]
+                                best_azimuth_sigma = max_row_popt[2]
+                            else:
+                                plotter(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], c='k', alpha = 0.3)
+                                popt = fitGaus(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut], ax, c='k', alpha = 0.3, add_label=False)
+
+                    plotter(current_bin_centers_x[x_range_cut], numpy.sum(counts[:,x_range_cut], axis=0), color=ds.roi_colors[roi_index], alpha = 1.0, label='All Rows Summed',marker='*')
+                    popt = fitGaus(current_bin_centers_x[x_range_cut], numpy.sum(counts[:,x_range_cut], axis=0), ax, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, linestyle='--')
+                    popt = fitGaus(current_bin_centers_x[x_range_cut], numpy.sum(counts[:,x_range_cut], axis=0), all_fits_ax_1_summed, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, center=True, normalize=True, linestyle='--')
+
+                    ax_2d.set_xlim(max_x_value-cut_range,max_x_value+cut_range)
+                    plt.sca(ax)
+                    plt.xlim(max_x_value-0.5*cut_range,max_x_value+cut_range)
+                    plt.ylabel('Counts')
+                    plt.xlabel('Azimuthal Bin Centers (deg)')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend(loc='upper right')
+
+                    if logscale == True:
+                        ax.set_yscale('log')
+                        ax.set_ylim(1, ax.get_ylim()[1])
+                    else:
+                        ax.ticklabel_format(axis='y',style='sci', scilimits=(0,3),useMathText=True)
+
+
+                    ax = plt.subplot(2,1,2)
+                    columns = range(numpy.shape(counts)[1])#[max_x_column]
+                    y_range_cut = numpy.where(numpy.abs(current_bin_centers_y - max_y_value) < cut_range)[0]
+                    for column in columns:
+                        if sum(counts[:,column]) > 0:
+                            if column == max_x_column:
+                                plotter(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], color=ds.roi_colors[roi_index], alpha = 1.0, label='Max Bin Column')
+                                popt = fitGaus(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], ax, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True)
+
+                                max_column_popt = fitGaus(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], all_fits_ax_2, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, center=True, normalize=True)
+                                best_elevation = max_column_popt[1]
+                                best_elevation_sigma = max_column_popt[2]
+                            else:
+                                plotter(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], c='k', alpha = 0.3)
+                                popt = fitGaus(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut], ax, c='k', alpha = 0.3, add_label=False)
+
+                    plotter(current_bin_centers_y[y_range_cut], numpy.sum(counts[y_range_cut,:], axis=1), color=ds.roi_colors[roi_index], alpha = 1.0, label='All Columns Summed',marker='*')
+                    popt = fitGaus(current_bin_centers_y[y_range_cut], numpy.sum(counts[y_range_cut,:], axis=1), ax, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, linestyle='--')
+                    popt = fitGaus(current_bin_centers_y[y_range_cut], numpy.sum(counts[y_range_cut,:], axis=1), all_fits_ax_2_summed, color=ds.roi_colors[roi_index], alpha = 1.0, add_label=True, center=True, normalize=True, linestyle='--')
+
+
+                    ax_2d.set_ylim(max_y_value-cut_range,max_y_value+cut_range)
+                    plt.sca(ax)
+                    plt.xlim(max_y_value-0.5*cut_range,max_y_value+cut_range)
+                    plt.ylabel('Counts')
+                    plt.xlabel('Elevation Bin Centers (deg)')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend(loc='upper right')
+                    if logscale == True:
+                        ax.set_yscale('log')
+                        ax.set_ylim(1, ax.get_ylim()[1])
+                    else:
+                        ax.ticklabel_format(axis='y',style='sci', scilimits=(0,3),useMathText=True)
+
+                    circleSource(best_azimuth, best_elevation, [best_azimuth_sigma,best_elevation_sigma, 1.0], n_points=1000, spread_limit=5, save_kml=True, save_name=None, save_description=roi_key, color_rgba=(numpy.array(ds.roi_colors[roi_index])*255).astype(int))
+
+                    '''
+                    ATTEMPTING A 2D GAUSSIAN FIT
+                    '''
+
+                    #Will want to switch to interpolated grid for actual final plotting, but this is fine for testing.
+                    x, y = ds.current_bin_centers_mesh_x, ds.current_bin_centers_mesh_y #Used for calculating, but pcolormesh expects bin edges.
+
+                    fit_guess_params =  [max_row_popt[1], max_row_popt[2], max_column_popt[1], max_column_popt[2], 0.0]#x0,sigma_x, y0,sigma_y, rho 
+
+                    xy_range_cut = numpy.where(numpy.logical_and(numpy.abs(x - max_x_value) < cut_range , numpy.abs(y - max_y_value) < cut_range).ravel())[0]
+
+                    popt, pcov = curve_fit(bivariateGaus,(x.ravel()[xy_range_cut], y.ravel()[xy_range_cut]),counts.ravel()[xy_range_cut] / (numpy.sum(counts.ravel()[xy_range_cut])*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]),p0=fit_guess_params) #Only want to use normalize when plotting not fitting.
+                    
+                    x0          = popt[0]
+                    sigma_x     = popt[1]
+                    y0          = popt[2]
+                    sigma_y     = popt[3]
+                    rho         = popt[4]
+                    mean = numpy.array([x0,y0])
+                    sigma = numpy.array([[sigma_x**2, rho*sigma_x*sigma_y],[rho*sigma_x*sigma_y,sigma_y**2]])
+
+                    ellipse_vertices = parametricCovarianceEllipse(sigma, mean, confidence_integral_value, n=10000)
+                    ellipse_path = matplotlib.path.Path(ellipse_vertices)
+                    ellipse_area = contourArea(ellipse_path.vertices) #square degrees
+
+                    print('Comparing Initial and Fit Values')
+                    
+                    print('x0 :         initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[0], x0,       x0 - fit_guess_params[0]))
+                    print('sigma_x :    initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[1], sigma_x,  sigma_x - fit_guess_params[1]))
+                    print('y0 :         initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[2], y0,       y0 - fit_guess_params[2]))
+                    print('sigma_y :    initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[3], sigma_y,  sigma_y - fit_guess_params[3]))
+                    print('rho :        initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[4], rho,      rho - fit_guess_params[4]))
+                    print(roi_key + r' 90% Confidence = ' + '%0.4f deg^2'%(ellipse_area))
+
+
+                    #popt[2] = abs(popt[2]) #I want positive sigma.
+
+                    plot_x_edges = ds.current_bin_edges_x[numpy.abs(ds.current_bin_edges_x - max_x_value) < cut_range]
+                    plot_x_edges =  numpy.linspace(min(plot_x_edges), max(plot_x_edges), 1000)
+                    plot_x_centers = (plot_x_edges[:-1] + plot_x_edges[1:]) / 2
+                    
+                    plot_y_edges = ds.current_bin_edges_y[numpy.abs(ds.current_bin_edges_y - max_y_value) < cut_range]
+                    plot_y_edges =  numpy.linspace(min(plot_y_edges), max(plot_y_edges), 1000)
+                    plot_y_centers = (plot_y_edges[:-1] + plot_y_edges[1:]) / 2
+
+                    plot_x_edges_mesh, plot_y_edges_mesh = numpy.meshgrid(plot_x_edges, plot_y_edges)
+                    plot_x_centers_mesh, plot_y_centers_mesh = numpy.meshgrid(plot_x_centers, plot_y_centers)
+
+
+                    initial_z = bivariateGaus( (x, y) ,fit_guess_params[0], fit_guess_params[1], fit_guess_params[2], fit_guess_params[3], fit_guess_params[4], scale_factor = (numpy.sum(counts)*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]), return_2d=True)
+                    
+                    scale_factor = (numpy.sum(counts)*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0])
+                    fit_z = bivariateGaus( (plot_x_centers_mesh, plot_y_centers_mesh) ,popt[0], popt[1], popt[2], popt[3], popt[4], scale_factor = scale_factor, return_2d=True)
+
+
+                    fig_2dgaus = plt.figure(figsize=halfsize_fig_dims)
+                    ax_2dgaus_a = plt.subplot(2,1,1)
+                    im = ax_2dgaus_a.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap='coolwarm')
+                    ax_2dgaus_a.set_ylim(max_column_popt[1] - cut_range, max_column_popt[1] + cut_range)
+                    ax_2dgaus_a.set_xlim(max_row_popt[1] - cut_range, max_row_popt[1] + cut_range)
+
+                    try:
+                        cbar = fig_2dgaus.colorbar(im)
+                        cbar.set_label('Counts')
+                    except Exception as e:
+                        print('Error in colorbar, often caused by no events.')
+                        print(e)
+
+                    plt.xlabel(ds.current_label_x)
+                    plt.ylabel(ds.current_label_y)
+                    plt.grid(which='both', axis='both')
+                    ax_2dgaus_a.minorticks_on()
+                    ax_2dgaus_a.grid(b=True, which='major', color='k', linestyle='-')
+                    ax_2dgaus_a.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                    ax_2dgaus_b = plt.subplot(2,1,2, sharex=ax_2dgaus_a, sharey=ax_2dgaus_a)
+                    im = ax_2dgaus_b.pcolormesh(plot_x_edges_mesh, plot_y_edges_mesh, fit_z,norm=colors.LogNorm(vmin=0.5, vmax=fit_z.max()),cmap='coolwarm')
+                    ax_2dgaus_b.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color=ds.roi_colors[roi_index],label='%0.2f'%(confidence_integral_value*100) + r'% PDF Area = ' + '%0.3f deg^2\nrho = %0.3f'%(ellipse_area,rho))
+                    plt.sca(ax_2dgaus_b)
+
+                    plt.legend(loc = 'upper right')
+
+                    try:
+                        cbar = fig_2dgaus.colorbar(im)
+                        cbar.set_label('Counts')
+                    except Exception as e:
+                        print('Error in colorbar, often caused by no events.')
+                        print(e)
+
+                    plt.xlabel(ds.current_label_x)
+                    plt.ylabel(roi_key + ' Counts Fit')
+                    plt.grid(which='both', axis='both')
+                    ax_2dgaus_b.minorticks_on()
+                    ax_2dgaus_b.grid(b=True, which='major', color='k', linestyle='-')
+                    ax_2dgaus_b.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                    #fig_2dgaus.set_tight_layout(True)
+                    if save_fig_dir is not None:
+                        fig_2dgaus.set_size_inches(halfsize_fig_dims)
+                        fig_2dgaus.subplots_adjust(top=0.93)
+                        fig_2dgaus.savefig(os.path.join(save_fig_dir,'%s_spot_%s.png'%(roi_key.replace(' ','').lower() , pol)) , dpi=180,transparent=False)
+
+                    if True:
+                        # Sanity check
+                        #Generate 10000 events using the fit gaussian
+
+                        out = numpy.random.multivariate_normal(mean, sigma, size=100000)
+                        in_contour = numpy.array([ellipse_path.contains_point(p) for p in out])
+                        percent_in_contour = numpy.sum(in_contour)/len(in_contour)
+                        print('Under a MC-based sanity check the percentage of randomly generated events within the given %0.2f CI is %0.4f'%(confidence_integral_value*100, percent_in_contour*100))
+
+
+
+                for ax in [all_fits_ax_1, all_fits_ax_1_summed]:
+                    # Set display settings for total plot
+                    plt.sca(ax)
+                    plt.xlim(-0.5*cut_range,cut_range)
+                    plt.ylabel('Normalized Counts')
+                    plt.xlabel('Azimuthal Bin Centers (deg)')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend(loc='upper right')
+
+                    if logscale == True:
+                        ax.set_yscale('log')
+                        ax.set_ylim(1, ax.get_ylim()[1])
+                    else:
+                        ax.ticklabel_format(axis='y',style='sci', scilimits=(0,3),useMathText=True)
+
+
+                for ax in [all_fits_ax_2, all_fits_ax_2_summed]:
+                    # Set display settings for total plot
+                    plt.sca(ax)
+                    plt.xlim(-0.5*cut_range,cut_range)
+                    plt.ylabel('Normalized Counts')
+                    plt.xlabel('Elevation Bin Centers (deg)')
+                    plt.minorticks_on()
+                    plt.grid(b=True, which='major', color='k', linestyle='-')
+                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                    plt.legend(loc='upper right')
+                    if logscale == True:
+                        ax.set_yscale('log')
+                        ax.set_ylim(1, ax.get_ylim()[1])
+                    else:
+                        ax.ticklabel_format(axis='y',style='sci', scilimits=(0,3),useMathText=True)
+
+
+                if save_fig_dir is not None:
+                    fig_all_fits_slice.set_tight_layout(True)
+                    fig_all_fits_slice.savefig(os.path.join(save_fig_dir, 'all_1d_fits_fig_slice_%s.png'%pol), dpi=180,transparent=False)
+
+                if save_fig_dir is not None:
+                    fig_all_fits_summed.set_tight_layout(True)
+                    fig_all_fits_summed.savefig(os.path.join(save_fig_dir, 'all_1d_fits_fig_summed_%s.png'%pol), dpi=180,transparent=False)
 
 
                         

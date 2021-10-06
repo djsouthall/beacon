@@ -10,3 +10,8 @@ slurmout
 tools/slurmout
 tools/slurm*.out
 tools/beam_definitions
+tools/map_data/output/*.kml
+config/test_calibrations/*.json
+analysis/*.gif
+analysis/*.png
+analysis/*.jpg
