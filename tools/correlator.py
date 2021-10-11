@@ -3138,9 +3138,9 @@ class Correlator:
                             plt.plot(plot_x,gaus(plot_x,*popt),'-',c='k',label='Fit Sigma = %f ns'%popt[2])
                             plt.axvline(popt[1],linestyle='-',c='k',label='Fit Center = %f'%(popt[1] + mean_phi))
                         except Exception as e:
-                            print('Failed to fit histogram')
-                            print(e)
-                            print('Trying to add info without fit.')
+                            #print('Failed to fit histogram')
+                            #print(e)
+                            #print('Trying to add info without fit.')
                             try:
                                 if acceptable_fit_range is not None:
                                     range_cut = numpy.abs(numpy.mean(all_phi_best) - all_phi_best) <= acceptable_fit_range
@@ -3148,7 +3148,7 @@ class Correlator:
                                 else:
                                     plt.axvline(numpy.mean(all_phi_best),linestyle='-',c='k',label='Fit Failed\nstd = %f ns\nmean= %f ns'%(numpy.std(all_phi_best) , numpy.mean(all_phi_best)))    
                             except Exception as e:
-                                print('Failed here too.')
+                                #print('Failed here too.')
                                 print(e)                         
 
                         if circle_az is not None:
@@ -4056,18 +4056,32 @@ def testMain():
 if __name__=="__main__":
     #'LPf_70.0-LPo_4-HPf_None-HPo_None-Phase_1-Hilb_1-upsample_32768-maxmethod_0'
 
-    crit_freq_low_pass_MHz = 100#60 #This new pulser seems to peak in the region of 85 MHz or so
-    low_pass_filter_order = 8
+    if False:
+        crit_freq_low_pass_MHz = 100#60 #This new pulser seems to peak in the region of 85 MHz or so
+        low_pass_filter_order = 8
 
-    crit_freq_high_pass_MHz = None#30#None
-    high_pass_filter_order = None#5#None
+        crit_freq_high_pass_MHz = None#30#None
+        high_pass_filter_order = None#5#None
+        
+        sine_subtract = True
+        sine_subtract_min_freq_GHz = 0.03
+        sine_subtract_max_freq_GHz = 0.250
+        sine_subtract_percent = 0.05
+    else:
+        crit_freq_low_pass_MHz = 80
+        low_pass_filter_order = 14
+
+        crit_freq_high_pass_MHz = 20
+        high_pass_filter_order = 4
+
+        sine_subtract = False
+        sine_subtract_min_freq_GHz = 0.02
+        sine_subtract_max_freq_GHz = 0.15
+        sine_subtract_percent = 0.01
+
     plot_filter=True
 
     apply_phase_response=True
-    sine_subtract = True
-    sine_subtract_min_freq_GHz = 0.03
-    sine_subtract_max_freq_GHz = 0.250
-    sine_subtract_percent = 0.05
 
     n_phi = 720
     n_theta = 1080
@@ -4089,19 +4103,41 @@ if __name__=="__main__":
         all_figs = []
         all_axs = []
         all_cors = []
-
+        map_source_distance_m = 100000
         if run == 1507:
             waveform_index_range = (1500,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
         elif run == 1509:
             waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.  
         elif run == 1511:
             waveform_index_range = (1250,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
+        elif run == 5630:
+                waveform_index_range = (1250,2274)
+                print('Using waveform_index_range of ', str(waveform_index_range))
+                map_source_distance_m = 521.62
         else:
             waveform_index_range = (None,None)
+        # if True:
+        # shorten_signals = False
+        # index_window_dict = {'hpol': {'d2sa': (1250, 2274),
+        #                               'd3sa': (2273, 3297),
+        #                               'd3sb': (2426, 3450),
+        #                               'd3sc': (1889, 2913),
+        #                               'd4sa': (2060, 3084),
+        #                               'd4sb': (1097, 2121)},
+        #                      'vpol': {'d2sa': (1233, 2257),
+        #                               'd3sa': (2246, 3270),
+        #                               'd3sb': (2445, 3469),
+        #                               'd3sc': (1941, 2965),
+        #                               'd4sa': (2074, 3098),
+        #                               'd4sb': (1063, 2087)}}
+        #     else:
+        #         index_window_dict = {'hpol':{},'vpol':{}} 
 
         reader = Reader(datapath,run)
 
-        cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response, deploy_index=deploy_index)
+
+
+        cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response, deploy_index=deploy_index, map_source_distance_m=map_source_distance_m)
         
 
         if sine_subtract:
@@ -4109,6 +4145,9 @@ if __name__=="__main__":
 
         for mode in ['hpol','vpol']:
             mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,90.0], center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=False)
+            fig.set_size_inches(16, 9)
+            plt.sca(ax)
+            plt.tight_layout()
             all_figs.append(fig)
             all_axs.append(ax)
             if False:
@@ -4136,7 +4175,8 @@ if __name__=="__main__":
                 elif run == 1509:
                     waveform_index_range = (2000,3000) #Looking at the later bit of the waveform only, 10000 will cap off.
                 elif run == 1511:
-                    waveform_index_range = (1250,2000) #Looking at the later bit of the waveform only, 10000 will cap off.  
+                    waveform_index_range = (1250,2000) #Looking at the later bit of the waveform only, 10000 will cap off. 
+
 
 
                 reader = Reader(datapath,run)

@@ -1405,7 +1405,16 @@ class dataSlicerSingleRun():
                     if 'map_max_' in param_key:
                         #Time delays derived from the maps max value
                         split_param_key = param_key.split('_')
-                        label = '%spol Time Delay from Max Map Location\n Ant %s - Ant %s'%(split_param_key[5].title(),split_param_key[4].split('subtract')[2],split_param_key[4].split('subtract')[3])
+                        if split_param_key[6] == 'allsky':
+                            title_scope = 'All Sky'
+                        elif split_param_key[6] == 'belowhorizon':
+                            title_scope = 'Below Horizon'
+                        elif split_param_key[6] == 'abovehorizon':
+                            title_scope = 'Above Horizon'
+                        else:
+                            title_scope = ''
+
+                        label = '%spol Time Delay from %s Max Map Location\n Ant %s - Ant %s'%(split_param_key[5].title(), title_scope, split_param_key[4].split('subtract')[0],split_param_key[4].split('subtract')[1])
                         if split_param_key[3] == 'h':
                             x_n_bins = self.time_delays_n_bins_h
                         else:

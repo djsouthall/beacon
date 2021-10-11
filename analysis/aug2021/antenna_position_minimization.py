@@ -533,7 +533,7 @@ if __name__ == '__main__':
             pol = 'hpol'
 
         if True:
-            deploy_index = 'rtk-gps-day3-june22-2021.json'#'theodolite-day3-june22-2021_only_enu.json'#'rtk-gps-day3-june22-2021.json'
+            deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/september_2021_minimized_calibration.json')#'rtk-gps-day3-june22-2021.json'#'theodolite-day3-june22-2021_only_enu.json'#'rtk-gps-day3-june22-2021.json'
             if pol == 'hpol':
                 use_sites = ['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']#['d3sa','d3sb','d3sc','d4sa','d4sb']#
             elif pol == 'vpol':
@@ -1224,6 +1224,24 @@ if __name__ == '__main__':
 
             #Plot Pulser Events
             pulser_info = PulserInfo()
+            pulser_info = PulserInfo()
+            if True:
+                shorten_signals = False
+                index_window_dict = {'hpol': {'d2sa': (1250, 2274),
+                                      'd3sa': (2273, 3297),
+                                      'd3sb': (2426, 3450),
+                                      'd3sc': (1889, 2913),
+                                      'd4sa': (2060, 3084),
+                                      'd4sb': (1097, 2121)},
+                             'vpol': {'d2sa': (1233, 2257),
+                                      'd3sa': (2246, 3270),
+                                      'd3sb': (2445, 3469),
+                                      'd3sc': (1941, 2965),
+                                      'd4sa': (2074, 3098),
+                                      'd4sb': (1063, 2087)}}
+            else:
+                index_window_dict = {'hpol':{},'vpol':{}}
+
             for key in am.use_sites:
                 #Calculate old and new geometries
                 #Distance needed when calling correlator, as it uses that distance.
@@ -1255,8 +1273,13 @@ if __name__ == '__main__':
                     event_info = numpy.random.choice(known_pulser_ids)
 
                 reader = Reader(datapath,int(event_info['run']))
+
+                if key in list(index_window_dict[pol].keys()):
+                    waveform_index_range = index_window_dict[pol][key]
+                else:
+                    waveform_index_range = (None, None)
                 
-                cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
+                cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
                 cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
 
@@ -1266,7 +1289,7 @@ if __name__ == '__main__':
                     cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,cor.A0_hpol,cor.A1_hpol,cor.A2_hpol,cor.A3_hpol,am.initial_ant0_ENU,am.initial_ant1_ENU,am.initial_ant2_ENU,am.initial_ant3_ENU,verbose=False)
 
 
-                adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
+                adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                 adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                 if pol == 'hpol':
@@ -1293,6 +1316,10 @@ if __name__ == '__main__':
 
 
                 #mean_corr_values, fig, ax = cor.map(int(event_info['eventid']), pol, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+                mean_corr_values, fig, ax = cor.map(int(event_info['eventid']), pol, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+                fig.set_size_inches(16, 9)
+                plt.sca(ax)
+                plt.tight_layout()
                 adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(int(event_info['eventid']), pol, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
                 adjusted_fig.set_size_inches(16, 9)
                 plt.sca(adjusted_ax)
@@ -1306,10 +1333,10 @@ if __name__ == '__main__':
                     n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
                     n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
                                     
-                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
+                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-                    adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
+                    adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                     adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                     if pol == 'hpol':
@@ -1575,6 +1602,22 @@ if __name__ == '__main__':
 
             #Plot Pulser Events
             pulser_info = PulserInfo()
+            if True:
+                shorten_signals = False
+                index_window_dict = {'hpol': {'d2sa': (1250, 2274),
+                                      'd3sa': (2273, 3297),
+                                      'd3sb': (2426, 3450),
+                                      'd3sc': (1889, 2913),
+                                      'd4sa': (2060, 3084),
+                                      'd4sb': (1097, 2121)},
+                             'vpol': {'d2sa': (1233, 2257),
+                                      'd3sa': (2246, 3270),
+                                      'd3sb': (2445, 3469),
+                                      'd3sc': (1941, 2965),
+                                      'd4sa': (2074, 3098),
+                                      'd4sb': (1063, 2087)}}
+            else:
+                index_window_dict = {'hpol':{},'vpol':{}}
             for _pol in ['hpol','vpol']:
                 for key in ['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']:
                     #Calculate old and new geometries
@@ -1614,13 +1657,16 @@ if __name__ == '__main__':
                         event_info = numpy.random.choice(known_pulser_ids)
 
                     reader = Reader(datapath,int(event_info['run']))
-                    
-                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
+                    if key in list(index_window_dict[_pol].keys()):
+                        waveform_index_range = index_window_dict[_pol][key]
+                    else:
+                        waveform_index_range = (None, None)
+                    cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                     cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,cm.am_hpol.initial_ant0_ENU,cm.am_hpol.initial_ant1_ENU,cm.am_hpol.initial_ant2_ENU,cm.am_hpol.initial_ant3_ENU,cm.am_vpol.initial_ant0_ENU,cm.am_vpol.initial_ant1_ENU,cm.am_vpol.initial_ant2_ENU,cm.am_vpol.initial_ant3_ENU,verbose=False)
                    
-                    adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
+                    adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                     adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                     adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU_hpol,ant1_ENU_hpol,ant2_ENU_hpol,ant3_ENU_hpol,ant0_ENU_vpol,ant1_ENU_vpol,ant2_ENU_vpol,ant3_ENU_vpol,verbose=False)
@@ -1657,12 +1703,12 @@ if __name__ == '__main__':
                         n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
                         n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
                                         
-                        cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
+                        cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=original_distance_m)
                         cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                         cor.overwriteAntennaLocations(cor.A0_physical,cor.A1_physical,cor.A2_physical,cor.A3_physical,cm.am_hpol.initial_ant0_ENU,cm.am_hpol.initial_ant1_ENU,cm.am_hpol.initial_ant2_ENU,cm.am_hpol.initial_ant3_ENU,cm.am_vpol.initial_ant0_ENU,cm.am_vpol.initial_ant1_ENU,cm.am_vpol.initial_ant2_ENU,cm.am_vpol.initial_ant3_ENU,verbose=False)
 
-                        adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
+                        adjusted_cor = Correlator(reader,  upsample=cor_upsample, n_phi=n_phi,range_phi_deg=range_phi_deg, n_theta=n_theta,range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=False, sine_subtract=True,map_source_distance_m=distance_m)
                         adjusted_cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
                         adjusted_cor.overwriteAntennaLocations(adjusted_cor.A0_physical,adjusted_cor.A1_physical,adjusted_cor.A2_physical,adjusted_cor.A3_physical,ant0_ENU_hpol,ant1_ENU_hpol,ant2_ENU_hpol,ant3_ENU_hpol,ant0_ENU_vpol,ant1_ENU_vpol,ant2_ENU_vpol,ant3_ENU_vpol,verbose=False)

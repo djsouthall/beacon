@@ -11,7 +11,7 @@ from beacon.tools.data_handler import createFile, getTimes, loadTriggerTypes, ge
 raw_datapath = os.environ['BEACON_DATA']
 
 if __name__ == '__main__':
-    runs = numpy.array([5733])#numpy.arange(5733,5790)#numpy.array([5733])
+    runs = numpy.arange(5733,5790)#numpy.array([5733])
     all_runs = numpy.array([],dtype=int)
     all_eventids = numpy.array([],dtype=int)
     all_trigger_types = numpy.array([],dtype=int)

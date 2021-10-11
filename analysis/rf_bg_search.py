@@ -144,7 +144,62 @@ datapath = os.environ['BEACON_DATA']
 
 
 
+known_pulser_ids = info.load2021PulserEventids()
+index_window_dict = {'hpol': {'d2sa': (1250, 2274),
+                              'd3sa': (2273, 3297),
+                              'd3sb': (2426, 3450),
+                              'd3sc': (1889, 2913),
+                              'd4sa': (2060, 3084),
+                              'd4sb': (1097, 2121)},
+                     'vpol': {'d2sa': (1233, 2257),
+                              'd3sa': (2246, 3270),
+                              'd3sb': (2445, 3469),
+                              'd3sc': (1941, 2965),
+                              'd4sa': (2074, 3098),
+                              'd4sb': (1063, 2087)}}
 
+direction_dict = {  'd2sa': {'azimuth_deg': -45.613736741990834,
+                          'zenith_deg': 99.09445476373067,
+                          'elevation_deg': -9.094454763730667,
+                          'distance_m': 521.616462754899},
+                    'd3sa': {'azimuth_deg': -21.04237515116415,
+                          'zenith_deg': 97.8769623011641,
+                          'elevation_deg': -7.876962301164099,
+                          'distance_m': 1118.0401456335342},
+                    'd3sb': {'azimuth_deg': -8.413762469954158,
+                          'zenith_deg': 101.19711809638179,
+                          'elevation_deg': -11.197118096381786,
+                          'distance_m': 1192.8539386915534},
+                    'd3sc': {'azimuth_deg': -3.5486704218142275,
+                          'zenith_deg': 105.81645053640865,
+                          'elevation_deg': -15.816450536408652,
+                          'distance_m': 897.7425893600894},
+                    'd4sa': {'azimuth_deg': 22.644625829641022,
+                          'zenith_deg': 96.5140587981508,
+                          'elevation_deg': -6.514058798150799,
+                          'distance_m': 959.9056107333164},
+                    'd4sb': {'azimuth_deg': 58.80941058645383,
+                          'zenith_deg': 97.30396628369822,
+                          'elevation_deg': -7.303966283698216,
+                          'distance_m': 358.97094565670193}}
+
+                            
+
+known_pulser_runs = numpy.unique(numpy.concatenate([numpy.append(numpy.unique(known_pulser_ids[site]['hpol']['run']),numpy.unique(known_pulser_ids[site]['vpol']['run'])) for site in list(known_pulser_ids.keys())]))
+
+pulser_run_sites = {}
+for site in list(known_pulser_ids.keys()):
+    for run in numpy.unique(numpy.append(numpy.unique(known_pulser_ids[site]['hpol']['run']),numpy.unique(known_pulser_ids[site]['vpol']['run']))):
+        pulser_run_sites[run] = site
+
+# This one was double checking that there are no runs that have multiple pulsing sites in them.
+# pulser_run_sites = {}
+# for site in list(known_pulser_ids.keys()):
+#     for run in numpy.unique(numpy.append(numpy.unique(known_pulser_ids[site]['hpol']['run']),numpy.unique(known_pulser_ids[site]['vpol']['run']))):
+#         if run not in list(pulser_run_sites.keys()):
+#             pulser_run_sites[run] = [site]
+#         else:
+#             pulser_run_sites[run].append(site)
 
 
 if __name__=="__main__":
@@ -575,7 +630,18 @@ if __name__=="__main__":
 
                             print('Performing calculations for %s'%mode)
 
-                            cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=(None,None),crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract, deploy_index=deploy_index)
+                            if numpy.isin(run, known_pulser_runs):
+                                waveform_index_range = index_window_dict[mode][pulser_run_sites[run]]
+                                print('USING WAVEFORM_INDEX_RANGE OF ', str(waveform_index_range))
+
+                                map_source_distance_m = direction_dict[pulser_run_sites[run]]['distance_m']
+                                print('USING MAP SOURCE DISTANCE OF %0.2f m'%(map_source_distance_m))
+
+                            else:
+                                waveform_index_range = (None, None)
+                                map_source_distance_m = 1e6
+
+                            cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract, deploy_index=deploy_index,map_source_distance_m=map_source_distance_m)
 
                             print('Cor setup to use deploy index %s'%str(cor.deploy_index))
 
@@ -606,7 +672,7 @@ if __name__=="__main__":
                                     if impose_time_limit is not None:
                                         if datetime.timestamp(datetime.now()) - starting_timestamp >= 3600*impose_time_limit:
                                             print('\n\n')
-                                            print('SELF IMPOSED TIME LIMIT REACHED, ENDING SCRIPT EARLY.  MOST REVENT EVENTID COMPLETED IS %i'%(eventids[event_index-1]))
+                                            print('SELF IMPOSED TIME LIMIT REACHED, ENDING SCRIPT EARLY.  MOST RECENT EVENTID COMPLETED IS %i'%(eventids[event_index-1]))
                                             break 
 
                                 if debug == True:

@@ -37,7 +37,7 @@ if __name__ == "__main__":
     else:
         runs = numpy.array([5630, 5631, 5632, 5638, 5639, 5640, 5641, 5642, 5643, 5644, 5645, 5646, 5647, 5648, 5649, 5656, 5657, 5659, 5660], dtype=int)
         done_runs = numpy.array([])
-        pol = 'hpol'
+        pol = 'vpol'
 
 
     ###--------###
@@ -50,8 +50,8 @@ if __name__ == "__main__":
         jobname = 'bcn%i'%run
 
         batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,jobname)
-
-        command = os.environ['BEACON_ANALYSIS_DIR'] + 'analysis/all_analysis_part1.sh %i %s %s'%(run, deploy_index, pol)#'analysis/time_averaged_spectrum.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'tools/data_handler.py %i redo'%(run)#'analysis/cr_search/simple_cr_template_search.py %i 1'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
+        
+        command = os.environ['BEACON_ANALYSIS_DIR'] + 'analysis/all_analysis_part2.sh %i %s %s'%(run, deploy_index, pol)#'analysis/time_averaged_spectrum.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'tools/data_handler.py %i redo'%(run)#'analysis/cr_search/simple_cr_template_search.py %i 1'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
         #command = os.environ['BEACON_ANALYSIS_DIR'] + 'analysis/rf_bg_search.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'analysis/rf_bg_search.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'tools/data_handler.py %i redo'%(run)#'analysis/cr_search/simple_cr_template_search.py %i 1'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
 
         command_queue = batch + command
