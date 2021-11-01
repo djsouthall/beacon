@@ -12,6 +12,8 @@ import csv
 import sys
 import os
 import datetime
+import pytz
+import matplotlib.dates as md
 import pandas as pd
 import itertools
 import h5py
@@ -34,6 +36,7 @@ from matplotlib.colors import LogNorm
 from matplotlib.collections import LineCollection
 import matplotlib
 from matplotlib import gridspec
+plt.ion()
 
 
 c = 2.99700e8 #m/s
@@ -84,12 +87,26 @@ def getFileNamesFromTimestamps(start,stop,hour_window=12):
         # else:
         #     return []
         try:
-            start_file_index = numpy.max(numpy.where(timestamps <= start)[0])
-            stop_file_index = numpy.min(numpy.where(timestamps > stop)[0])
+            lower_cut = numpy.where(timestamps <= start)[0]
+            upper_cut = numpy.where(timestamps > stop)[0]
+            if len(upper_cut) > 0:
+                stop_file_index = numpy.min(upper_cut)
+            else:
+                stop_file_index = len(sorted_files)
+
+            if len(lower_cut) > 0:
+                start_file_index = numpy.max(lower_cut)
+            else:
+                start_file_index = 0 #Lower bound snap to the earliest file we have
+
+            if start_file_index == len(sorted_files) - 1:
+                print('Warning, the most recent airplane file is being returned, and may not actually overlap with the given time window if data isnt up to date')
+
             return sorted_files[start_file_index:stop_file_index]
         except Exception as e:
             print('Error in getting files from timestamp.')
             print(e)
+            #import pdb; pdb.set_trace()
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
@@ -585,8 +602,53 @@ def oldMain():
 def gaussian2D(x, y, mu_x, mu_y, sig_x, sig_y):
     return numpy.exp(-(numpy.power(x - mu_x, 2.) / (2 * numpy.power(sig_x, 2.)) + numpy.power(y - mu_y, 2.) / (2 * numpy.power(sig_y, 2.))))
 
+
+def plotAirplaneTrackerStatus(start_time_utc_timestamp=None, stop_time_utc_timestamp=None, interval_s=3600*24, min_approach_cut_km=300, timezone='America/Chicago'):
+    '''
+    This will plot the number of unique airplanes visible per interval as a function of time.  This will be plotted, and
+    can be used to determine when the plane tracker was working, or to locate airplane-dense periods of time.
+    '''
+    now = datetime.datetime.timestamp(datetime.datetime.now())
+    if stop_time_utc_timestamp is None:
+        stop_time_utc_timestamp = now
+    if start_time_utc_timestamp is None:
+        start_time_utc_timestamp = stop_time_utc_timestamp - 28*24*60*60
+
+    time_bin_edges = numpy.arange(start_time_utc_timestamp,stop_time_utc_timestamp + interval_s,interval_s) #1 hour windows.
+    time_bin_centers = (time_bin_edges[:-1] + time_bin_edges[1:]) / 2
+    timezone = pytz.timezone(timezone)
+    datetime_bin_centers = [datetime.datetime.fromtimestamp(d, tz=timezone) for d in time_bin_centers]
+    number_of_airplanes = numpy.zeros(len(time_bin_edges) - 1)
+
+    for window_index in range(len(time_bin_edges)-1):
+        start = time_bin_edges[window_index]
+        stop = time_bin_edges[window_index+1]
+        flight_tracks_ENU, all_vals = getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 0,flights_of_interest=[])
+        unique_flights = numpy.unique(all_vals['names'][numpy.logical_and(all_vals['timestamps'] >= start, all_vals['timestamps'] < stop)])
+
+        number_of_airplanes[window_index] = len(unique_flights)
+
+    fig = plt.figure()
+    plt.ylabel('Number of Unique Airlane IDs')
+    plt.xlabel('Time')
+    plt.minorticks_on()
+    plt.grid(b=True, which='major', color='k', linestyle='-')
+    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+    plt.plot(datetime_bin_centers,number_of_airplanes,color='k')
+    ax=plt.gca()
+    xfmt = md.DateFormatter('%Y-%m-%d\n%H:%M:%S')
+    ax.xaxis.set_major_formatter(xfmt)
+    plt.xticks(rotation=45)
+    fig.tight_layout()
+
 if __name__ == '__main__':
     plt.close('all')
+
+    plotAirplaneTrackerStatus(start_time_utc_timestamp=1630454400, stop_time_utc_timestamp=1635790699, interval_s=3600*6, min_approach_cut_km=300)
+    #plotAirplaneTrackerStatus(start_time_utc_timestamp=None, stop_time_utc_timestamp=None, interval_s=3600*24, min_approach_cut_km=300)
+
+    sys.exit()
+
     if len(sys.argv) == 2:
         add_string = str(sys.argv[1])
     else:

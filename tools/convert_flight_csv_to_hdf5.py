@@ -34,10 +34,13 @@ def readTxt(infile, header=0, delimeter=','):
         vals = []
         for index, line in enumerate(lines):
             if index > header - 1:
-                line = line.replace('\n','').split(delimeter)
-                line[1] = line[0].replace(' ','') + '_' + line[1].replace(' ','') #consolodating names to 1 value.
-                line.pop(0) #removing redundent first column.
-                vals.append( line )
+                if len(line.split(delimeter)) <= 1:
+                    continue
+                else:
+                    line = line.replace('\n','').split(delimeter)
+                    line[1] = line[0].replace(' ','') + '_' + line[1].replace(' ','') #consolodating names to 1 value.
+                    line.pop(0) #removing redundent first column.
+                    vals.append( line )
     return vals
 
 def filenameToDatetime(filename):
@@ -187,7 +190,7 @@ def catalogMinDistancesPerFlight(file,flights_of_interest=[],return_vals=False):
     vals = numpy.array(readTxt(file))
     try:
         times = vals[:,1].astype(float)
-        flight_tracks_ENU = getENUTrackDict(min(times), max(times),hour_window=0,flights_of_interest=flights_of_interest)
+        flight_tracks_ENU, all_vals = getENUTrackDict(min(times), max(times),hour_window=0,flights_of_interest=flights_of_interest)
 
         if numpy.size(flight_tracks_ENU) != 0:
 
@@ -216,7 +219,8 @@ def catalogMinDistancesPerFlight(file,flights_of_interest=[],return_vals=False):
 def writeFilesWithDistance():
     files = glob.glob(flight_data_location_raw+'*.csv')
     for infile in files:
-        print(infile)
+        outfile = infile.replace('/raw/','/altered/').replace('.csv','.h5')
+        print(infile, '  -->  ', outfile)
         min_d, vals = catalogMinDistancesPerFlight(infile,return_vals=True)
         if numpy.size(min_d) != 0:
             names = vals[:,0]
@@ -227,7 +231,7 @@ def writeFilesWithDistance():
             min_d = [min_d[f] for f in names]
             N = len(names)
 
-            with h5py.File(infile.replace('/raw/','/altered/').replace('.csv','.h5'), 'w') as output:
+            with h5py.File(outfile, 'w') as output:
                 dtype = str(names.dtype).replace('U','S').replace('>','').replace('<','')
                 output.create_dataset('names', (N,), dtype=dtype, compression='gzip', compression_opts=9, shuffle=True)
                 output['names'][...] = names.astype(dtype)
