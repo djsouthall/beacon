@@ -159,6 +159,9 @@ class dataSlicerSingleRun():
                         max_peak_to_sidelobe_val=5,peak_to_sidelobe_n_bins_h=100,peak_to_sidelobe_n_bins_v=100):
         try:
             self.updateReader(reader)
+
+            self.math_keywords = ['SLICERSUBTRACT', 'SLICERADD', 'SLICERDIVIDE', 'SLICERMULTIPLY'] #Meta words that will relate 2 known variables and produce a plot with their arithmatic combination. 
+
             if self.reader.failed_setup == False:
                 self.included_antennas = included_antennas#[0,1,2,3,4,5,6,7]
                 self.included_hpol_antennas = numpy.array([0,2,4,6])[numpy.isin([0,2,4,6],self.included_antennas)]
@@ -604,17 +607,36 @@ class dataSlicerSingleRun():
                         'param_c_string':[roi1_c_lower, roi1_c_upper]}
         '''
         try:
-            if numpy.any(~numpy.isin(list(roi_dict.keys()), self.known_param_keys)):
+            passed = []
+            for param_key in list(roi_dict.keys()):
+                kw_cut = numpy.where([kw in param_key for kw in self.math_keywords])[0]
+
+                if len(kw_cut) == 1:
+                    math_keyword = self.math_keywords[kw_cut[0]]
+                    if len(param_key.split(math_keyword)) == 2:
+                        param_key_a = param_key.split(math_keyword)[0]
+                        param_key_b = param_key.split(math_keyword)[1]
+                        
+                        if numpy.isin(param_key_a, self.known_param_keys) and numpy.isin(param_key_b, self.known_param_keys):
+                            passed.append(True)
+                        else:
+                            passed.append(False)
+                    else:
+                        passed.append(False)
+                elif numpy.isin(param_key, self.known_param_keys):
+                    passed.append(True)
+                else:
+                    passed.append(False)
+
+            if numpy.all(passed):
+                self.roi[roi_key] = roi_dict
+                self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, len(list(self.roi.keys())))]
+            else:
                 print('WARNING!!!')
                 import pdb; pdb.set_trace()
                 for key in list(roi_dict.keys())[~numpy.isin(list(roi_dict.keys()), self.known_param_keys)]:
                     print('The given roi parameter [%s] not in the list of known parameters\n%s:'%(key,str(self.known_param_keys)))
                 return
-            else:
-                self.roi[roi_key] = roi_dict
-                self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, len(list(self.roi.keys())))]
-
-            #Could add more checks here to ensure roi_dict is good.
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print('Run: ',self.reader.run)
@@ -662,6 +684,59 @@ class dataSlicerSingleRun():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def getModifiedDataFromParam(self, eventids, param_key, verbose=True):
+        '''
+        This will attempt to return param data similar to getDataFromParam, but will do so assuming that the given
+        param_key contains one of the the known self.math_keywords.  It will then delineate the two parameters to be
+        combined, perform the desired operation, and return the values.  This does not nest multiple operations yet.
+
+        The parameters to be combined should be given such that the only additional text is a keyword.  For example
+        std_hSLICERSUBTRACTstd_v will be interpreted as std_h - std_v.  So no additional hyphens, spaces, etc. should
+        be included.  This is also case sensitive. 
+        '''
+        try:
+            kw_cut = numpy.where([kw in param_key for kw in self.math_keywords])[0]
+            #param_key_cut = numpy.where([key in param_key for key in self.known_param_keys])[0]
+            if len(kw_cut) == 1:
+                math_keyword = self.math_keywords[kw_cut[0]]
+                if len(param_key.split(math_keyword)) == 2:
+                    param_key_a = param_key.split(math_keyword)[0]
+                    param_key_b = param_key.split(math_keyword)[1]
+                    param_a = self.getDataFromParam(eventids, param_key_a)
+                    param_b = self.getDataFromParam(eventids, param_key_b)
+                    if math_keyword == 'SLICERADD':
+                        param = param_a + param_b
+                    elif math_keyword == 'SLICERSUBTRACT':
+                        param = param_a - param_b
+                    elif math_keyword == 'SLICERDIVIDE':
+                        param = numpy.divide(param_a, param_b)
+                    elif math_keyword == 'SLICERMULTIPLY':
+                        param = numpy.multiply(param_a, param_b)
+                    else:
+                        print('WARNING: GIVEN param_key IS NOT ACCOUNTED FOR IN getModifiedDataFromParam, RETURNING EMPTY ARRAY')
+                        param = numpy.array([])
+                else:
+                    print('WARNING: MATH KEYWORD GIVEN IN getModifiedDataFromParam BUT INSUFFICIENT NORMAL param_key VARIABLES ARE IN THE STRING AS WELL, RETURNING EMPTY ARRAY')
+                    param = numpy.array([])
+
+            elif len(param_key_cut) == 1:
+                if verbose:
+                    print('getModifiedDataFromParam called with no math_keyword and only one param_key.  Returning result from getDataFromParam.')
+                param = self.getDataFromParam(eventids, param_key)
+            else:
+                if verbose:
+                    print('Error in getModifiedDataFromParam, no known math_keyword is in the given param_key, and this function should not have been called.')
+                param = numpy.array([])
+            return param
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
     def getDataFromParam(self, eventids, param_key):
         '''
         Given eventids, this will load and return array for parameters associated with string param.
@@ -670,7 +745,9 @@ class dataSlicerSingleRun():
             if len(numpy.shape(eventids)) > 1:
                 print('WARNING!!! eventids is in the incorrect format.')
             if len(eventids) > 0:
-                if param_key in self.known_param_keys:
+                if len(numpy.where([kw in param_key for kw in self.math_keywords])[0]) == 1:
+                    param = self.getModifiedDataFromParam(eventids, param_key, verbose=False)
+                elif param_key in self.known_param_keys:
                     with h5py.File(self.analysis_filename, 'r') as file:
                         if param_key == 'impulsivity_h':
                             param = file['impulsivity'][self.impulsivity_dset_key]['hpol'][...][eventids]
@@ -1307,8 +1384,30 @@ class dataSlicerSingleRun():
             if len(eventids) == 0:
                 print('No eventids given to getSingleParamPlotBins, using all eventids corresponding to selected trigger types.')
                 eventids = self.getEventidsFromTriggerType()
-            if param_key in self.known_param_keys:
+
+            if len(numpy.where([kw in param_key for kw in self.math_keywords])[0]) == 1:
+                if verbose:
+                    print('\tPreparing to get counts for %s'%param_key)
+                kw_cut = numpy.where([kw in param_key for kw in self.math_keywords])[0]
+
+                math_keyword = self.math_keywords[kw_cut[0]]
+                if len(param_key.split(math_keyword)) == 2:
+                    param_key_a = param_key.split(math_keyword)[0]
+                    param_key_b = param_key.split(math_keyword)[1]
+                    label = '%s %s %s'%(param_key_a, math_keyword , param_key_b)
+                else:
+                    label = 'Failed math operation parsing'
+                
+                param = self.getModifiedDataFromParam(eventids, param_key, verbose=False)
+                
+                x_n_bins = 1000
+                x_max_val = max(param)
+                x_min_val = min(param)
+
+            elif param_key in self.known_param_keys:
                 #Append snr to the lists below only if max value isn't present.
+                if verbose:
+                    print('\tPreparing to get counts for %s'%param_key)
                 if self.max_snr_val is None:
                     std_requiring_params = ['std_h','std_v','snr_h','snr_v'] #List all params that might require max snr to be calculated if hard limit not given.
                     p2p_requiring_params = ['p2p_h','p2p_v','snr_h','snr_v'] #List all params that might require max p2p to be calculated if hard limit not given.
@@ -1340,325 +1439,323 @@ class dataSlicerSingleRun():
                         self.max_beam_power = numpy.max(beam_power)
                         self.max_beam_number = numpy.max(triggered_beams)
                     
-            if param_key not in self.known_param_keys:
+            else:
                 print('WARNING!!!')
                 print('Given key [%s] is not listed in known_param_keys:\n%s'%(param_key,str(self.known_param_keys)))
                 import pdb; pdb.set_trace()
                 return
-            else:
-                if verbose:
-                    print('\tPreparing to get counts for %s'%param_key)
+                
 
-                calculate_bins_from_min_max = True #By default will be calculated at bottom of conditional list, unless a specific condition overrides.
+            calculate_bins_from_min_max = True #By default will be calculated at bottom of conditional list, unless a specific condition overrides.
 
-                if param_key == 'impulsivity_h':
-                    label = 'Impulsivity (hpol)'
-                    x_n_bins = self.impulsivity_n_bins_h
-                    x_max_val = 1
-                    x_min_val = 0
-                elif param_key == 'impulsivity_v':
-                    label = 'Impulsivity (vpol)'
-                    x_n_bins = self.impulsivity_n_bins_v
-                    x_max_val = 1
-                    x_min_val = 0
-                elif param_key == 'cr_template_search_h':
-                    label = 'HPol Correlation Values with CR Template'
-                    x_n_bins = self.cr_template_n_bins_h
-                    x_max_val = 1
-                    x_min_val = 0
-                elif param_key == 'cr_template_search_v':
-                    label = 'VPol Correlation Values with CR Template'
-                    x_n_bins = self.cr_template_n_bins_v
-                    x_max_val = 1
-                    x_min_val = 0
-                elif param_key == 'std_h':
-                    label = 'Mean Time Domain STD (hpol)'
-                    x_n_bins = self.std_n_bins_h
-                    x_max_val = self.max_std_val
-                    x_min_val = 0
-                elif param_key == 'std_v':
-                    label = 'Mean Time Domain STD (vpol)'
-                    x_n_bins = self.std_n_bins_v
-                    x_max_val = self.max_std_val
-                    x_min_val = 0
-                elif param_key == 'p2p_h': 
-                    label = 'Mean P2P (hpol)'
-                    x_n_bins = self.p2p_n_bins_h
-                    x_max_val = self.max_p2p_val
-                    x_min_val = 0
-                elif param_key == 'p2p_v': 
-                    label = 'Mean P2P (vpol)'
-                    x_n_bins = self.p2p_n_bins_v
-                    x_max_val = self.max_p2p_val
-                    x_min_val = 0
-                elif param_key == 'snr_h':
-                    label = 'Mean SNR (hpol)\n P2P/STD'
-                    x_n_bins = self.snr_n_bins_h
-                    x_max_val = self.max_snr_val
-                    x_min_val = 0
-                elif param_key == 'snr_v':
-                    label = 'Mean SNR (vpol)\n P2P/STD'
-                    x_n_bins = self.snr_n_bins_v
-                    x_max_val = self.max_snr_val
-                    x_min_val = 0
-                elif 'time_delay_' in param_key:
-                    if 'map_max_' in param_key:
-                        #Time delays derived from the maps max value
-                        split_param_key = param_key.split('_')
-                        if split_param_key[6] == 'allsky':
-                            title_scope = 'All Sky'
-                        elif split_param_key[6] == 'belowhorizon':
-                            title_scope = 'Below Horizon'
-                        elif split_param_key[6] == 'abovehorizon':
-                            title_scope = 'Above Horizon'
-                        else:
-                            title_scope = ''
-
-                        label = '%spol Time Delay from %s Max Map Location\n Ant %s - Ant %s'%(split_param_key[5].title(), title_scope, split_param_key[4].split('subtract')[0],split_param_key[4].split('subtract')[1])
-                        if split_param_key[3] == 'h':
-                            x_n_bins = self.time_delays_n_bins_h
-                        else:
-                            x_n_bins = self.time_delays_n_bins_v
-                        
-                        if numpy.logical_or(self.min_time_delays_val is None, self.max_time_delays_val is None):
-                            time_delays = self.getDataFromParam(eventids, param_key)
-                        
-                        if self.min_time_delays_val is None:
-                            x_min_val = min(time_delays) - 1
-                        else:
-                            x_min_val = self.min_time_delays_val
-
-                        if self.max_time_delays_val is None:
-                            x_max_val = max(time_delays) + 1
-                        else:
-                            x_max_val = self.max_time_delays_val
-
-                    else:
-                        # Time delays calculated from cross correlations
-                        split_param_key = param_key.split('_')
-                        label = '%spol Time Delay From XCorr\n Ant %s - Ant %s'%(split_param_key[3].title(),split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1])
-                        if split_param_key[3] == 'h':
-                            x_n_bins = self.time_delays_n_bins_h
-                        else:
-                            x_n_bins = self.time_delays_n_bins_v
-                        
-                        if numpy.logical_or(self.min_time_delays_val is None, self.max_time_delays_val is None):
-                            time_delays = self.getDataFromParam(eventids, param_key)
-                        
-                        if self.min_time_delays_val is None:
-                            x_min_val = min(time_delays) - 1
-                        else:
-                            x_min_val = self.min_time_delays_val
-
-                        if self.max_time_delays_val is None:
-                            x_max_val = max(time_delays) + 1
-                        else:
-                            x_max_val = self.max_time_delays_val
-                elif 'max_corr_' in param_key and 'map' not in param_key:
+            if param_key == 'impulsivity_h':
+                label = 'Impulsivity (hpol)'
+                x_n_bins = self.impulsivity_n_bins_h
+                x_max_val = 1
+                x_min_val = 0
+            elif param_key == 'impulsivity_v':
+                label = 'Impulsivity (vpol)'
+                x_n_bins = self.impulsivity_n_bins_v
+                x_max_val = 1
+                x_min_val = 0
+            elif param_key == 'cr_template_search_h':
+                label = 'HPol Correlation Values with CR Template'
+                x_n_bins = self.cr_template_n_bins_h
+                x_max_val = 1
+                x_min_val = 0
+            elif param_key == 'cr_template_search_v':
+                label = 'VPol Correlation Values with CR Template'
+                x_n_bins = self.cr_template_n_bins_v
+                x_max_val = 1
+                x_min_val = 0
+            elif param_key == 'std_h':
+                label = 'Mean Time Domain STD (hpol)'
+                x_n_bins = self.std_n_bins_h
+                x_max_val = self.max_std_val
+                x_min_val = 0
+            elif param_key == 'std_v':
+                label = 'Mean Time Domain STD (vpol)'
+                x_n_bins = self.std_n_bins_v
+                x_max_val = self.max_std_val
+                x_min_val = 0
+            elif param_key == 'p2p_h': 
+                label = 'Mean P2P (hpol)'
+                x_n_bins = self.p2p_n_bins_h
+                x_max_val = self.max_p2p_val
+                x_min_val = 0
+            elif param_key == 'p2p_v': 
+                label = 'Mean P2P (vpol)'
+                x_n_bins = self.p2p_n_bins_v
+                x_max_val = self.max_p2p_val
+                x_min_val = 0
+            elif param_key == 'snr_h':
+                label = 'Mean SNR (hpol)\n P2P/STD'
+                x_n_bins = self.snr_n_bins_h
+                x_max_val = self.max_snr_val
+                x_min_val = 0
+            elif param_key == 'snr_v':
+                label = 'Mean SNR (vpol)\n P2P/STD'
+                x_n_bins = self.snr_n_bins_v
+                x_max_val = self.max_snr_val
+                x_min_val = 0
+            elif 'time_delay_' in param_key:
+                if 'map_max_' in param_key:
+                    #Time delays derived from the maps max value
                     split_param_key = param_key.split('_')
-                    if 'mean_max_corr' in param_key:
-                        label = '%spol All Baselines Mean Value From XCorr'%(split_param_key[3].title())
-                    elif param_key == 'max_max_corr':
-                        label = '%spol All Baselines Max Value From XCorr'%(split_param_key[3].title())
+                    if split_param_key[6] == 'allsky':
+                        title_scope = 'All Sky'
+                    elif split_param_key[6] == 'belowhorizon':
+                        title_scope = 'Below Horizon'
+                    elif split_param_key[6] == 'abovehorizon':
+                        title_scope = 'Above Horizon'
                     else:
-                        split_param_key = param_key.split('_')
-                        label = '%spol Max Value From XCorr\n Ant %s - Ant %s'%(split_param_key[3].title(),split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1])
+                        title_scope = ''
 
-                    x_n_bins = self.max_corr_n_bins
-                    x_min_val = self.min_max_corr_val
-                    x_max_val = self.max_max_corr_val
-
-                elif 'cw_present' == param_key:
-                    label = 'CW Detected Removed (1) or Not (0)'
-                    calculate_bins_from_min_max = False
-                    current_bin_edges = numpy.array([0.        , 0.33333333, 0.66666667, 1.        ])#
-                    # x_n_bins = 3
-                    # x_max_val = 1
-                    # x_min_val = 0
-                elif 'cw_freq_Mhz' == param_key:
-                    with h5py.File(self.analysis_filename, 'r') as file:
-                        x_max_val = 1000*float(file['cw'].attrs['sine_subtract_min_freq_GHz'])
-                        x_min_val = 1000*float(file['cw'].attrs['sine_subtract_max_freq_GHz'])
-                        cw_dsets = list(file['cw'].keys())
-                        if not hasattr(self, 'cw_prep'):
-                            if verbose:
-                                print('Creating FFTPrepper class to prepare CW bins.')
-                            self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
-                            self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
-
-                    label = 'Identified CW Freq (MHz)'
+                    label = '%spol Time Delay from %s Max Map Location\n Ant %s - Ant %s'%(split_param_key[5].title(), title_scope, split_param_key[4].split('subtract')[0],split_param_key[4].split('subtract')[1])
+                    if split_param_key[3] == 'h':
+                        x_n_bins = self.time_delays_n_bins_h
+                    else:
+                        x_n_bins = self.time_delays_n_bins_v
                     
-                    raw_freqs = self.cw_prep.rfftWrapper(self.cw_prep.t(), numpy.ones_like(self.cw_prep.t()))[0]
-                    df = raw_freqs[1] - raw_freqs[0]
-                    current_bin_edges = (numpy.append(raw_freqs,raw_freqs[-1]+df) - df/2)/1e6 #MHz
-                    current_bin_edges = current_bin_edges[current_bin_edges<120]
-                    x_n_bins = len(current_bin_edges)
-                    calculate_bins_from_min_max = False #override the default behaviour below.
-                elif 'cw_linear_magnitude' == param_key:
-                    label = 'abs(linear magnitude) of\nmaximum identified CW Peak'
-                    x_n_bins = 1000
-                    x_max_val = 10000 # A Guess, Try it out and adjust.
-                    x_min_val = 0
-                elif 'cw_dbish' == param_key:
-                    label = 'dBish Magnitude of\nmaximum identified CW Peak'
-                    x_n_bins = 120
-                    x_max_val = 60
-                    x_min_val = 0
+                    if numpy.logical_or(self.min_time_delays_val is None, self.max_time_delays_val is None):
+                        time_delays = self.getDataFromParam(eventids, param_key)
+                    
+                    if self.min_time_delays_val is None:
+                        x_min_val = min(time_delays) - 1
+                    else:
+                        x_min_val = self.min_time_delays_val
 
-                    # self.n_phi = n_phi
-                    # self.range_phi_deg = range_phi_deg
-                    # self.n_theta = n_theta
-                    # self.range_theta_deg = range_theta_deg
+                    if self.max_time_delays_val is None:
+                        x_max_val = max(time_delays) + 1
+                    else:
+                        x_max_val = self.max_time_delays_val
 
-                elif 'hilbert_' not in param_key and 'theta_best_h' in param_key:
-                    scope = param_key.replace('theta_best_h','')
-                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
+                else:
+                    # Time delays calculated from cross correlations
+                    split_param_key = param_key.split('_')
+                    label = '%spol Time Delay From XCorr\n Ant %s - Ant %s'%(split_param_key[3].title(),split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1])
+                    if split_param_key[3] == 'h':
+                        x_n_bins = self.time_delays_n_bins_h
                     else:
-                        label = 'Best Reconstructed Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_theta_deg)
-                    x_min_val = numpy.min(self.range_theta_deg)
-                    x_n_bins = self.n_theta
-                elif 'hilbert_' not in param_key and 'theta_best_v' in param_key:
-                    scope = param_key.replace('theta_best_v','')
-                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
+                        x_n_bins = self.time_delays_n_bins_v
+                    
+                    if numpy.logical_or(self.min_time_delays_val is None, self.max_time_delays_val is None):
+                        time_delays = self.getDataFromParam(eventids, param_key)
+                    
+                    if self.min_time_delays_val is None:
+                        x_min_val = min(time_delays) - 1
                     else:
-                        label = 'Best Reconstructed Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_theta_deg)
-                    x_min_val = numpy.min(self.range_theta_deg)
-                    x_n_bins = self.n_theta
-                elif 'hilbert_' not in param_key and 'elevation_best_h' in param_key:
-                    scope = param_key.replace('elevation_best_h','')
-                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
-                    else:
-                        label = 'Best Reconstructed Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(90.0 - self.range_theta_deg)
-                    x_min_val = numpy.min(90.0 - self.range_theta_deg)
-                    x_n_bins = self.n_theta
-                elif 'hilbert_' not in param_key and 'elevation_best_v' in param_key:
-                    scope = param_key.replace('elevation_best_v','')
-                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
-                    else:
-                        label = 'Best Reconstructed Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(90.0 - self.range_theta_deg)
-                    x_min_val = numpy.min(90.0 - self.range_theta_deg)
-                    x_n_bins = self.n_theta
-                elif 'hilbert_' not in param_key and 'phi_best_h' in param_key:
-                    scope = param_key.replace('phi_best_h','')
-                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
-                    else:
-                        label = 'Best Reconstructed Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_phi_deg)
-                    x_min_val = numpy.min(self.range_phi_deg)
-                    x_n_bins = self.n_phi
-                elif 'hilbert_' not in param_key and 'phi_best_v' in param_key:
-                    scope = param_key.replace('phi_best_v','')
-                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
-                    else:
-                        label = 'Best Reconstructed Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_phi_deg)
-                    x_min_val = numpy.min(self.range_phi_deg)
-                    x_n_bins = self.n_phi
+                        x_min_val = self.min_time_delays_val
 
-                elif 'hilbert_' in param_key and 'theta_best_h' in param_key:
-                    scope = param_key.replace('hilbert_theta_best_h','')
+                    if self.max_time_delays_val is None:
+                        x_max_val = max(time_delays) + 1
+                    else:
+                        x_max_val = self.max_time_delays_val
+            elif 'max_corr_' in param_key and 'map' not in param_key:
+                split_param_key = param_key.split('_')
+                if 'mean_max_corr' in param_key:
+                    label = '%spol All Baselines Mean Value From XCorr'%(split_param_key[3].title())
+                elif param_key == 'max_max_corr':
+                    label = '%spol All Baselines Max Value From XCorr'%(split_param_key[3].title())
+                else:
+                    split_param_key = param_key.split('_')
+                    label = '%spol Max Value From XCorr\n Ant %s - Ant %s'%(split_param_key[3].title(),split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1])
+
+                x_n_bins = self.max_corr_n_bins
+                x_min_val = self.min_max_corr_val
+                x_max_val = self.max_max_corr_val
+
+            elif 'cw_present' == param_key:
+                label = 'CW Detected Removed (1) or Not (0)'
+                calculate_bins_from_min_max = False
+                current_bin_edges = numpy.array([0.        , 0.33333333, 0.66666667, 1.        ])#
+                # x_n_bins = 3
+                # x_max_val = 1
+                # x_min_val = 0
+            elif 'cw_freq_Mhz' == param_key:
+                with h5py.File(self.analysis_filename, 'r') as file:
+                    x_max_val = 1000*float(file['cw'].attrs['sine_subtract_min_freq_GHz'])
+                    x_min_val = 1000*float(file['cw'].attrs['sine_subtract_max_freq_GHz'])
+                    cw_dsets = list(file['cw'].keys())
+                    if not hasattr(self, 'cw_prep'):
+                        if verbose:
+                            print('Creating FFTPrepper class to prepare CW bins.')
+                        self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
+                        self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
+
+                label = 'Identified CW Freq (MHz)'
+                
+                raw_freqs = self.cw_prep.rfftWrapper(self.cw_prep.t(), numpy.ones_like(self.cw_prep.t()))[0]
+                df = raw_freqs[1] - raw_freqs[0]
+                current_bin_edges = (numpy.append(raw_freqs,raw_freqs[-1]+df) - df/2)/1e6 #MHz
+                current_bin_edges = current_bin_edges[current_bin_edges<120]
+                x_n_bins = len(current_bin_edges)
+                calculate_bins_from_min_max = False #override the default behaviour below.
+            elif 'cw_linear_magnitude' == param_key:
+                label = 'abs(linear magnitude) of\nmaximum identified CW Peak'
+                x_n_bins = 1000
+                x_max_val = 10000 # A Guess, Try it out and adjust.
+                x_min_val = 0
+            elif 'cw_dbish' == param_key:
+                label = 'dBish Magnitude of\nmaximum identified CW Peak'
+                x_n_bins = 120
+                x_max_val = 60
+                x_min_val = 0
+
+                # self.n_phi = n_phi
+                # self.range_phi_deg = range_phi_deg
+                # self.n_theta = n_theta
+                # self.range_theta_deg = range_theta_deg
+
+            elif 'hilbert_' not in param_key and 'theta_best_h' in param_key:
+                scope = param_key.replace('theta_best_h','')
+                if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                     label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_theta_deg)
-                    x_min_val = numpy.min(self.range_theta_deg)
-                    x_n_bins = self.n_theta
-                elif 'hilbert_' in param_key and 'theta_best_v' in param_key:
-                    scope = param_key.replace('hilbert_theta_best_v','')
+                else:
+                    label = 'Best Reconstructed Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
+                #x_n_bins = 360
+                x_max_val = numpy.max(self.range_theta_deg)
+                x_min_val = numpy.min(self.range_theta_deg)
+                x_n_bins = self.n_theta
+            elif 'hilbert_' not in param_key and 'theta_best_v' in param_key:
+                scope = param_key.replace('theta_best_v','')
+                if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                     label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_theta_deg)
-                    x_min_val = numpy.min(self.range_theta_deg)
-                    x_n_bins = self.n_theta
-                elif 'hilbert_' in param_key and 'elevation_best_h' in param_key:
-                    scope = param_key.replace('hilbert_elevation_best_h','')
+                else:
+                    label = 'Best Reconstructed Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
+                #x_n_bins = 360
+                x_max_val = numpy.max(self.range_theta_deg)
+                x_min_val = numpy.min(self.range_theta_deg)
+                x_n_bins = self.n_theta
+            elif 'hilbert_' not in param_key and 'elevation_best_h' in param_key:
+                scope = param_key.replace('elevation_best_h','')
+                if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                     label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(90.0 - self.range_theta_deg)
-                    x_min_val = numpy.min(90.0 - self.range_theta_deg)
-                    x_n_bins = self.n_theta
-                elif 'hilbert_' in param_key and 'elevation_best_v' in param_key:
-                    scope = param_key.replace('hilbert_elevation_best_v','')
+                else:
+                    label = 'Best Reconstructed Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
+                #x_n_bins = 360
+                x_max_val = numpy.max(90.0 - self.range_theta_deg)
+                x_min_val = numpy.min(90.0 - self.range_theta_deg)
+                x_n_bins = self.n_theta
+            elif 'hilbert_' not in param_key and 'elevation_best_v' in param_key:
+                scope = param_key.replace('elevation_best_v','')
+                if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                     label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(90.0 - self.range_theta_deg)
-                    x_min_val = numpy.min(90.0 - self.range_theta_deg)
-                    x_n_bins = self.n_theta
-                elif 'hilbert_' in param_key and 'phi_best_h' in param_key:
-                    scope = param_key.replace('hilbert_phi_best_h','')
+                else:
+                    label = 'Best Reconstructed Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
+                #x_n_bins = 360
+                x_max_val = numpy.max(90.0 - self.range_theta_deg)
+                x_min_val = numpy.min(90.0 - self.range_theta_deg)
+                x_n_bins = self.n_theta
+            elif 'hilbert_' not in param_key and 'phi_best_h' in param_key:
+                scope = param_key.replace('phi_best_h','')
+                if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                     label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_phi_deg)
-                    x_min_val = numpy.min(self.range_phi_deg)
-                    x_n_bins = self.n_phi
-                elif 'hilbert_' in param_key and 'phi_best_v' in param_key:
-                    scope = param_key.replace('hilbert_phi_best_v','')
+                else:
+                    label = 'Best Reconstructed Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
+                #x_n_bins = 360
+                x_max_val = numpy.max(self.range_phi_deg)
+                x_min_val = numpy.min(self.range_phi_deg)
+                x_n_bins = self.n_phi
+            elif 'hilbert_' not in param_key and 'phi_best_v' in param_key:
+                scope = param_key.replace('phi_best_v','')
+                if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                     label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_phi_deg)
-                    x_min_val = numpy.min(self.range_phi_deg)
-                    x_n_bins = self.n_phi
-                elif 'calibrated_trigtime' == param_key:
-                    label = 'Calibrated Trigger Time (s)'
-                    with h5py.File(self.analysis_filename, 'r') as file:
-                        x_min_val = file['calibrated_trigtime'][...][0]
-                        x_max_val = file['calibrated_trigtime'][...][-1]
+                else:
+                    label = 'Best Reconstructed Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
+                #x_n_bins = 360
+                x_max_val = numpy.max(self.range_phi_deg)
+                x_min_val = numpy.min(self.range_phi_deg)
+                x_n_bins = self.n_phi
 
-                    x_n_bins = numpy.ceil((x_max_val - x_min_val)/60).astype(int) #bin into roughly 1 min chunks.
-                elif 'triggered_beams' == param_key:
-                    x_min_val = -0.5
-                    x_max_val = self.max_beam_number + 0.5 #This is crude but at least it avoids hard coding the number of beams.
-                    x_n_bins = int(x_max_val - x_min_val)
-                    label = 'Triggered Beam'
-                elif 'beam_power' == param_key:
-                    label = 'Beam Power Sum (arb)'
-                    x_min_val = 0
-                    x_max_val = self.max_beam_power
-                    x_n_bins = 2*128 #Unsure what is reasonable for this number.  
+            elif 'hilbert_' in param_key and 'theta_best_h' in param_key:
+                scope = param_key.replace('hilbert_theta_best_h','')
+                label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
+                #x_n_bins = 360
+                x_max_val = numpy.max(self.range_theta_deg)
+                x_min_val = numpy.min(self.range_theta_deg)
+                x_n_bins = self.n_theta
+            elif 'hilbert_' in param_key and 'theta_best_v' in param_key:
+                scope = param_key.replace('hilbert_theta_best_v','')
+                label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
+                #x_n_bins = 360
+                x_max_val = numpy.max(self.range_theta_deg)
+                x_min_val = numpy.min(self.range_theta_deg)
+                x_n_bins = self.n_theta
+            elif 'hilbert_' in param_key and 'elevation_best_h' in param_key:
+                scope = param_key.replace('hilbert_elevation_best_h','')
+                label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
+                #x_n_bins = 360
+                x_max_val = numpy.max(90.0 - self.range_theta_deg)
+                x_min_val = numpy.min(90.0 - self.range_theta_deg)
+                x_n_bins = self.n_theta
+            elif 'hilbert_' in param_key and 'elevation_best_v' in param_key:
+                scope = param_key.replace('hilbert_elevation_best_v','')
+                label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
+                #x_n_bins = 360
+                x_max_val = numpy.max(90.0 - self.range_theta_deg)
+                x_min_val = numpy.min(90.0 - self.range_theta_deg)
+                x_n_bins = self.n_theta
+            elif 'hilbert_' in param_key and 'phi_best_h' in param_key:
+                scope = param_key.replace('hilbert_phi_best_h','')
+                label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
+                #x_n_bins = 360
+                x_max_val = numpy.max(self.range_phi_deg)
+                x_min_val = numpy.min(self.range_phi_deg)
+                x_n_bins = self.n_phi
+            elif 'hilbert_' in param_key and 'phi_best_v' in param_key:
+                scope = param_key.replace('hilbert_phi_best_v','')
+                label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
+                #x_n_bins = 360
+                x_max_val = numpy.max(self.range_phi_deg)
+                x_min_val = numpy.min(self.range_phi_deg)
+                x_n_bins = self.n_phi
+            elif 'calibrated_trigtime' == param_key:
+                label = 'Calibrated Trigger Time (s)'
+                with h5py.File(self.analysis_filename, 'r') as file:
+                    x_min_val = file['calibrated_trigtime'][...][0]
+                    x_max_val = file['calibrated_trigtime'][...][-1]
 
-                elif 'peak_to_sidelobe' in param_key:
-                    if 'hilbert_' in param_key:
-                        label = '%s All Sky Peak to Sidelobe Ratio (Hilbert Envelope Applied)'%(param_key.split('_')[0].title())
-                    else:
-                        label = '%s All Sky Peak to Sidelobe Ratio'%(param_key.split('_')[0].title())
-                    if 'hpol' in param_key:
-                        x_n_bins = self.peak_to_sidelobe_n_bins_h
-                    else:
-                        x_n_bins = self.peak_to_sidelobe_n_bins_v
+                x_n_bins = numpy.ceil((x_max_val - x_min_val)/60).astype(int) #bin into roughly 1 min chunks.
+            elif 'triggered_beams' == param_key:
+                x_min_val = -0.5
+                x_max_val = self.max_beam_number + 0.5 #This is crude but at least it avoids hard coding the number of beams.
+                x_n_bins = int(x_max_val - x_min_val)
+                label = 'Triggered Beam'
+            elif 'beam_power' == param_key:
+                label = 'Beam Power Sum (arb)'
+                x_min_val = 0
+                x_max_val = self.max_beam_power
+                x_n_bins = 2*128 #Unsure what is reasonable for this number.  
 
-                    x_max_val = self.peak_to_sidelobe_max_val
-                    x_min_val = 1.0
+            elif 'peak_to_sidelobe' in param_key:
+                if 'hilbert_' in param_key:
+                    label = '%s All Sky Peak to Sidelobe Ratio (Hilbert Envelope Applied)'%(param_key.split('_')[0].title())
+                else:
+                    label = '%s All Sky Peak to Sidelobe Ratio'%(param_key.split('_')[0].title())
+                if 'hpol' in param_key:
+                    x_n_bins = self.peak_to_sidelobe_n_bins_h
+                else:
+                    x_n_bins = self.peak_to_sidelobe_n_bins_v
+
+                x_max_val = self.peak_to_sidelobe_max_val
+                x_min_val = 1.0
 
 
 
-                elif 'max_possible_map_value' in param_key:
-                    if 'hilbert_' in param_key:
-                        label = 'Maximum Possible Map Value Per Event (Hilbert Envelope Applied)'
-                        x_max_val = 10.0 #Set high because I don't know if hilbert will max out differently
-                    else:
-                        label = 'Maximum Possible Map Value Per Event'
-                        x_max_val = self.max_max_possible_map_value_val
+            elif 'max_possible_map_value' in param_key:
+                if 'hilbert_' in param_key:
+                    label = 'Maximum Possible Map Value Per Event (Hilbert Envelope Applied)'
+                    x_max_val = 10.0 #Set high because I don't know if hilbert will max out differently
+                else:
+                    label = 'Maximum Possible Map Value Per Event'
+                    x_max_val = self.max_max_possible_map_value_val
 
-                    x_min_val = 0.0
-                    if 'hpol' in param_key:
-                        x_n_bins = self.max_possible_map_value_n_bins_h
-                    else:
-                        x_n_bins = self.max_possible_map_value_n_bins_v
+                x_min_val = 0.0
+                if 'hpol' in param_key:
+                    x_n_bins = self.max_possible_map_value_n_bins_h
+                else:
+                    x_n_bins = self.max_possible_map_value_n_bins_v
 
             if calculate_bins_from_min_max:
                 current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges
@@ -2905,12 +3002,15 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-    def getDataArrayFromParam(self, param_key, trigger_types=None):
+    def getDataArrayFromParam(self, param_key, trigger_types=None, eventids_dict=None):
         '''
         This will return the data corresponding to param_key for all events specified by the given trigger types.  
         If trigger_types is None then the previously assigned trigger types will be used. 
         '''
-        return self.concatenateParamDict(self.getDataFromParam(self.getEventidsFromTriggerType(trigger_types=trigger_types),param_key))
+        if eventids_dict is None:
+            eventids_dict = self.getEventidsFromTriggerType(trigger_types=trigger_types)
+        return self.concatenateParamDict(self.getDataFromParam(eventids_dict,param_key))
+
 
 
 if __name__ == '__main__':

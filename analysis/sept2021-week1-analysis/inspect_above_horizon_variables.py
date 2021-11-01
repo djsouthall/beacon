@@ -81,9 +81,22 @@ if __name__ == '__main__':
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
                         n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta))
 
-        ds.addROI('above horizon',{'elevation_best_h':[0,90],'elevation_best_v':[0,90]})
+        #ds.addROI('above horizon',{'elevation_best_h':[0,90],'elevation_best_v':[0,90], 'hpol_peak_to_sidelobe':[2.0,300], 'vpol_peak_to_sidelobe':[2.0,300]})#'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.0,300]})
+        ds.addROI('above horizon',{'elevation_best_h':[0,90], 'hpol_peak_to_sidelobe_abovehorizonSLICERADDvpol_peak_to_sidelobe_abovehorizon':[2.75,300], 'impulsivity_hSLICERADDimpulsivity_v':[0.4,300]})
         above_horizon_eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False)
         ds.resetAllROI()
+        #ds.addROI('test',{'hpol_peak_to_sidelobe_abovehorizonSLICERADDvpol_peak_to_sidelobe_abovehorizon':[2.0,300]})
+        roi_eventid_dict = ds.getCutsFromROI('test',load=False,save=False,verbose=False)
+        roi_eventid_dict = ds.returnCommonEvents(above_horizon_eventids_dict, roi_eventid_dict)
+        #test_data = ds.getDataArrayFromParam('hpol_peak_to_sidelobe_abovehorizonSLICERADDvpol_peak_to_sidelobe_abovehorizon', trigger_types=None, eventids_dict=roi_eventid_dict)
+        ds.addROI('baseline_0subtract1',{'map_max_time_delay_0subtract1_h_belowhorizonSLICERSUBTRACTtime_delay_0subtract1_h':[-5,5]})
+        ds.addROI('baseline_0subtract2',{'map_max_time_delay_0subtract2_h_belowhorizonSLICERSUBTRACTtime_delay_0subtract2_h':[-5,5]})
+        ds.addROI('baseline_0subtract3',{'map_max_time_delay_0subtract3_h_belowhorizonSLICERSUBTRACTtime_delay_0subtract3_h':[-5,5]})
+        ds.addROI('baseline_1subtract2',{'map_max_time_delay_1subtract2_h_belowhorizonSLICERSUBTRACTtime_delay_1subtract2_h':[-5,5]})
+        ds.addROI('baseline_1subtract3',{'map_max_time_delay_1subtract3_h_belowhorizonSLICERSUBTRACTtime_delay_1subtract3_h':[-5,5]})
+        ds.addROI('baseline_2subtract3',{'map_max_time_delay_2subtract3_h_belowhorizonSLICERSUBTRACTtime_delay_2subtract3_h':[-5,5]})
+
+        #ds.addROI('test',{'map_max_time_delay_0subtract1_h_belowhorizonSLICERSUBTRACTtime_delay_0subtract1_h':[-5,5],'map_max_time_delay_0subtract2_h_belowhorizonSLICERSUBTRACTtime_delay_0subtract2_h':[-5,5],'map_max_time_delay_0subtract3_h_belowhorizonSLICERSUBTRACTtime_delay_0subtract3_h':[-5,5],'map_max_time_delay_1subtract2_h_belowhorizonSLICERSUBTRACTtime_delay_1subtract2_h':[-5,5],'map_max_time_delay_1subtract3_h_belowhorizonSLICERSUBTRACTtime_delay_1subtract3_h':[-5,5],'map_max_time_delay_2subtract3_h_belowhorizonSLICERSUBTRACTtime_delay_2subtract3_h':[-5,5]})
         # ds.addROI('p2s',{'elevation_best_h':[0,90],'elevation_best_v':[0,90], 'hpol_peak_to_sidelobe':[1.5,10]})
         #ds.addROI('Cluster 1',{'phi_best_h':[33.2,35.7],'elevation_best_h':[7.3,9.4]})
         # roi_eventid_dict = ds.getCutsFromROI('p2s',load=False,save=False,verbose=False)
@@ -93,8 +106,10 @@ if __name__ == '__main__':
 
         #interesting_eventids_dict = ds.getCutsFromROI('intersting events',load=False,save=False,verbose=False)
         #plot_params = [['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['hpol_peak_to_sidelobe','elevation_best_h'],['impulsivity_h','impulsivity_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['p2p_h', 'p2p_v'],['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v']]
-        plot_params = [['phi_best_h','elevation_best_h'],['hpol_peak_to_sidelobe_belowhorizon','hpol_peak_to_sidelobe_abovehorizon'], ['time_delay_0subtract1_h', 'map_max_time_delay_0subtract1_h_belowhorizon'], ['map_max_time_delay_0subtract1_h_belowhorizon', 'map_max_time_delay_0subtract1_h_abovehorizon'], ['time_delay_0subtract1_h', 'map_max_time_delay_0subtract1_h_abovehorizon'], ['impulsivity_h','impulsivity_v']]
+        plot_params = [['phi_best_h','elevation_best_h'], ['hpol_peak_to_sidelobe_abovehorizon', 'vpol_peak_to_sidelobe_abovehorizon'],['hpol_peak_to_sidelobe_belowhorizon','hpol_peak_to_sidelobe_abovehorizon'], ['map_max_time_delay_0subtract1_h_abovehorizon', 'map_max_time_delay_0subtract1_h_belowhorizon'], ['map_max_time_delay_0subtract1_h_belowhorizonSLICERSUBTRACTtime_delay_0subtract1_h', 'map_max_time_delay_0subtract2_h_belowhorizonSLICERSUBTRACTtime_delay_0subtract2_h'], ['time_delay_0subtract1_h', 'map_max_time_delay_0subtract1_h_belowhorizon'], ['time_delay_0subtract1_h', 'map_max_time_delay_0subtract1_h_belowhorizon'], ['time_delay_0subtract1_h', 'map_max_time_delay_0subtract1_h_abovehorizon'], ['impulsivity_h','impulsivity_v']]
         print('Generating plots:')
+
+        #plot_params = [['hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe']]
         for key_x, key_y in plot_params:
             print('Generating %s plot'%(key_x + ' vs ' + key_y))
             ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', eventids_dict=above_horizon_eventids_dict, include_roi=True)
