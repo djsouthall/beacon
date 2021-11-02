@@ -2095,6 +2095,8 @@ class Correlator:
                     if shorten_signals == True:
                         waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
 
+                #TODO: Could consider upsample only the cross correlations AFTER, rather than upsampling the waveforms, also consider passing scipy.signal.correlate the desired method
+
                 corr01 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[1])))/(len(self.times_resampled))
                 corr02 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[2])))/(len(self.times_resampled))
                 corr03 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[3])))/(len(self.times_resampled))
@@ -2129,6 +2131,8 @@ class Correlator:
 
                     if shorten_signals == True:
                         waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+
+                #TODO: Could consider upsample only the cross correlations AFTER, rather than upsampling the waveforms, also consider passing scipy.signal.correlate the desired method
 
                 corr01 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[1])))/(len(self.times_resampled))
                 corr02 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[2])))/(len(self.times_resampled))
@@ -4067,6 +4071,17 @@ if __name__=="__main__":
         sine_subtract_min_freq_GHz = 0.03
         sine_subtract_max_freq_GHz = 0.250
         sine_subtract_percent = 0.05
+    elif True:
+        crit_freq_low_pass_MHz = 85
+        low_pass_filter_order = 6
+
+        crit_freq_high_pass_MHz = 25
+        high_pass_filter_order = 8
+
+        sine_subtract = True
+        sine_subtract_min_freq_GHz = 0.03
+        sine_subtract_max_freq_GHz = 0.13
+        sine_subtract_percent = 0.03
     else:
         crit_freq_low_pass_MHz = 80
         low_pass_filter_order = 14
@@ -4115,7 +4130,8 @@ if __name__=="__main__":
                 print('Using waveform_index_range of ', str(waveform_index_range))
                 map_source_distance_m = 521.62
         else:
-            waveform_index_range = (None,None)
+            waveform_index_range = (100, 611) # Shortens for better peak to sidelobe
+            #waveform_index_range = (None,None)
         # if True:
         # shorten_signals = False
         # index_window_dict = {'hpol': {'d2sa': (1250, 2274),
