@@ -346,16 +346,23 @@ class FFTPrepper:
         self.sine_subtracts.append(sine_subtract)
 
 
-    def wf(self, channel, apply_filter=False, hilbert=False, tukey=None, sine_subtract=False, return_sine_subtract_info=False):
+    def wf(self, channel, apply_filter=False, hilbert=False, tukey=None, sine_subtract=False, return_sine_subtract_info=False, ss_first=True):
         '''
         This loads a wf but only the section that is selected by the start and end indices specified.
 
         If tukey is True to loaded wf will have tapered edges of the waveform on the 1% level to help
         with edge effects.  This will be applied before hilbert if hilbert is true, and before
         the filter.
+
+        If ss_first is True then the waveform index range will only be applied AFTER sine subtraction is applied to
+        help the filtering. 
         '''
         try:
-            temp_wf = self.reader.wf(int(channel))[self.start_waveform_index:self.end_waveform_index+1]
+            if ss_first == True:
+                temp_wf = self.reader.wf(int(channel))
+            else:
+                temp_wf = self.reader.wf(int(channel))[self.start_waveform_index:self.end_waveform_index+1]
+
             temp_wf -= numpy.mean(temp_wf)
             temp_wf = temp_wf.astype(numpy.double)
             ss_freqs = []
@@ -377,7 +384,12 @@ class FFTPrepper:
                         plt.semilogy(numpy.array(ss.storedSpectra(0).GetX()), ss.storedSpectra(0).GetY())
                     if n_fit > 0:
                         temp_wf = _temp_wf
-                #if sum(n_fits) > 0:
+
+            if ss_first == True:
+                temp_wf = temp_wf[self.start_waveform_index:self.end_waveform_index+1] #indexed AFTER sine subtract because sine subtract benefits from seeing the whole wf. 
+
+
+
             if tukey is None:
                 tukey = self.tukey_default
             if tukey == True:
