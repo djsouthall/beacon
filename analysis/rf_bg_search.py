@@ -565,6 +565,17 @@ if __name__=="__main__":
                             else:
                                 print('Values in vpol_max_possible_map_value of %s will be overwritten by this analysis script.'%filename)
 
+
+                            if not numpy.isin('hpol_max_map_value',map_properties_subsets):
+                                file['map_properties'][filter_string].create_dataset('hpol_max_map_value', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in hpol_max_map_value of %s will be overwritten by this analysis script.'%filename)
+
+                            if not numpy.isin('vpol_max_map_value',map_properties_subsets):
+                                file['map_properties'][filter_string].create_dataset('vpol_max_map_value', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            else:
+                                print('Values in vpol_max_map_value of %s will be overwritten by this analysis script.'%filename)
+
                             #Fill in attributes for the different map cuts
                             #Determine cut values
                             if mapmax_cut_modes[filter_string_index] == 'abovehorizon':
@@ -655,6 +666,7 @@ if __name__=="__main__":
                             print('Performing access sanity check:')
                             try:
                                 file['map_properties'][filter_string]['%s_max_possible_map_value'%mode][0] = file['map_properties'][filter_string]['%s_max_possible_map_value'%mode][0]
+                                file['map_properties'][filter_string]['%s_max_map_value'%mode][0] = file['map_properties'][filter_string]['%s_max_map_value'%mode][0]
                                 file['map_direction'][filter_string]['%s_ENU_zenith'%mode][0] = file['map_direction'][filter_string]['%s_ENU_zenith'%mode][0]
                                 file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][0] = file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][0]
                                 file['map_times'][filter_string]['%s_0subtract1'%mode][0] = file['map_times'][filter_string]['%s_0subtract1'%mode][0]
@@ -690,7 +702,6 @@ if __name__=="__main__":
                                     m, max_possible_map_value = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert,return_max_possible_map_value=True)
 
                                 for filter_string_index, filter_string in enumerate(filter_strings):
-                                    file['map_properties'][filter_string]['%s_max_possible_map_value'%mode][eventid] = max_possible_map_value #doesn't really depend on filter_string but would depend on calibration, so keeping it sorted.
                                     #Determine cut values
                                     if mapmax_cut_modes[filter_string_index] == 'abovehorizon':
                                         # print('abovehorizon')
@@ -721,8 +732,12 @@ if __name__=="__main__":
                                         else:
                                             linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
 
+                                    map_max_value = m.flat[linear_max_index] #different per scope
+                                    
                                     if debug == True:
                                         if event_index == 0:
+                                            file['map_properties'][filter_string]['%s_max_possible_map_value'%mode][eventid]  = max_possible_map_value #Not different per scope - doesn't really depend on filter_string but would depend on calibration, so keeping it sorted.
+                                            file['map_properties'][filter_string]['%s_max_map_value'%mode][eventid]           = map_max_value #Different per scope
                                             file['map_direction'][filter_string]['%s_ENU_zenith'%mode][eventid] = theta_best 
                                             file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][eventid] = phi_best 
                                             file['map_times'][filter_string]['%s_0subtract1'%mode][eventid] = t_0subtract1 
@@ -733,6 +748,8 @@ if __name__=="__main__":
                                             file['map_times'][filter_string]['%s_2subtract3'%mode][eventid] = t_2subtract3
                                             file['map_properties'][filter_string]['%s_peak_to_sidelobe'%mode][eventid] = peak_to_sidelobe
                                     else:
+                                        file['map_properties'][filter_string]['%s_max_possible_map_value'%mode][eventid]  = max_possible_map_value #Not different per scope - doesn't really depend on filter_string but would depend on calibration, so keeping it sorted.
+                                        file['map_properties'][filter_string]['%s_max_map_value'%mode][eventid]           = map_max_value #Different per scope
                                         file['map_direction'][filter_string]['%s_ENU_zenith'%mode][eventid] = theta_best 
                                         file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][eventid] = phi_best 
                                         file['map_times'][filter_string]['%s_0subtract1'%mode][eventid] = t_0subtract1 
