@@ -259,7 +259,7 @@ if __name__=="__main__":
 
     apply_phase_response = True
 
-    upsample = 2**15 #Just upsample in this case
+    upsample = 2**14 #Just upsample in this case, Reduced to 2**14 when the waveform length was reduced, to maintain same time precision with faster execution.
     max_method = 0
 
 
@@ -681,19 +681,50 @@ if __name__=="__main__":
                                 print('Print Failed')
                                 print(e)
 
+                            # Prepare theta cut
+                            # Rather than doing this per event do it in advance
+                            #Determine cut values
+                            theta_cuts = {}
+                            for filter_string_index, filter_string in enumerate(filter_strings):
+                                if mapmax_cut_modes[filter_string_index] == 'abovehorizon':
+                                    # print('abovehorizon')
+                                    zenith_cut_ENU=[0,90] #leaving some tolerance
+                                    zenith_cut_array_plane=None
+                                elif mapmax_cut_modes[filter_string_index] == 'belowhorizon':
+                                    # print('belowhorizon')
+                                    zenith_cut_ENU=[90,180]
+                                    zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
+                                elif mapmax_cut_modes[filter_string_index] == 'allsky':
+                                    # print('allsky')
+                                    zenith_cut_ENU=None
+                                    zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
+                                else:
+                                    zenith_cut_ENU=None
+                                    zenith_cut_array_plane=None
+
+                                theta_cuts[filter_string] = cor.generateThetaCutMask(mode, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
+
                             for event_index, eventid in enumerate(eventids):
-                                if (event_index + 1) % 1000 == 0:
-                                    sys.stdout.write('(%i/%i)\t\t\t\n'%(event_index+1,len(eventids)))
-                                    sys.stdout.flush()
+                                if False:
+                                    #Used when profiling with py-spy
+                                    if (event_index + 1) % 100 == 0:
+                                        sys.stdout.write('(%i/%i)\t\t\t\n'%(event_index+1,len(eventids)))
+                                        sys.stdout.flush()
+                                    if event_index > 1000:
+                                        continue
+                                else:
+                                    if (event_index + 1) % 1000 == 0:
+                                        sys.stdout.write('(%i/%i)\t\t\t\n'%(event_index+1,len(eventids)))
+                                        sys.stdout.flush()
 
 
-                                    # CONSIDER ADDING HDF5 FLUSH HERE
+                                        # CONSIDER ADDING HDF5 FLUSH HERE
 
-                                    if impose_time_limit is not None:
-                                        if datetime.timestamp(datetime.now()) - starting_timestamp >= 3600*impose_time_limit:
-                                            print('\n\n')
-                                            print('SELF IMPOSED TIME LIMIT REACHED, ENDING SCRIPT EARLY.  MOST RECENT EVENTID COMPLETED IS %i'%(eventids[event_index-1]))
-                                            break 
+                                        if impose_time_limit is not None:
+                                            if datetime.timestamp(datetime.now()) - starting_timestamp >= 3600*impose_time_limit:
+                                                print('\n\n')
+                                                print('SELF IMPOSED TIME LIMIT REACHED, ENDING SCRIPT EARLY.  MOST RECENT EVENTID COMPLETED IS %i'%(eventids[event_index-1]))
+                                                break 
 
                                 if debug == True:
                                     if event_index == 0:
@@ -707,30 +738,34 @@ if __name__=="__main__":
                                         # print('abovehorizon')
                                         zenith_cut_ENU=[0,90] #leaving some tolerance
                                         zenith_cut_array_plane=None
+                                        theta_cut = theta_cuts[filter_string]
                                     elif mapmax_cut_modes[filter_string_index] == 'belowhorizon':
                                         # print('belowhorizon')
                                         zenith_cut_ENU=[90,180]
                                         zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
+                                        theta_cut = theta_cuts[filter_string]
                                     elif mapmax_cut_modes[filter_string_index] == 'allsky':
                                         # print('allsky')
                                         zenith_cut_ENU=None
                                         zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
+                                        theta_cut = theta_cuts[filter_string]
                                     else:
                                         zenith_cut_ENU=None
                                         zenith_cut_array_plane=None
+                                        theta_cut = theta_cuts[filter_string]
 
                                     #Calculate best reconstruction direction
                                     if debug == True:
                                         if event_index == 0:
                                             if max_method is not None:
-                                                linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
+                                                linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True, theta_cut=theta_cut)
                                             else:
-                                                linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
+                                                linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True, theta_cut=theta_cut)
                                     else:
                                         if max_method is not None:
-                                            linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
+                                            linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True, theta_cut=theta_cut)
                                         else:
-                                            linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
+                                            linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True, theta_cut=theta_cut)
 
                                     map_max_value = m.flat[linear_max_index] #different per scope
                                     

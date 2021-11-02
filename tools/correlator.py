@@ -1422,8 +1422,62 @@ class Correlator:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 print(exc_type, fname, exc_tb.tb_lineno)
+    
+    def generateThetaCutMask(self, pol, shape=None, zenith_cut_ENU=None, zenith_cut_array_plane=None):
+        '''
+        zenith_cut_ENU : list of 2 float values
+            Given in degrees, angles within these two values are considered.  If None is given for the first then it is
+            assumed to be 0 (overhead), if None is given for the latter then it is assumed to be 180 (straight down).
+        zenith_cut_array_plane : list of 2 float values
+            Given in degrees, angles within these two values are considered.  If None is given for the first then it is
+            assumed to be 0 (overhead), if None is given for the latter then it is assumed to be 180 (straight down).  This is
+            polarization dependant because it depends on the calibration of the antennas positions.  So if pol=None then this will
+            be ignored.
+        '''
+        try:
+            if shape is None:
+                shape = numpy.shape(self.mesh_azimuth_deg)
 
-    def mapMax(self, map_values, max_method=0, verbose=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, pol=None, return_peak_to_sidelobe=False):
+            theta_cut = numpy.ones(shape,dtype=bool)
+
+            if zenith_cut_ENU is not None:
+                if len(zenith_cut_ENU) != 2:
+                    print('zenith_cut_ENU must be a 2 valued list.')
+                    return
+                else:
+                    if zenith_cut_ENU[0] is None:
+                        zenith_cut_ENU[0] = 0
+                    if zenith_cut_ENU[1] is None:
+                        zenith_cut_ENU[1] = 180
+
+                    theta_cut_1d = numpy.logical_and(self.thetas_deg >= min(zenith_cut_ENU), self.thetas_deg <= max(zenith_cut_ENU))
+                    theta_cut = numpy.multiply(theta_cut.T,theta_cut_1d).T
+            if pol is not None:
+                if zenith_cut_array_plane is not None:
+                    if len(zenith_cut_array_plane) != 2:
+                        print('zenith_cut_array_plane must be a 2 valued list.')
+                        return
+                    else:
+                        if zenith_cut_array_plane[0] is None:
+                            zenith_cut_array_plane[0] = 0
+                        if zenith_cut_array_plane[1] is None:
+                            zenith_cut_array_plane[1] = 180
+
+                        if pol == 'hpol':
+                            theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.hpol_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.hpol_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
+                        elif pol == 'vpol':
+                            theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.vpol_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.vpol_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
+                        else:
+                            theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.physical_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.physical_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
+            return theta_cut
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def mapMax(self, map_values, max_method=0, verbose=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, pol=None, return_peak_to_sidelobe=False, theta_cut=None):
         '''
         Determines the indices in the given map of the optimal source direction.
 
@@ -1471,41 +1525,10 @@ class Correlator:
 
         '''
         try:
-            theta_cut = numpy.ones_like(map_values,dtype=bool)
+            if theta_cut is None:
+                theta_cut = self.generateThetaCutMask(pol, shape=numpy.shape(map_values),zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
 
-            if zenith_cut_ENU is not None:
-                if len(zenith_cut_ENU) != 2:
-                    print('zenith_cut_ENU must be a 2 valued list.')
-                    return
-                else:
-                    if zenith_cut_ENU[0] is None:
-                        zenith_cut_ENU[0] = 0
-                    if zenith_cut_ENU[1] is None:
-                        zenith_cut_ENU[1] = 180
-
-                    theta_cut_1d = numpy.logical_and(self.thetas_deg >= min(zenith_cut_ENU), self.thetas_deg <= max(zenith_cut_ENU))
-                    theta_cut = numpy.multiply(theta_cut.T,theta_cut_1d).T
-            if pol is not None:
-                if zenith_cut_array_plane is not None:
-                    if len(zenith_cut_array_plane) != 2:
-                        print('zenith_cut_array_plane must be a 2 valued list.')
-                        return
-                    else:
-                        if zenith_cut_array_plane[0] is None:
-                            zenith_cut_array_plane[0] = 0
-                        if zenith_cut_array_plane[1] is None:
-                            zenith_cut_array_plane[1] = 180
-
-                        if pol == 'hpol':
-                            theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.hpol_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.hpol_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
-                        elif pol == 'vpol':
-                            theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.vpol_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.vpol_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
-                        else:
-                            theta_cut = numpy.logical_and(theta_cut,numpy.logical_and(90.0 - self.physical_dot_angle_from_plane_deg >= min(zenith_cut_array_plane), 90.0 - self.physical_dot_angle_from_plane_deg <= max(zenith_cut_array_plane)))
-
-
-
-            masked_map_values = numpy.ma.array(map_values.copy(),mask=~theta_cut) #This way the values not in the range are not included in calculations but the dimensions of the map stay the same.
+            masked_map_values = numpy.ma.array(map_values,mask=~theta_cut) #This way the values not in the range are not included in calculations but the dimensions of the map stay the same.#masked_map_values = numpy.ma.array(map_values.copy(),mask=~theta_cut) #This way the values not in the range are not included in calculations but the dimensions of the map stay the same.
 
             # if max_method == 0:
             #     row_index, column_index = numpy.unravel_index(masked_map_values.argmax(),numpy.shape(masked_map_values))
@@ -1516,15 +1539,16 @@ class Correlator:
             #     row_index, column_index = numpy.unravel_index(rounded_corr_values.argmax(),numpy.shape(rounded_corr_values))
 
             linear_max_index = masked_map_values.argmax()
-            
+
             if return_peak_to_sidelobe:
                 blob_label, num_blobs = scipy.ndimage.label(masked_map_values > 0)
-                max_peak_mask = blob_label == blob_label[numpy.unravel_index(linear_max_index,numpy.shape(blob_label))]
-                _main_peak_masked_map_values = numpy.ma.array(map_values.copy(),mask=numpy.logical_or(~theta_cut , max_peak_mask)) #Ignore values in the main peak
+                #max_peak_mask = blob_label == blob_label[numpy.unravel_index(linear_max_index,numpy.shape(blob_label))] #Commented for slightly faster.
+                _main_peak_masked_map_values = numpy.ma.array(map_values,mask=numpy.logical_or(~theta_cut , blob_label == blob_label[numpy.unravel_index(linear_max_index,numpy.shape(blob_label))])) #Ignore values in the main peak
 
-                peak_to_sidelobe = masked_map_values.max() / _main_peak_masked_map_values.max()
+                peak_to_sidelobe = masked_map_values.flat[linear_max_index] / _main_peak_masked_map_values.max()
 
                 if False:
+                    max_peak_mask = blob_label == blob_label[numpy.unravel_index(linear_max_index,numpy.shape(blob_label))]
                     #For testing and debugging
                     plt.figure()
                     ax = plt.gca()
@@ -2104,15 +2128,21 @@ class Correlator:
                 corr13 = (numpy.asarray(scipy.signal.correlate(waveforms[1],waveforms[3])))/(len(self.times_resampled))
                 corr23 = (numpy.asarray(scipy.signal.correlate(waveforms[2],waveforms[3])))/(len(self.times_resampled))
                 
-                corr_value_0subtract1 = corr01[self.delay_indices_hpol_0subtract1]
-                corr_value_0subtract2 = corr02[self.delay_indices_hpol_0subtract2]
-                corr_value_0subtract3 = corr03[self.delay_indices_hpol_0subtract3]
-                corr_value_1subtract2 = corr12[self.delay_indices_hpol_1subtract2]
-                corr_value_1subtract3 = corr13[self.delay_indices_hpol_1subtract3]
-                corr_value_2subtract3 = corr23[self.delay_indices_hpol_2subtract3]
+                '''
+                # Commented out because it is signicantly faster to do these all as one line of code.                
+                # corr_value_0subtract1 = corr01[self.delay_indices_hpol_0subtract1]
+                # corr_value_0subtract2 = corr02[self.delay_indices_hpol_0subtract2]
+                # corr_value_0subtract3 = corr03[self.delay_indices_hpol_0subtract3]
+                # corr_value_1subtract2 = corr12[self.delay_indices_hpol_1subtract2]
+                # corr_value_1subtract3 = corr13[self.delay_indices_hpol_1subtract3]
+                # corr_value_2subtract3 = corr23[self.delay_indices_hpol_2subtract3]
 
-                stacked_corr_values = numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] )
-                mean_corr_values = numpy.mean(stacked_corr_values[include_baselines],axis=0)
+                # stacked_corr_values = numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] )
+                # mean_corr_values = numpy.mean(stacked_corr_values[include_baselines],axis=0)
+                '''
+                #mean_corr_values = (corr01[self.delay_indices_hpol_0subtract1] + corr02[self.delay_indices_hpol_0subtract2] + corr03[self.delay_indices_hpol_0subtract3] + corr12[self.delay_indices_hpol_1subtract2] + corr13[self.delay_indices_hpol_1subtract3] + corr23[self.delay_indices_hpol_2subtract3])/6.0
+                mean_corr_values = ((corr01[self.delay_indices_hpol_0subtract1] if 0 in include_baselines else 0) + (corr02[self.delay_indices_hpol_0subtract2] if 1 in include_baselines else 0) + (corr03[self.delay_indices_hpol_0subtract3] if 2 in include_baselines else 0) + (corr12[self.delay_indices_hpol_1subtract2] if 3 in include_baselines else 0) + (corr13[self.delay_indices_hpol_1subtract3] if 4 in include_baselines else 0) + (corr23[self.delay_indices_hpol_2subtract3] if 5 in include_baselines else 0))/len(include_baselines)
+
                 if plot_map == True:
                     if max_method is not None:
                         if plot_peak_to_sidelobe:
@@ -2140,39 +2170,23 @@ class Correlator:
                 corr12 = (numpy.asarray(scipy.signal.correlate(waveforms[1],waveforms[2])))/(len(self.times_resampled))
                 corr13 = (numpy.asarray(scipy.signal.correlate(waveforms[1],waveforms[3])))/(len(self.times_resampled))
                 corr23 = (numpy.asarray(scipy.signal.correlate(waveforms[2],waveforms[3])))/(len(self.times_resampled))
-                try:
-                    corr_value_0subtract1 = corr01[self.delay_indices_vpol_0subtract1]
-                except:
-                    print('Error in corr_value_0subtract1')
-                    #import pdb; pdb.set_trace()
-                try:
-                    corr_value_0subtract2 = corr02[self.delay_indices_vpol_0subtract2]
-                except:
-                    print('Error in corr_value_0subtract2')
-                    #import pdb; pdb.set_trace()
-                try:
-                    corr_value_0subtract3 = corr03[self.delay_indices_vpol_0subtract3]
-                except:
-                    print('Error in corr_value_0subtract3')
-                    #import pdb; pdb.set_trace()
-                try:
-                    corr_value_1subtract2 = corr12[self.delay_indices_vpol_1subtract2]
-                except:
-                    print('Error in corr_value_1subtract2')
-                    #import pdb; pdb.set_trace()
-                try:
-                    corr_value_1subtract3 = corr13[self.delay_indices_vpol_1subtract3]
-                except:
-                    print('Error in corr_value_1subtract3')
-                    #import pdb; pdb.set_trace()
-                try:
-                    corr_value_2subtract3 = corr23[self.delay_indices_vpol_2subtract3]
-                except:
-                    print('Error in corr_value_2subtract3')
-                    #import pdb; pdb.set_trace()
 
-                stacked_corr_values = numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] )
-                mean_corr_values = numpy.mean(stacked_corr_values[include_baselines],axis=0)
+                '''
+                # Commented out because it is signicantly faster to do these all as one line of code.                
+
+                # corr_value_0subtract1 = corr01[self.delay_indices_vpol_0subtract1]
+                # corr_value_0subtract2 = corr02[self.delay_indices_vpol_0subtract2]
+                # corr_value_0subtract3 = corr03[self.delay_indices_vpol_0subtract3]
+                # corr_value_1subtract2 = corr12[self.delay_indices_vpol_1subtract2]
+                # corr_value_1subtract3 = corr13[self.delay_indices_vpol_1subtract3]
+                # corr_value_2subtract3 = corr23[self.delay_indices_vpol_2subtract3]
+                
+                # stacked_corr_values = numpy.array([corr_value_0subtract1, corr_value_0subtract2, corr_value_0subtract3, corr_value_1subtract2, corr_value_1subtract3, corr_value_2subtract3] )
+                # mean_corr_values = numpy.mean(stacked_corr_values[include_baselines],axis=0)
+                '''
+                #0 if 0 in include_baselines else corr01[self.delay_indices_vpol_0subtract1]
+                mean_corr_values = ((corr01[self.delay_indices_vpol_0subtract1] if 0 in include_baselines else 0) + (corr02[self.delay_indices_vpol_0subtract2] if 1 in include_baselines else 0) + (corr03[self.delay_indices_vpol_0subtract3] if 2 in include_baselines else 0) + (corr12[self.delay_indices_vpol_1subtract2] if 3 in include_baselines else 0) + (corr13[self.delay_indices_vpol_1subtract3] if 4 in include_baselines else 0) + (corr23[self.delay_indices_vpol_2subtract3] if 5 in include_baselines else 0))/len(include_baselines)
+
                 
                 if plot_map == True:
                     if max_method is not None:
