@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib import cm, ticker
 from matplotlib.patches import Rectangle
-from matplotlib.backend_tools import ToolBase, ToolToggleBase
+from matplotlib.backend_tools import ToolBase, ToolToggleBase, ToolQuit
 plt.ion()
 
 import warnings
@@ -3209,7 +3209,6 @@ class dataSlicer():
                 else:
                     for artist in self.inspector_mpl[key].lines + self.inspector_mpl[key].collections:
                         artist.remove()
-
         #Plot Waveforms
         self.data_slicers[run_index].cor.reader.setEntry(eventid)
         t = self.data_slicers[run_index].cor.reader.t()
@@ -3250,21 +3249,11 @@ class dataSlicer():
             ax.set_ylabel(apply_filter*'filtered ' + 'db ish')
 
 
-
-        # self.data_slicers[run_index].prepareCorrelator() #Run again in case at some later point I make it so you can check the run to soe event that was not passed to this tool. 
-        # self.data_slicers[run_index].cor.reader.setEntry(eventid)
-        # self.inspector_mpl['fig1_wf_0'].set_ydata(self.data_slicers[run_index].cor.reader.wf(0))
-        # self.inspector_mpl['fig1_wf_1'].set_ydata(self.data_slicers[run_index].cor.reader.wf(1))
-        # self.inspector_mpl['fig1_wf_2'].set_ydata(self.data_slicers[run_index].cor.reader.wf(2))
-        # self.inspector_mpl['fig1_wf_3'].set_ydata(self.data_slicers[run_index].cor.reader.wf(3))
-        # self.inspector_mpl['fig1_wf_4'].set_ydata(self.data_slicers[run_index].cor.reader.wf(4))
-        # self.inspector_mpl['fig1_wf_5'].set_ydata(self.data_slicers[run_index].cor.reader.wf(5))
-        # self.inspector_mpl['fig1_wf_6'].set_ydata(self.data_slicers[run_index].cor.reader.wf(6))
-        # self.inspector_mpl['fig1_wf_7'].set_ydata(self.data_slicers[run_index].cor.reader.wf(7))
         self.inspector_mpl['fig1'].canvas.draw()
-        self.inspector_mpl['fig1'].canvas.flush_events(); plt.show(block=False)
-        
-
+        # self.inspector_mpl['fig1'].canvas.flush_events()
+        # plt.show()
+        # plt.pause(0.05)
+        return
 
     def eventInspector(self, eventids_dict, mollweide=False):
         '''
@@ -3383,14 +3372,6 @@ class dataSlicer():
         
         self.updateEventInspect(run_index, eventid, mollweide=mollweide)
 
-
-        #fig1.tight_layout()
-
-
-
-        # class EventIterator(ToolBase):
-        #     '''
-        #     '''
         self.inspector_eventids_list = self.organizeEventDict(eventids_dict)
         self.inspector_eventids_index = 0
 
@@ -3430,17 +3411,15 @@ class dataSlicer():
                 self.outer.inspector_eventids_index = (self.outer.inspector_eventids_index - 1)%len(self.outer.inspector_eventids_list)
                 self.outer.updateEventInspect(self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['run_index'],self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['eventid'])
 
-
-        tm = fig1.canvas.manager.toolmanager
+        tm = self.inspector_mpl['fig1'].canvas.manager.toolmanager
         #import pdb; pdb.set_trace()
         tm.add_tool('Previous', PreviousEventIterator, self)
-        fig1.canvas.manager.toolbar.add_tool(tm.get_tool('Previous'), 'toolgroup')
+        self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Previous'), 'toolgroup')
         tm.add_tool('Next', NextEventIterator, self)
-        fig1.canvas.manager.toolbar.add_tool(tm.get_tool('Next'), 'toolgroup')
-        # os.path.join(matplotlib.matplotlib_fname().replace('matplotlibrc','images'), 'back.png')
-
-
-
+        self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Next'), 'toolgroup')
+        tm.add_tool('Quit', ToolQuit)
+        self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Quit'), 'toolgroup')
+        return
 
 
 
