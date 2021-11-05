@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 '''
 This class is adopted from a script originally written by Kaeli Hughes and as been significantly
 restructured/altered for my BEACON analysis framework.  
@@ -1240,7 +1241,7 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def interactivePlotter(self, event, mollweide = False, center_dir='E', all_alignments=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0):
+    def interactivePlotter(self, event, eventid=None, pol=None, hilbert=None, mollweide = False, center_dir='E', all_alignments=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0):
         '''
         This hopefully will make a plot when called by a double click in the map.
         '''
@@ -1251,12 +1252,15 @@ class Correlator:
                 except:
                     pass #Just maintaining only one popout at a time.
                 event_ax = event.inaxes
-                pol = event_ax.get_title().split('-')[2]
-                eventid = int(event_ax.get_title().split('-')[1])
-                if 'True' in event_ax.get_title().split('Hilbert')[1]:
-                    hilbert = True
-                else:
-                    hilbert = False
+                if pol == None:
+                    pol = event_ax.get_title().split('-')[2]
+                if eventid is None:
+                    eventid = int(event_ax.get_title().split('-')[1])
+                if hilbert is None:
+                    if 'True' in event_ax.get_title().split('Hilbert')[1]:
+                        hilbert = True
+                    else:
+                        hilbert = False
 
                 if center_dir.upper() == 'E':
                     azimuth_offset_rad = 0 #Normally this is subtracted for plotting, but needs to be added here to get back to original orientation for finding the correct time delays.
@@ -1620,7 +1624,7 @@ class Correlator:
         coords_radec = coords_altaz.icrs
         print('THIS FUNCTION IS NOT WORKING YET.')
 
-    def addCurveToMap(self, im, plane_xy,  mollweide=False, *args, **kwargs):
+    def addCurveToMap(self, im, plane_xy, ax=None,  mollweide=False, *args, **kwargs):
         '''
         This will plot the curves to a map (ax.pcolormesh instance passed as im).
 
@@ -1630,6 +1634,8 @@ class Correlator:
         The args and kwargs should be plotting things such as color and linestyle.  
         '''
         try:
+            if ax is None:
+                ax = plt.gca()
             plane_xy[1] = 90.0 - plane_xy[1]
             max_diff_deg = numpy.max(numpy.abs(numpy.diff(plane_xy)))
 
@@ -1647,14 +1653,14 @@ class Correlator:
                 left_cut = numpy.sort(numpy.where(left_cut)[0])
                 left_cut = numpy.roll(left_cut,numpy.argmax(numpy.diff(plane_xy[0][left_cut]))-1)
 
-                plt.plot(plane_xy[0][left_cut], plane_xy[1][left_cut], *args, **kwargs)
-                plt.plot(plane_xy[0][right_cut], plane_xy[1][right_cut], *args, **kwargs)
+                ax.plot(plane_xy[0][left_cut], plane_xy[1][left_cut], *args, **kwargs)
+                ax.plot(plane_xy[0][right_cut], plane_xy[1][right_cut], *args, **kwargs)
             else:
                 if numpy.all([len(numpy.unique(plane_xy[0])) == 1,len(numpy.unique(plane_xy[1])) == 1]):
                     #import pdb; pdb.set_trace()
-                    plt.scatter(plane_xy[0][0], plane_xy[1][0], *args, **kwargs)
+                    ax.scatter(plane_xy[0][0], plane_xy[1][0], *args, **kwargs)
                 else:
-                    plt.plot(plane_xy[0], plane_xy[1], *args, **kwargs)
+                    ax.plot(plane_xy[0], plane_xy[1], *args, **kwargs)
 
             return im
         except Exception as e:
@@ -2021,7 +2027,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)  
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -2187,7 +2193,6 @@ class Correlator:
                 #0 if 0 in include_baselines else corr01[self.delay_indices_vpol_0subtract1]
                 mean_corr_values = ((corr01[self.delay_indices_vpol_0subtract1] if 0 in include_baselines else 0) + (corr02[self.delay_indices_vpol_0subtract2] if 1 in include_baselines else 0) + (corr03[self.delay_indices_vpol_0subtract3] if 2 in include_baselines else 0) + (corr12[self.delay_indices_vpol_1subtract2] if 3 in include_baselines else 0) + (corr13[self.delay_indices_vpol_1subtract3] if 4 in include_baselines else 0) + (corr23[self.delay_indices_vpol_2subtract3] if 5 in include_baselines else 0))/len(include_baselines)
 
-                
                 if plot_map == True:
                     if max_method is not None:
                         if plot_peak_to_sidelobe:
@@ -2260,6 +2265,8 @@ class Correlator:
                     xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)' + add_text
                     roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
 
+
+
                 rolled_values = numpy.roll(mean_corr_values,roll,axis=1)
 
 
@@ -2267,38 +2274,50 @@ class Correlator:
 
                 elevation_best_deg = 90.0 - theta_best
 
-                fig = plt.figure()
-                if window_title is None:
-                    fig.canvas.set_window_title('r%i-e%i-%s Correlation Map'%(self.reader.run,eventid,pol.title()))
+                if map_ax is None:
+                    fig = plt.figure()
+                    if window_title is None:
+                        fig.canvas.set_window_title('r%i-e%i-%s Correlation Map'%(self.reader.run,eventid,pol.title()))
+                    else:
+                        fig.canvas.set_window_title(window_title)
+
+                    if mollweide == True:
+                        map_ax = fig.add_subplot(1,1,1, projection='mollweide')
+                    else:
+                        map_ax = fig.add_subplot(1,1,1)
+
+                    if True:
+                        map_ax.set_title('%i-%i-%s-Hilbert=%s\nSine Subtract %s\nSource Distance = %0.2f m'%(self.reader.run,eventid,pol,str(hilbert), ['Disabled','Enabled'][int(self.apply_sine_subtract)], self.map_source_distance_m)) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
+                    else:
+                        map_ax.set_title('%i-%i-%s-Hilbert=%s\nSource Distance = %0.2f m'%(self.reader.run,eventid,pol,str(hilbert), self.map_source_distance_m)) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
                 else:
-                    fig.canvas.set_window_title(window_title)
-                if mollweide == True:
-                    ax = fig.add_subplot(1,1,1, projection='mollweide')
-                else:
-                    ax = fig.add_subplot(1,1,1)
-                if True:
-                    ax.set_title('%i-%i-%s-Hilbert=%s\nSine Subtract %s\nSource Distance = %0.2f m'%(self.reader.run,eventid,pol,str(hilbert), ['Disabled','Enabled'][int(self.apply_sine_subtract)], self.map_source_distance_m)) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
-                else:
-                    ax.set_title('%i-%i-%s-Hilbert=%s\nSource Distance = %0.2f m'%(self.reader.run,eventid,pol,str(hilbert), self.map_source_distance_m)) #FORMATTING SPECIFIC AND PARSED ELSEWHERE, DO NOT CHANGE. 
+                    fig = map_ax.figure
 
                 if mollweide == True:
                     #Automatically converts from rads to degs
-                    im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
+                    im = map_ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
                 else:
-                    im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
+                    im = map_ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=numpy.min(rolled_values), vmax=numpy.max(rolled_values),cmap=plt.cm.coolwarm)
 
                 if plot_peak_to_sidelobe and max_method is not None:
                     blank_patch = matplotlib.patches.Patch(color='red', alpha=0.0, label='Peak to Sidelobe: %0.3f'%peak_to_sidelobe)
-                    plt.legend(handles=[blank_patch], loc='upper right')
+                    map_ax.legend(handles=[blank_patch], loc='upper right')
 
-                cbar = fig.colorbar(im)
-                if hilbert == True:
-                    cbar.set_label('Mean Correlation Value (Arb)')
+                #cbar = fig.colorbar(im)
+
+                if minimal == True:
+                    #cbar = plt.colorbar(im, ax=map_ax,fraction=0.046, pad=0.04)
+                    map_ax.set_xlabel(pol + ' MV=%0.2f'%(mean_corr_values.flat[linear_max_index]),fontsize=14)
+                    map_ax.grid(True)
                 else:
-                    cbar.set_label('Mean Correlation Value')
-                plt.xlabel(xlabel,fontsize=18)
-                plt.ylabel('Elevation Angle (Degrees)',fontsize=18)
-                plt.grid(True)
+                    cbar = plt.colorbar(im, ax=map_ax)
+                    if hilbert == True:
+                        cbar.set_label('Mean Correlation Value (Arb)')
+                    else:
+                        cbar.set_label('Mean Correlation Value')
+                    map_ax.set_xlabel(xlabel,fontsize=18)
+                    map_ax.set_ylabel('Elevation Angle (Degrees)',fontsize=18)
+                    map_ax.grid(True)
 
                 #Prepare array cut curves
                 if pol is not None:
@@ -2331,37 +2350,36 @@ class Correlator:
                         lower_plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)
 
                 #Plot array plane 0 elevation curve.
-                im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
+                im = self.addCurveToMap(im, plane_xy, ax=map_ax, mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
 
                 if self.conference_mode:
                     ticks_deg = numpy.array([-60,-40,-30,-15,0,15,30,45,60,75])
                     if mollweide == True:
-                        plt.yticks(numpy.deg2rad(ticks_deg))
+                        plt.set_yticks(numpy.deg2rad(ticks_deg))
                     else:
-                        plt.yticks(ticks_deg)
+                        plt.set_yticks(ticks_deg)
                     x = plane_xy[0]
                     y1 = plane_xy[1]
                     if mollweide == True:
                         y2 = -numpy.pi/2 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
                     else:
                         y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
-                    ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
-                    #plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=6,color='#41719C')
+                    map_ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
                 
                 if zenith_cut_array_plane is not None:
                     #Plot upper zenith array cut
-                    im = self.addCurveToMap(im, upper_plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
+                    im = self.addCurveToMap(im, upper_plane_xy, ax=map_ax,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
                     #Plot lower zenith array cut
-                    im = self.addCurveToMap(im, lower_plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
+                    im = self.addCurveToMap(im, lower_plane_xy, ax=map_ax,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
 
 
                 if pol != 'all':
                     #Add curves for time delays if present.
-                    im, ax = self.addTimeDelayCurves(im, time_delay_dict, pol, ax, mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg, include_baselines=include_baselines)
+                    im, map_ax = self.addTimeDelayCurves(im, time_delay_dict, pol, map_ax, mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg, include_baselines=include_baselines)
 
 
                 #Added circles as specified.
-                ax, peak_circle = self.addCircleToMap(ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+                map_ax, peak_circle = self.addCircleToMap(map_ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
 
                 if circle_az is not None:
                     if circle_zenith is not None:
@@ -2386,7 +2404,7 @@ class Correlator:
                                 additional_circles.append(_circ)
 
                 if add_airplanes:
-                    ax, airplane_direction_dict = self.addAirplanesToMap([eventid], pol, ax, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=False, color='r', min_approach_cut_km=200,plot_distance_cut_limit=200)
+                    map_ax, airplane_direction_dict = self.addAirplanesToMap([eventid], pol, map_ax, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=False, color='r', min_approach_cut_km=200,plot_distance_cut_limit=200)
                     if verbose:
                         print('airplane_direction_dict:')
                         print(airplane_direction_dict)
@@ -2408,16 +2426,17 @@ class Correlator:
                 #Enable Interactive Portion
                 if interactive == True:
                     print('Map should be interactive')
-                    fig.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event,  mollweide=mollweide, center_dir=center_dir, all_alignments=self.all_alignments, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading))
+                    map_ax.figure.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event, pol=pol, hilbert=hilbert, eventid=eventid, mollweide=mollweide, center_dir=center_dir, all_alignments=self.all_alignments, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading))
 
-                #ax.legend(loc='lower left')
-                self.figs.append(fig)
-                self.axs.append(ax)
+                #map_ax.legend(loc='lower left')
+                #self.figs.append(fig)
+                self.figs.append(map_ax.figure)
+                self.axs.append(map_ax)
 
                 if return_max_possible_map_value == True:
-                    return mean_corr_values, fig, ax, max_possible_map_value
+                    return mean_corr_values, fig, map_ax, max_possible_map_value
                 else:
-                    return mean_corr_values, fig, ax
+                    return mean_corr_values, fig, map_ax
             else:
                 if return_max_possible_map_value == True:
                     return mean_corr_values, max_possible_map_value

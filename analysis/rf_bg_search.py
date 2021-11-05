@@ -203,20 +203,11 @@ for site in list(known_pulser_ids.keys()):
 
 
 if __name__=="__main__":
-
-
-    '''
-    NEED TO ADD IN SOMETHING TO HANDLED TIME WINDOWED SIGNALS FOR SPECIFIED RUNS SUCH AS PULSING EVENTS.  
-    SPECIFICALLY USING THE WINDOW INDEX RANGE RATHER THAN THE SHORTEN SIGNALS METRIC. 
-    '''
-
-
-
-
-
     starting_timestamp = datetime.timestamp(datetime.now())
     #multithread = True
     debug = False#THIS IS A TEST, WILL POPULATE ALL VALUES WITH 0, JUST TO MAKE DEBUGGING QUICKER.
+
+    
     if len(sys.argv) > 1:
         run = int(sys.argv[1])
         if len(sys.argv) >= 3:

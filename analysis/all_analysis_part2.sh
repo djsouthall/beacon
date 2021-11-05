@@ -2,6 +2,7 @@
 # This will execute all of the current analysis scripts in turn for a given run number.
 echo 'Executing analysis scripts for Run' $1  || exit
 echo 'Where relevant using calibration/deploy_index ' $2 || exit
+echo 'Using Polarization  ' $3 || exit
 #echo 'Where relevant only using specified polarization: ' $3 || exit
 # echo 'Attempting to prepare file by executing data_handler.py' || exit
 # python3 ${BEACON_ANALYSIS_DIR}tools/data_handler.py $1 || exit
@@ -36,5 +37,4 @@ echo 'Where relevant using calibration/deploy_index ' $2 || exit
 # This is the correlation map script used for determining pointing direction.
 # NOTE: RF BG SEARCH IS TIME INSTENSIVE.  POSSIBLE THAT JOBS WILL BE CANCELLED BEFORE FOLLOWING SCRIPTS CAN FINISH.
 echo 'Attempting to prepare current pointing directions by executing rf_bg_search.py' || exit
-python3 ${BEACON_ANALYSIS_DIR}analysis/rf_bg_search.py $1 $2 || exit
-#python3 ${BEACON_ANALYSIS_DIR}analysis/rf_bg_search.py $1 $2 $3 || exit
+python3 ${BEACON_ANALYSIS_DIR}analysis/rf_bg_search.py $1 $2 $3 || exit

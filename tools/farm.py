@@ -29,15 +29,27 @@ if __name__ == "__main__":
         done_runs = numpy.array([5732,5733,5734,5735,5736,5738,5739,5740,5741,5742,5743,5746,5749,5750,5751,5756,5757,5758,5763,5771,5773,5774,5775,5776,5789])
         done_runs = numpy.append(done_runs , [5762,5764]) #TEMPORARY BECAUSE ALL OTHER FILES FINISHED RUNNING PART 1
         pol = 'vpol' #currently only used in rf_bg_search because it runs so long it is split up for safety. 
+        analysis_part = 2
     elif False:
         runs = [5762,5764]
         done_runs = numpy.array([5732,5733,5734,5735,5736,5738,5739,5740,5741,5742,5743,5746,5749,5750,5751,5756,5757,5758,5763,5771,5773,5774,5775,5776,5789])
         #runs = [5762,5764]
         pol = 'vpol' #currently only used in rf_bg_search because it runs so long it is split up for safety. 
+        analysis_part = 2
+    elif False:
+        runs = numpy.arange(5790,5974,dtype=int)
+        done_runs = numpy.array([])
+        pol = 'hpol'
+        analysis_part = 1
+    elif True:
+        runs = numpy.arange(5790,5974,dtype=int)
+        done_runs = numpy.array([])
+        analysis_part = 2
     else:
         runs = numpy.array([5630, 5631, 5632, 5638, 5639, 5640, 5641, 5642, 5643, 5644, 5645, 5646, 5647, 5648, 5649, 5656, 5657, 5659, 5660], dtype=int)
         done_runs = numpy.array([])
         pol = 'vpol'
+        analysis_part = 2
 
 
     ###--------###
@@ -47,33 +59,41 @@ if __name__ == "__main__":
     for run in runs:
         if run in done_runs:
             continue
+
         jobname = 'bcn%i'%run
 
-        batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,jobname)
-        
-        command = os.environ['BEACON_ANALYSIS_DIR'] + 'analysis/all_analysis_part2.sh %i %s %s'%(run, deploy_index, pol)#'analysis/time_averaged_spectrum.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'tools/data_handler.py %i redo'%(run)#'analysis/cr_search/simple_cr_template_search.py %i 1'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
-        #command = os.environ['BEACON_ANALYSIS_DIR'] + 'analysis/rf_bg_search.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'analysis/rf_bg_search.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'tools/data_handler.py %i redo'%(run)#'analysis/cr_search/simple_cr_template_search.py %i 1'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
-
-        command_queue = batch + command
-        print(command_queue)    
-        os.system(command_queue) # Submit to queue
-
-        # Avoid overwhelming the queue with jobs
-        while False:
-
-            # Clean up log files
-            n_output = subprocess.Popen('ls slurm*.out | wc', shell=True, 
-                                        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0].split()[0]
-            if n_output.isdigit():
-                os.system('rm slurm*.out')
-
-            n_submitted = int(subprocess.Popen('squeue -u %s | wc\n'%username, shell=True, 
-                                               stdin=subprocess.PIPE, stdout=subprocess.PIPE).communicate()[0].split()[0]) - 1
+        if True and analysis_part == 2:
+            script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part2.sh')
             
-            # Check to see whether to enter holding pattern
-            if n_submitted < 200:
-                break
-            else:
-                print('%i jobs already in queue, waiting ...'%(n_submitted), time.asctime(time.localtime()))
-                time.sleep(60)
-                
+            #Prepare Hpol Job
+            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,jobname+'h')
+            command = '%s %i %s %s'%(script, run, deploy_index, 'hpol')
+            command_queue = batch + command
+
+            #Submit hpol job and get the jobid to then submit vpol with dependency
+            print(command_queue)
+            hpol_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
+
+            
+            #Prepare Vpol Job
+            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition,jobname+'v', hpol_jobid)
+            command = '%s %i %s %s'%(script, run, deploy_index, 'vpol')
+            command_queue = batch + command
+
+            #Submit vpol job
+            print(command_queue)
+            vpol_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
+
+            print('Run %i jobs submitted --> HPol jid:%i\tVPol jid:%i'%(run,hpol_jobid,vpol_jobid))
+
+        else:
+            script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part1.sh')
+
+            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,jobname)
+            command = script + ' %i %s %s'%(analysis_part, run, deploy_index, pol)#'analysis/time_averaged_spectrum.py %i'%(run)#'analysis/all_analysis.sh %i'%(run)#'tools/data_handler.py %i'%(run)#'analysis/time_averaged_spectrum.py %i'%(run)#'tools/data_handler.py %i redo'%(run)#'analysis/cr_search/simple_cr_template_search.py %i 1'%(run)#'tools/data_handler.py %i'%(run)#'analysis/rf_bg_search.py %i'%(run)
+            command_queue = batch + command
+            print(command_queue)    
+            os.system(command_queue) # Submit to queue
+
+
+
