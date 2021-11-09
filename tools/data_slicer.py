@@ -1495,7 +1495,8 @@ class dataSlicerSingleRun():
             calculate_bins_from_min_max = True #By default will be calculated at bottom of conditional list, unless a specific condition overrides.
             
             if len(eventids) == 0:
-                print('No eventids given to getSingleParamPlotBins, using all eventids corresponding to selected trigger types.')
+                if verbose:
+                    print('No eventids given to getSingleParamPlotBins, using all eventids corresponding to selected trigger types.')
                 eventids = self.getEventidsFromTriggerType()
 
             if len(numpy.where([kw in param_key for kw in self.math_keywords])[0]) == 1:
@@ -1534,16 +1535,22 @@ class dataSlicerSingleRun():
                         vals_of_interest = [min(current_bin_edges_a) / min(current_bin_edges_b) , min(current_bin_edges_a) / max(current_bin_edges_b), max(current_bin_edges_a) / min(current_bin_edges_b), max(current_bin_edges_a) / max(current_bin_edges_b)]
                         x_min_val = min(vals_of_interest)
                         x_max_val = max(vals_of_interest)
+                        #import pdb; pdb.set_trace()
                     else:
                         param = self.getModifiedDataFromParam(eventids, param_key, verbose=False)
                         x_n_bins = max((len(current_bin_edges_a) , len(current_bin_edges_b)))
                         x_min_val = min(param)
-                        x_min_val = max(param)
+                        x_max_val = max(param)
                 except Exception as e:
                     param = self.getModifiedDataFromParam(eventids, param_key, verbose=False)
                     x_n_bins = max((len(current_bin_edges_a) , len(current_bin_edges_b)))
                     x_min_val = min(param)
-                    x_min_val = max(param)
+                    x_max_val = max(param)
+                if numpy.any((numpy.isinf(x_min_val), numpy.isinf(x_max_val),numpy.isnan(x_min_val), numpy.isnan(x_max_val))):
+                    param = self.getModifiedDataFromParam(eventids, param_key, verbose=False)
+                    x_n_bins = max((len(current_bin_edges_a) , len(current_bin_edges_b)))
+                    x_min_val = min(param)
+                    x_max_val = max(param)
 
             else:
 
@@ -1910,11 +1917,13 @@ class dataSlicerSingleRun():
                         x_n_bins = self.max_possible_map_value_n_bins_v
 
                 elif 'max_map_value' in param_key:
+                    pol = 'HPol '*('hpol' in param_key) + 'VPol '*('vpol' in param_key)
+                    scope = 'Above Horizon '*('abovehorizon' in param_key) + 'Below Horizon '*('belowhorizon' in param_key) + 'All Sky '*('allsky' in param_key) 
                     if 'hilbert_' in param_key:
-                        label = 'Maximum Map Value Per Event (Hilbert Envelope Applied)'
+                        label = pol + scope + 'Maximum Map Value Per Event (Hilbert Envelope Applied)'
                         x_max_val = 10.0 #Set high because I don't know if hilbert will max out differently
                     else:
-                        label = 'Maximum Map Value Per Event'
+                        label = pol + scope + 'Maximum Map Value Per Event'
                         x_max_val = self.max_max_map_value_val
 
                     x_min_val = 0.0
@@ -3248,12 +3257,31 @@ class dataSlicer():
             ax.set_ylim(-20,50)
             ax.set_ylabel(apply_filter*'filtered ' + 'db ish')
 
+        #Populate Table
+        start_data = numpy.round(self.getSingleEventTableValues(self.table_params, run_index, eventid),decimals=3)
+        name_column = list(self.table_params.values())
+        table = self.inspector_mpl['fig1_table'].table(cellText=list(zip(name_column,start_data)), loc='center', in_layout=True)
+        table.auto_set_font_size(False)
+        table.set_fontsize(12)
+        table.scale(1,4)
+        self.inspector_mpl['fig1_table'].axis('tight')
+        self.inspector_mpl['fig1_table'].axis('off')
 
         self.inspector_mpl['fig1'].canvas.draw()
         # self.inspector_mpl['fig1'].canvas.flush_events()
         # plt.show()
         # plt.pause(0.05)
         return
+
+    def getSingleEventTableValues(self, table_dict, run_index, eventid):
+        '''
+        Given a run and eventid this will pull the values for the param keys listed in the table dict.
+        '''
+        out_array = numpy.zeros(len(list(table_dict.keys())))
+        for param_index, param_key in enumerate(list(table_dict.keys())):
+            out_array[param_index] = self.data_slicers[run_index].getDataFromParam([eventid], param_key)
+        return out_array
+
 
     def eventInspector(self, eventids_dict, mollweide=False):
         '''
@@ -3270,7 +3298,7 @@ class dataSlicer():
             ds.prepareCorrelator()
         
         fig1 = plt.figure(constrained_layout=True)
-        gs = fig1.add_gridspec(4,4)
+        gs = fig1.add_gridspec(4,5, width_ratios=[1,1,1,1,0.75])
 
         fig1_wf_0 = fig1.add_subplot(gs[0,0])
         fig1_wf_0.set_ylabel('0H')
@@ -3336,15 +3364,29 @@ class dataSlicer():
             fig1_map_h = fig1.add_subplot(gs[2:,0])
             fig1_map_v = fig1.add_subplot(gs[2:,1], sharex=fig1_map_h, sharey=fig1_map_h)
 
-        fig1_spec_raw = fig1.add_subplot(gs[2,2:])
+        fig1_spec_raw = fig1.add_subplot(gs[2,2:4])
         fig1_spec_raw.minorticks_on()
         fig1_spec_raw.grid(b=True, which='major', color='k', linestyle='-')
         fig1_spec_raw.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-        fig1_spec_filt = fig1.add_subplot(gs[3,2:])
+        fig1_spec_filt = fig1.add_subplot(gs[3,2:4])
         fig1_spec_filt.minorticks_on()
         fig1_spec_filt.grid(b=True, which='major', color='k', linestyle='-')
         fig1_spec_filt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+        fig1_table = fig1.add_subplot(gs[:,4])
+        
+        #[['phi_best_h','elevation_best_h'],['hpol_max_map_value_abovehorizon','vpol_max_map_value_abovehorizon'], ['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'], ['hpol_max_map_value','vpol_max_map_value'], ['hpol_peak_to_sidelobe_abovehorizon', 'vpol_peak_to_sidelobe_abovehorizon'],['hpol_peak_to_sidelobe_belowhorizon','hpol_peak_to_sidelobe_abovehorizon'], ['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'], ['hpol_max_possible_map_value','vpol_max_possible_map_value']]
+        self.table_params = {}
+        #Format is param_key : 'Name In Table'
+        self.table_params['phi_best_h'] = 'Az'
+        self.table_params['elevation_best_h'] = 'El'
+        self.table_params['hpol_max_map_value_abovehorizon'] = 'Map Max H'
+        self.table_params['vpol_max_map_value_abovehorizon'] = 'Map Max V'
+        self.table_params['impulsivity_h'] = 'Imp H'
+        self.table_params['impulsivity_v'] = 'Imp V'
+        self.table_params['cr_template_search_h'] = 'CR XC H'
+        self.table_params['cr_template_search_v'] = 'CR XC V'
 
 
         #Sample eventid, would normally be selected from and changeable
@@ -3368,6 +3410,7 @@ class dataSlicer():
         self.inspector_mpl['fig1_map_v'] = fig1_map_v
         self.inspector_mpl['fig1_spec_raw'] = fig1_spec_raw
         self.inspector_mpl['fig1_spec_filt'] = fig1_spec_filt
+        self.inspector_mpl['fig1_table'] = fig1_table
         
         
         self.updateEventInspect(run_index, eventid, mollweide=mollweide)
