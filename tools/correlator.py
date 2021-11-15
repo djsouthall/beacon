@@ -2404,7 +2404,7 @@ class Correlator:
                                 additional_circles.append(_circ)
 
                 if add_airplanes:
-                    map_ax, airplane_direction_dict = self.addAirplanesToMap([eventid], pol, map_ax, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=False, color='r', min_approach_cut_km=200,plot_distance_cut_limit=200)
+                    map_ax, airplane_direction_dict = self.addAirplanesToMap([eventid], pol, map_ax, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=False, color='r', min_approach_cut_km=500,plot_distance_cut_limit=500)
                     if verbose:
                         print('airplane_direction_dict:')
                         print(airplane_direction_dict)
@@ -3887,7 +3887,7 @@ class Correlator:
         '''
         return pt.getENUTrackDict(*args, **kwargs)
 
-    def addAirplanesToMap(self, eventids, pol, ax, azimuth_offset_deg=0, mollweide=False, radius = 1.0, crosshair=False, color='k', min_approach_cut_km=100,plot_distance_cut_limit=100):
+    def addAirplanesToMap(self, eventids, pol, ax, azimuth_offset_deg=0, mollweide=False, radius = 1.0, crosshair=False, color='k', min_approach_cut_km=100,plot_distance_cut_limit=100, time_window_s = 60.0):
         '''
         This will add circles to a map for every airplane that is expected to be present in the sky at the time of the
         event.  If a range of events are given then this will plot trajectories of planes ovr the map.
@@ -3899,6 +3899,10 @@ class Correlator:
     
         Parameters
         ----------
+        time_window_s : float
+            Half of this is added to both the start and stop time (such that the full search window is expanded by the
+            full value).  This means that if a single event is given, the window search will be this span, centered
+            at the events trigger time.
         eventids : numpy.array of ints
             The entries to be used for determining the time window appropriate to see if airplanes are visible.
         pol : str
@@ -3929,8 +3933,8 @@ class Correlator:
             cmap = matplotlib.cm.jet
             # Determine if planes are in the sky in the time window of the event.
             event_times = self.getEventTimes()[eventids]
-            start = min(event_times)
-            stop = max(event_times)
+            start = min(event_times) - time_window_s/2
+            stop = max(event_times) +  time_window_s/2
             if pol == 'hpol':
                 origin = self.A0_latlonel_hpol
             elif pol == 'vpol':
@@ -3943,11 +3947,15 @@ class Correlator:
             # Get interpolated airplane trajectories. 
             airplane_direction_dict = {}
 
+            #TODO: Refresh yourself on what is happening here in the airplane plotting
+
             for plane_index, key in enumerate(list(flight_tracks_ENU.keys())):
                 airplane_direction_dict[key] = {}
 
                 original_norms = numpy.sqrt(flight_tracks_ENU[key][:,0]**2 + flight_tracks_ENU[key][:,1]**2 + flight_tracks_ENU[key][:,2]**2 )
-                cut = numpy.logical_and(original_norms/1000.0 < plot_distance_cut_limit,numpy.logical_and(min(flight_tracks_ENU[key][:,3]) <= start ,max(flight_tracks_ENU[key][:,3]) >= stop))
+                # import pdb; pdb.set_trace()
+                #cut = numpy.logical_and(original_norms/1000.0 < plot_distance_cut_limit,numpy.logical_and(min(flight_tracks_ENU[key][:,3]) <= start ,max(flight_tracks_ENU[key][:,3]) >= stop))
+                cut = numpy.logical_and(original_norms/1000.0 < plot_distance_cut_limit,numpy.logical_and(flight_tracks_ENU[key][:,3] >= start ,flight_tracks_ENU[key][:,3]) <= stop)
                 if numpy.sum(cut) == 0:
                     continue
                 poly = pt.PlanePoly(flight_tracks_ENU[key][cut,3],(flight_tracks_ENU[key][cut,0],flight_tracks_ENU[key][cut,1],flight_tracks_ENU[key][cut,2]),order=5,plot=False)
@@ -4193,7 +4201,7 @@ if __name__=="__main__":
             cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
         for mode in ['hpol','vpol']:
-            mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,90.0], center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=False)
+            mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,90.0], center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
             fig.set_size_inches(16, 9)
             plt.sca(ax)
             plt.tight_layout()

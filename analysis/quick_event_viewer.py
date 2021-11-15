@@ -34,7 +34,7 @@ if __name__ == '__main__':
     #plt.close('all')
     # If your data is elsewhere, pass it as an argument
     datapath = os.environ['BEACON_DATA']
-    run = 1509
+    run = 5911
     if run == 1507:
         waveform_index_range = (1500,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
     elif run == 1509:

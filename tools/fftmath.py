@@ -918,6 +918,104 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def smoothArray(self, values, index_window_width = 20):
+        '''
+        This will take the input array and smooth it using a hamming window of the specified width.
+        '''
+        #Smoothing out rate
+        hamming_filter = scipy.signal.hamming(index_window_width)
+        hamming_filter = hamming_filter/sum(hamming_filter)
+        if index_window_width%2 == 0:
+            padded = numpy.append(numpy.append(numpy.ones(index_window_width//2)*values[0],values),numpy.ones(index_window_width//2 - 1)*values[-1])
+        else:
+            padded = numpy.append(numpy.append(numpy.ones(index_window_width//2)*values[0],values),numpy.ones(index_window_width//2)*values[-1])
+        #import pdb; pdb.set_trace()
+        smoothed = numpy.convolve(padded,hamming_filter, mode='valid')
+        return smoothed
+
+    def calculateBandwidth(self, eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, sine_subtract=False, apply_tukey=None, additional_title_text=None, time_delays=None, verbose=False, plot=False, min_freq_MHz=20, max_freq_MHz=90, step_freq_MHz=10):
+        '''
+        For each event this attempts to determine the bandwidth.
+        '''
+        try:
+            bin_edges = numpy.arange(min_freq_MHz, max_freq_MHz+step_freq_MHz, step_freq_MHz)
+
+            self.setEntry(eventid)
+            t_ns = self.t()
+            if verbose:
+                print(eventid)
+            if apply_tukey is None:
+                apply_tukey = self.tukey_default
+            
+            if plot:
+                plt.figure()
+            
+            processed_specs = numpy.zeros((len(channels),len(self.t())//2 + 1))                
+
+            for channel_index, channel in enumerate(channels):
+                channel=int(channel)
+                if sine_subtract == True:
+                    wf, ss_freqs, n_fits = self.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_tukey,sine_subtract=sine_subtract, return_sine_subtract_info=sine_subtract)
+                    if verbose:
+                        print(list(zip(n_fits, ss_freqs)))
+                else:
+                    wf = self.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_tukey,sine_subtract=sine_subtract, return_sine_subtract_info=sine_subtract)
+
+                freqs, spec_dbish, spec = self.rfftWrapper(t_ns, wf)
+                spec2 = spec * numpy.conj(spec)
+
+                values = spec2#spec_dbish
+                smoothed_values = self.smoothArray(values, index_window_width = int(step_freq_MHz*1e6 / freqs[1]))#self.smoothArray(spec_dbish, index_window_width = int(step_freq_MHz*1e6 / freqs[1]))
+                processed_specs[channel_index] = smoothed_values
+                # plt.figure()
+                # plt.plot(spec_dbish)
+                # plt.plot(smoothed_values)
+                #import pdb; pdb.set_trace()
+
+
+                if plot:
+                    plt.subplot(5,1,1)
+                    plt.plot(freqs/1e6, values)
+
+                    plt.subplot(5,1,2)
+                    plt.plot(freqs/1e6, smoothed_values)
+                    #plt.plot()
+
+            hpol = numpy.mean(processed_specs[numpy.array(channels)%2 == 0],axis=0)
+            vpol = numpy.mean(processed_specs[numpy.array(channels)%2 == 1],axis=0)
+
+            mean_out_of_band = numpy.min((numpy.mean(hpol[freqs > 100e6]), numpy.mean(vpol[freqs > 100e6])))
+
+            hpol = hpol - mean_out_of_band
+            vpol = vpol - mean_out_of_band
+
+            plt.subplot(5,1,3)
+            plt.plot(freqs/1e6, hpol)
+            plt.plot(freqs/1e6, vpol)
+
+            plt.subplot(5,1,4)
+            plt.plot(numpy.diff(hpol, n=1))
+            plt.plot(numpy.diff(vpol, n=1))
+
+            plt.subplot(5,1,5)
+            plt.plot(numpy.abs(numpy.diff(hpol, n=2)))
+            plt.plot(numpy.abs(numpy.diff(vpol, n=2)))
+
+
+
+
+
+
+
+
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
     def plotEvent(self, eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, hilbert=False, sine_subtract=False, apply_tukey=None, additional_title_text=None, time_delays=None, verbose=False):
         '''
         This will plot all given channels in both time domain and frequency domain.

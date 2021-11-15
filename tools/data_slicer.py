@@ -24,18 +24,19 @@ from beacon.tools.fftmath import TemplateCompareTool
 from beacon.tools.fftmath import FFTPrepper
 from beacon.tools.correlator import Correlator
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.filterwarnings("ignore")
 import matplotlib
-matplotlib.rcParams["toolbar"] = "toolmanager" #Necessary to add toolbar buttons
 import matplotlib.pyplot as plt
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    plt.rcParams['toolbar'] = 'toolmanager'
 import matplotlib.colors as colors
 from matplotlib import cm, ticker
 from matplotlib.patches import Rectangle
 from matplotlib.backend_tools import ToolBase, ToolToggleBase, ToolQuit
 plt.ion()
-
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-warnings.filterwarnings("ignore")
 
 raw_datapath = os.environ['BEACON_DATA']
 processed_datapath = os.environ['BEACON_PROCESSED_DATA']
@@ -3263,7 +3264,7 @@ class dataSlicer():
         table = self.inspector_mpl['fig1_table'].table(cellText=list(zip(name_column,start_data)), loc='center', in_layout=True)
         table.auto_set_font_size(False)
         table.set_fontsize(12)
-        table.scale(1,4)
+        #table.scale(1,4)
         self.inspector_mpl['fig1_table'].axis('tight')
         self.inspector_mpl['fig1_table'].axis('off')
 
@@ -3279,7 +3280,12 @@ class dataSlicer():
         '''
         out_array = numpy.zeros(len(list(table_dict.keys())))
         for param_index, param_key in enumerate(list(table_dict.keys())):
-            out_array[param_index] = self.data_slicers[run_index].getDataFromParam([eventid], param_key)
+            if param_key == 'eventid':
+                out_array[param_index] = eventid
+            elif param_key == 'run':
+                out_array[param_index] = self.runs[run_index]
+            else:
+                out_array[param_index] = self.data_slicers[run_index].getDataFromParam([eventid], param_key)
         return out_array
 
 
@@ -3379,6 +3385,8 @@ class dataSlicer():
         #[['phi_best_h','elevation_best_h'],['hpol_max_map_value_abovehorizon','vpol_max_map_value_abovehorizon'], ['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'], ['hpol_max_map_value','vpol_max_map_value'], ['hpol_peak_to_sidelobe_abovehorizon', 'vpol_peak_to_sidelobe_abovehorizon'],['hpol_peak_to_sidelobe_belowhorizon','hpol_peak_to_sidelobe_abovehorizon'], ['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'], ['hpol_max_possible_map_value','vpol_max_possible_map_value']]
         self.table_params = {}
         #Format is param_key : 'Name In Table'
+        self.table_params['run'] = 'Run'
+        self.table_params['eventid'] = 'Event id'
         self.table_params['phi_best_h'] = 'Az'
         self.table_params['elevation_best_h'] = 'El'
         self.table_params['hpol_max_map_value_abovehorizon'] = 'Map Max H'
@@ -3387,6 +3395,12 @@ class dataSlicer():
         self.table_params['impulsivity_v'] = 'Imp V'
         self.table_params['cr_template_search_h'] = 'CR XC H'
         self.table_params['cr_template_search_v'] = 'CR XC V'
+        self.table_params['std_h'] = 'SDev H'
+        self.table_params['std_v'] = 'SDev V'
+        self.table_params['p2p_h'] = 'P2P H'
+        self.table_params['p2p_v'] = 'P2P V'
+        self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
+        self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
 
 
         #Sample eventid, would normally be selected from and changeable
