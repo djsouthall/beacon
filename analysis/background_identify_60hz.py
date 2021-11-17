@@ -41,6 +41,9 @@ import inspect
 warnings.simplefilter(action='ignore', category=FutureWarning)
 plt.ion()
 
+def gaus(x,a,x0,sigma):
+    return a*numpy.exp(-(x-x0)**2.0/(2.0*sigma**2.0))
+
 
 def plotSubVSec(_calibrated_trig_time, *args, **kwargs):
     '''
@@ -422,13 +425,34 @@ if __name__ == '__main__':
 
                     if True:
                         #for window_s in [1,5,10,20,60,120,360]:
-                        for window_s in [1]:
+                        for window_s in [20]:
                             metric_true = diffFromPeriodic(calibrated_trig_time,window_s=window_s, atol=0.001, normalize_by_window_index=normalize_by_window_index, plot_sample_hist=True, plot_test_plot_A=True)
                             metric_rand = diffFromPeriodic(randomized_times,window_s=window_s, atol=0.001, normalize_by_window_index=normalize_by_window_index)
                             bins = numpy.linspace(min(min(metric_true),min(metric_rand)),max(max(metric_true),max(metric_rand)),100)
                             plt.figure()
-                            plt.hist(metric_true,alpha=0.8,label='True',bins=bins)
-                            plt.hist(metric_rand,alpha=0.8,label='Rand',bins=bins)
+                            counts_true, bins_true, patches_true = plt.hist(metric_true,alpha=0.8,label='True',bins=bins)
+                            counts_rand, bins_rand, patches_rand = plt.hist(metric_rand,alpha=0.8,label='Rand',bins=bins)
+
+                            #Fit Gaussian
+                            x = (bins_rand[1:len(bins_rand)] + bins_rand[0:len(bins_rand)-1] )/2.0
+                            plot_x = numpy.linspace(min(x),max(x),1000)
+
+                            try:
+                                popt, pcov = curve_fit(gaus,x,counts_rand,p0=[numpy.max(counts_rand),0.0,0.5*numpy.mean(metric_rand[metric_rand > 0])])
+                                popt[2] = abs(popt[2]) #I want positive sigma.
+
+                            except Exception as e:
+                                try:
+                                    popt, pcov = curve_fit(gaus,x,counts_rand,p0=[numpy.max(counts_rand),0.0,0.025])
+                                    popt[2] = abs(popt[2]) #I want positive sigma.
+                                except Exception as e:
+                                    popt = (numpy.max(counts_rand),0.0,0.025)
+                                    print('Failed at deepest level, using dummy gaus vallues too.')
+                                    print(e)        
+
+                            plt.plot(plot_x,gaus(plot_x,*popt),'-',c='k',label='Fit Sigma = %f ns'%popt[2])
+                            plt.axvline(popt[1],linestyle='-',c='k',label='Fit Center = %f'%(popt[1]))
+                            
                             plt.legend()
                             plt.title('Window_s = %f'%window_s)
                             plt.ylabel('Counts')
@@ -447,7 +471,7 @@ if __name__ == '__main__':
                         metric_rand = diffFromPeriodic(randomized_times,window_s=window_s, atol=0.001, normalize_by_window_index=normalize_by_window_index, plot_sample_hist=True)
                         bins = numpy.linspace(min(min(metric),min(metric_rand)),max(max(metric),max(metric_rand)),100)
                         bin_centers = (bins[:-1] + bins[1:]) / 2.0
-                        TS_cut_level = 0.1
+                        TS_cut_level = 0.075
 
                         plt.figure()
                         plt.hist(metric,alpha=0.8,label='Real Data',bins=bins)

@@ -39,7 +39,7 @@ if __name__=="__main__":
     else:
         print('No run number given, returning without calculations.')
 
-    print('Running analyze_event_rate_frequency.py')
+    print('Running analyze_event_rate_frequency.py for run %i'%run)
 
     expected_rates_hz = [60.0] #The plotter will perform calculations assuming a frequency of 1/thing numbers.  Currently the output dataset is named using these values to 3 decimal places, so be weary of overlapping rates that are extremely precise.
     time_windows = [5,10,20] #The test statistic will be calculated for each event window given here.  Select integers.
@@ -92,12 +92,12 @@ if __name__=="__main__":
                         event_rate_testing_subsets = list(file['event_rate_testing'][rate_string].keys())
                         
                         for time_window in time_windows:
-                            time_window_str = '%is'%time_window
+                            time_window_string = '%is'%time_window
 
-                            if not numpy.isin(time_window_str,event_rate_testing_subsets):
-                                file['event_rate_testing'][rate_string].create_dataset(time_window_str, (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
+                            if not numpy.isin(time_window_string,event_rate_testing_subsets):
+                                file['event_rate_testing'][rate_string].create_dataset(time_window_string, (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in %s of %s will be overwritten by this analysis script.'%(time_window_str, filename))
+                                print('Values in %s of %s will be overwritten by this analysis script.'%(time_window_string, filename))
 
 
                     #Loop back through settings for actual calculations
@@ -109,8 +109,11 @@ if __name__=="__main__":
                     for rate_hz in expected_rates_hz:
                         rate_string = '%0.3fHz'%rate_hz
                         for time_window in time_windows:
-                            time_window_str = '%is'%time_window
-                            #file['event_rate_testing'][rate_string][time_window_str][eventid] = 0.0
+                            time_window_string = '%is'%time_window
+
+                            sys.stdout.write('Running for rate %s and window %s\n'%(rate_string,time_window_string))
+                            sys.stdout.flush()
+                            #file['event_rate_testing'][rate_string][time_window_string][eventid] = 0.0
                             metric_true = diffFromPeriodic(calibrated_trig_time,window_s=time_window, atol=0.001, normalize_by_window_index=normalize_by_window_index, plot_sample_hist=False, plot_test_plot_A=False)
                             metric_rand = diffFromPeriodic(randomized_times,window_s=time_window, atol=0.001, normalize_by_window_index=normalize_by_window_index) 
 
@@ -136,14 +139,14 @@ if __name__=="__main__":
                                     print(e)
 
                             #Store fit of randomized values for this run to use for reference in further cutting or calculations.
-                            file['event_rate_testing'][rate_string][time_window_str].attrs['random_fit_scale'] = popt[0]
-                            file['event_rate_testing'][rate_string][time_window_str].attrs['random_fit_mean'] = popt[1]
-                            file['event_rate_testing'][rate_string][time_window_str].attrs['random_fit_sigma'] = popt[2]
-                            file['event_rate_testing'][rate_string][time_window_str].attrs['window_s'] = time_window
-                            file['event_rate_testing'][rate_string][time_window_str].attrs['rate_hz'] = rate_hz
-                            file['event_rate_testing'][rate_string][time_window_str].attrs['normalize_by_window_index'] = normalize_by_window_index
+                            file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_scale'] = popt[0]
+                            file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_mean'] = popt[1]
+                            file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_sigma'] = popt[2]
+                            file['event_rate_testing'][rate_string][time_window_string].attrs['window_s'] = time_window
+                            file['event_rate_testing'][rate_string][time_window_string].attrs['rate_hz'] = rate_hz
+                            file['event_rate_testing'][rate_string][time_window_string].attrs['normalize_by_window_index'] = normalize_by_window_index
 
-                            file['event_rate_testing'][rate_string][time_window_str][loaded_eventids] = metric_true
+                            file['event_rate_testing'][rate_string][time_window_string][loaded_eventids] = metric_true
 
 
                 except Exception as e:

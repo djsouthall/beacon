@@ -174,11 +174,13 @@ class dataSlicerSingleRun():
 
                 #I want to work on adding: 'std', 'p2p', and 'snr', where snr is p2p/std.  I think these could be interesting, and are already available by default per signal. 
                 #self.known_param_keys = ['impulsivity_hv', 'cr_template_search', 'std', 'p2p', 'snr'] #If it is not listed in here then it cannot be used.
-                #Should add triggered beam to this list of params. 
+                #Should add triggered beam to this list of params.
+                #Note that you should also check the datasets handled by checkForComplementaryBothMapDatasets and checkForRateDatasets, which adds custom parameters that can be
+                #cut on that are somewhat dynamic in their definitions.  
                 self.known_param_keys = [   'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
                                             'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
                                             'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',\
-                                            'mean_max_corr_h', 'max_max_corr_h','mean_max_corr_v', 'max_max_corr_v',\
+                                            'mean_max_corr_h', 'max_max_corr_h','mean_max_corr_v', 'max_max_corr_v','similarity_count_h','similarity_count_v','similarity_fraction_h','similarity_fraction_v',\
                                             'max_corr_0subtract1_h','max_corr_0subtract2_h','max_corr_0subtract3_h','max_corr_1subtract2_h','max_corr_1subtract3_h','max_corr_2subtract3_h',\
                                             'max_corr_0subtract1_v','max_corr_0subtract2_v','max_corr_0subtract3_v','max_corr_1subtract2_v','max_corr_1subtract3_v','max_corr_2subtract3_v',\
                                             'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','phi_best_h','phi_best_v',\
@@ -269,8 +271,8 @@ class dataSlicerSingleRun():
                 else:
                     self.map_deploy_index = None #Will use default
 
-
-                self.checkForComplementaryBothMapDatasets() #Will append to known param key and prepare for if hilber used or not.
+                self.checkForRateDatasets() #Will append to known param key based on which repeated rate signal datasets are available
+                self.checkForComplementaryBothMapDatasets() #Will append to known param key and prepare for if hilbert used or not.
                 
                 self.n_phi = n_phi
                 self.range_phi_deg = numpy.asarray(range_phi_deg)
@@ -414,6 +416,70 @@ class dataSlicerSingleRun():
         This will return a list of the currently supported parameter keys for making 2d histogram plots.
         '''
         return print(self.known_param_keys)
+
+    def checkForRateDatasets(self, verbose=True):
+        '''
+        This will look for the datasets corresponding to analyze_event_rate_frequency.py and add them to known_param_keys.
+
+        If the gaussian fit of the randomized data (as generated in analyze_event_rate_frequency.py) is available then
+        an additional dataset option will be made available for which the TS of each data will instead be presented
+        as a number of standard deviations it is from the equivalent random dataset.  High values of this are highly
+        likely to be associated with events of repeating sources like 60 Hz events.  Similar to the calculation below: 
+        
+        # gaus_fit_popt = [0,0,0]
+        # popt[0] = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_scale']
+        # popt[1] = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_mean']
+        # popt[2] = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_sigma']
+        # normalize_by_window_index = file['event_rate_testing'][rate_string][time_window_string].attrs['normalize_by_window_index']
+
+        # metric_true = file['event_rate_testing'][rate_string][time_window_string][...][loaded_eventids]
+
+        # sigma = (metric_true - popt[1])/popt[2]
+        '''
+        try:
+            added_param_keys = []
+            self.event_rate_gaus_param = {}
+            with h5py.File(self.analysis_filename, 'r') as file:
+                try:
+                    event_rate_testing_dsets = list(file['event_rate_testing'].keys())
+                    for rate_string in event_rate_testing_dsets:
+                        self.event_rate_gaus_param[rate_string] = {}
+                        event_rate_testing_subsets = list(file['event_rate_testing'][rate_string].keys())
+                        for time_window_string in event_rate_testing_subsets:
+                            param_key = 'event_rate_ts_%s_%s'%(rate_string,time_window_string)
+                            self.known_param_keys.append(param_key)
+                            added_param_keys.append(param_key)
+                            if numpy.all(numpy.isin(numpy.array(['random_fit_scale','random_fit_mean','random_fit_sigma']) , file['event_rate_testing'][rate_string][time_window_string].attrs)):
+                                self.event_rate_gaus_param[rate_string][time_window_string] = {}
+                                self.event_rate_gaus_param[rate_string][time_window_string]['scale'] = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_scale']
+                                self.event_rate_gaus_param[rate_string][time_window_string]['mean'] = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_mean']
+                                self.event_rate_gaus_param[rate_string][time_window_string]['sigma'] = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_sigma']
+                                param_key2 = 'event_rate_sigma_%s_%s'%(rate_string,time_window_string)
+                                self.known_param_keys.append(param_key2)
+                                added_param_keys.append(param_key2)
+                    file.close()
+                except Exception as e:
+                    file.close()
+                    print('\nError in %s'%inspect.stack()[0][3])
+                    print('Run: ',self.reader.run)
+                    print(e)
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    print(exc_type, fname, exc_tb.tb_lineno)
+
+            if verbose:
+                print('Event rate datasets in file and available for slicing:')
+                for param_key in added_param_keys: 
+                    print('\t' + param_key)
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
 
     def checkForComplementaryBothMapDatasets(self, verbose=True):
         '''
@@ -1275,6 +1341,21 @@ class dataSlicerSingleRun():
                         elif 'hilbert' in param_key and 'map_max_time_delay_2subtract3_v_belowhorizon' in param_key:
                             param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_2subtract3'][...][eventids]
 
+                        elif 'event_rate_ts_' in param_key:
+                            rate_string, time_window_string = param_key.replace('event_rate_ts_','').split('_')
+                            param = file['event_rate_testing'][rate_string][time_window_string][...][eventids]
+                        elif 'event_rate_sigma_' in param_key:
+                            rate_string, time_window_string = param_key.replace('event_rate_sigma_','').split('_')
+                            mean = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_mean']
+                            sigma = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_sigma']
+                            
+                            param = (file['event_rate_testing'][rate_string][time_window_string][...][eventids] - mean)/sigma
+                        elif 'similarity_count_' in param_key:
+                            param = file['similarity_count'][self.time_delays_dset_key]['%spol_count'%(param_key.split('_')[-1])][...][eventids]
+                        elif 'similarity_fraction_' in param_key:
+                            param = file['similarity_count'][self.time_delays_dset_key]['%spol_fraction'%(param_key.split('_')[-1])][...][eventids]
+                            
+
                         file.close()
                 else:
                     print('\nWARNING!!!\nOther parameters have not been accounted for yet.\n%s'%(param_key))
@@ -1932,6 +2013,24 @@ class dataSlicerSingleRun():
                         x_n_bins = self.max_map_value_n_bins_h
                     else:
                         x_n_bins = self.max_map_value_n_bins_v
+                elif 'similarity_' in param_key:
+                    param = self.getDataFromParam(eventids, param_key)
+                    label = '%spol Time Delay Similarity %s'%(param_key.split('_')[-1].title(), param_key.split('_')[1].title())
+                    x_n_bins = 1000
+                    x_max_val = max(param)
+                    x_min_val = min(param)
+                elif 'event_rate_ts_' in param_key:
+                    rate_string, time_window_string = param_key.replace('event_rate_ts_','').split('_')
+                    label = 'Test Statistic for Expected Event Rate\nof%s Using %s Window'%(rate_string, time_window_string)
+                    x_n_bins = 100
+                    x_max_val = self.event_rate_gaus_param[rate_string][time_window_string]['mean'] + 20*self.event_rate_gaus_param[rate_string][time_window_string]['sigma']
+                    x_min_val = self.event_rate_gaus_param[rate_string][time_window_string]['mean'] - 10*self.event_rate_gaus_param[rate_string][time_window_string]['sigma']
+                elif 'event_rate_sigma_' in param_key:
+                    rate_string, time_window_string = param_key.replace('event_rate_sigma_','').split('_')
+                    label = 'Test Statistic for Expected Event Rate\nof%s Using %s Window'%(rate_string, time_window_string)
+                    x_n_bins = 100
+                    x_max_val = 20
+                    x_min_val = -10
 
             if calculate_bins_from_min_max:
                 current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges

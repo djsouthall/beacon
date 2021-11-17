@@ -77,15 +77,15 @@ if __name__=="__main__":
                     for rate_hz in expected_rates_hz:
                         rate_string = '%0.3fHz'%rate_hz
                         for time_window in time_windows:
-                            time_window_str = '%is'%time_window
+                            time_window_string = '%is'%time_window
                             #Store fit of randomized values for this run to use for reference in further cutting or calculations.
                             popt = [0,0,0]
-                            popt[0] = file['event_rate_testing'][rate_string][time_window_str].attrs['random_fit_scale']
-                            popt[1] = file['event_rate_testing'][rate_string][time_window_str].attrs['random_fit_mean']
-                            popt[2] = file['event_rate_testing'][rate_string][time_window_str].attrs['random_fit_sigma']
-                            normalize_by_window_index = file['event_rate_testing'][rate_string][time_window_str].attrs['normalize_by_window_index']
+                            popt[0] = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_scale']
+                            popt[1] = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_mean']
+                            popt[2] = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_sigma']
+                            normalize_by_window_index = file['event_rate_testing'][rate_string][time_window_string].attrs['normalize_by_window_index']
 
-                            metric_true = file['event_rate_testing'][rate_string][time_window_str][...][loaded_eventids]
+                            metric_true = file['event_rate_testing'][rate_string][time_window_string][...][loaded_eventids]
 
                             sigma = (metric_true - popt[1])/popt[2]
 
