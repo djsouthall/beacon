@@ -49,8 +49,8 @@ if __name__=="__main__":
     high_pass_filter_order = None#8
 
     sine_subtract = True
-    sine_subtract_min_freq_GHz = 0.02
-    sine_subtract_max_freq_GHz = 0.20
+    sine_subtract_min_freq_GHz = 0.00
+    sine_subtract_max_freq_GHz = 0.25
     sine_subtract_percent = 0.03
 
     hilbert=False

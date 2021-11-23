@@ -244,8 +244,8 @@ if __name__=="__main__":
     high_pass_filter_order = 8
 
     sine_subtract = True
-    sine_subtract_min_freq_GHz = 0.03
-    sine_subtract_max_freq_GHz = 0.13
+    sine_subtract_min_freq_GHz = 0.00
+    sine_subtract_max_freq_GHz = 0.25
     sine_subtract_percent = 0.03
 
     apply_phase_response = True
@@ -403,9 +403,17 @@ if __name__=="__main__":
                         file['map_direction'].attrs['sine_subtract_min_freq_GHz']   = sine_subtract_min_freq_GHz 
                         file['map_direction'].attrs['sine_subtract_max_freq_GHz']   = sine_subtract_max_freq_GHz 
                         file['map_direction'].attrs['sine_subtract_percent']        = sine_subtract_percent
+                        file['map_direction'].attrs['sine_subtract']                = sine_subtract
+
+                        file['map_times'].attrs['sine_subtract_percent']            = sine_subtract_percent
+
                         file['map_times'].attrs['sine_subtract_min_freq_GHz']       = sine_subtract_min_freq_GHz 
                         file['map_times'].attrs['sine_subtract_max_freq_GHz']       = sine_subtract_max_freq_GHz 
                         file['map_times'].attrs['sine_subtract_percent']            = sine_subtract_percent
+                        file['map_direction'].attrs['sine_subtract']                = sine_subtract
+
+                        file['map_times'].attrs['sine_subtract_percent']            = sine_subtract_percent
+
 
                         file['map_direction'].attrs['n_phi']        = n_phi
                         file['map_direction'].attrs['min_phi']      = min_phi

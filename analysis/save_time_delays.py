@@ -64,8 +64,8 @@ if __name__=="__main__":
     high_pass_filter_order = 4
 
     sine_subtract = True
-    sine_subtract_min_freq_GHz = 0.02
-    sine_subtract_max_freq_GHz = 0.20
+    sine_subtract_min_freq_GHz = 0.00
+    sine_subtract_max_freq_GHz = 0.25
     sine_subtract_percent = 0.03
 
     apply_phase_response = True
@@ -149,7 +149,10 @@ if __name__=="__main__":
     vpol_pairs  = numpy.array(list(itertools.combinations((1,3,5,7), 2)))
     pairs       = numpy.vstack((hpol_pairs,vpol_pairs)) 
 
-    known_pulsing_runs = numpy.array([5630, 5631, 5632, 5638, 5639, 5640, 5641, 5642, 5643, 5644, 5645, 5646, 5647, 5648, 5649, 5656, 5657, 5659, 5660], dtype=int)
+    #known_pulser_runs = numpy.array([5630, 5631, 5632, 5638, 5639, 5640, 5641, 5642, 5643, 5644, 5645, 5646, 5647, 5648, 5649, 5656, 5657, 5659, 5660], dtype=int)
+    known_pulser_ids = info.load2021PulserEventids()
+    known_pulser_runs = numpy.unique(numpy.concatenate([numpy.append(numpy.unique(known_pulser_ids[site]['hpol']['run']),numpy.unique(known_pulser_ids[site]['vpol']['run'])) for site in list(known_pulser_ids.keys())]))
+
 
     try:
         run = int(run)
@@ -161,11 +164,15 @@ if __name__=="__main__":
                 eventids = file['eventids'][...]
 
 
-                if numpy.isin(run, known_pulsing_runs):
+                if numpy.isin(run, known_pulser_runs):
                     print('Given run is known to be a pulsing run, including calculations for force triggers.')
                     rf_cut = numpy.ones_like(file['trigger_type'][...] == 2)
+                    waveform_index_range = (None, None)
                 else:
+                    waveform_index_range = (100, 611) #Windowing around typical triggered event time window for less contaminated time delays.
                     rf_cut = file['trigger_type'][...] == 2
+                print('USING WAVEFORM_INDEX_RANGE OF ', str(waveform_index_range))
+
 
 
                 # print('TEMPORARY HARDCODE') #debugging an error that occurred in run 1663 due to a zero valued waveform
@@ -216,8 +223,11 @@ if __name__=="__main__":
 
                 file['time_delays'][filter_string].attrs['sine_subtract_min_freq_GHz'] = sine_subtract_min_freq_GHz 
                 file['time_delays'][filter_string].attrs['sine_subtract_max_freq_GHz'] = sine_subtract_max_freq_GHz 
-                file['time_delays'][filter_string].attrs['sine_subtract_percent'] = sine_subtract_percent 
-
+                file['time_delays'][filter_string].attrs['sine_subtract_percent'] = sine_subtract_percent
+                file['time_delays'][filter_string].attrs['sine_subtract'] = sine_subtract
+                file['time_delays'][filter_string].attrs['waveform_index_range_min'] = min(waveform_index_range)
+                file['time_delays'][filter_string].attrs['waveform_index_range_max'] = max(waveform_index_range)
+                
                 #eventids with rf trigger
                 if numpy.size(eventids) != 0:
                     print('run = ',run)
@@ -387,7 +397,7 @@ if __name__=="__main__":
 
                 if sum(rf_cut) > 0:
                     #rf_cut = numpy.multiply(rf_cut ,numpy.cumsum(rf_cut) < 10) #limits it to the first 100 Trues for testing.
-                    tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response)
+                    tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filter,apply_phase_response=apply_phase_response)
                     if sine_subtract:
                         tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 

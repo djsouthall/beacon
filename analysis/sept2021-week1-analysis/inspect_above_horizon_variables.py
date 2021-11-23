@@ -167,7 +167,9 @@ if __name__ == '__main__':
                     ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', eventids_dict=above_horizon_eventids_dict, include_roi=True)
 
                 if len(above_horizon_eventids_array) < 100:
+                    print(above_horizon_eventids_array)
                     ds.eventInspector(above_horizon_eventids_dict)
 
+            # ds.eventInspector({5973:[27301]})
 
 

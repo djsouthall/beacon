@@ -22,6 +22,7 @@ sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
+from tools.data_handler import loadTriggerTypes
 import analysis.phase_response as pr
 import tools.interpret #Must be imported before matplotlib or else plots don't load.
 import tools.clock_correct as cc
@@ -157,6 +158,8 @@ class FFTPrepper:
 
             self.sine_subtracts = []
             self.plot_ss = []
+
+            self.averaged_bg_squared_spectrum = None #call calculateAverageNoiseSpectrum to populate this.
 
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -296,6 +299,11 @@ class FFTPrepper:
         in ns.
         '''
         try:
+            if 'return_dbish' in kwargs:
+                return_dbish = kwargs['return_dbish']
+                del kwargs['return_dbish']
+            else:
+                return_dbish =True
             numpy.seterr(divide = 'ignore') 
             spec = numpy.fft.rfft(*args, **kwargs)
             real_power_multiplier = 2.0*numpy.ones_like(spec) #The factor of 2 because rfft lost half of the power except for dc and Nyquist bins (handled below).
@@ -303,10 +311,15 @@ class FFTPrepper:
                 real_power_multiplier[:,[0,-1]] = 1.0
             else:
                 real_power_multiplier[[0,-1]] = 1.0
-            spec_dbish = 10.0*numpy.log10( real_power_multiplier*spec * numpy.conj(spec) / len(waveform_times)) #10 because doing power in log.  Dividing by N to match monutau. 
             freqs = numpy.fft.rfftfreq(len(waveform_times), d=(waveform_times[1] - waveform_times[0])/1.0e9)
-            numpy.seterr(divide = 'warn')
-            return freqs, spec_dbish, spec
+            if return_dbish == True:
+                #If either of the above failes then will return spec_dbish
+                spec_dbish = 10.0*numpy.log10( real_power_multiplier*spec * numpy.conj(spec) / len(waveform_times)) #10 because doing power in log.  Dividing by N to match monutau. 
+                numpy.seterr(divide = 'warn')
+                return freqs, spec_dbish, spec
+            else:
+                return freqs, spec
+
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -933,24 +946,94 @@ class FFTPrepper:
         smoothed = numpy.convolve(padded,hamming_filter, mode='valid')
         return smoothed
 
-    def calculateBandwidth(self, eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, sine_subtract=False, apply_tukey=None, additional_title_text=None, time_delays=None, verbose=False, plot=False, min_freq_MHz=20, max_freq_MHz=90, step_freq_MHz=10):
+    def spec2Todbish(self, spec2, len_t_ns):
+        real_power_multiplier = 2.0*numpy.ones_like(spec2) #The factor of 2 because rfft lost half of the power except for dc and Nyquist bins (handled below).
+        if len(numpy.shape(spec2)) != 1:
+            real_power_multiplier[:,[0,-1]] = 1.0
+        else:
+            real_power_multiplier[[0,-1]] = 1.0
+        spec_dbish = 10.0*numpy.log10( real_power_multiplier*spec2 / len_t_ns) #10 because doing power in log.  Dividing by N to match monutau. 
+        return spec_dbish
+
+    def calculateAverageNoiseSpectrum(self,trigger_type=[1,3],td_std_cut=20, apply_filter=False, sine_subtract=False, apply_tukey=None, verbose=False, plot=False, max_counts=1000):
+        '''
+        This will take the average of all events in the specific trigger type and store it to the class as self.averaged_bg_squared_spectrum. 
+        To avoid oddities with phases this squares signals before adding them.  It will stop averaging if max_counts is reached.  
+        '''
+        channels = numpy.arange(8)
+        trigger_types = loadTriggerTypes(self.reader)
+        cut_eventids = numpy.where(numpy.isin(trigger_types,trigger_type))[0]
+        t_ns = self.t()
+
+        added_counts = numpy.zeros(8)
+        averaged_bg_squared_spectrum = None
+        if plot == True:
+            stds = []
+
+        for event_index, eventid in enumerate(cut_eventids):
+            if verbose:
+                sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,min(max_counts,len(cut_eventids))))
+            self.setEntry(eventid)
+            if numpy.any(added_counts > max_counts):
+                break
+            for channel in channels:
+                channel=int(channel)
+                if sine_subtract == True:
+                    wf, ss_freqs, n_fits = self.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_tukey,sine_subtract=sine_subtract, return_sine_subtract_info=sine_subtract)
+                    if verbose:
+                        print(list(zip(n_fits, ss_freqs)))
+                else:
+                    wf = self.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_tukey,sine_subtract=sine_subtract, return_sine_subtract_info=sine_subtract)
+                std = numpy.std(wf)
+                if plot:
+                    stds.append(std)
+
+                if std < td_std_cut:
+                    #import pdb; pdb.set_trace()
+                    freqs, spec = self.rfftWrapper(t_ns, wf, return_dbish=False)
+                    spec2 = spec * numpy.conj(spec)
+    
+                    if averaged_bg_squared_spectrum is None:
+                        averaged_bg_squared_spectrum = numpy.zeros((len(channels),len(spec2)))
+
+                    added_counts[channel] += 1
+                    averaged_bg_squared_spectrum[channel] += spec2.astype(float)
+
+
+        self.averaged_bg_squared_spectrum = numpy.divide(averaged_bg_squared_spectrum.T, added_counts).T
+
+        if plot:
+            plt.figure()
+            plt.hist(stds,bins=100)
+
+        if verbose:
+            print('An average spectrum was generated for each channel for trigger types %s, excluding %0.2f percent of events in this category due to exceeding the time domain rms of %0.2f'%(str(trigger_type), 100.0*(1- numpy.mean(added_counts)/len(cut_eventids)), td_std_cut))
+
+
+        return self.averaged_bg_squared_spectrum 
+
+
+    def calculateBandwidth(self, eventid, channels=[0,1,2,3,4,5,6,7], apply_filter=False, sine_subtract=False, apply_tukey=None, additional_title_text=None, time_delays=None, verbose=False, plot=False, min_freq_MHz=20, max_freq_MHz=90, step_freq_MHz=10, remove_averaged_spectrum=False):
         '''
         For each event this attempts to determine the bandwidth.
+
+        If remove_averaged_spectrum is called then it will subtract the output of calculateAverageNoiseSpectrum from each spec2. 
         '''
         try:
             bin_edges = numpy.arange(min_freq_MHz, max_freq_MHz+step_freq_MHz, step_freq_MHz)
 
             self.setEntry(eventid)
             t_ns = self.t()
+            len_t_ns = len(t_ns)
             if verbose:
                 print(eventid)
             if apply_tukey is None:
                 apply_tukey = self.tukey_default
             
             if plot:
-                plt.figure()
+                fig = plt.figure()
             
-            processed_specs = numpy.zeros((len(channels),len(self.t())//2 + 1))                
+            processed_specs = numpy.zeros((len(channels),len_t_ns//2 + 1))              
 
             for channel_index, channel in enumerate(channels):
                 channel=int(channel)
@@ -961,53 +1044,83 @@ class FFTPrepper:
                 else:
                     wf = self.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_tukey,sine_subtract=sine_subtract, return_sine_subtract_info=sine_subtract)
 
-                freqs, spec_dbish, spec = self.rfftWrapper(t_ns, wf)
+                freqs, spec = self.rfftWrapper(t_ns, wf, return_dbish=False)
                 spec2 = spec * numpy.conj(spec)
+                spec2 = spec2.astype(float)
 
-                values = spec2#spec_dbish
-                smoothed_values = self.smoothArray(values, index_window_width = int(step_freq_MHz*1e6 / freqs[1]))#self.smoothArray(spec_dbish, index_window_width = int(step_freq_MHz*1e6 / freqs[1]))
+                if remove_averaged_spectrum:
+                    if self.averaged_bg_squared_spectrum is None:
+                        self.calculateAverageNoiseSpectrum(trigger_type=[1,3], apply_filter=apply_filter, sine_subtract=sine_subtract, apply_tukey=apply_tukey, verbose=verboses)
+                    spec2[spec2 > self.averaged_bg_squared_spectrum[channel]] -= self.averaged_bg_squared_spectrum[channel][spec2 > self.averaged_bg_squared_spectrum[channel]]
+
+                smoothed_values = self.smoothArray(spec2, index_window_width = int(step_freq_MHz*1e6 / freqs[1]))#self.smoothArray(spec_dbish, index_window_width = int(step_freq_MHz*1e6 / freqs[1]))
                 processed_specs[channel_index] = smoothed_values
-                # plt.figure()
-                # plt.plot(spec_dbish)
-                # plt.plot(smoothed_values)
-                #import pdb; pdb.set_trace()
 
 
                 if plot:
+                    spec_dbish = self.spec2Todbish(spec2, len_t_ns)
+                    spec_dbish_smoothed = self.spec2Todbish(smoothed_values, len_t_ns)
                     plt.subplot(5,1,1)
-                    plt.plot(freqs/1e6, values)
+                    plt.plot(freqs/1e6, spec_dbish)
+                    plt.ylim(-20,60)
+                    plt.xlim(0,150)
 
                     plt.subplot(5,1,2)
-                    plt.plot(freqs/1e6, smoothed_values)
-                    #plt.plot()
+                    plt.plot(freqs/1e6, spec_dbish_smoothed)
+                    plt.ylim(-20,60)
+                    plt.xlim(0,150)
 
             hpol = numpy.mean(processed_specs[numpy.array(channels)%2 == 0],axis=0)
             vpol = numpy.mean(processed_specs[numpy.array(channels)%2 == 1],axis=0)
 
-            mean_out_of_band = numpy.min((numpy.mean(hpol[freqs > 100e6]), numpy.mean(vpol[freqs > 100e6])))
 
-            hpol = hpol - mean_out_of_band
-            vpol = vpol - mean_out_of_band
-
-            plt.subplot(5,1,3)
-            plt.plot(freqs/1e6, hpol)
-            plt.plot(freqs/1e6, vpol)
-
-            plt.subplot(5,1,4)
-            plt.plot(numpy.diff(hpol, n=1))
-            plt.plot(numpy.diff(vpol, n=1))
-
-            plt.subplot(5,1,5)
-            plt.plot(numpy.abs(numpy.diff(hpol, n=2)))
-            plt.plot(numpy.abs(numpy.diff(vpol, n=2)))
+            hpol = hpol - numpy.mean(hpol[freqs > 100e6])
+            vpol = vpol - numpy.mean(vpol[freqs > 100e6])
 
 
+            freq_cut = numpy.logical_and(freqs/1e6 >= min_freq_MHz , freqs/1e6 <= max_freq_MHz)
 
+            hpol = self.spec2Todbish(hpol, len_t_ns)
+            hpol = numpy.ma.masked_array(hpol,mask=numpy.isnan(hpol))
 
+            vpol = self.spec2Todbish(vpol, len_t_ns)
+            vpol = numpy.ma.masked_array(vpol,mask=numpy.isnan(vpol))
 
+            if False:
+                metric_hpol = numpy.abs(numpy.std(hpol[freq_cut]))/ numpy.mean(hpol[freq_cut])
+                metric_vpol = numpy.abs(numpy.std(vpol[freq_cut]))/ numpy.mean(vpol[freq_cut])
 
+            elif False:
+                metric_hpol = numpy.mean(numpy.abs(numpy.diff(hpol[freq_cut],n=2)))*numpy.mean(numpy.abs(numpy.diff(hpol[freq_cut],n=1))) / numpy.mean(hpol[freq_cut])
+                metric_vpol = numpy.mean(numpy.abs(numpy.diff(vpol[freq_cut],n=2)))*numpy.mean(numpy.abs(numpy.diff(vpol[freq_cut],n=1))) / numpy.mean(vpol[freq_cut])
+            else:
+                metric_hpol = numpy.std(hpol[freq_cut])*numpy.mean(numpy.abs(numpy.diff(hpol[freq_cut],n=1))) / numpy.mean(hpol[freq_cut])**2
+                metric_vpol = numpy.std(vpol[freq_cut])*numpy.mean(numpy.abs(numpy.diff(vpol[freq_cut],n=1))) / numpy.mean(vpol[freq_cut])**2
+            
+            #import pdb; pdb.set_trace()
+ 
+            # import pdb; pdb.set_trace()
+            if plot:
+                plt.subplot(5,1,3)
+                plt.plot(freqs/1e6, hpol, label='Metric = %0.3f'%metric_hpol)
+                plt.plot(freqs/1e6, vpol, label='Metric = %0.3f'%metric_vpol)
+                plt.legend(loc='upper right')
+                plt.ylim(-20,80)
+                plt.xlim(0,150)
 
+                plt.subplot(5,1,4)
+                plt.plot(numpy.diff(hpol, n=1))
+                plt.plot(numpy.diff(vpol, n=1))
+                plt.xlim(0,150)
 
+                plt.subplot(5,1,5)
+                plt.plot(numpy.abs(numpy.diff(hpol, n=2)))
+                plt.plot(numpy.abs(numpy.diff(vpol, n=2)))
+                plt.xlim(0,150)
+
+                return metric_hpol, metric_vpol, fig, freqs
+            else:
+                return metric_hpol, metric_vpol
 
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])

@@ -4112,7 +4112,7 @@ if __name__=="__main__":
         sine_subtract_min_freq_GHz = 0.03
         sine_subtract_max_freq_GHz = 0.250
         sine_subtract_percent = 0.05
-    elif True:
+    elif False:
         crit_freq_low_pass_MHz = 85
         low_pass_filter_order = 6
 
@@ -4122,6 +4122,17 @@ if __name__=="__main__":
         sine_subtract = True
         sine_subtract_min_freq_GHz = 0.03
         sine_subtract_max_freq_GHz = 0.13
+        sine_subtract_percent = 0.03
+    elif True:
+        crit_freq_low_pass_MHz = 85
+        low_pass_filter_order = 6
+
+        crit_freq_high_pass_MHz = 25
+        high_pass_filter_order = 8
+
+        sine_subtract = True
+        sine_subtract_min_freq_GHz = 0.00
+        sine_subtract_max_freq_GHz = 0.25
         sine_subtract_percent = 0.03
     else:
         crit_freq_low_pass_MHz = 80

@@ -16,7 +16,7 @@ sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.info as info
 import tools.cosmic_ray_template as crt
 from tools.data_handler import createFile
-from tools.fftmath import TemplateCompareTool
+from tools.fftmath import TemplateCompareTool, TimeDelayCalculator
 
 import matplotlib
 matplotlib.use('pdf')
@@ -51,6 +51,97 @@ if __name__ == '__main__':
                 print('Farm Mode = False')
                 calculate_correlation_values = False #If True then the values we be newly calculated, if false then will try to load them from the existing files
             #Parameters:
+
+            crit_freq_low_pass_MHz = 80
+            low_pass_filter_order = 14
+
+            crit_freq_high_pass_MHz = 20
+            high_pass_filter_order = 4
+
+            plot_filter=False
+
+            sine_subtract = True
+            sine_subtract_min_freq_GHz = 0.00
+            sine_subtract_max_freq_GHz = 0.25
+            sine_subtract_percent = 0.03
+
+            apply_phase_response = True
+
+            shorten_signals = False
+            shorten_thresh = 0.7
+            shorten_delay = 10.0
+            shorten_length = 90.0
+
+            align_method = None
+
+            hilbert=False
+            final_corr_length = 2**17
+
+            filter_string = ''
+
+            if crit_freq_low_pass_MHz is None:
+                filter_string += 'LPf_%s-'%('None')
+            else:
+                filter_string += 'LPf_%0.1f-'%(crit_freq_low_pass_MHz)
+
+            if low_pass_filter_order is None:
+                filter_string += 'LPo_%s-'%('None')
+            else:
+                filter_string += 'LPo_%i-'%(low_pass_filter_order)
+
+            if crit_freq_high_pass_MHz is None:
+                filter_string += 'HPf_%s-'%('None')
+            else:
+                filter_string += 'HPf_%0.1f-'%(crit_freq_high_pass_MHz)
+
+            if high_pass_filter_order is None:
+                filter_string += 'HPo_%s-'%('None')
+            else:
+                filter_string += 'HPo_%i-'%(high_pass_filter_order)
+
+            if apply_phase_response is None:
+                filter_string += 'Phase_%s-'%('None')
+            else:
+                filter_string += 'Phase_%i-'%(apply_phase_response)
+
+            if hilbert is None:
+                filter_string += 'Hilb_%s-'%('None')
+            else:
+                filter_string += 'Hilb_%i-'%(hilbert)
+
+            if final_corr_length is None:
+                filter_string += 'corlen_%s-'%('None')
+            else:
+                filter_string += 'corlen_%i-'%(final_corr_length)
+
+            if align_method is None:
+                filter_string += 'align_%s-'%('None')
+            else:
+                filter_string += 'align_%i-'%(align_method)
+
+            if shorten_signals is None:
+                filter_string += 'shortensignals-%s-'%('None')
+            else:
+                filter_string += 'shortensignals-%i-'%(shorten_signals)
+            if shorten_thresh is None:
+                filter_string += 'shortenthresh-%s-'%('None')
+            else:
+                filter_string += 'shortenthresh-%0.2f-'%(shorten_thresh)
+            if shorten_delay is None:
+                filter_string += 'shortendelay-%s-'%('None')
+            else:
+                filter_string += 'shortendelay-%0.2f-'%(shorten_delay)
+            if shorten_length is None:
+                filter_string += 'shortenlength-%s-'%('None')
+            else:
+                filter_string += 'shortenlength-%0.2f-'%(shorten_length)
+
+            filter_string += 'sinesubtract_%i'%(int(sine_subtract))
+
+            print(filter_string)
+
+
+
             #Curve choice is a parameter in the bi-delta template model that changes the timing of the input dela signal.
             curve_choice = 0
             upsample_factor = 4
@@ -111,7 +202,14 @@ if __name__ == '__main__':
 
                         file['cr_template_search'][this_dset][...] = numpy.zeros((file.attrs['N'],8),dtype=float)
 
+                        file['cr_template_search'][this_dset].attrs['filter_string'] = filter_string
+
                         output_correlation_values = numpy.zeros((file.attrs['N'],8),dtype=float) #Fill this, write to hdf5 once.
+
+                        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response)
+                        if sine_subtract:
+                            tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
                         
                         for eventid_index, eventid in enumerate(eventids): 
                             if eventid%500 == 0:
@@ -119,9 +217,10 @@ if __name__ == '__main__':
                                 sys.stdout.flush()
 
                             #CALCULATE CORRELATION VALUE
-                            reader.setEntry(eventid)
+                            tdc.setEntry(eventid)
                             for channel in range(8):
-                                wf = scipy.signal.resample(reader.wf(channel),len_t) #I don't need the times.
+                                wf = tdc.wf(channel, apply_filter=True, hilbert=hilbert, tukey=True, sine_subtract=sine_subtract, return_sine_subtract_info=False, ss_first=True)
+                                wf = scipy.signal.resample(wf,len_t) #I don't need the times.
                                 cc = scipy.signal.correlate(template_E, wf)/wf.std() #template_E already normalized for cc
                                 output_correlation_values[eventid,channel] = numpy.max(numpy.abs(cc))
 
