@@ -127,7 +127,7 @@ class Correlator:
         meters away).  To change the distance call the overwriteSourceDistance() function, which will implement the
         necessary adjustments for the new source distance.
     '''
-    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=False, tukey=False, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None, all_alignments=False):
+    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=True, tukey=True, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None, all_alignments=False):
         try:
             self.conference_mode = False #Enable to apply any temporary adjustments such as fontsizes or title labels. 
             if deploy_index is None:
@@ -1685,34 +1685,40 @@ class Correlator:
         If return_crosshair is True it will plot the crosshair (even if crosshair = False) and will return a tuple (h,v) where
         h and v are the line2d objects of those lines.  These can then have their xdata and ydata updated. 
         '''
+        try:
+            #Add best circle.
+            azimuth = azimuth - azimuth_offset_deg
+            if azimuth < -180.0:
+                azimuth += 2*180.0
+            elif azimuth > 180.0:
+                azimuth -= 2*180.0
+            
+            if mollweide == True:
+                radius = numpy.deg2rad(radius)
+                elevation = numpy.deg2rad(elevation)
+                azimuth = numpy.deg2rad(azimuth)
 
-        #Add best circle.
-        azimuth = azimuth - azimuth_offset_deg
-        if azimuth < -180.0:
-            azimuth += 2*180.0
-        elif azimuth > 180.0:
-            azimuth -= 2*180.0
-        
-        if mollweide == True:
-            radius = numpy.deg2rad(radius)
-            elevation = numpy.deg2rad(elevation)
-            azimuth = numpy.deg2rad(azimuth)
+            circle = plt.Circle((azimuth, elevation), radius, edgecolor=color, *args, **kwargs)
 
-        circle = plt.Circle((azimuth, elevation), radius, edgecolor=color, *args, **kwargs)
+            if crosshair == True or return_crosshair == True:
+                h = ax.axhline(elevation,c=color,linewidth=1,alpha=0.5)
+                v = ax.axvline(azimuth,c=color,linewidth=1,alpha=0.5)
 
-        if crosshair == True or return_crosshair == True:
-            h = ax.axhline(elevation,c=color,linewidth=1,alpha=0.5)
-            v = ax.axvline(azimuth,c=color,linewidth=1,alpha=0.5)
-
-        ax.add_artist(circle)
-        if return_circle == False and return_crosshair == False:
-            return ax
-        elif return_circle == True and return_crosshair == False:
-            return ax,  circle
-        elif return_circle == False and return_crosshair == True:
-            return ax,  (h, v)
-        else:
-            return ax, circle, (h, v)
+            ax.add_artist(circle)
+            if return_circle == False and return_crosshair == False:
+                return ax
+            elif return_circle == True and return_crosshair == False:
+                return ax,  circle
+            elif return_circle == False and return_crosshair == True:
+                return ax,  (h, v)
+            else:
+                return ax, circle, (h, v)
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def addTimeDelayCurves(self, im, time_delay_dict, mode, ax, include_baselines=numpy.array([0,1,2,3,4,5]), mollweide=False, azimuth_offset_deg=0, *args, **kwargs):
         '''
@@ -2027,7 +2033,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)  
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -2378,8 +2384,9 @@ class Correlator:
                     im, map_ax = self.addTimeDelayCurves(im, time_delay_dict, pol, map_ax, mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg, include_baselines=include_baselines)
 
 
-                #Added circles as specified.
-                map_ax, peak_circle = self.addCircleToMap(map_ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+                if circle_map_max:
+                    #Added circles as specified.
+                    map_ax, peak_circle = self.addCircleToMap(map_ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
 
                 if circle_az is not None:
                     if circle_zenith is not None:
@@ -2400,7 +2407,7 @@ class Correlator:
                         if len(_circle_zenith) == len(_circle_az):
                             additional_circles = []
                             for i in range(len(_circle_az)):
-                                ax, _circ = self.addCircleToMap(ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
+                                ax, _circ = self.addCircleToMap(map_ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
                                 additional_circles.append(_circ)
 
                 if add_airplanes:
@@ -4065,7 +4072,7 @@ def testMain():
         hpol_eventids_cut = numpy.isin(all_eventids,eventids['hpol'])
         vpol_eventids_cut = numpy.isin(all_eventids,eventids['vpol'])
 
-        cor = Correlator(reader,  upsample=2**15, n_phi=361, n_theta=361, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response)
+        cor = Correlator(reader,  upsample=2**15, n_phi=361, n_theta=361, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=True)
         if True:
             for mode in ['hpol','vpol']:
                 eventid = eventids[mode][0]

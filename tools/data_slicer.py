@@ -12,6 +12,7 @@ import os
 import inspect
 import h5py
 import copy
+from collections import OrderedDict
 
 import numpy
 import scipy
@@ -385,30 +386,39 @@ class dataSlicerSingleRun():
             high_pass_filter_order = 8
 
             sine_subtract = True
-            sine_subtract_min_freq_GHz = 0.03
-            sine_subtract_max_freq_GHz = 0.13
+            sine_subtract_min_freq_GHz = 0.00
+            sine_subtract_max_freq_GHz = 0.25
             sine_subtract_percent = 0.03
 
             apply_phase_response = True
 
-            map_resolution_theta = 0.1 #degrees
+            map_resolution_theta = 0.25 #degrees
             min_theta   = 0
             max_theta   = 120
             n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
 
-            map_resolution_phi = 0.5 #degrees
+            map_resolution_phi = 0.1 #degrees
             min_phi     = -180
             max_phi     = 180
             n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
 
-            upsample = 2**12 #Just upsample in this case, Reduced to 2**14 when the waveform length was reduced, to maintain same time precision with faster execution.
+            upsample = 2**14 #Just upsample in this case, Reduced to 2**14 when the waveform length was reduced, to maintain same time precision with faster execution.
             max_method = 0
 
-            waveform_index_range = (100, 611)#(0,1024)#
-
-            self.cor = Correlator(self.reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=True, sine_subtract=sine_subtract, deploy_index=self.map_deploy_index)
+            waveform_index_range = (100, 611)#This is handled inclusivelym meaning the 611th time is also included.  So 100-611 is a 512 long waveform starting at 200ns into the waveform.  This is shortened around the triggered waveform to improve map snr.  #(None, None) 
+            map_source_distance_m = 1e6
+            # self.cor = Correlator(self.reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False, sine_subtract=sine_subtract, deploy_index=self.map_deploy_index, map_source_distance_m=map_source_distance_m)
+            self.cor = Correlator(self.reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=True, sine_subtract=sine_subtract, deploy_index=self.map_deploy_index, map_source_distance_m=map_source_distance_m)
             if sine_subtract:
                 self.cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+    def delCorrelator(self):
+        '''
+        Deletes the currently saved correlator. 
+        '''
+        if hasattr(self, 'cor'):
+            del self.cor
+        self.cor = None
 
 
     def printKnownParamKeys(self):
@@ -864,51 +874,95 @@ class dataSlicerSingleRun():
         try:
             if len(numpy.shape(eventids)) > 1:
                 print('WARNING!!! eventids is in the incorrect format.')
+            
+            if numpy.any(numpy.diff(eventids) < 1):
+                print('WARNING!!! eventids is not sorted or has duplicate entries.  May mess up output of getDataFromParam.')
+
+            len_eventids = len(eventids)
             if len(eventids) > 0:
                 if len(numpy.where([kw in param_key for kw in self.math_keywords])[0]) == 1:
                     param = self.getModifiedDataFromParam(eventids, param_key, verbose=False)
                 elif param_key in self.known_param_keys:
                     with h5py.File(self.analysis_filename, 'r') as file:
                         if param_key == 'impulsivity_h':
-                            param = file['impulsivity'][self.impulsivity_dset_key]['hpol'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['impulsivity'][self.impulsivity_dset_key]['hpol'][eventids]
+                            else:
+                                param = file['impulsivity'][self.impulsivity_dset_key]['hpol'][...][eventids]
                         elif param_key == 'impulsivity_v':
-                            param = file['impulsivity'][self.impulsivity_dset_key]['vpol'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['impulsivity'][self.impulsivity_dset_key]['vpol'][eventids]
+                            else:
+                                param = file['impulsivity'][self.impulsivity_dset_key]['vpol'][...][eventids]
                         elif param_key == 'cr_template_search_h':
                             this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
-                            output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
+                            if len_eventids < 500:
+                                output_correlation_values = file['cr_template_search'][this_dset][eventids]
+                            else:
+                                output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
                             param = numpy.max(output_correlation_values[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD 
                         elif param_key == 'cr_template_search_v':
                             this_dset = 'bi-delta-curve-choice-%i'%self.cr_template_curve_choice
-                            output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
+                            if len_eventids < 500:
+                                output_correlation_values = file['cr_template_search'][this_dset][eventids]
+                            else:
+                                output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
                             param = numpy.max(output_correlation_values[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
                         elif param_key == 'std_h':
-                            std = file['std'][...][eventids]
+                            if len_eventids < 500:
+                                std = file['std'][eventids]
+                            else:
+                                std = file['std'][...][eventids]
                             param = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
                         elif param_key == 'std_v':
-                            std = file['std'][...][eventids]
+                            if len_eventids < 500:
+                                std = file['std'][eventids]
+                            else:
+                                std = file['std'][...][eventids]
                             param = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
                         elif param_key == 'p2p_h': 
-                            p2p = file['p2p'][...][eventids]
+                            if len_eventids < 500:
+                                p2p = file['p2p'][eventids]
+                            else:
+                                p2p = file['p2p'][...][eventids]
                             param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
                         elif param_key == 'p2p_v': 
-                            p2p = file['p2p'][...][eventids]
+                            if len_eventids < 500:
+                                p2p = file['p2p'][eventids]
+                            else:
+                                p2p = file['p2p'][...][eventids]
                             param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
                         elif param_key == 'snr_h':
-                            std = file['std'][...][eventids]
+                            if len_eventids < 500:
+                                std = file['std'][eventids]
+                            else:
+                                std = file['std'][...][eventids]
                             param_1 = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
-                            p2p = file['p2p'][...][eventids]
+                            if len_eventids < 500:
+                                p2p = file['p2p'][eventids]
+                            else:
+                                p2p = file['p2p'][...][eventids]
                             param_2 = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
                             param = numpy.divide(param_2, param_1)
                         elif param_key == 'snr_v':
-                            std = file['std'][...][eventids]
+                            if len_eventids < 500:
+                                std = file['std'][eventids]
+                            else:
+                                std = file['std'][...][eventids]
                             param_1 = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
-                            p2p = file['p2p'][...][eventids]
+                            if len_eventids < 500:
+                                p2p = file['p2p'][eventids]
+                            else:
+                                p2p = file['p2p'][...][eventids]
                             param_2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
                             param = numpy.divide(param_2, param_1)
                         elif 'time_delay_' in param_key and 'map' not in param_key:
                             split_param_key = param_key.split('_')
                             dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
-                            param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
+                            if len_eventids < 500:
+                                param = file['time_delays'][self.time_delays_dset_key][dset][eventids]
+                            else:
+                                param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
                         elif 'max_corr_' in param_key and 'map' not in param_key:
                             if param_key == 'mean_max_corr_h':
                                 param = numpy.mean(numpy.vstack((self.getDataFromParam(eventids,'max_corr_0subtract1_h'),self.getDataFromParam(eventids,'max_corr_0subtract2_h'),self.getDataFromParam(eventids,'max_corr_0subtract3_h'),self.getDataFromParam(eventids,'max_corr_1subtract2_h'),self.getDataFromParam(eventids,'max_corr_1subtract3_h'),self.getDataFromParam(eventids,'max_corr_2subtract3_h'))),axis=0)
@@ -921,14 +975,26 @@ class dataSlicerSingleRun():
                             else:
                                 split_param_key = param_key.split('_')
                                 dset = '%spol_max_corr_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
-                                param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
+                                if len_eventids < 500:
+                                    param = file['time_delays'][self.time_delays_dset_key][dset][eventids]
+                                else:
+                                    param = file['time_delays'][self.time_delays_dset_key][dset][...][eventids]
 
                         elif 'cw_present' == param_key:
-                            param = file['cw']['has_cw'][...][eventids].astype(int)
+                            if len_eventids < 500:
+                                param = file['cw']['has_cw'][eventids].astype(int)
+                            else:
+                                param = file['cw']['has_cw'][...][eventids].astype(int)
                         elif 'cw_freq_Mhz' == param_key:
-                            param = file['cw']['freq_hz'][...][eventids]/1e6 #MHz
+                            if len_eventids < 500:
+                                param = file['cw']['freq_hz'][eventids]/1e6 #MHz
+                            else:
+                                param = file['cw']['freq_hz'][...][eventids]/1e6 #MHz
                         elif 'cw_linear_magnitude' == param_key:
-                            param = file['cw']['linear_magnitude'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['cw']['linear_magnitude'][eventids]
+                            else:
+                                param = file['cw']['linear_magnitude'][...][eventids]
                         elif 'cw_dbish' == param_key:
                             cw_dsets = list(file['cw'].keys())
                             if not numpy.isin('dbish',cw_dsets):
@@ -938,422 +1004,950 @@ class dataSlicerSingleRun():
                                     self.cw_prep = FFTPrepper(self.reader, final_corr_length=int(file['cw'].attrs['final_corr_length']), crit_freq_low_pass_MHz=float(file['cw'].attrs['crit_freq_low_pass_MHz']), crit_freq_high_pass_MHz=float(file['cw'].attrs['crit_freq_high_pass_MHz']), low_pass_filter_order=float(file['cw'].attrs['low_pass_filter_order']), high_pass_filter_order=float(file['cw'].attrs['high_pass_filter_order']), waveform_index_range=(None,None), plot_filters=False)
                                     self.cw_prep.addSineSubtract(file['cw'].attrs['sine_subtract_min_freq_GHz'], file['cw'].attrs['sine_subtract_max_freq_GHz'], file['cw'].attrs['sine_subtract_percent'], max_failed_iterations=3, verbose=False, plot=False)
 
-                                linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
+                                if len_eventids < 500:
+                                    linear_magnitude = file['cw']['linear_magnitude'][eventids]
+                                else:
+                                    linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
                                 param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
                             else:
-                                #param = file['cw']['dbish'][...][eventids] #Should work, but I messed it up.  Bodging it for now.
+                                # if len_eventids < 500:
+                                    #param = file['cw']['dbish'][eventids] #Should work, but I messed it up.  Bodging it for now.
+                                # else:
+                                    #param = file['cw']['dbish'][...][eventids] #Should work, but I messed it up.  Bodging it for now.
                                 #print('dbish not correctly setup in flag_cw.py.  Converting linear to dbish now.')
-                                linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
+                                if len_eventids < 500:
+                                    linear_magnitude = file['cw']['linear_magnitude'][eventids]
+                                else:
+                                    linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
                                 param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
                         
                         elif 'hilbert' not in param_key and 'theta_best_h_allsky' in param_key:
-                            param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'theta_best_v_allsky' in param_key:
-                            param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'elevation_best_h_allsky' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'elevation_best_v_allsky' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'phi_best_h_allsky' in param_key:
-                            param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_azimuth'][...][eventids]
                         elif 'hilbert' not in param_key and 'phi_best_v_allsky' in param_key:
-                            param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_normal_allsky]['vpol_ENU_azimuth'][...][eventids]
 
                         elif 'hilbert' not in param_key and 'theta_best_h_abovehorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'theta_best_v_abovehorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'elevation_best_h_abovehorizon' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'elevation_best_v_abovehorizon' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'phi_best_h_abovehorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['hpol_ENU_azimuth'][...][eventids]
                         elif 'hilbert' not in param_key and 'phi_best_v_abovehorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_normal_abovehorizon]['vpol_ENU_azimuth'][...][eventids]
 
                         elif 'hilbert' not in param_key and 'theta_best_h_belowhorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'theta_best_v_belowhorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'elevation_best_h_belowhorizon' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'elevation_best_v_belowhorizon' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'phi_best_h_belowhorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['hpol_ENU_azimuth'][...][eventids]
                         elif 'hilbert' not in param_key and 'phi_best_v_belowhorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_normal_belowhorizon]['vpol_ENU_azimuth'][...][eventids]
 
                         #Must be last in it's category so more specific scope calls are hit first in elif case
                         elif 'hilbert' not in param_key and 'theta_best_h' in param_key:
-                            param = file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'theta_best_v' in param_key:
-                            param = file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'elevation_best_h' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'elevation_best_v' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' not in param_key and 'phi_best_h' in param_key:
-                            param = file['map_direction'][self.map_dset_key]['hpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key]['hpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key]['hpol_ENU_azimuth'][...][eventids]
                         elif 'hilbert' not in param_key and 'phi_best_v' in param_key:
-                            param = file['map_direction'][self.map_dset_key]['vpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key]['vpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key]['vpol_ENU_azimuth'][...][eventids]
 
                         elif 'hilbert' in param_key and 'theta_best_h_allsky' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'theta_best_v_allsky' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'elevation_best_h_allsky' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'elevation_best_v_allsky' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'phi_best_h_allsky' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert_allsky]['hpol_ENU_azimuth'][...][eventids]
                         elif 'hilbert' in param_key and 'phi_best_v_allsky' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert_allsky]['vpol_ENU_azimuth'][...][eventids]
 
                         elif 'hilbert' in param_key and 'theta_best_h_abovehorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'theta_best_v_abovehorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'elevation_best_h_abovehorizon' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'elevation_best_v_abovehorizon' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'phi_best_h_abovehorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['hpol_ENU_azimuth'][...][eventids]
                         elif 'hilbert' in param_key and 'phi_best_v_abovehorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert_abovehorizon]['vpol_ENU_azimuth'][...][eventids]
 
                         elif 'hilbert' in param_key and 'theta_best_h_belowhorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'theta_best_v_belowhorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'elevation_best_h_belowhorizon' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'elevation_best_v_belowhorizon' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'phi_best_h_belowhorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['hpol_ENU_azimuth'][...][eventids]
                         elif 'hilbert' in param_key and 'phi_best_v_belowhorizon' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert_belowhorizon]['vpol_ENU_azimuth'][...][eventids]
 
                         #Must be last in it's category so more specific scope calls are hit first in elif case
                         elif 'hilbert' in param_key and 'theta_best_h' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'theta_best_v' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'elevation_best_h' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'elevation_best_v' in param_key:
-                            param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
+                            if len_eventids < 500:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][eventids]
+                            else:
+                                param = 90.0 - file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_zenith'][...][eventids]
                         elif 'hilbert' in param_key and 'phi_best_h' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert]['hpol_ENU_azimuth'][...][eventids]
                         elif 'hilbert' in param_key and 'phi_best_v' in param_key:
-                            param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_azimuth'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_key_hilbert]['vpol_ENU_azimuth'][...][eventids]
                         elif 'calibrated_trigtime' == param_key:
-                            param = file['calibrated_trigtime'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['calibrated_trigtime'][eventids]
+                            else:
+                                param = file['calibrated_trigtime'][...][eventids]
                         elif 'triggered_beams' == param_key:
                             param = self.reader.returnTriggerInfo()[0][eventids]
                         elif 'beam_power' == param_key:
                             param = self.reader.returnTriggerInfo()[1][eventids]
 
                         elif 'hilbert' not in param_key and 'hpol_peak_to_sidelobe_allsky' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' not in param_key and 'hpol_peak_to_sidelobe_abovehorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' not in param_key and 'hpol_peak_to_sidelobe_belowhorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_peak_to_sidelobe_allsky' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_peak_to_sidelobe_abovehorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_peak_to_sidelobe_belowhorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' not in param_key and 'hpol_peak_to_sidelobe' in param_key:
                             #Must be last in it's category so more specific scope calls are hit first in elif case
-                            param = file['map_properties'][self.map_dset_key]['hpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key]['hpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key]['hpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_peak_to_sidelobe' in param_key:
                             #Must be last in it's category so more specific scope calls are hit first in elif case
-                            param = file['map_properties'][self.map_dset_key_hilbert]['hpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert]['hpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert]['hpol_peak_to_sidelobe'][...][eventids]
 
                         elif 'hilbert' not in param_key and 'vpol_peak_to_sidelobe_allsky' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' not in param_key and 'vpol_peak_to_sidelobe_abovehorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' not in param_key and 'vpol_peak_to_sidelobe_belowhorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_peak_to_sidelobe_allsky' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_peak_to_sidelobe_abovehorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_peak_to_sidelobe_belowhorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' not in param_key and 'vpol_peak_to_sidelobe' in param_key:
                             #Must be last in it's category so more specific scope calls are hit first in elif case
-                            param = file['map_properties'][self.map_dset_key]['vpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key]['vpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key]['vpol_peak_to_sidelobe'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_peak_to_sidelobe' in param_key:
                             #Must be last in it's category so more specific scope calls are hit first in elif case
-                            param = file['map_properties'][self.map_dset_key_hilbert]['vpol_peak_to_sidelobe'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert]['vpol_peak_to_sidelobe'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert]['vpol_peak_to_sidelobe'][...][eventids]
 
 
                         elif 'hilbert' not in param_key and 'hpol_max_possible_map_value_allsky' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' not in param_key and 'hpol_max_possible_map_value_abovehorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' not in param_key and 'hpol_max_possible_map_value_belowhorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_max_possible_map_value_allsky' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_max_possible_map_value_abovehorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_max_possible_map_value_belowhorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' not in param_key and 'hpol_max_possible_map_value' in param_key:
                             #Must be last in it's category so more specific scope calls are hit first in elif case
-                            param = file['map_properties'][self.map_dset_key]['hpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key]['hpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_max_possible_map_value' in param_key:
                             #Must be last in it's category so more specific scope calls are hit first in elif case
-                            param = file['map_properties'][self.map_dset_key_hilbert]['hpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert]['hpol_max_possible_map_value'][...][eventids]
 
                         elif 'hilbert' not in param_key and 'hpol_max_map_value_allsky' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_max_map_value'][...][eventids]
                         elif 'hilbert' not in param_key and 'hpol_max_map_value_abovehorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_max_map_value'][...][eventids]
                         elif 'hilbert' not in param_key and 'hpol_max_map_value_belowhorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_max_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_max_map_value_allsky' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_max_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_max_map_value_abovehorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_max_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_max_map_value_belowhorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_max_map_value'][...][eventids]
                         elif 'hilbert' not in param_key and 'hpol_max_map_value' in param_key:
                             #Must be last in it's category so more specific scope calls are hit first in elif case
-                            param = file['map_properties'][self.map_dset_key]['hpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key]['hpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key]['hpol_max_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'hpol_max_map_value' in param_key:
                             #Must be last in it's category so more specific scope calls are hit first in elif case
-                            param = file['map_properties'][self.map_dset_key_hilbert]['hpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert]['hpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert]['hpol_max_map_value'][...][eventids]
 
 
 
                         elif 'hilbert' not in param_key and 'vpol_max_possible_map_value_allsky' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' not in param_key and 'vpol_max_possible_map_value_abovehorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' not in param_key and 'vpol_max_possible_map_value_belowhorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_max_possible_map_value_allsky' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_max_possible_map_value_abovehorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_max_possible_map_value_belowhorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' not in param_key and 'vpol_max_possible_map_value' in param_key:
                             #Must be last in it's category so more specific scope calls are hit first in elif case
-                            param = file['map_properties'][self.map_dset_key]['vpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key]['vpol_max_possible_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_max_possible_map_value' in param_key:
                             #Must be last in it's category so more specific scope calls are hit first in elif case
-                            param = file['map_properties'][self.map_dset_key_hilbert]['vpol_max_possible_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert]['vpol_max_possible_map_value'][...][eventids]
 
                         elif 'hilbert' not in param_key and 'vpol_max_map_value_allsky' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_max_map_value'][...][eventids]
                         elif 'hilbert' not in param_key and 'vpol_max_map_value_abovehorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_max_map_value'][...][eventids]
                         elif 'hilbert' not in param_key and 'vpol_max_map_value_belowhorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_max_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_max_map_value_allsky' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_max_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_max_map_value_abovehorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_max_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_max_map_value_belowhorizon' in param_key:
-                            param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_max_map_value'][...][eventids]
                         elif 'hilbert' not in param_key and 'vpol_max_map_value' in param_key:
                             #Must be last in it's category so more specific scope calls are hit first in elif case
-                            param = file['map_properties'][self.map_dset_key]['vpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key]['vpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key]['vpol_max_map_value'][...][eventids]
                         elif 'hilbert' in param_key and 'vpol_max_map_value' in param_key:
                             #Must be last in it's category so more specific scope calls are hit first in elif case
-                            param = file['map_properties'][self.map_dset_key_hilbert]['vpol_max_map_value'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_properties'][self.map_dset_key_hilbert]['vpol_max_map_value'][eventids]
+                            else:
+                                param = file['map_properties'][self.map_dset_key_hilbert]['vpol_max_map_value'][...][eventids]
 
 
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract1_h_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_0subtract1'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_0subtract1'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_0subtract1'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract1_h_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_0subtract1'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_0subtract1'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_0subtract1'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract1_h_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_0subtract1'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_0subtract1'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_0subtract1'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract1_h_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_0subtract1'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_0subtract1'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_0subtract1'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract1_h_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_0subtract1'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_0subtract1'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_0subtract1'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract1_h_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_0subtract1'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_0subtract1'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_0subtract1'][...][eventids]
 
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract1_v_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_0subtract1'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_0subtract1'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_0subtract1'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract1_v_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_0subtract1'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_0subtract1'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_0subtract1'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract1_v_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_0subtract1'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_0subtract1'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_0subtract1'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract1_v_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_0subtract1'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_0subtract1'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_0subtract1'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract1_v_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_0subtract1'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_0subtract1'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_0subtract1'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract1_v_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_0subtract1'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_0subtract1'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_0subtract1'][...][eventids]
 
 
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract2_h_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_0subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_0subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_0subtract2'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract2_h_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_0subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_0subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_0subtract2'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract2_h_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_0subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_0subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_0subtract2'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract2_h_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_0subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_0subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_0subtract2'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract2_h_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_0subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_0subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_0subtract2'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract2_h_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_0subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_0subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_0subtract2'][...][eventids]
 
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract2_v_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_0subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_0subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_0subtract2'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract2_v_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_0subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_0subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_0subtract2'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract2_v_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_0subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_0subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_0subtract2'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract2_v_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_0subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_0subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_0subtract2'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract2_v_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_0subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_0subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_0subtract2'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract2_v_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_0subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_0subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_0subtract2'][...][eventids]
 
 
 
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract3_h_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_0subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_0subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_0subtract3'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract3_h_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_0subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_0subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_0subtract3'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract3_h_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_0subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_0subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_0subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract3_h_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_0subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_0subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_0subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract3_h_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_0subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_0subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_0subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract3_h_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_0subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_0subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_0subtract3'][...][eventids]
 
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract3_v_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_0subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_0subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_0subtract3'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract3_v_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_0subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_0subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_0subtract3'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_0subtract3_v_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_0subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_0subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_0subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract3_v_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_0subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_0subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_0subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract3_v_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_0subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_0subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_0subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_0subtract3_v_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_0subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_0subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_0subtract3'][...][eventids]
 
 
 
                         elif 'hilbert' not in param_key and 'map_max_time_delay_1subtract2_h_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_1subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_1subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_1subtract2'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_1subtract2_h_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_1subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_1subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_1subtract2'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_1subtract2_h_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_1subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_1subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_1subtract2'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_1subtract2_h_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_1subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_1subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_1subtract2'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_1subtract2_h_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_1subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_1subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_1subtract2'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_1subtract2_h_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_1subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_1subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_1subtract2'][...][eventids]
 
                         elif 'hilbert' not in param_key and 'map_max_time_delay_1subtract2_v_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_1subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_1subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_1subtract2'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_1subtract2_v_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_1subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_1subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_1subtract2'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_1subtract2_v_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_1subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_1subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_1subtract2'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_1subtract2_v_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_1subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_1subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_1subtract2'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_1subtract2_v_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_1subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_1subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_1subtract2'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_1subtract2_v_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_1subtract2'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_1subtract2'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_1subtract2'][...][eventids]
 
 
 
                         elif 'hilbert' not in param_key and 'map_max_time_delay_1subtract3_h_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_1subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_1subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_1subtract3'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_1subtract3_h_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_1subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_1subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_1subtract3'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_1subtract3_h_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_1subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_1subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_1subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_1subtract3_h_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_1subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_1subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_1subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_1subtract3_h_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_1subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_1subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_1subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_1subtract3_h_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_1subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_1subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_1subtract3'][...][eventids]
 
                         elif 'hilbert' not in param_key and 'map_max_time_delay_1subtract3_v_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_1subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_1subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_1subtract3'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_1subtract3_v_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_1subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_1subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_1subtract3'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_1subtract3_v_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_1subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_1subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_1subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_1subtract3_v_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_1subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_1subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_1subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_1subtract3_v_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_1subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_1subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_1subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_1subtract3_v_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_1subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_1subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_1subtract3'][...][eventids]
 
 
 
                         elif 'hilbert' not in param_key and 'map_max_time_delay_2subtract3_h_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_2subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_2subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['hpol_2subtract3'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_2subtract3_h_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_2subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_2subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['hpol_2subtract3'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_2subtract3_h_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_2subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_2subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['hpol_2subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_2subtract3_h_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_2subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_2subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['hpol_2subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_2subtract3_h_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_2subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_2subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['hpol_2subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_2subtract3_h_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_2subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_2subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['hpol_2subtract3'][...][eventids]
 
                         elif 'hilbert' not in param_key and 'map_max_time_delay_2subtract3_v_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_2subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_2subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_allsky]['vpol_2subtract3'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_2subtract3_v_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_2subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_2subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_abovehorizon]['vpol_2subtract3'][...][eventids]
                         elif 'hilbert' not in param_key and 'map_max_time_delay_2subtract3_v_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_2subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_2subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_normal_belowhorizon]['vpol_2subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_2subtract3_v_allsky' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_2subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_2subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_allsky]['vpol_2subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_2subtract3_v_abovehorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_2subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_2subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_abovehorizon]['vpol_2subtract3'][...][eventids]
                         elif 'hilbert' in param_key and 'map_max_time_delay_2subtract3_v_belowhorizon' in param_key:
-                            param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_2subtract3'][...][eventids]
+                            if len_eventids < 500:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_2subtract3'][eventids]
+                            else:
+                                param = file['map_times'][self.map_dset_key_hilbert_belowhorizon]['vpol_2subtract3'][...][eventids]
 
                         elif 'event_rate_ts_' in param_key:
                             rate_string, time_window_string = param_key.replace('event_rate_ts_','').split('_')
-                            param = file['event_rate_testing'][rate_string][time_window_string][...][eventids]
+                            if len_eventids < 500:
+                                param = file['event_rate_testing'][rate_string][time_window_string][eventids]
+                            else:
+                                param = file['event_rate_testing'][rate_string][time_window_string][...][eventids]
                         elif 'event_rate_sigma_' in param_key:
                             rate_string, time_window_string = param_key.replace('event_rate_sigma_','').split('_')
                             mean = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_mean']
                             sigma = file['event_rate_testing'][rate_string][time_window_string].attrs['random_fit_sigma']
                             
-                            param = (file['event_rate_testing'][rate_string][time_window_string][...][eventids] - mean)/sigma
+                            if len_eventids < 500:
+                                param = (file['event_rate_testing'][rate_string][time_window_string][eventids] - mean)/sigma
+                            else:
+                                param = (file['event_rate_testing'][rate_string][time_window_string][...][eventids] - mean)/sigma
                         elif 'similarity_count_' in param_key:
-                            param = file['similarity_count'][self.time_delays_dset_key]['%spol_count'%(param_key.split('_')[-1])][...][eventids]
+                            if len_eventids < 500:
+                                param = file['similarity_count'][self.time_delays_dset_key]['%spol_count'%(param_key.split('_')[-1])][eventids]
+                            else:
+                                param = file['similarity_count'][self.time_delays_dset_key]['%spol_count'%(param_key.split('_')[-1])][...][eventids]
                         elif 'similarity_fraction_' in param_key:
-                            param = file['similarity_count'][self.time_delays_dset_key]['%spol_fraction'%(param_key.split('_')[-1])][...][eventids]
+                            if len_eventids < 500:
+                                param = file['similarity_count'][self.time_delays_dset_key]['%spol_fraction'%(param_key.split('_')[-1])][eventids]
+                            else:
+                                param = file['similarity_count'][self.time_delays_dset_key]['%spol_fraction'%(param_key.split('_')[-1])][...][eventids]
                             
 
                         file.close()
@@ -1371,7 +1965,7 @@ class dataSlicerSingleRun():
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def getCutsFromROI(self,roi_key,load=False,save=False):
+    def getCutsFromROI(self,roi_key,eventids=None,load=False,save=False, return_successive_cut_counts=False, return_total_cut_counts=False):
         '''
         This will determine the eventids that match the cuts listed in the dictionary corresponding to roi_key, and will
         return them.  
@@ -1389,7 +1983,13 @@ class dataSlicerSingleRun():
             saved with the same name will be automatically overwritten.
         '''
         try:
+            if return_successive_cut_counts == True:
+                successive_cut_counts = OrderedDict()
+            if return_total_cut_counts == True:
+                total_cut_counts = OrderedDict()
+
             if load == True:
+                print('WARNING LOAD CUT IS DEPRECATED')
                 with h5py.File(self.analysis_filename, 'r') as file:
                     dsets = list(file.keys()) #Existing datasets
                     if not numpy.isin('ROI',dsets):
@@ -1407,21 +2007,45 @@ class dataSlicerSingleRun():
                 load_failed = True
 
             if load_failed == True:
+                #Really this is the default behaviour
                 if roi_key in list(self.roi.keys()):
-                    try:
-                        if self.eventids_matching_trig is None:
-                            eventids = numpy.array([])
-                        else:
-                            eventids = numpy.asarray(self.eventids_matching_trig).copy()
-                    except Exception as e:
-                        import pdb; pdb.set_trace()
+                    if eventids is None:
+                        try:
+                            if self.eventids_matching_trig is None:
+                                eventids = numpy.array([])
+                            else:
+                                eventids = numpy.asarray(self.eventids_matching_trig).copy()
+                        except Exception as e:
+                            import pdb; pdb.set_trace()
+
+                    if return_successive_cut_counts == True:
+                        successive_cut_counts['initial'] = len(eventids)
+                    if return_total_cut_counts == True:
+                        total_cut_counts['initial'] = len(eventids)
+                        master_cut = numpy.ones_like(eventids,dtype=bool)
+
 
 
                     if len(eventids) > 0:
                         for param_key in list(self.roi[roi_key].keys()):
                             param = self.getDataFromParam(eventids, param_key)
-                            #Reduce eventids by box cut
-                            eventids = eventids[numpy.logical_and(param >= self.roi[roi_key][param_key][0], param < self.roi[roi_key][param_key][1])]  #Should get smaller/faster with every param cut.
+
+                            cut = numpy.logical_and(param >= self.roi[roi_key][param_key][0], param < self.roi[roi_key][param_key][1])
+
+                            if return_total_cut_counts == True:
+                                #Can't do shortening of events because I want the stats at every level
+                                master_cut = numpy.logical_and(master_cut,cut)
+                                total_cut_counts[param_key] = sum(cut)
+                                if return_successive_cut_counts == True:
+                                    successive_cut_counts[param_key] = sum(master_cut)
+                            else:
+                                #Can't shorten eventids each time.
+                                #Reduce eventids by box cut
+                                eventids = eventids[cut]  #Should get smaller/faster with every param cut.
+                                if return_successive_cut_counts == True:
+                                    successive_cut_counts[param_key] = len(eventids)
+                        if return_total_cut_counts == True:
+                            eventids = eventids[master_cut]
                 else:
                     print('WARNING!!!')
                     print('Requested ROI [%s] is not specified in self.roi list:\n%s'%(roi_key,str(list(self.roi.keys()))))
@@ -1467,8 +2091,14 @@ class dataSlicerSingleRun():
                     file.close() #want file to close where exception met or not.  
                 print('Saving the cuts to the analysis file.')
 
-
-            return eventids
+            if return_successive_cut_counts and return_total_cut_counts:
+                return eventids, successive_cut_counts, total_cut_counts
+            elif return_successive_cut_counts:
+                return eventids, successive_cut_counts
+            elif return_total_cut_counts:
+                return eventids, total_cut_counts
+            else:
+                return eventids
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print('Run: ',self.reader.run)
@@ -2817,6 +3447,9 @@ class dataSlicer():
     def printSampleROI(self, verbose=False):
         return self.data_slicers[0].printDatasets
     def addROI(self, roi_key, roi_dict, verbose=False):
+        '''
+        Note that cuts are conducted in the order the are supplied to the ROI definition.
+        '''
         self.roi[roi_key] = roi_dict
         self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, len(list(self.roi.keys())))]
         for run_index, run in enumerate(self.runs):
@@ -2849,13 +3482,88 @@ class dataSlicer():
                 eventids = eventids_dict[run]
                 data[run] = self.data_slicers[run_index].getDataFromParam(eventids, param_key)
         return data
-    def getCutsFromROI(self,roi_key,load=False,save=False,verbose=False):
-        eventids_dict = {}
+    def getCutsFromROI(self,roi_key,eventids_dict=None,load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False):
+        '''
+        Note that cuts are conducted in the order the are supplied to the ROI definition.
+        '''
+        if eventids_dict is None:
+            eventids_dict = {}
+            all_runs = True
+        else:
+            all_runs = False
+
+        if return_successive_cut_counts == True:
+            successive_cut_counts = OrderedDict()
+        if return_total_cut_counts == True:
+            total_cut_counts = OrderedDict()
+
         for run_index, run in enumerate(self.runs):
             if verbose:
                 print('Run %i'%run)
-            eventids_dict[run] = self.data_slicers[run_index].getCutsFromROI(roi_key,load=load,save=save)
-        return eventids_dict
+
+            if run in eventids_dict.keys():
+                if return_successive_cut_counts and return_total_cut_counts:
+                    eventids_dict[run], _successive_cut_counts, _total_cut_counts    = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                elif return_successive_cut_counts:
+                    eventids_dict[run], _successive_cut_counts                       = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                elif return_total_cut_counts:
+                    eventids_dict[run], _total_cut_counts                            = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                else:
+                    eventids_dict[run],                                              = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+
+            elif all_runs == True:
+                if return_successive_cut_counts and return_total_cut_counts:
+                    eventids_dict[run], _successive_cut_counts, _total_cut_counts    = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                elif return_successive_cut_counts:
+                    eventids_dict[run], _successive_cut_counts                       = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                elif return_total_cut_counts:
+                    eventids_dict[run], _total_cut_counts                            = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                else:
+                    eventids_dict[run],                                              = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+            else:
+                eventids_dict[run] = numpy.array([])
+
+            if return_successive_cut_counts:
+                for key in list(_successive_cut_counts.keys()):
+                    if key in list(successive_cut_counts.keys()):
+                        successive_cut_counts[key] += _successive_cut_counts[key]
+                    else:
+                        successive_cut_counts[key] = _successive_cut_counts[key]
+            if return_total_cut_counts:
+                for key in list(_total_cut_counts.keys()):
+                    if key in list(total_cut_counts.keys()):
+                        total_cut_counts[key] += _total_cut_counts[key]
+                    else:
+                        total_cut_counts[key] = _total_cut_counts[key]
+
+        if verbose == True:
+            if return_successive_cut_counts or return_total_cut_counts:
+                print('Cut breakdown for ROI %s'%(roi_key))
+                if return_successive_cut_counts:
+                    for key in list(successive_cut_counts.keys()):
+                        if key == 'initial':
+                            print('Initial Event Count is %i'%(successive_cut_counts[key]))
+                        else:
+                            print('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]))
+                            print('%0.3f%% events then cut by %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key))
+                        previous_count = successive_cut_counts[key]
+
+                if return_total_cut_counts:
+                    for key in list(total_cut_counts.keys()):
+                        if key == 'initial':
+                            print('Initial Event Count is %i'%(total_cut_counts[key]))
+                        else:
+                            print('%0.3f%% of initial events would be cut by %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key))
+
+        if return_successive_cut_counts and return_total_cut_counts:
+            return eventids_dict, successive_cut_counts, total_cut_counts
+        elif return_successive_cut_counts:
+            return eventids_dict, successive_cut_counts
+        elif return_total_cut_counts:
+            return eventids_dict, total_cut_counts
+        else:
+            return eventids_dict
+
     def setCurrentPlotBins(self, main_param_key_x, main_param_key_y, eventids_dict):
         '''
         Loops over all saved dataSlicerSingleRun, gets their bounds, then makes sure all match using the largest windows.
@@ -3308,6 +4016,15 @@ class dataSlicer():
     def updateEventInspect(self, run_index, eventid, mollweide=False):
         '''
         '''
+        start_data = numpy.round(self.getSingleEventTableValues(self.table_params, run_index, eventid),decimals=3) #Meta information about the event that will be put in the table.
+        az_h = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_h_allsky']
+        el_h = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_h_allsky']
+        az_v = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_v_allsky']
+        el_v = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_v_allsky']
+
+
+        #import pdb; pdb.set_trace()
+
         self.data_slicers[run_index].prepareCorrelator()
         self.inspector_mpl['fig1'].canvas.set_window_title('r%ie%i'%(self.runs[run_index],eventid))
         #Clear plot axes
@@ -3337,8 +4054,8 @@ class dataSlicer():
         self.inspector_mpl['fig1_wf_0'].set_xlim(min(t[start:stop]), max(t[start:stop])) #All others will follow
 
         #Plot Maps
-        m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.data_slicers[run_index].cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True)
-        m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.data_slicers[run_index].cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True)
+        m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.data_slicers[run_index].cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - el_h, circle_az=az_h, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+        m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.data_slicers[run_index].cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - el_v, circle_az=az_v, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
 
         #Plot Spectra
         sine_subtract = False
@@ -3358,7 +4075,6 @@ class dataSlicer():
             ax.set_ylabel(apply_filter*'filtered ' + 'db ish')
 
         #Populate Table
-        start_data = numpy.round(self.getSingleEventTableValues(self.table_params, run_index, eventid),decimals=3)
         name_column = list(self.table_params.values())
         table = self.inspector_mpl['fig1_table'].table(cellText=list(zip(name_column,start_data)), loc='center', in_layout=True)
         table.auto_set_font_size(False)
@@ -3386,6 +4102,17 @@ class dataSlicer():
             else:
                 out_array[param_index] = self.data_slicers[run_index].getDataFromParam([eventid], param_key)
         return out_array
+
+    def delInspector(self):
+        for ds in self.data_slicers:
+            ds.delCorrelator()
+        if hasattr(self,'table_params'):
+            del self.table_params
+        if hasattr(self,'inspector_mpl'):
+            for key in list(self.inspector_mpl.keys()):
+                del self.inspector_mpl[key]
+            del self.inspector_mpl
+
 
 
     def eventInspector(self, eventids_dict, mollweide=False):
@@ -3482,12 +4209,14 @@ class dataSlicer():
         fig1_table = fig1.add_subplot(gs[:,4])
         
         #[['phi_best_h','elevation_best_h'],['hpol_max_map_value_abovehorizon','vpol_max_map_value_abovehorizon'], ['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'], ['hpol_max_map_value','vpol_max_map_value'], ['hpol_peak_to_sidelobe_abovehorizon', 'vpol_peak_to_sidelobe_abovehorizon'],['hpol_peak_to_sidelobe_belowhorizon','hpol_peak_to_sidelobe_abovehorizon'], ['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'], ['hpol_max_possible_map_value','vpol_max_possible_map_value']]
-        self.table_params = {}
+        self.table_params = OrderedDict()
         #Format is param_key : 'Name In Table'
         self.table_params['run'] = 'Run'
         self.table_params['eventid'] = 'Event id'
-        self.table_params['phi_best_h'] = 'Az'
-        self.table_params['elevation_best_h'] = 'El'
+        self.table_params['phi_best_h_allsky'] = 'Az H'
+        self.table_params['elevation_best_h_allsky'] = 'El H'
+        self.table_params['phi_best_v_allsky'] = 'Az V'
+        self.table_params['elevation_best_v_allsky'] = 'El V'
         self.table_params['hpol_max_map_value_abovehorizon'] = 'Map Max H'
         self.table_params['vpol_max_map_value_abovehorizon'] = 'Map Max V'
         self.table_params['impulsivity_h'] = 'Imp H'
@@ -3500,6 +4229,8 @@ class dataSlicer():
         self.table_params['p2p_v'] = 'P2P V'
         self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
         self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
+        self.table_params['similarity_count_h'] = 'H Simlr'
+        self.table_params['similarity_count_v'] = 'V Simlr'
 
 
         #Sample eventid, would normally be selected from and changeable

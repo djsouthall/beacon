@@ -51,7 +51,7 @@ if __name__ == "__main__":
         #runs = numpy.arange(5790,5974,dtype=int)
         runs = numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
-        analysis_part = 1 #Need to run 2 at some point after 11//23/2021 if things worked on part 1
+        analysis_part = 2 #Need to run 2 at some point after 11//23/2021 if things worked on part 1
         pol = 'both' #Always treated as both when analysis_part == 3
     else:
         runs = numpy.array([5630, 5631, 5632, 5638, 5639, 5640, 5641, 5642, 5643, 5644, 5645, 5646, 5647, 5648, 5649, 5656, 5657, 5659, 5660], dtype=int)

@@ -655,7 +655,7 @@ if __name__=="__main__":
                             file['map_times'].attrs['waveform_index_range_%s'%mode]     = str(waveform_index_range)
                             file['map_direction'].attrs['waveform_index_range_%s'%mode] = str(waveform_index_range)
 
-                            cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract, deploy_index=deploy_index,map_source_distance_m=map_source_distance_m)
+                            cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter, sine_subtract=sine_subtract, deploy_index=deploy_index,map_source_distance_m=map_source_distance_m, apply_phase_response=apply_phase_response, tukey=True)
 
                             print('Cor setup to use deploy index %s'%str(cor.deploy_index))
 
