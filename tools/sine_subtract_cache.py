@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 '''
 This file contains code written to handle pre-calculating sine subtraction.  The goal is to save runtime on code
 by storing the sine subtraction output values and calling them for each event as needed.  This will also hopefully
@@ -71,6 +72,7 @@ class sineSubtractedReader(Reader):
             for channel in range(8):
                 self.ss_event_tree.SetBranchAddress("result_ch%i"%channel, self.sine_subtracts[channel].getResult())
         super().__init__(base_dir, run)
+        
 
     def event(self,force_reload = False):
         '''
@@ -81,22 +83,24 @@ class sineSubtractedReader(Reader):
         force_reload : bool
             Will force this to reset entry info.
         '''
-        self.ss_event_entry = self.event_entry
-        super().event(force_reload=force_reload)
+        if self.ss_event_file is None:
+            return super().event(force_reload=force_reload)
+        else:
+            self.ss_event_entry = self.event_entry
+            super().event(force_reload=force_reload)
 
-        try:
-            if (self.ss_event_entry != self.current_entry or force_reload):
-                self.ss_event_tree.GetEntry(self.current_entry)
-                self.ss_event_entry = self.current_entry 
-                #self.ss_evt = getattr(self.ss_event_tree,"event")
-        except Exception as e:
-            print('\nError in %s'%inspect.stack()[0][3])
-            print(e)
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
+            try:
+                if (self.ss_event_entry != self.current_entry or force_reload):
+                    self.ss_event_tree.GetEntry(self.current_entry)
+                    self.ss_event_entry = self.current_entry 
+            except Exception as e:
+                print('\nError in %s'%inspect.stack()[0][3])
+                print(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
 
-        return self.evt#, self.ss_evt
+            return self.evt
 
     def wf(self, channel):
         '''
@@ -120,38 +124,41 @@ class sineSubtractedReader(Reader):
         '''
         ## stupid hack because for some reason it doesn't always report the right buffer length 
         try:
-            #ev, ss_ev = self.event() #Want to call the newly defined one to update both trees rather than the original.
-            ev = self.event() #Want to call the newly defined one to update both trees rather than the original.
+            if self.ss_event_file is None:
+                return super().wf(channel)
+            else:
+                #ev, ss_ev = self.event() #Want to call the newly defined one to update both trees rather than the original.
+                ev = self.event() #Want to call the newly defined one to update both trees rather than the original.
 
-            #Load original wf and make output shell for processed wf.
-            original_wf = numpy.copy(numpy.frombuffer(ev.getData(channel), numpy.dtype('float64'), ev.getBufferLength()))
-            original_wf -= numpy.mean(original_wf)
-            original_wf = original_wf.astype(numpy.double)
-            len_wf = len(original_wf)
+                #Load original wf and make output shell for processed wf.
+                original_wf = numpy.copy(numpy.frombuffer(ev.getData(channel), numpy.dtype('float64'), ev.getBufferLength()))
+                original_wf -= numpy.mean(original_wf)
+                original_wf = original_wf.astype(numpy.double)
+                len_wf = len(original_wf)
 
-            #Do the sine subtraction
-            output_wf = numpy.zeros(len_wf,dtype=numpy.double)
-            self.sine_subtracts[channel].subtractCW(len_wf,original_wf.data,len_wf,output_wf, self.sine_subtracts[channel].getResult())
+                #Do the sine subtraction
+                output_wf = numpy.zeros(len_wf,dtype=numpy.double)
+                self.sine_subtracts[channel].subtractCW(len_wf,original_wf.data,len_wf,output_wf, self.sine_subtracts[channel].getResult())
 
-            if True:
-                plt.figure()
-                plt.subplot(2,1,1)
-                plt.plot(original_wf)
-                plt.plot(output_wf)
-                plt.subplot(2,1,2)  
+                if True:
+                    plt.figure()
+                    plt.subplot(2,1,1)
+                    plt.plot(original_wf)
+                    plt.plot(output_wf)
+                    plt.subplot(2,1,2)  
 
-                #Crude just for testing
+                    #Crude just for testing
 
-                original_spec = numpy.fft.rfft(original_wf)
-                original_db = 10.0*numpy.log10( 2*original_spec * numpy.conj(original_spec) / len_wf)
+                    original_spec = numpy.fft.rfft(original_wf)
+                    original_db = 10.0*numpy.log10( 2*original_spec * numpy.conj(original_spec) / len_wf)
 
-                output_spec = numpy.fft.rfft(output_wf)
-                output_db = 10.0*numpy.log10( 2*output_spec * numpy.conj(output_spec) / len_wf)
+                    output_spec = numpy.fft.rfft(output_wf)
+                    output_db = 10.0*numpy.log10( 2*output_spec * numpy.conj(output_spec) / len_wf)
 
-                plt.plot(original_db)
-                plt.plot(output_db)
+                    plt.plot(original_db)
+                    plt.plot(output_db)
 
-            return output_wf
+                return output_wf
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -161,14 +168,14 @@ class sineSubtractedReader(Reader):
 
 
 if __name__ == '__main__':
-    run = 5732 #To be made a variable
-    mode = ['make','test'][1]
+    if len(sys.argv) > 1:
+        run = int(sys.argv[1])
 
-    #Prepare event reader and sine subtracts
-    reader = Reader(datapath,run)
-    filename = os.path.join(cache_dir, 'sinsub%i.root'%run)
+        print('Attempting to precalculate sie subtraction terms for run %i'%run)
+        #Prepare event reader and sine subtracts
+        reader = Reader(datapath,run)
+        filename = os.path.join(cache_dir, 'sinsub%i.root'%run)
 
-    if mode == 'make':
         sine_subtracts = prepareStandardSineSubtractions()
         #Check if the cache directory exists.  If not make it.  This is where the sin subtraction ROOT files will be stored.
         if not os.path.exists(cache_dir):
@@ -203,9 +210,6 @@ if __name__ == '__main__':
             if (eventid + 1) % 100 == 0:
                 sys.stdout.write('(%i/%i)\t\t\t\n'%(eventid+1,reader.N()))
                 sys.stdout.flush()
-            if eventid > 1001:
-                t.Fill()
-                continue
 
             reader.setEntry(eventid)
             for channel in range(8):
@@ -222,9 +226,23 @@ if __name__ == '__main__':
         t.Write()
         f.Close()
 
-    elif mode == 'test':
-        reader = sineSubtractedReader(datapath,run)
-
+    else:
+        '''
+        Testing
+        '''
+        reader = sineSubtractedReader(datapath,5732)
+        sine_subtracts = prepareStandardSineSubtractions()
+        print(sine_subtracts[0].getResult())
         reader.setEntry(200)
-        reader.wf(0)
+        wf = reader.wf(0)
+        fig = plt.figure()
+        ax = plt.gca()
+        plt.plot(wf)
+        
+        reader2 = sineSubtractedReader(datapath,5733)
+        reader2.setEntry(200)
+        wf2 = reader2.wf(0)
+        plt.sca(ax)
+        plt.plot(wf2)
+        
         

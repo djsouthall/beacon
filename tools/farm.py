@@ -47,12 +47,16 @@ if __name__ == "__main__":
         done_runs = numpy.array([])
         analysis_part = 2
         pol == 'both'
-    elif True:
-        #runs = numpy.arange(5790,5974,dtype=int)
+    elif False:
+        #THE ONE I LIE TO DO NOW
         runs = numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
         analysis_part = 2 #Need to run 2 at some point after 11//23/2021 if things worked on part 1
         pol = 'both' #Always treated as both when analysis_part == 3
+    elif True:
+        runs = numpy.arange(5733,5974,dtype=int)
+        done_runs = numpy.array([])
+        analysis_part = 4 # Sine subtraction
     else:
         runs = numpy.array([5630, 5631, 5632, 5638, 5639, 5640, 5641, 5642, 5643, 5644, 5645, 5646, 5647, 5648, 5649, 5656, 5657, 5659, 5660], dtype=int)
         done_runs = numpy.array([])
@@ -154,6 +158,14 @@ if __name__ == "__main__":
             vpol_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
 
             print('Run %i jobs submitted --> HPol jid:%i\tVPol jid:%i'%(run,hpol_jobid,vpol_jobid))
+
+        elif analysis_part == 4:
+            script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'tools', 'sine_subtract_cache.py')
+            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,jobname)
+            command = script + ' %i'%(run)
+            command_queue = batch + command
+            print(command_queue)    
+            os.system(command_queue) # Submit to queue
 
         else:
             script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'analyze_event_rate_frequency.py')
