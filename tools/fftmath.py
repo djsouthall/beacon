@@ -47,7 +47,7 @@ class FFTPrepper:
 
     Parameters
     ----------
-    reader : examples.beacon_data_reader.reader
+    reader : beaconroot.examples.beacon_data_reader.reader or beacon.tools.sine_subtract_cache.sineSubtractedReader
         The run reader you wish to examine time delays for.
     final_corr_length : int
         Should be given as a power of 2.  This is the goal length of the cross correlations, and can set the time resolution
@@ -100,6 +100,12 @@ class FFTPrepper:
         try:
             self.reader = reader
             self.reader.setEntry(0)
+            self.ss_reader_mode = False
+            if hasattr(self.reader, "ss_event_file"):
+                if self.reader.ss_event_file is not None:
+                    print('Sine Subtracted Reader detected and ss_event_file appears to be present.  Any sine subtraction added to this FFTPrepper object will be ignored, assuming that it will be automatically handled via precomputed sine subtraction values.')
+                    self.ss_reader_mode = True
+
             self.buffer_length = reader.header().buffer_length
 
             # self.use_sinc_interpolation = use_sinc_interpolation #Testing this right now.
@@ -346,17 +352,20 @@ class FFTPrepper:
         max_failed_iterations : int
             This sets a limiter on the number of attempts to make when removing signals, before exiting.
         '''
-        sine_subtract = FFTtools.SineSubtract(max_failed_iterations, min_power_ratio,plot)
-        if plot == True:
-            print('Showing plots from SineSubtract enabled')
-            self.plot_ss.append(True)
-            print('WARNING!  Enabling plot for sine subtraction will result in plotting for EVERY waveform that is processed with this object.')
-        else: 
-            self.plot_ss.append(False)
-        sine_subtract.setVerbose(verbose) #Don't print a bunch to the screen
-        if numpy.logical_and(min_freq is not None,min_freq is not None):
-            sine_subtract.setFreqLimits(min_freq, max_freq)
-        self.sine_subtracts.append(sine_subtract)
+        if self.ss_reader_mode == True:
+            print('Attempt to addSineSubtract ignored due to sineSubtractedReader being detected and usable.')
+        else:
+            sine_subtract = FFTtools.SineSubtract(max_failed_iterations, min_power_ratio,plot)
+            if plot == True:
+                print('Showing plots from SineSubtract enabled')
+                self.plot_ss.append(True)
+                print('WARNING!  Enabling plot for sine subtraction will result in plotting for EVERY waveform that is processed with this object.')
+            else: 
+                self.plot_ss.append(False)
+            sine_subtract.setVerbose(verbose) #Don't print a bunch to the screen
+            if numpy.logical_and(min_freq is not None,min_freq is not None):
+                sine_subtract.setFreqLimits(min_freq, max_freq)
+            self.sine_subtracts.append(sine_subtract)
 
 
     def wf(self, channel, apply_filter=False, hilbert=False, tukey=None, sine_subtract=False, return_sine_subtract_info=False, ss_first=True):
@@ -371,37 +380,44 @@ class FFTPrepper:
         help the filtering. 
         '''
         try:
-            if ss_first == True:
-                temp_wf = self.reader.wf(int(channel))
-            else:
+            if self.ss_reader_mode == True and numpy.logical_and(sine_subtract, return_sine_subtract_info) == False:
                 temp_wf = self.reader.wf(int(channel))[self.start_waveform_index:self.end_waveform_index+1]
+            else:
+                if self.ss_reader_mode == True:
+                    if ss_first == True:
+                        temp_wf = self.reader.raw_wf(int(channel))
+                    else:
+                        temp_wf = self.reader.raw_wf(int(channel))[self.start_waveform_index:self.end_waveform_index+1]
+                else:
+                    if ss_first == True:
+                        temp_wf = self.reader.wf(int(channel))
+                    else:
+                        temp_wf = self.reader.wf(int(channel))[self.start_waveform_index:self.end_waveform_index+1]
 
-            temp_wf -= numpy.mean(temp_wf)
-            temp_wf = temp_wf.astype(numpy.double)
-            ss_freqs = []
-            n_fits = []
-            if numpy.logical_and(sine_subtract, len(self.sine_subtracts) > 0):
-                for ss_index, ss in enumerate(self.sine_subtracts):
-                    #_temp_wf is the output array for the subtractCW function, and must be predefined.  
-                    _temp_wf = numpy.zeros(len(temp_wf),dtype=numpy.double)#numpy.zeros_like(temp_wf)
-                    #Do the sine subtraction
-                    ss.subtractCW(len(temp_wf),temp_wf.data,self.dt_ns_original,_temp_wf)#*1e-9,_temp_wf)#self.dt_ns_original
+                temp_wf -= numpy.mean(temp_wf)
+                temp_wf = temp_wf.astype(numpy.double)
+                ss_freqs = []
+                n_fits = []
+                if numpy.logical_and(sine_subtract, len(self.sine_subtracts) > 0):
+                    for ss_index, ss in enumerate(self.sine_subtracts):
+                        #_temp_wf is the output array for the subtractCW function, and must be predefined.  
+                        _temp_wf = numpy.zeros(len(temp_wf),dtype=numpy.double)#numpy.zeros_like(temp_wf)
+                        #Do the sine subtraction
+                        ss.subtractCW(len(temp_wf),temp_wf.data,self.dt_ns_original,_temp_wf)#*1e-9,_temp_wf)#self.dt_ns_original
 
-                    #Check how many solutions were found
-                    n_fit = ss.getNSines()
-                    n_fits.append(n_fit)
-                    #Save all frequencies in array
-                    ss_freqs.append(numpy.frombuffer(ss.getFreqs(),dtype=numpy.float64,count=n_fit))
-                    if self.plot_ss[ss_index] == True:
-                        plt.figure()
-                        plt.semilogy(numpy.array(ss.storedSpectra(0).GetX()), ss.storedSpectra(0).GetY())
-                    if n_fit > 0:
-                        temp_wf = _temp_wf
+                        #Check how many solutions were found
+                        n_fit = ss.getNSines()
+                        n_fits.append(n_fit)
+                        #Save all frequencies in array
+                        ss_freqs.append(numpy.frombuffer(ss.getFreqs(),dtype=numpy.float64,count=n_fit))
+                        if self.plot_ss[ss_index] == True:
+                            plt.figure()
+                            plt.semilogy(numpy.array(ss.storedSpectra(0).GetX()), ss.storedSpectra(0).GetY())
+                        if n_fit > 0:
+                            temp_wf = _temp_wf
 
-            if ss_first == True:
-                temp_wf = temp_wf[self.start_waveform_index:self.end_waveform_index+1] #indexed AFTER sine subtract because sine subtract benefits from seeing the whole wf. 
-
-
+                if ss_first == True:
+                    temp_wf = temp_wf[self.start_waveform_index:self.end_waveform_index+1] #indexed AFTER sine subtract because sine subtract benefits from seeing the whole wf. 
 
             if tukey is None:
                 tukey = self.tukey_default
@@ -1018,6 +1034,8 @@ class FFTPrepper:
         For each event this attempts to determine the bandwidth.
 
         If remove_averaged_spectrum is called then it will subtract the output of calculateAverageNoiseSpectrum from each spec2. 
+
+        This function was never satisfactorily refined to provide adequate characterization imo.  
         '''
         try:
             bin_edges = numpy.arange(min_freq_MHz, max_freq_MHz+step_freq_MHz, step_freq_MHz)

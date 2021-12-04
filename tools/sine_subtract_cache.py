@@ -102,6 +102,12 @@ class sineSubtractedReader(Reader):
 
             return self.evt
 
+    def raw_wf(self,channel):
+        '''
+        Calls the super wf function without performing sine subtraction.
+        '''
+        return super().wf(channel)
+
     def wf(self, channel):
         '''
         This will pull the waveform data (returned in adu) for the requested channel.  The channel mapping for the
@@ -140,7 +146,7 @@ class sineSubtractedReader(Reader):
                 output_wf = numpy.zeros(len_wf,dtype=numpy.double)
                 self.sine_subtracts[channel].subtractCW(len_wf,original_wf.data,len_wf,output_wf, self.sine_subtracts[channel].getResult())
 
-                if True:
+                if False:
                     plt.figure()
                     plt.subplot(2,1,1)
                     plt.plot(original_wf)
@@ -171,7 +177,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         run = int(sys.argv[1])
 
-        print('Attempting to precalculate sie subtraction terms for run %i'%run)
+        print('Attempting to precalculate sine subtraction terms for run %i'%run)
         #Prepare event reader and sine subtracts
         reader = Reader(datapath,run)
         filename = os.path.join(cache_dir, 'sinsub%i.root'%run)
@@ -197,11 +203,6 @@ if __name__ == '__main__':
         
         for channel in range(8):
             t.Branch("result_ch%i"%channel, ROOT.addressof(sine_subtracts[channel].getResult()), "result_ch%i"%channel)
-
-
-        for channel in range(8):
-            #I don't know if I need to do this seperately from definine Branch or if this is only when accessing the file.
-            t.SetBranchAddress("result_ch%i"%channel, sine_subtracts[channel].getResult())
 
         len_wf = len(reader.t())
         output_wf = numpy.zeros(len_wf,dtype=numpy.double)#output_wf is the output array for the subtractCW function, and must be predefined.  Not sure if I can use the same one for all events. 

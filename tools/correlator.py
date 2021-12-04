@@ -141,13 +141,20 @@ class Correlator:
             self.c = 299792458.0/n #m/s
             self.min_elevation_linewidth = 0.5
             self.reader = reader
+
+            self.ss_reader_mode = False
+            if hasattr(self.reader, "ss_event_file"):
+                if self.reader.ss_event_file is not None:
+                    print('Sine Subtracted Reader detected and ss_event_file appears to be present.  Any sine subtraction added to this Correlator object will be ignored, assuming that it will be automatically handled via precomputed sine subtraction values.')
+                    self.ss_reader_mode = True
+
             if upsample is None:
                 self.upsample = len(self.reader.t())
             else:
                 self.upsample = upsample
 
             self.apply_tukey = tukey
-            self.apply_sine_subtract = sine_subtract
+            self.apply_sine_subtract = sine_subtract or self.ss_reader_mode #Used in some places just to have titles portray accurately that sine subtraction was used.  If ss_reader_mode is True then this is largely actually ignored and the ss reader is used with sine subtracted waveforms.
             '''
             Note that the definition of final_corr_length in FFTPrepper and upsample in this are different (off by about 
             a factor of 2).  final_corr_length is not actually being used in correlator, all signal upsampling happens
@@ -569,7 +576,7 @@ class Correlator:
             channels = numpy.sort(numpy.asarray(channels)).astype(int)
             temp_waveforms = numpy.zeros((len(channels),self.prep.buffer_length))
             for channel_index, channel in enumerate(channels):
-                temp_wf = self.prep.wf(channel,apply_filter=apply_filter,hilbert=hilbert,tukey=tukey,sine_subtract=sine_subtract, return_sine_subtract_info=False)
+                temp_wf = self.prep.wf(channel,apply_filter=apply_filter,hilbert=hilbert,tukey=tukey,sine_subtract=sine_subtract, return_sine_subtract_info=False) #May apply sine subtraction automatically if the self.prep was handed a sineSubtractedReader instead of the default Reader
 
                 if div_std:
                     temp_wf = temp_wf/numpy.std(temp_wf)
