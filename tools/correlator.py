@@ -13,7 +13,8 @@ import gc
 import pymap3d as pm
 import itertools
 
-from    beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+#from    beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
 import  beacon.tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
 import  beacon.tools.info as info
 from    beacon.tools.data_handler import getEventTimes
@@ -4225,7 +4226,7 @@ if __name__=="__main__":
         if sine_subtract:
             cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-        for mode in ['hpol','vpol']:
+        for mode in ['hpol','vpol','all']:
             mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,90.0], center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
             fig.set_size_inches(16, 9)
             plt.sca(ax)

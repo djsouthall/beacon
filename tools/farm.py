@@ -47,13 +47,13 @@ if __name__ == "__main__":
         done_runs = numpy.array([])
         analysis_part = 2
         pol == 'both'
-    elif False:
-        #THE ONE I LIE TO DO NOW
-        runs = numpy.arange(5733,5974,dtype=int)
-        done_runs = numpy.array([])
-        analysis_part = 2 #Need to run 2 at some point after 11//23/2021 if things worked on part 1
-        pol = 'both' #Always treated as both when analysis_part == 3
     elif True:
+        #THE ONE I LIkE TO DO NOW
+        runs = numpy.arange(5733,5974,dtype=int)
+        done_runs = numpy.array([5733])
+        analysis_part = 2 #Need to run 2 at some point after 11//23/2021 if things worked on part 1
+        #pol = 'both' #Always treated as both when analysis_part == 3
+    elif False:
         runs = numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
         analysis_part = 4 # Sine subtraction
@@ -75,6 +75,32 @@ if __name__ == "__main__":
         jobname = 'bcn%i'%run
 
         if True and analysis_part == 2:
+            script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part2.sh')
+
+            #Run hpol and vpol jobs in same job, and run the 'all' case as a seperate job. 
+            
+            #Prepare Hpol Job
+            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,jobname+'hv')
+            command = '%s %i %s %s'%(script, run, deploy_index, 'both')
+            command_queue = batch + command
+
+            #Submit hpol job and get the jobid to then submit vpol with dependency
+            print(command_queue)
+            both_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
+
+            
+            #Prepare Vpol Job
+            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition,jobname+'all', both_jobid)
+            command = '%s %i %s %s'%(script, run, deploy_index, 'all')
+            command_queue = batch + command
+
+            #Submit all job
+            print(command_queue)
+            all_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
+
+            print('Run %i jobs submitted --> Both jid:%i\tAll jid:%i'%(run,both_jobid,all_jobid))
+            
+        elif False and analysis_part == 2:
             script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part2.sh')
 
             if pol == 'both':
@@ -117,6 +143,15 @@ if __name__ == "__main__":
                 #Submit hpol job and get the jobid to then submit vpol with dependency
                 print(command_queue)
                 hpol_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
+            elif pol == 'all':
+                #Prepare all Job
+                batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,jobname+'all')
+                command = '%s %i %s %s'%(script, run, deploy_index, 'all')
+                command_queue = batch + commandW
+
+                #Submit hpol job and get the jobid to then submit all with dependency
+                print(command_queue)
+                hpol_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n','')) 
 
         elif analysis_part == 1:
             script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part1.sh')

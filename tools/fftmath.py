@@ -19,7 +19,8 @@ ROOT.gInterpreter.ProcessLine('#include "%s"'%(os.environ['LIB_ROOT_FFTW_WRAPPER
 from ROOT import FFTtools
 
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+#from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
 
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 from tools.data_handler import loadTriggerTypes

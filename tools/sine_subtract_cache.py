@@ -47,6 +47,7 @@ def prepareStandardSineSubtractions():
         sine_subtracts[channel] = FFTtools.SineSubtract(max_failed_iterations, sine_subtract_percent,False)
         sine_subtracts[channel].setVerbose(False)
         sine_subtracts[channel].setFreqLimits(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz)
+        sine_subtracts[channel].getResult()
 
     return sine_subtracts
 
@@ -70,7 +71,8 @@ class sineSubtractedReader(Reader):
 
             self.sine_subtracts = prepareStandardSineSubtractions()
             for channel in range(8):
-                self.ss_event_tree.SetBranchAddress("result_ch%i"%channel, self.sine_subtracts[channel].getResult())
+                self.ss_event_tree.Branch("result_ch%i"%channel, ROOT.addressof(self.sine_subtracts[channel].getResult()), "result_ch%i"%channel)
+
         super().__init__(base_dir, run)
         
 
@@ -231,9 +233,7 @@ if __name__ == '__main__':
         '''
         Testing
         '''
-        reader = sineSubtractedReader(datapath,5732)
-        sine_subtracts = prepareStandardSineSubtractions()
-        print(sine_subtracts[0].getResult())
+        reader = Reader(datapath,5733)
         reader.setEntry(200)
         wf = reader.wf(0)
         fig = plt.figure()
