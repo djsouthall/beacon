@@ -37,7 +37,10 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore")
 
 raw_datapath = os.environ['BEACON_DATA']
-processed_datapath = os.environ['BEACON_PROCESSED_DATA']
+processed_datapath = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'backup_pre_all_map_run_12-5-2021')
+#processed_datapath = os.environ['BEACON_PROCESSED_DATA']
+print('SETTING processed_datapath TO: ', processed_datapath)
+
 
 '''
 'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
@@ -80,7 +83,7 @@ if __name__ == '__main__':
         n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
 
 
-        ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
+        ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                         std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
@@ -228,24 +231,35 @@ if __name__ == '__main__':
                             print(above_horizon_eventids_array)
                             ds.eventInspector(above_horizon_eventids_dict)
 
-                    print('successive_cut_counts:')
-                    pprint(successive_cut_counts)
-                    print('total_cut_counts:')
-                    pprint(total_cut_counts)
+                    # print('successive_cut_counts:')
+                    # pprint(successive_cut_counts)
+                    # print('total_cut_counts:')
+                    # pprint(total_cut_counts)
                     
+                    roi_key = 'above horizon'
                     for key in list(successive_cut_counts.keys()):
+                        #ds.roi[roi_key][key]
                         if key == 'initial':
                             print('Initial Event Count is %i'%(successive_cut_counts[key]))
                         else:
+                            print('%0.3f%% events then cut by %s with bounds %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key, str(ds.roi[roi_key][key])))
+                            print('%0.3f%% of initial events would be cut by %s with bounds %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key, str(ds.roi[roi_key][key])))
                             print('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]))
-                            print('%0.3f%% events then cut by %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key))
                         previous_count = successive_cut_counts[key]
+                    
+                    # for key in list(successive_cut_counts.keys()):
+                    #     if key == 'initial':
+                    #         print('Initial Event Count is %i'%(successive_cut_counts[key]))
+                    #     else:
+                    #         print('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]))
+                    #         print('%0.3f%% events then cut by %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key))
+                    #     previous_count = successive_cut_counts[key]
 
-                    for key in list(total_cut_counts.keys()):
-                        if key == 'initial':
-                            print('Initial Event Count is %i'%(total_cut_counts[key]))
-                        else:
-                            print('%0.3f%% of initial events would be cut by %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key))
+                    # for key in list(total_cut_counts.keys()):
+                    #     if key == 'initial':
+                    #         print('Initial Event Count is %i'%(total_cut_counts[key]))
+                    #     else:
+                    #         print('%0.3f%% of initial events would be cut by %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key))
 
                 # ds.eventInspector({5973:[27301]})
 

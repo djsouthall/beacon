@@ -27,10 +27,6 @@ import tools.interpret as interpret #Must be imported before matplotlib or else 
 import pdb
 
 
-analysis_data_dir = os.environ['BEACON_PROCESSED_DATA']#'/home/dsouthall/scratch-midway2/beacon_jan17_2020/'
-#os.environ['BEACON_ANALYSIS_DIR'] + 'data/'
-
-
 def loadTriggerTypes(reader):
     '''
     Will get a list of trigger types corresponding to all eventids for the given reader
@@ -313,7 +309,7 @@ def getEventTimes(reader,plot=False,smooth_window=101):
 
 
 
-def createFile(reader,redo_defaults=False, check_defaults=False):
+def createFile(reader,redo_defaults=False, check_defaults=False,analysis_data_dir=None):
     '''
     This will make an hdf5 file for the run specified by the reader.
     If the file already exists then this will check if the file has
@@ -339,8 +335,10 @@ def createFile(reader,redo_defaults=False, check_defaults=False):
         run = int(reader.run)
         N = reader.N()
         if N > 0:
-
-            filename = analysis_data_dir + 'run%i_analysis_data.h5'%run
+            if analysis_data_dir is None:
+                analysis_data_dir = os.environ['BEACON_PROCESSED_DATA']
+                
+            filename = os.path.join(analysis_data_dir,'run%i_analysis_data.h5'%run)
 
             header_keys_to_copy = []
             h = interpret.getHeaderDict(reader)

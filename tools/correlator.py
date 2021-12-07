@@ -1321,6 +1321,25 @@ class Correlator:
                     t_best_1subtract2 = self.t_vpol_1subtract2[theta_index,phi_index]
                     t_best_1subtract3 = self.t_vpol_1subtract3[theta_index,phi_index]
                     t_best_2subtract3 = self.t_vpol_2subtract3[theta_index,phi_index]
+                elif pol == 'all':
+                    channels = numpy.array([0,1,2,3,4,5,6,7])
+                    waveforms = self.wf(eventid, channels, div_std=False, hilbert=hilbert, apply_filter=self.apply_filter, tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract)
+                    if shorten_signals == True:
+                        waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+                    
+                    t_best_0subtract1_h = self.t_hpol_0subtract1[theta_index,phi_index]
+                    t_best_0subtract2_h = self.t_hpol_0subtract2[theta_index,phi_index]
+                    t_best_0subtract3_h = self.t_hpol_0subtract3[theta_index,phi_index]
+                    t_best_1subtract2_h = self.t_hpol_1subtract2[theta_index,phi_index]
+                    t_best_1subtract3_h = self.t_hpol_1subtract3[theta_index,phi_index]
+                    t_best_2subtract3_h = self.t_hpol_2subtract3[theta_index,phi_index]
+
+                    t_best_0subtract1_v = self.t_vpol_0subtract1[theta_index,phi_index]
+                    t_best_0subtract2_v = self.t_vpol_0subtract2[theta_index,phi_index]
+                    t_best_0subtract3_v = self.t_vpol_0subtract3[theta_index,phi_index]
+                    t_best_1subtract2_v = self.t_vpol_1subtract2[theta_index,phi_index]
+                    t_best_1subtract3_v = self.t_vpol_1subtract3[theta_index,phi_index]
+                    t_best_2subtract3_v = self.t_vpol_2subtract3[theta_index,phi_index]
 
                 # #Determine how many indices to roll each waveform.
                 # roll0 = 0
@@ -1328,102 +1347,219 @@ class Correlator:
                 # roll2 = int(numpy.rint(t_best_0subtract2/self.dt_resampled))
                 # roll3 = int(numpy.rint(t_best_0subtract3/self.dt_resampled))
 
-                self.popout_fig = plt.figure()
-                self.popout_ax = self.popout_fig.gca()
-                plt.suptitle('ENU %s\nAzimuth = %0.3f, Zenith = %0.3f'%(event_ax.get_title().replace('-',' ').title(), event.xdata,event.ydata))
                 
-                if all_alignments == False:
-                    #Align signals to antenna 0
+                if pol in ['hpol', 'vpol']:
+                    self.popout_fig = plt.figure()
+                    self.popout_ax = self.popout_fig.gca()
+                    plt.suptitle('ENU %s\nAzimuth = %0.3f, Zenith = %0.3f'%(event_ax.get_title().replace('-',' ').title(), event.xdata,event.ydata))
+                    if all_alignments == False:
+                        #Align signals to antenna 0
 
-                    plt.subplot(2,1,1)
-                    
-                    plt.plot(self.times_resampled, waveforms[0],label='Ch%i'%channels[0])
-                    plt.plot(self.times_resampled, waveforms[1],label='Ch%i'%(channels[1]))
-                    plt.plot(self.times_resampled, waveforms[2],label='Ch%i'%(channels[2]))
-                    plt.plot(self.times_resampled, waveforms[3],label='Ch%i'%(channels[3]))
+                        plt.subplot(2,1,1)
+                        
+                        plt.plot(self.times_resampled, waveforms[0],label='Ch%i'%channels[0])
+                        plt.plot(self.times_resampled, waveforms[1],label='Ch%i'%(channels[1]))
+                        plt.plot(self.times_resampled, waveforms[2],label='Ch%i'%(channels[2]))
+                        plt.plot(self.times_resampled, waveforms[3],label='Ch%i'%(channels[3]))
 
-                    plt.ylabel('adu')
-                    plt.xlabel('Time (ns)')
-                    plt.minorticks_on()
-                    plt.grid(b=True, which='major', color='k', linestyle='-')
-                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.legend()
+                        plt.ylabel('adu')
+                        plt.xlabel('Time (ns)')
+                        plt.minorticks_on()
+                        plt.grid(b=True, which='major', color='k', linestyle='-')
+                        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                        plt.legend()
 
-                    plt.subplot(2,1,2)
-                    
-                    plt.plot(self.times_resampled, waveforms[0]/max(waveforms[0]),label='Ch%i'%channels[0])
-                    plt.plot(self.times_resampled + t_best_0subtract1, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], t_best_0subtract1))
-                    plt.plot(self.times_resampled + t_best_0subtract2, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
-                    plt.plot(self.times_resampled + t_best_0subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
+                        plt.subplot(2,1,2)
+                        
+                        plt.plot(self.times_resampled, waveforms[0]/max(waveforms[0]),label='Ch%i'%channels[0])
+                        plt.plot(self.times_resampled + t_best_0subtract1, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], t_best_0subtract1))
+                        plt.plot(self.times_resampled + t_best_0subtract2, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
+                        plt.plot(self.times_resampled + t_best_0subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
 
-                    plt.ylabel('Normalized adu')
-                    plt.xlabel('Time (ns)')
-                    plt.minorticks_on()
-                    plt.grid(b=True, which='major', color='k', linestyle='-')
-                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.legend()
+                        plt.ylabel('Normalized adu')
+                        plt.xlabel('Time (ns)')
+                        plt.minorticks_on()
+                        plt.grid(b=True, which='major', color='k', linestyle='-')
+                        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                        plt.legend()
 
-                else:
-                    #Each waveform aligned to each antenna by that antennas relevant time delays. 
-                    plt.subplot(2,2,1)
-                    #Antenna 0
-                    
-                    plt.plot(self.times_resampled                    , waveforms[0]/max(waveforms[0]),label='Ch%i, shifted %0.2f ns'%(channels[0], 0))
-                    plt.plot(self.times_resampled + t_best_0subtract1, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], t_best_0subtract1))
-                    plt.plot(self.times_resampled + t_best_0subtract2, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
-                    plt.plot(self.times_resampled + t_best_0subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
+                    else:
+                        #Each waveform aligned to each antenna by that antennas relevant time delays. 
+                        plt.subplot(2,2,1)
+                        #Antenna 0
+                        
+                        plt.plot(self.times_resampled                    , waveforms[0]/max(waveforms[0]),label='Ch%i, shifted %0.2f ns'%(channels[0], 0))
+                        plt.plot(self.times_resampled + t_best_0subtract1, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], t_best_0subtract1))
+                        plt.plot(self.times_resampled + t_best_0subtract2, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
+                        plt.plot(self.times_resampled + t_best_0subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
 
-                    plt.ylabel('Normalized adu')
-                    plt.xlabel('Time (ns)')
-                    plt.minorticks_on()
-                    plt.grid(b=True, which='major', color='k', linestyle='-')
-                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.legend()
+                        plt.ylabel('Normalized adu')
+                        plt.xlabel('Time (ns)')
+                        plt.minorticks_on()
+                        plt.grid(b=True, which='major', color='k', linestyle='-')
+                        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                        plt.legend()
 
-                    plt.subplot(2,2,2)
-                    #Antenna 1
-                    
-                    plt.plot(self.times_resampled - t_best_0subtract1, waveforms[0]/max(waveforms[0]),label='Ch%i, shifted %0.2f ns'%(channels[1], - t_best_0subtract1))
-                    plt.plot(self.times_resampled                    , waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], 0))
-                    plt.plot(self.times_resampled + t_best_1subtract2, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
-                    plt.plot(self.times_resampled + t_best_1subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
+                        plt.subplot(2,2,2)
+                        #Antenna 1
+                        
+                        plt.plot(self.times_resampled - t_best_0subtract1, waveforms[0]/max(waveforms[0]),label='Ch%i, shifted %0.2f ns'%(channels[1], - t_best_0subtract1))
+                        plt.plot(self.times_resampled                    , waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], 0))
+                        plt.plot(self.times_resampled + t_best_1subtract2, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2))
+                        plt.plot(self.times_resampled + t_best_1subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3))
 
-                    plt.ylabel('Normalized adu')
-                    plt.xlabel('Time (ns)')
-                    plt.minorticks_on()
-                    plt.grid(b=True, which='major', color='k', linestyle='-')
-                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.legend()
+                        plt.ylabel('Normalized adu')
+                        plt.xlabel('Time (ns)')
+                        plt.minorticks_on()
+                        plt.grid(b=True, which='major', color='k', linestyle='-')
+                        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                        plt.legend()
 
-                    plt.subplot(2,2,3)
-                    #Antenna 2
-                    
-                    plt.plot(self.times_resampled - t_best_0subtract2, waveforms[0]/max(waveforms[0]),label='Ch%i, shifted %0.2f ns'%(channels[0], - t_best_0subtract2))
-                    plt.plot(self.times_resampled - t_best_1subtract2, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], - t_best_1subtract2))
-                    plt.plot(self.times_resampled                    , waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], 0))
-                    plt.plot(self.times_resampled + t_best_2subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_2subtract3))
+                        plt.subplot(2,2,3)
+                        #Antenna 2
+                        
+                        plt.plot(self.times_resampled - t_best_0subtract2, waveforms[0]/max(waveforms[0]),label='Ch%i, shifted %0.2f ns'%(channels[0], - t_best_0subtract2))
+                        plt.plot(self.times_resampled - t_best_1subtract2, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], - t_best_1subtract2))
+                        plt.plot(self.times_resampled                    , waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], 0))
+                        plt.plot(self.times_resampled + t_best_2subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_2subtract3))
 
-                    plt.ylabel('Normalized adu')
-                    plt.xlabel('Time (ns)')
-                    plt.minorticks_on()
-                    plt.grid(b=True, which='major', color='k', linestyle='-')
-                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.legend()
+                        plt.ylabel('Normalized adu')
+                        plt.xlabel('Time (ns)')
+                        plt.minorticks_on()
+                        plt.grid(b=True, which='major', color='k', linestyle='-')
+                        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                        plt.legend()
 
-                    plt.subplot(2,2,4)
-                    #Antenna 3
-                    
-                    plt.plot(self.times_resampled - t_best_0subtract3, waveforms[0]/max(waveforms[0]),label='Ch%i, shifted %0.2f ns'%(channels[0], - t_best_0subtract3))
-                    plt.plot(self.times_resampled - t_best_1subtract3, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], - t_best_1subtract3))
-                    plt.plot(self.times_resampled - t_best_2subtract3, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], - t_best_2subtract3))
-                    plt.plot(self.times_resampled                    , waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], 0))
+                        plt.subplot(2,2,4)
+                        #Antenna 3
+                        
+                        plt.plot(self.times_resampled - t_best_0subtract3, waveforms[0]/max(waveforms[0]),label='Ch%i, shifted %0.2f ns'%(channels[0], - t_best_0subtract3))
+                        plt.plot(self.times_resampled - t_best_1subtract3, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], - t_best_1subtract3))
+                        plt.plot(self.times_resampled - t_best_2subtract3, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], - t_best_2subtract3))
+                        plt.plot(self.times_resampled                    , waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], 0))
 
-                    plt.ylabel('Normalized adu')
-                    plt.xlabel('Time (ns)')
-                    plt.minorticks_on()
-                    plt.grid(b=True, which='major', color='k', linestyle='-')
-                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.legend()
+                        plt.ylabel('Normalized adu')
+                        plt.xlabel('Time (ns)')
+                        plt.minorticks_on()
+                        plt.grid(b=True, which='major', color='k', linestyle='-')
+                        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                        plt.legend()
+                elif pol == 'all':
+                    self.popout_fig = [None]*2
+                    self.popout_ax = [None]*2
+
+                    for mode_index, mode in enumerate(['hpol', 'vpol']):
+                        self.popout_fig[mode_index] = plt.figure()
+                        self.popout_ax[mode_index] = self.popout_fig[mode_index].gca()
+                        plt.suptitle('ENU %s (%s)\nAzimuth = %0.3f, Zenith = %0.3f'%(event_ax.get_title().replace('-',' ').title(),mode.title(), event.xdata,event.ydata))
+
+                        if mode == 'hpol':
+                            t_best_0subtract1 = t_best_0subtract1_h
+                            t_best_0subtract2 = t_best_0subtract2_h
+                            t_best_0subtract3 = t_best_0subtract3_h
+                            t_best_1subtract2 = t_best_1subtract2_h
+                            t_best_1subtract3 = t_best_1subtract3_h
+                            t_best_2subtract3 = t_best_2subtract3_h
+                        elif mode == 'vpol':
+                            t_best_0subtract1 = t_best_0subtract1_v
+                            t_best_0subtract2 = t_best_0subtract2_v
+                            t_best_0subtract3 = t_best_0subtract3_v
+                            t_best_1subtract2 = t_best_1subtract2_v
+                            t_best_1subtract3 = t_best_1subtract3_v
+                            t_best_2subtract3 = t_best_2subtract3_v
+
+                        if all_alignments == False:
+                            #Align signals to antenna 0
+
+                            plt.subplot(2,1,1)
+                            
+                            plt.plot(self.times_resampled, waveforms[0*2 + int(mode == 'vpol')],label='Ch%i'%channels[0*2 + int(mode == 'vpol')])
+                            plt.plot(self.times_resampled, waveforms[1*2 + int(mode == 'vpol')],label='Ch%i'%(channels[1*2 + int(mode == 'vpol')]))
+                            plt.plot(self.times_resampled, waveforms[2*2 + int(mode == 'vpol')],label='Ch%i'%(channels[2*2 + int(mode == 'vpol')]))
+                            plt.plot(self.times_resampled, waveforms[3*2 + int(mode == 'vpol')],label='Ch%i'%(channels[3*2 + int(mode == 'vpol')]))
+
+                            plt.ylabel('adu')
+                            plt.xlabel('Time (ns)')
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                            plt.legend()
+
+                            plt.subplot(2,1,2)
+                            
+                            plt.plot(self.times_resampled, waveforms[0*2 + int(mode == 'vpol')]/max(waveforms[0*2 + int(mode == 'vpol')]),label='Ch%i'%channels[0*2 + int(mode == 'vpol')])
+                            plt.plot(self.times_resampled + t_best_0subtract1, waveforms[1*2 + int(mode == 'vpol')]/max(waveforms[1*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[1*2 + int(mode == 'vpol')], t_best_0subtract1))
+                            plt.plot(self.times_resampled + t_best_0subtract2, waveforms[2*2 + int(mode == 'vpol')]/max(waveforms[2*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[2*2 + int(mode == 'vpol')], t_best_0subtract2))
+                            plt.plot(self.times_resampled + t_best_0subtract3, waveforms[3*2 + int(mode == 'vpol')]/max(waveforms[3*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[3*2 + int(mode == 'vpol')], t_best_0subtract3))
+
+                            plt.ylabel('Normalized adu')
+                            plt.xlabel('Time (ns)')
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                            plt.legend()
+
+                        else:
+                            #Each waveform aligned to each antenna by that antennas relevant time delays. 
+                            plt.subplot(2,2,1)
+                            #Antenna 0
+                            
+                            plt.plot(self.times_resampled                    , waveforms[0*2 + int(mode == 'vpol')]/max(waveforms[0*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[0*2 + int(mode == 'vpol')], 0))
+                            plt.plot(self.times_resampled + t_best_0subtract1, waveforms[1*2 + int(mode == 'vpol')]/max(waveforms[1*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[1*2 + int(mode == 'vpol')], t_best_0subtract1))
+                            plt.plot(self.times_resampled + t_best_0subtract2, waveforms[2*2 + int(mode == 'vpol')]/max(waveforms[2*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[2*2 + int(mode == 'vpol')], t_best_0subtract2))
+                            plt.plot(self.times_resampled + t_best_0subtract3, waveforms[3*2 + int(mode == 'vpol')]/max(waveforms[3*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[3*2 + int(mode == 'vpol')], t_best_0subtract3))
+
+                            plt.ylabel('Normalized adu')
+                            plt.xlabel('Time (ns)')
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                            plt.legend()
+
+                            plt.subplot(2,2,2)
+                            #Antenna 1
+                            
+                            plt.plot(self.times_resampled - t_best_0subtract1, waveforms[0*2 + int(mode == 'vpol')]/max(waveforms[0*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[1*2 + int(mode == 'vpol')], - t_best_0subtract1))
+                            plt.plot(self.times_resampled                    , waveforms[1*2 + int(mode == 'vpol')]/max(waveforms[1*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[1*2 + int(mode == 'vpol')], 0))
+                            plt.plot(self.times_resampled + t_best_1subtract2, waveforms[2*2 + int(mode == 'vpol')]/max(waveforms[2*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[2*2 + int(mode == 'vpol')], t_best_0subtract2))
+                            plt.plot(self.times_resampled + t_best_1subtract3, waveforms[3*2 + int(mode == 'vpol')]/max(waveforms[3*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[3*2 + int(mode == 'vpol')], t_best_0subtract3))
+
+                            plt.ylabel('Normalized adu')
+                            plt.xlabel('Time (ns)')
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                            plt.legend()
+
+                            plt.subplot(2,2,3)
+                            #Antenna 2
+                            
+                            plt.plot(self.times_resampled - t_best_0subtract2, waveforms[0*2 + int(mode == 'vpol')]/max(waveforms[0*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[0*2 + int(mode == 'vpol')], - t_best_0subtract2))
+                            plt.plot(self.times_resampled - t_best_1subtract2, waveforms[1*2 + int(mode == 'vpol')]/max(waveforms[1*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[1*2 + int(mode == 'vpol')], - t_best_1subtract2))
+                            plt.plot(self.times_resampled                    , waveforms[2*2 + int(mode == 'vpol')]/max(waveforms[2*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[2*2 + int(mode == 'vpol')], 0))
+                            plt.plot(self.times_resampled + t_best_2subtract3, waveforms[3*2 + int(mode == 'vpol')]/max(waveforms[3*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[3*2 + int(mode == 'vpol')], t_best_2subtract3))
+
+                            plt.ylabel('Normalized adu')
+                            plt.xlabel('Time (ns)')
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                            plt.legend()
+
+                            plt.subplot(2,2,4)
+                            #Antenna 3
+                            
+                            plt.plot(self.times_resampled - t_best_0subtract3, waveforms[0*2 + int(mode == 'vpol')]/max(waveforms[0*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[0*2 + int(mode == 'vpol')], - t_best_0subtract3))
+                            plt.plot(self.times_resampled - t_best_1subtract3, waveforms[1*2 + int(mode == 'vpol')]/max(waveforms[1*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[1*2 + int(mode == 'vpol')], - t_best_1subtract3))
+                            plt.plot(self.times_resampled - t_best_2subtract3, waveforms[2*2 + int(mode == 'vpol')]/max(waveforms[2*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[2*2 + int(mode == 'vpol')], - t_best_2subtract3))
+                            plt.plot(self.times_resampled                    , waveforms[3*2 + int(mode == 'vpol')]/max(waveforms[3*2 + int(mode == 'vpol')]),label='Ch%i, shifted %0.2f ns'%(channels[3*2 + int(mode == 'vpol')], 0))
+
+                            plt.ylabel('Normalized adu')
+                            plt.xlabel('Time (ns)')
+                            plt.minorticks_on()
+                            plt.grid(b=True, which='major', color='k', linestyle='-')
+                            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                            plt.legend()
 
 
 
@@ -2108,30 +2244,74 @@ class Correlator:
                 hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe)
                 vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe)
                 return hpol_result, vpol_result
+                # elif pol == 'all':
+                #     hpol_result = self.map(eventid,'hpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe)
+                #     vpol_result = self.map(eventid,'vpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe)
+                #     mean_corr_values = (hpol_result + vpol_result)/2
+
+                #     if plot_map == True:
+                #         if max_method is not None:
+                #             if plot_peak_to_sidelobe:
+                #                 linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all', return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                #             else:
+                #                 linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all', return_peak_to_sidelobe=plot_peak_to_sidelobe)
+
+                #         else:
+                #             if plot_peak_to_sidelobe:
+                #                 linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all', return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                #             else:
+                #                 linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all', return_peak_to_sidelobe=plot_peak_to_sidelobe)
+
+                #     if plot_corr == True:
+                #         print('Disabling plot corr for all antenna map.')
+                #         plot_corr = False
+                #     if interactive == True:
+                #         print('Disabling interactive for all antenna map.')
+                #         interactive = False
             elif pol == 'all':
-                hpol_result = self.map(eventid,'hpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe)
-                vpol_result = self.map(eventid,'vpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe)
-                mean_corr_values = (hpol_result + vpol_result)/2
+                if waveforms is None:
+                    waveforms = self.wf(eventid, numpy.array([0,1,2,3,4,5,6,7]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter,tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract) #Div by std and resampled waveforms normalizes the correlations
+
+                    if shorten_signals == True:
+                        waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+
+                #TODO: Could consider upsample only the cross correlations AFTER, rather than upsampling the waveforms, also consider passing scipy.signal.correlate the desired method
+
+                #Hpol signals:
+                corr01_h = (numpy.asarray(scipy.signal.correlate(waveforms[0*2],waveforms[1*2])))/(len(self.times_resampled))
+                corr02_h = (numpy.asarray(scipy.signal.correlate(waveforms[0*2],waveforms[2*2])))/(len(self.times_resampled))
+                corr03_h = (numpy.asarray(scipy.signal.correlate(waveforms[0*2],waveforms[3*2])))/(len(self.times_resampled))
+                corr12_h = (numpy.asarray(scipy.signal.correlate(waveforms[1*2],waveforms[2*2])))/(len(self.times_resampled))
+                corr13_h = (numpy.asarray(scipy.signal.correlate(waveforms[1*2],waveforms[3*2])))/(len(self.times_resampled))
+                corr23_h = (numpy.asarray(scipy.signal.correlate(waveforms[2*2],waveforms[3*2])))/(len(self.times_resampled))
+
+                #Vpol singals:
+                corr01_v = (numpy.asarray(scipy.signal.correlate(waveforms[0*2 + 1],waveforms[1*2 + 1])))/(len(self.times_resampled))
+                corr02_v = (numpy.asarray(scipy.signal.correlate(waveforms[0*2 + 1],waveforms[2*2 + 1])))/(len(self.times_resampled))
+                corr03_v = (numpy.asarray(scipy.signal.correlate(waveforms[0*2 + 1],waveforms[3*2 + 1])))/(len(self.times_resampled))
+                corr12_v = (numpy.asarray(scipy.signal.correlate(waveforms[1*2 + 1],waveforms[2*2 + 1])))/(len(self.times_resampled))
+                corr13_v = (numpy.asarray(scipy.signal.correlate(waveforms[1*2 + 1],waveforms[3*2 + 1])))/(len(self.times_resampled))
+                corr23_v = (numpy.asarray(scipy.signal.correlate(waveforms[2*2 + 1],waveforms[3*2 + 1])))/(len(self.times_resampled))
+                
+              
+                mean_corr_values = ((corr01_h[self.delay_indices_hpol_0subtract1] if 0 in include_baselines else 0) + (corr02_h[self.delay_indices_hpol_0subtract2] if 1 in include_baselines else 0) + (corr03_h[self.delay_indices_hpol_0subtract3] if 2 in include_baselines else 0) + (corr12_h[self.delay_indices_hpol_1subtract2] if 3 in include_baselines else 0) + (corr13_h[self.delay_indices_hpol_1subtract3] if 4 in include_baselines else 0) + (corr23_h[self.delay_indices_hpol_2subtract3] if 5 in include_baselines else 0) + (corr01_v[self.delay_indices_vpol_0subtract1] if 0 in include_baselines else 0) + (corr02_v[self.delay_indices_vpol_0subtract2] if 1 in include_baselines else 0) + (corr03_v[self.delay_indices_vpol_0subtract3] if 2 in include_baselines else 0) + (corr12_v[self.delay_indices_vpol_1subtract2] if 3 in include_baselines else 0) + (corr13_v[self.delay_indices_vpol_1subtract3] if 4 in include_baselines else 0) + (corr23_v[self.delay_indices_vpol_2subtract3] if 5 in include_baselines else 0))/(2*len(include_baselines))
 
                 if plot_map == True:
                     if max_method is not None:
                         if plot_peak_to_sidelobe:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all', return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
                         else:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all', return_peak_to_sidelobe=plot_peak_to_sidelobe)
-
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
                     else:
                         if plot_peak_to_sidelobe:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all', return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
                         else:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all', return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
 
-                if plot_corr == True:
-                    print('Disabling plot corr for all antenna map.')
-                    plot_corr = False
-                if interactive == True:
-                    print('Disabling interactive for all antenna map.')
-                    interactive = False
+
+
+
+
             elif pol == 'hpol':
                 if waveforms is None:
                     waveforms = self.wf(eventid, numpy.array([0,2,4,6]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter,tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract) #Div by std and resampled waveforms normalizes the correlations
@@ -2210,14 +2390,14 @@ class Correlator:
                 if plot_map == True:
                     if max_method is not None:
                         if plot_peak_to_sidelobe:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol,return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
                         else:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol,return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
                     else:
                         if plot_peak_to_sidelobe:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol,return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
                         else:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol,return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
 
             else:
                 print('Invalid polarization option.  Returning nothing.')
@@ -2225,28 +2405,70 @@ class Correlator:
 
 
             if return_max_possible_map_value == True:
-                max_values = numpy.array([numpy.max(corr01),numpy.max(corr02),numpy.max(corr03),numpy.max(corr12),numpy.max(corr13),numpy.max(corr23)])
-                max_possible_map_value = numpy.mean(max_values[include_baselines]) #This would occur if the map samples the cross correlations each at their exact maximum value.   This may never actually occur in a non-ideal calibration.
+                if pol == 'all':
+                    max_values_h = numpy.array([numpy.max(corr01_h),numpy.max(corr02_h),numpy.max(corr03_h),numpy.max(corr12_h),numpy.max(corr13_h),numpy.max(corr23_h)])
+                    max_values_v = numpy.array([numpy.max(corr01_v),numpy.max(corr02_v),numpy.max(corr03_v),numpy.max(corr12_v),numpy.max(corr13_v),numpy.max(corr23_v)])
+                    max_possible_map_value = numpy.mean(numpy.append(max_values_h[include_baselines], max_values_v[include_baselines])) #This would occur if the map samples the cross correlations each at their exact maximum value.   This may never actually occur in a non-ideal calibration.
+                else:
+                    max_values = numpy.array([numpy.max(corr01),numpy.max(corr02),numpy.max(corr03),numpy.max(corr12),numpy.max(corr13),numpy.max(corr23)])
+                    max_possible_map_value = numpy.mean(max_values[include_baselines]) #This would occur if the map samples the cross correlations each at their exact maximum value.   This may never actually occur in a non-ideal calibration.
 
             if plot_corr:
+                if pol == 'all':
+                    fig = plt.figure()
+                    fig.canvas.set_window_title('HPol Correlations')
+                    center = len(self.times_resampled)
+                    shifts = (numpy.arange(len(corr01_h)) - center + 1)*self.dt_resampled
+                    if True:
+                        #To check normalization.  Should be 1 at 0 time. 
+                        corr00_h = (numpy.asarray(scipy.signal.correlate_h(waveforms[0],waveforms[0])))/len(self.times_resampled) 
+                        plt.plot(shifts,corr00_h,alpha=0.7,label='autocorr00_h')
+                    plt.plot(shifts,corr01_h,alpha=0.7,label='corr01_h' + [' (Not Included in Map)', ''][numpy.isin( 0, include_baselines).astype(int)])
+                    plt.plot(shifts,corr02_h,alpha=0.7,label='corr02_h' + [' (Not Included in Map)', ''][numpy.isin( 1, include_baselines).astype(int)])
+                    plt.plot(shifts,corr03_h,alpha=0.7,label='corr03_h' + [' (Not Included in Map)', ''][numpy.isin( 2, include_baselines).astype(int)])
+                    plt.plot(shifts,corr12_h,alpha=0.7,label='corr12_h' + [' (Not Included in Map)', ''][numpy.isin( 3, include_baselines).astype(int)])
+                    plt.plot(shifts,corr13_h,alpha=0.7,label='corr13_h' + [' (Not Included in Map)', ''][numpy.isin( 4, include_baselines).astype(int)])
+                    plt.plot(shifts,corr23_h,alpha=0.7,label='corr23_h' + [' (Not Included in Map)', ''][numpy.isin( 5, include_baselines).astype(int)])
+                    plt.legend()
+                    self.figs.append(fig)
+                    self.axs.append(fig.gca())
 
-                fig = plt.figure()
-                fig.canvas.set_window_title('Correlations')
-                center = len(self.times_resampled)
-                shifts = (numpy.arange(len(corr01)) - center + 1)*self.dt_resampled
-                if True:
-                    #To check normalization.  Should be 1 at 0 time. 
-                    corr00 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[0])))/len(self.times_resampled) 
-                    plt.plot(shifts,corr00,alpha=0.7,label='autocorr00')
-                plt.plot(shifts,corr01,alpha=0.7,label='corr01' + [' (Not Included in Map)', ''][numpy.isin( 0, include_baselines).astype(int)])
-                plt.plot(shifts,corr02,alpha=0.7,label='corr02' + [' (Not Included in Map)', ''][numpy.isin( 1, include_baselines).astype(int)])
-                plt.plot(shifts,corr03,alpha=0.7,label='corr03' + [' (Not Included in Map)', ''][numpy.isin( 2, include_baselines).astype(int)])
-                plt.plot(shifts,corr12,alpha=0.7,label='corr12' + [' (Not Included in Map)', ''][numpy.isin( 3, include_baselines).astype(int)])
-                plt.plot(shifts,corr13,alpha=0.7,label='corr13' + [' (Not Included in Map)', ''][numpy.isin( 4, include_baselines).astype(int)])
-                plt.plot(shifts,corr23,alpha=0.7,label='corr23' + [' (Not Included in Map)', ''][numpy.isin( 5, include_baselines).astype(int)])
-                plt.legend()
-                self.figs.append(fig)
-                self.axs.append(fig.gca())
+                    fig = plt.figure()
+                    fig.canvas.set_window_title('VPol Correlations')
+                    center = len(self.times_resampled)
+                    shifts = (numpy.arange(len(corr01_v)) - center + 1)*self.dt_resampled
+                    if True:
+                        #To check normalization.  Should be 1 at 0 time. 
+                        corr00_v = (numpy.asarray(scipy.signal.correlate_v(waveforms[0],waveforms[0])))/len(self.times_resampled) 
+                        plt.plot(shifts,corr00_v,alpha=0.7,label='autocorr00_v')
+                    plt.plot(shifts,corr01_v,alpha=0.7,label='corr01_v' + [' (Not Included in Map)', ''][numpy.isin( 0, include_baselines).astype(int)])
+                    plt.plot(shifts,corr02_v,alpha=0.7,label='corr02_v' + [' (Not Included in Map)', ''][numpy.isin( 1, include_baselines).astype(int)])
+                    plt.plot(shifts,corr03_v,alpha=0.7,label='corr03_v' + [' (Not Included in Map)', ''][numpy.isin( 2, include_baselines).astype(int)])
+                    plt.plot(shifts,corr12_v,alpha=0.7,label='corr12_v' + [' (Not Included in Map)', ''][numpy.isin( 3, include_baselines).astype(int)])
+                    plt.plot(shifts,corr13_v,alpha=0.7,label='corr13_v' + [' (Not Included in Map)', ''][numpy.isin( 4, include_baselines).astype(int)])
+                    plt.plot(shifts,corr23_v,alpha=0.7,label='corr23_v' + [' (Not Included in Map)', ''][numpy.isin( 5, include_baselines).astype(int)])
+                    plt.legend()
+                    self.figs.append(fig)
+                    self.axs.append(fig.gca())
+
+                else:
+                    fig = plt.figure()
+                    fig.canvas.set_window_title('Correlations')
+                    center = len(self.times_resampled)
+                    shifts = (numpy.arange(len(corr01)) - center + 1)*self.dt_resampled
+                    if True:
+                        #To check normalization.  Should be 1 at 0 time. 
+                        corr00 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[0])))/len(self.times_resampled) 
+                        plt.plot(shifts,corr00,alpha=0.7,label='autocorr00')
+                    plt.plot(shifts,corr01,alpha=0.7,label='corr01' + [' (Not Included in Map)', ''][numpy.isin( 0, include_baselines).astype(int)])
+                    plt.plot(shifts,corr02,alpha=0.7,label='corr02' + [' (Not Included in Map)', ''][numpy.isin( 1, include_baselines).astype(int)])
+                    plt.plot(shifts,corr03,alpha=0.7,label='corr03' + [' (Not Included in Map)', ''][numpy.isin( 2, include_baselines).astype(int)])
+                    plt.plot(shifts,corr12,alpha=0.7,label='corr12' + [' (Not Included in Map)', ''][numpy.isin( 3, include_baselines).astype(int)])
+                    plt.plot(shifts,corr13,alpha=0.7,label='corr13' + [' (Not Included in Map)', ''][numpy.isin( 4, include_baselines).astype(int)])
+                    plt.plot(shifts,corr23,alpha=0.7,label='corr23' + [' (Not Included in Map)', ''][numpy.isin( 5, include_baselines).astype(int)])
+                    plt.legend()
+                    self.figs.append(fig)
+                    self.axs.append(fig.gca())
 
             if plot_map:
                 if ~numpy.all(numpy.isin(include_baselines, numpy.array([0,1,2,3,4,5]))):
@@ -4227,7 +4449,8 @@ if __name__=="__main__":
             cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
         for mode in ['hpol','vpol','all']:
-            mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,90.0], center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
+            mean_corr_values, fig, ax, max_possible_map_value = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0.0,90.0], center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=True, return_max_possible_map_value=True, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True)
+            #mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,90.0], center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
             fig.set_size_inches(16, 9)
             plt.sca(ax)
             plt.tight_layout()

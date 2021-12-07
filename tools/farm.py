@@ -10,6 +10,29 @@ import time
 import numpy
 import yaml
 
+
+def parseJobIDs(partition,user,max_expected_column_width=8):
+    '''
+    Will return a dictionary of job ids for the set of jobs currently queued for user on partition.
+    '''
+    truncated_user = user[0:min(max_expected_column_width,len(user))]
+    text = subprocess.check_output(['squeue','--user=dsouthall']).decode('utf-8')
+
+    out_dict = {}
+    for line in text.replace(' ','').split('\n'):
+        if 'JOBID' in line or partition not in line:
+            continue
+        #import pdb; pdb.set_trace()
+        # print(line)
+        # print('---')
+        jobid = line.split(partition)[0]
+        key = line.split(partition)[1].split(truncated_user)[0]
+        out_dict[key] = jobid
+    return out_dict
+
+
+
+
 if __name__ == "__main__":
 
     ###------------###
@@ -47,13 +70,13 @@ if __name__ == "__main__":
         done_runs = numpy.array([])
         analysis_part = 2
         pol == 'both'
-    elif True:
+    elif False:
         #THE ONE I LIkE TO DO NOW
         runs = numpy.arange(5733,5974,dtype=int)
-        done_runs = numpy.array([5733])
+        done_runs = numpy.array([])
         analysis_part = 2 #Need to run 2 at some point after 11//23/2021 if things worked on part 1
         #pol = 'both' #Always treated as both when analysis_part == 3
-    elif False:
+    elif True:
         runs = numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
         analysis_part = 4 # Sine subtraction
@@ -68,13 +91,17 @@ if __name__ == "__main__":
     ### Script ###
     ###--------###
 
+    jobid_dict = parseJobIDs(partition,username,max_expected_column_width=8)
+
     for run in runs:
+        print('\nRun %i'%run)
         if run in done_runs:
             continue
 
         jobname = 'bcn%i'%run
 
-        if True and analysis_part == 2:
+        if False and analysis_part == 2:
+            #Runs h then v, then all
             script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part2.sh')
 
             #Run hpol and vpol jobs in same job, and run the 'all' case as a seperate job. 
@@ -97,6 +124,56 @@ if __name__ == "__main__":
             #Submit all job
             print(command_queue)
             all_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
+
+            print('Run %i jobs submitted --> Both jid:%i\tAll jid:%i'%(run,both_jobid,all_jobid))
+
+        elif True and analysis_part == 2:
+            # Assumes h and v may already be started, and checks if it is running, then will pull the jobid from that for dependancy rather than running it again
+            _jobname = jobname+'hv'
+            
+
+
+            script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part2.sh')
+
+            #Run hpol and vpol jobs in same job, and run the 'all' case as a seperate job. 
+            
+            #Prepare Hpol Job
+            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,_jobname)
+            command = '%s %i %s %s'%(script, run, deploy_index, 'both')
+            command_queue = batch + command
+
+            if _jobname[0:min(8,len(_jobname))] in list(jobid_dict.keys()):
+                print('Skipping Executing the following, as a job already matches the jobname %s'%(_jobname))
+                print('\t' + command_queue)
+                both_jobid = int(jobid_dict[_jobname[0:min(8,len(_jobname))]])
+            else:
+                #Submit hpol job and get the jobid to then submit vpol with dependency
+                if False:
+                    print(command_queue)
+                    both_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
+                else:
+                    #I don't want to run them in this scenario, they are already run and finished, just not in queue.
+                    both_jobid = 0
+
+            
+            #Prepare Vpol Job
+            _jobname = jobname+'all'
+            if both_jobid == 0:
+                batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,_jobname)
+            else:
+                batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition,_jobname, both_jobid)
+            command = '%s %i %s %s'%(script, run, deploy_index, 'all')
+            command_queue = batch + command
+
+            #Submit all job
+            if _jobname[0:min(8,len(_jobname))] in list(jobid_dict.keys()):
+                print('Skipping Executing the following, as a job already matches the jobname %s'%(_jobname))
+                print('\t' + command_queue)
+                all_jobid = int(jobid_dict[_jobname[0:min(8,len(_jobname))]])
+            else:
+                print(command_queue)
+                #all_jobid = 1
+                all_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
 
             print('Run %i jobs submitted --> Both jid:%i\tAll jid:%i'%(run,both_jobid,all_jobid))
             

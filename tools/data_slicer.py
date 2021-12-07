@@ -149,7 +149,7 @@ class dataSlicerSingleRun():
     peak_to_sidelobe_n_bins_v : int
         The number of bins to use when plotting the peak to sidelobe param for vpol.
     '''
-    def __init__(self,  reader, impulsivity_dset_key, time_delays_dset_key, map_dset_key, \
+    def __init__(self,  reader, impulsivity_dset_key, time_delays_dset_key, map_dset_key, analysis_data_dir=None, \
                         curve_choice=0, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
                         impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
@@ -159,11 +159,11 @@ class dataSlicerSingleRun():
                         p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=None,\
                         n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180),\
-                        max_possible_map_value_n_bins_h=100, max_possible_map_value_n_bins_v=100, max_possible_map_value_n_bins_all=100\
-                        max_map_value_n_bins_h=100, max_map_value_n_bins_v=100, max_map_value_n_bins_all=100\
+                        max_possible_map_value_n_bins_h=100, max_possible_map_value_n_bins_v=100, max_possible_map_value_n_bins_all=100,\
+                        max_map_value_n_bins_h=100, max_map_value_n_bins_v=100, max_map_value_n_bins_all=100,\
                         max_peak_to_sidelobe_val=5,peak_to_sidelobe_n_bins_h=100,peak_to_sidelobe_n_bins_v=100,peak_to_sidelobe_n_bins_all=100):
         try:
-            self.updateReader(reader)
+            self.updateReader(reader,analysis_data_dir=analysis_data_dir)
             self.cor = None
 
             self.math_keywords = ['SLICERSUBTRACT', 'SLICERADD', 'SLICERDIVIDE', 'SLICERMULTIPLY'] #Meta words that will relate 2 known variables and produce a plot with their arithmatic combination. 
@@ -672,13 +672,13 @@ class dataSlicerSingleRun():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def updateReader(self, reader):
+    def updateReader(self, reader, analysis_data_dir=None):
         '''
         This will let the user update the reader file if they are looping over multiple runs.
         '''
         try:
             self.reader = reader
-            self.analysis_filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.
+            self.analysis_filename = createFile(reader,analysis_data_dir=analysis_data_dir) #Creates an analysis file if one does not exist.  Returns filename to load file.
             try:
                 print(reader.status())
             except Exception as e:
@@ -3003,7 +3003,7 @@ class dataSlicerSingleRun():
                     #x_n_bins = 360
                     x_max_val = numpy.max(self.range_phi_deg)
                     x_min_val = numpy.min(self.range_phi_deg)
-                    x_n_bins = self.
+                    x_n_bins = self.n_phi
                 elif 'hilbert_' not in param_key and 'phi_best_all' in param_key:
                     scope = param_key.replace('phi_best_all','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
@@ -4054,21 +4054,32 @@ class dataSlicer():
         if verbose == True:
             if return_successive_cut_counts or return_total_cut_counts:
                 print('Cut breakdown for ROI %s'%(roi_key))
-                if return_successive_cut_counts:
+                if return_successive_cut_counts and return_total_cut_counts:
+                    for key in list(successive_cut_counts.keys()):
+                        #self.roi[roi_key][key]
+                        if key == 'initial':
+                            print('Initial Event Count is %i'%(successive_cut_counts[key]))
+                        else:
+                            print('%0.3f%% events then cut by %s with bounds %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key, str(self.roi[roi_key][key])))
+                            print('%0.3f%% of initial events would be cut by %s with bounds %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key, str(self.roi[roi_key][key])))
+                            print('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]))
+                        previous_count = successive_cut_counts[key]
+
+                elif return_successive_cut_counts:
                     for key in list(successive_cut_counts.keys()):
                         if key == 'initial':
                             print('Initial Event Count is %i'%(successive_cut_counts[key]))
                         else:
                             print('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]))
-                            print('%0.3f%% events then cut by %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key))
+                            print('%0.3f%% events then cut by %s with bounds %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key, str(self.roi[roi_key][key])))
                         previous_count = successive_cut_counts[key]
 
-                if return_total_cut_counts:
+                elif return_total_cut_counts:
                     for key in list(total_cut_counts.keys()):
                         if key == 'initial':
                             print('Initial Event Count is %i'%(total_cut_counts[key]))
                         else:
-                            print('%0.3f%% of initial events would be cut by %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key))
+                            print('%0.3f%% of initial events would be cut by %s with bounds %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key, str(self.roi[roi_key][key])))
 
         if return_successive_cut_counts and return_total_cut_counts:
             return eventids_dict, successive_cut_counts, total_cut_counts
