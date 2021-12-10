@@ -166,7 +166,7 @@ class dataSlicerSingleRun():
             self.updateReader(reader,analysis_data_dir=analysis_data_dir)
             self.cor = None
 
-            self.math_keywords = ['SLICERSUBTRACT', 'SLICERADD', 'SLICERDIVIDE', 'SLICERMULTIPLY'] #Meta words that will relate 2 known variables and produce a plot with their arithmatic combination. 
+            self.math_keywords = ['SLICERSUBTRACT', 'SLICERADD', 'SLICERDIVIDE', 'SLICERMULTIPLY', 'SLICERMAX', 'SLICERMIN', 'SLICERMEAN'] #Meta words that will relate 2 known variables and produce a plot with their arithmatic combination. 
 
             if self.reader.failed_setup == False:
                 self.included_antennas = included_antennas#[0,1,2,3,4,5,6,7]
@@ -430,7 +430,8 @@ class dataSlicerSingleRun():
         '''
         This will return a list of the currently supported parameter keys for making 2d histogram plots.
         '''
-        return print(self.known_param_keys)
+        print(self.known_param_keys)
+        return self.known_param_keys
 
     def checkForRateDatasets(self, verbose=True):
         '''
@@ -847,6 +848,12 @@ class dataSlicerSingleRun():
                         param = numpy.divide(param_a, param_b)
                     elif math_keyword == 'SLICERMULTIPLY':
                         param = numpy.multiply(param_a, param_b)
+                    elif math_keyword == 'SLICERMAX':
+                        param = numpy.max(numpy.vstack((param_a, param_b)),axis=0)
+                    elif math_keyword == 'SLICERMIN':
+                        param = numpy.min(numpy.vstack((param_a, param_b)),axis=0)
+                    elif math_keyword == 'SLICERMEAN':
+                        param = numpy.mean(numpy.vstack((param_a, param_b)),axis=0)
                     else:
                         print('WARNING: GIVEN param_key IS NOT ACCOUNTED FOR IN getModifiedDataFromParam, RETURNING EMPTY ARRAY')
                         param = numpy.array([])
@@ -2674,9 +2681,27 @@ class dataSlicerSingleRun():
                 if len(param_key.split(math_keyword)) == 2:
                     param_key_a = param_key.split(math_keyword)[0]
                     param_key_b = param_key.split(math_keyword)[1]
+                    
                     current_bin_edges_a, label_a = self.getSingleParamPlotBins(param_key_a, eventids, verbose=False)
                     current_bin_edges_b, label_b = self.getSingleParamPlotBins(param_key_b, eventids, verbose=False)
-                    label = '%s\n%s\n%s'%(label_a, math_keyword.replace('SLICER','') , label_b)
+                    
+                    if math_keyword == 'SLICERADD':
+                        label = '%s\n%s\n%s'%(label_a, ' + ' , label_b)
+                    elif math_keyword == 'SLICERSUBTRACT':
+                        label = '%s\n%s\n%s'%(label_a, ' - ' , label_b)
+                    elif math_keyword == 'SLICERDIVIDE':
+                        label = '%s\n%s\n%s'%(label_a, ' / ' , label_b)
+                    elif math_keyword == 'SLICERMULTIPLY':
+                        label = '%s\n%s\n%s'%(label_a, ' x ' , label_b)
+                    elif math_keyword == 'SLICERMAX':
+                        label = 'Max of \n%s and %s'%(label_a, label_b)
+                    elif math_keyword == 'SLICERMIN':
+                        label = 'Min of \n%s and %s'%(label_a, label_b)
+                    elif math_keyword == 'SLICERMEAN':
+                        label = 'Mean of \n%s and %s'%(label_a, label_b)
+                    else:
+                        label = '%s\n%s\n%s'%(label_a, math_keyword , label_b)
+
                 else:
                     label = 'Failed math operation parsing'
                 
@@ -2702,6 +2727,18 @@ class dataSlicerSingleRun():
                         x_min_val = min(vals_of_interest)
                         x_max_val = max(vals_of_interest)
                         #import pdb; pdb.set_trace()
+                    elif math_keyword == 'SLICERMAX':
+                        x_n_bins = max((len(current_bin_edges_a) , len(current_bin_edges_b)))
+                        x_min_val = min(min(current_bin_edges_a), min(current_bin_edges_b))
+                        x_max_val = max(max(current_bin_edges_a), max(current_bin_edges_b))
+                    elif math_keyword == 'SLICERMIN':
+                        x_n_bins = max((len(current_bin_edges_a) , len(current_bin_edges_b)))
+                        x_min_val = min(min(current_bin_edges_a), min(current_bin_edges_b))
+                        x_max_val = max(max(current_bin_edges_a), max(current_bin_edges_b))
+                    elif math_keyword == 'SLICERMEAN':
+                        x_n_bins = max((len(current_bin_edges_a) , len(current_bin_edges_b)))
+                        x_min_val = min(min(current_bin_edges_a), min(current_bin_edges_b))
+                        x_max_val = max(max(current_bin_edges_a), max(current_bin_edges_b))
                     else:
                         param = self.getModifiedDataFromParam(eventids, param_key, verbose=False)
                         x_n_bins = max((len(current_bin_edges_a) , len(current_bin_edges_b)))
@@ -2767,12 +2804,12 @@ class dataSlicerSingleRun():
                     label = 'Impulsivity (hpol)'
                     x_n_bins = self.impulsivity_n_bins_h
                     x_max_val = 1
-                    x_min_val = 0
+                    x_min_val = -0.25
                 elif param_key == 'impulsivity_v':
                     label = 'Impulsivity (vpol)'
                     x_n_bins = self.impulsivity_n_bins_v
                     x_max_val = 1
-                    x_min_val = 0
+                    x_min_val = -0.25
                 elif param_key == 'cr_template_search_h':
                     label = 'HPol Correlation Values with CR Template'
                     x_n_bins = self.cr_template_n_bins_h
@@ -4024,7 +4061,7 @@ class dataSlicer():
                 elif return_total_cut_counts:
                     eventids_dict[run], _total_cut_counts                            = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
                 else:
-                    eventids_dict[run],                                              = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                    eventids_dict[run]                                               = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
 
             elif all_runs == True:
                 if return_successive_cut_counts and return_total_cut_counts:
@@ -4034,7 +4071,7 @@ class dataSlicer():
                 elif return_total_cut_counts:
                     eventids_dict[run], _total_cut_counts                            = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
                 else:
-                    eventids_dict[run],                                              = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                    eventids_dict[run]                                               = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
             else:
                 eventids_dict[run] = numpy.array([])
 
@@ -4060,9 +4097,9 @@ class dataSlicer():
                         if key == 'initial':
                             print('Initial Event Count is %i'%(successive_cut_counts[key]))
                         else:
+                            print('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]))
                             print('%0.3f%% events then cut by %s with bounds %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key, str(self.roi[roi_key][key])))
                             print('%0.3f%% of initial events would be cut by %s with bounds %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key, str(self.roi[roi_key][key])))
-                            print('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]))
                         previous_count = successive_cut_counts[key]
 
                 elif return_successive_cut_counts:
@@ -4080,7 +4117,7 @@ class dataSlicer():
                             print('Initial Event Count is %i'%(total_cut_counts[key]))
                         else:
                             print('%0.3f%% of initial events would be cut by %s with bounds %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key, str(self.roi[roi_key][key])))
-
+                print('\n')
         if return_successive_cut_counts and return_total_cut_counts:
             return eventids_dict, successive_cut_counts, total_cut_counts
         elif return_successive_cut_counts:
@@ -4101,12 +4138,22 @@ class dataSlicer():
             y_bin_max = -1e12
             len_x = []
             len_y = []
+
+            if eventids_dict is None:
+                eventids_dict = {}
+                for run_index, run in enumerate(self.runs):
+                    eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+
             for run_index, run in enumerate(self.runs):
                 if run in list(eventids_dict.keys()):
                     self.data_slicers[run_index].setCurrentPlotBins(main_param_key_x, main_param_key_y, eventids_dict[run])
 
                     current_bin_edges_x, current_label_x = self.data_slicers[run_index].getSingleParamPlotBins(main_param_key_x, eventids_dict[run])
-                    current_bin_edges_y, current_label_y = self.data_slicers[run_index].getSingleParamPlotBins(main_param_key_y, eventids_dict[run])
+                    if main_param_key_x == main_param_key_y:
+                        current_bin_edges_y = current_bin_edges_x
+                        current_label_y = current_label_x
+                    else:
+                        current_bin_edges_y, current_label_y = self.data_slicers[run_index].getSingleParamPlotBins(main_param_key_y, eventids_dict[run])
 
                     if min(current_bin_edges_x) < x_bin_min:
                         x_bin_min = min(current_bin_edges_x)
