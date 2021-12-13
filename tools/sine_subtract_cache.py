@@ -34,7 +34,8 @@ warnings.filterwarnings("ignore")
 plt.ion()
 
 datapath = os.environ['BEACON_DATA']
-cache_dir = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'sine_subtraction_cache')
+#cache_dir = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'sine_subtraction_cache')
+cache_dir = os.environ['BEACON_SINE_SUBTRACTION_CACHE']#os.path.join(os.environ['BEACON_PROCESSED_DATA'],'sine_subtraction_cache')
 
 
 def prepareStandardSineSubtractions():
@@ -64,7 +65,11 @@ class sineSubtractedReader(Reader):
         self.ss_event_entry = -1
         self.ss_filename = os.path.join(cache_dir, 'sinsub%i.root'%run)
         
-        if not os.path.exists(self.ss_filename):
+        if not os.path.exists(cache_dir):
+            print('WARNING! The supplied sine subtraction directory does not exist!  This should be set correctly as environment BEACON_SINE_SUBTRACTION_CACHE if you want to utilize pre-calculated sine subtraction information for quicker analysis.')
+            self.ss_event_file = None
+            self.ss_event_tree = None
+        elif not os.path.exists(self.ss_filename):
             print('WARNING! SINE SUBTRACTION CACHE FILE DOES NOT EXIST: %s'%self.ss_filename)
             self.ss_event_file = None
             self.ss_event_tree = None
