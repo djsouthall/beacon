@@ -1,6 +1,6 @@
 # BEACON
 
-## People 
+## People
 
 ### Programmer:
 
@@ -164,6 +164,7 @@ Many of the scripts in this beacon analysis git will expect some system variable
   - *BEACON_DATA* : This is the location of the BEACON data.  Each run will have a folder containing the header, event, and status files.
   - *BEACON_PROCESSED_DATA* : This is the location of generated hdf5 analysis files for BEACON.  Any computations like time delays or reconstruction directions are stored here.
   - *BEACON_ANALYSIS_DIR* : This is the location of this package (the folder that contains the .git file).
+  - *BEACON_SINE_SUBTRACTION_CACHE* : This is a specified location to store or pull generated ROOT files containing the sine subtraction information for each event in pre-processed BEACON analysis files.  This can be anywhere.  When last checked, each generated ROOT file was approximately 300 MB per normal BEACON run so a large drive location may be required if analyzing large numbers of runs.  The ROOT files are generated using the script [tools/sine_subtract_cache.py](https://github.com/djsouthall/beacon/blob/master/tools/sine_subtract_cache.py), with the sineSubtracterReader class wrapper also defined there being used for utilizing the pre-calculated information.  *NOTE:* At the time of writing (12/13/2021) a bug in libFFtwWrapper resulted in these results not being properly handled.  This requires you to move this line of code: ([libRootFftwWrapper/src/SineSubtract.cxx#L1012](https://github.com/nichol77/libRootFftwWrapper/blob/24c667cbaf88a44707d1c47496cfd781d68df593/src/SineSubtract.cxx#L1012)) up 1 line into the above brackets before compiling.
 
 I am also moving towards using package-like import, which will require you to add the relevant paths to your PYTHONPATH.  An example of the lines I have in my bashrc for BEACON can be found below:
 
@@ -260,6 +261,7 @@ Do this if you plan on using git commits and pushes.
 13. Save and exit by typing esc followed by: `:x` , then enter
 14. Reactivate the environment: `conda activate my_root_env`
 15. Type:
+    * *NOTE:* At the time of writing (12/13/2021) a bug in libFFtwWrapper resulted in these results not being properly handled.  This requires you to move this line of code: ([libRootFftwWrapper/src/SineSubtract.cxx#L1012](https://github.com/nichol77/libRootFftwWrapper/blob/24c667cbaf88a44707d1c47496cfd781d68df593/src/SineSubtract.cxx#L1012)) up 1 line into the above brackets before compiling.
     * `cd ~/beacon/libRootFftwWrapper`
     * `make`
     * `make install` - if there are troubles try `sudo make install`
