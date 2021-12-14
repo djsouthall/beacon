@@ -24,6 +24,7 @@ from beacon.tools.data_handler import createFile
 from beacon.tools.fftmath import TemplateCompareTool
 from beacon.tools.fftmath import FFTPrepper
 from beacon.tools.correlator import Correlator
+from beacon.tools.get_sun_coords_from_timestamp import getSunAzEl
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -38,6 +39,16 @@ from matplotlib import cm, ticker
 from matplotlib.patches import Rectangle
 from matplotlib.backend_tools import ToolBase, ToolToggleBase, ToolQuit
 plt.ion()
+
+import astropy.units as apu
+from astropy.coordinates import SkyCoord
+import astropy
+import astropy.time
+import time
+from datetime import datetime
+from pytz import timezone,utc
+import matplotlib.dates as mdates
+
 
 raw_datapath = os.environ['BEACON_DATA']
 processed_datapath = os.environ['BEACON_PROCESSED_DATA']
@@ -191,7 +202,8 @@ class dataSlicerSingleRun():
                                             'map_max_time_delay_0subtract1_v','map_max_time_delay_0subtract2_v','map_max_time_delay_0subtract3_v',\
                                             'map_max_time_delay_1subtract2_v','map_max_time_delay_1subtract3_v','map_max_time_delay_2subtract3_v',\
                                             'map_max_time_delay_0subtract1_all','map_max_time_delay_0subtract2_all','map_max_time_delay_0subtract3_all',\
-                                            'map_max_time_delay_1subtract2_all','map_max_time_delay_1subtract3_all','map_max_time_delay_2subtract3_all']
+                                            'map_max_time_delay_1subtract2_all','map_max_time_delay_1subtract3_all','map_max_time_delay_2subtract3_all',\
+                                            'sun_az','sun_el']
 
                 self.tct = None #This will be defined when necessary by functions below. 
 
@@ -2409,7 +2421,13 @@ class dataSlicerSingleRun():
                                 param = file['similarity_count'][self.time_delays_dset_key]['%spol_fraction'%(param_key.split('_')[-1])][eventids]
                             else:
                                 param = file['similarity_count'][self.time_delays_dset_key]['%spol_fraction'%(param_key.split('_')[-1])][...][eventids]
-                            
+
+
+                        elif param_key == 'sun_az':
+                            param = getSunAzEl(self.getDataFromParam(eventids, 'calibrated_trigtime'), interp=True, interp_step_s=5*60)[0]
+
+                        elif param_key == 'sun_el':
+                            param = getSunAzEl(self.getDataFromParam(eventids, 'calibrated_trigtime'), interp=True, interp_step_s=5*60)[1]                            
 
                         file.close()
                 else:
@@ -3213,6 +3231,18 @@ class dataSlicerSingleRun():
                     x_n_bins = 100
                     x_max_val = 20
                     x_min_val = -10
+
+                elif param_key == 'sun_az':
+                    label = 'Azimuth Direction of the Sun (degrees, E=0, N=90)'
+                    x_n_bins = 360
+                    x_max_val = -180
+                    x_min_val = 180
+
+                elif param_key == 'sun_el':
+                    label = 'Elevation Direction of the Sun (degrees)'
+                    x_n_bins = 360
+                    x_max_val = 90
+                    x_min_val = -90
 
             if calculate_bins_from_min_max:
                 current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges
@@ -4055,23 +4085,23 @@ class dataSlicer():
 
             if run in eventids_dict.keys():
                 if return_successive_cut_counts and return_total_cut_counts:
-                    eventids_dict[run], _successive_cut_counts, _total_cut_counts    = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                    eventids_dict[run], _successive_cut_counts, _total_cut_counts    = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
                 elif return_successive_cut_counts:
-                    eventids_dict[run], _successive_cut_counts                       = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                    eventids_dict[run], _successive_cut_counts                       = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
                 elif return_total_cut_counts:
-                    eventids_dict[run], _total_cut_counts                            = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                    eventids_dict[run], _total_cut_counts                            = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
                 else:
-                    eventids_dict[run]                                               = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                    eventids_dict[run]                                               = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
 
             elif all_runs == True:
                 if return_successive_cut_counts and return_total_cut_counts:
-                    eventids_dict[run], _successive_cut_counts, _total_cut_counts    = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                    eventids_dict[run], _successive_cut_counts, _total_cut_counts    = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
                 elif return_successive_cut_counts:
-                    eventids_dict[run], _successive_cut_counts                       = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                    eventids_dict[run], _successive_cut_counts                       = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
                 elif return_total_cut_counts:
-                    eventids_dict[run], _total_cut_counts                            = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                    eventids_dict[run], _total_cut_counts                            = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
                 else:
-                    eventids_dict[run]                                               = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_successive_cut_counts)
+                    eventids_dict[run]                                               = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
             else:
                 eventids_dict[run] = numpy.array([])
 

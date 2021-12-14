@@ -26,21 +26,19 @@ from scipy.fftpack import fft
 import datetime as dt
 import inspect
 from ast import literal_eval
-import astropy.units as apu
-from astropy.coordinates import SkyCoord
 import itertools
 plt.ion()
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
+import astropy.units as apu
+from astropy.coordinates import SkyCoord
 import astropy
 import astropy.time
-import astropy.coordinates
 import time
 from datetime import datetime
 from pytz import timezone,utc
-from datetime import datetime
 import matplotlib.dates as mdates
 
 
