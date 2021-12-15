@@ -165,6 +165,7 @@ if __name__ == '__main__':
     log_counts = False
     plot_daynight = True
     daynight_mode = 'time' #'sun' #Time since first event in hours or sun elevation. 
+    wrap_daynight = False
 
 
     for dict_index, eventids_dict in enumerate(dicts):
@@ -193,6 +194,8 @@ if __name__ == '__main__':
             current_bin_edges = numpy.linspace(0.25,1.8,101)
         else:
             current_bin_edges = ds.current_bin_edges_x
+
+
 
         if plot_daynight == True:
             #Want 2 plots in left column and N in the right in this case
@@ -224,16 +227,22 @@ if __name__ == '__main__':
             time_dict = {}
 
             start_reference_time = numpy.inf
+            finish_reference_time = -numpy.inf
             for run_index, run in enumerate(ds.runs):
                 max_min_eventids_dict = {run:[0,ds.data_slicers[run_index].reader.N()-1]}
                 time_dict[run] = ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=max_min_eventids_dict)
                 start_reference_time = min(start_reference_time,min(time_dict[run]))
+                finish_reference_time = max(start_reference_time,max(time_dict[run]))
 
 
             timezone = pytz.timezone("America/Los_Angeles")
             start_reference_datetime = datetime.fromtimestamp(start_reference_time, tz=timezone) #Get the date and time of first event in Cali
             start_reference_datetime = datetime(start_reference_datetime.year, start_reference_datetime.month, start_reference_datetime.day, tzinfo=timezone) #Midnight of first day so time of day is time since start. 
             start_reference_time = datetime.timestamp(start_reference_datetime) #Rest reference time to the very beginning of the first day.
+
+            finish_reference_datetime = datetime.fromtimestamp(finish_reference_time + 24*60*60, tz=timezone) #Get the date and time of first event in Cali
+            finish_reference_datetime = datetime(finish_reference_datetime.year, finish_reference_datetime.month, finish_reference_datetime.day, tzinfo=timezone) #Midnight of first day so time of day is time since finish. 
+            finish_reference_time = datetime.timestamp(finish_reference_datetime) #Rest reference time to the very beginning of the first day.
 
 
             ax_daynight = plt.subplot(2,2,3)#plt.subplot(len(dicts) + 1 + int(plot_daynight),1,len(dicts) + 1 + int(plot_daynight))
@@ -255,7 +264,10 @@ if __name__ == '__main__':
                 time_bin_h = 15.0/60.0
                 daynight_edges = numpy.arange(0,24 + time_bin_h,time_bin_h)
                 daynight_centers = 0.5*(daynight_edges[1:]+daynight_edges[:-1])
-                daynight_xlabel = 'Time of Day at BEACON'#'Wrapped Time of Day Since %f'%start_reference_time
+                if wrap_daynight == True:
+                    daynight_xlabel = 'Time of Day at BEACON'#'Wrapped Time of Day Since %f'%start_reference_time
+                else:
+                    daynight_xlabel = textwrap.fill('Time Since %s'%str(start_reference_datetime),50)
                 plt.xlabel(daynight_xlabel)
 
                 # hours = mdates.HourLocator(interval = 1)
@@ -351,9 +363,15 @@ if __name__ == '__main__':
                     plt.bar(daynight_centers, counts, width=daynight_centers[1]-daynight_centers[0], label='%s, Overflow: %i'%(dict_names[dict_index],overflow),alpha=0.6, edgecolor='black', linewidth=1.0)
                     ax_daynight.set_yscale('log')
                 elif daynight_mode == 'time':
-                    min_daynight = 0
-                    max_daynight = 24
-                    data = ((ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=eventids_dict) - start_reference_time)/(60*60))%24
+                    if wrap_daynight == True:
+                        min_daynight = 0
+                        max_daynight = 24
+                        data = ((ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=eventids_dict) - start_reference_time)/(60*60))%24
+                    else:
+                        min_daynight = start_reference_time
+                        max_daynight = finish_reference_time
+                        data = (ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=eventids_dict) - start_reference_time)/(60*60)
+
                     #Plot normal histogram
                     plt.sca(ax_daynight)
                     counts = plt.hist(data, bins=daynight_edges, log=True, cumulative=False, density=True, label='%s, Overflow: %i'%(dict_names[dict_index],overflow),alpha=0.6, edgecolor='black', linewidth=1.0)[0]
@@ -376,7 +394,10 @@ if __name__ == '__main__':
                         if daynight_mode == 'sun':
                             val_daynight = ds.getDataArrayFromParam('sun_el', eventids_dict={run:numpy.array([eventid])})[0]
                         elif daynight_mode == 'time':
-                            val_daynight = ((ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict={run:numpy.array([eventid])})[0] - start_reference_time)/(60*60))%24
+                            if wrap_daynight == True:
+                                val_daynight = ((ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict={run:numpy.array([eventid])})[0] - start_reference_time)/(60*60))%24
+                            else:
+                                val_daynight = (ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict={run:numpy.array([eventid])})[0] - start_reference_time)/(60*60)
                 else:
                     val = point_of_interest_dict[param_key][key]
                     linestyle = '-'
