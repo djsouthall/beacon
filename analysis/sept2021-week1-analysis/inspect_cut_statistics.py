@@ -11,6 +11,7 @@ import inspect
 import h5py
 import copy
 from pprint import pprint
+import textwrap
 
 import numpy
 import scipy
@@ -24,6 +25,7 @@ from beacon.tools.fftmath import FFTPrepper
 from beacon.tools.correlator import Correlator
 from beacon.tools.data_slicer import dataSlicer
 from beacon.tools.line_of_sight import circleSource
+from beacon.tools.get_sun_coords_from_timestamp import getSunElWeightsFromRunDict
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -31,7 +33,10 @@ import matplotlib.colors as colors
 from matplotlib import cm, ticker
 from matplotlib.patches import Rectangle
 from matplotlib.ticker import FormatStrFormatter
+import matplotlib.dates as mdates
 import time
+from datetime import datetime
+import pytz
 plt.ion()
 
 import warnings
@@ -67,7 +72,13 @@ if __name__ == '__main__':
     map_length = 16384
     map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
 
-    runs = numpy.arange(5910,5934)#numpy.arange(5733,5974)#numpy.arange(5910,5912)
+    if False:
+        #Quicker for testing
+        runs = numpy.arange(5910,5912)
+    elif True:
+        runs = numpy.arange(5733,5974)
+    else:
+        runs = numpy.arange(5910,5934)#numpy.arange(5733,5974)#numpy.arange(5910,5912)
 
     print("Preparing dataSlicer")
 
@@ -118,7 +129,7 @@ if __name__ == '__main__':
     #params = ['hpol_peak_to_sidelobe', 'impulsivity_h', 'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe']
     #params = ['impulsivity_hSLICERMAXimpulsivity_v', 'cr_template_search_hSLICERMAXcr_template_search_v', 'std_hSLICERMAXstd_v', 'p2p_hSLICERMAXp2p_v', 'snr_hSLICERMAXsnr_v', 'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe', 'hpol_max_possible_map_valueSLICERMAXvpol_max_possible_map_value']
 
-    if False:
+    if True:
         mode = 1 #Will compare cuts based on the above horizon full, with an all but current param dict being created for each item.
         params = list(ds.roi['above horizon full'].keys())
     else:
@@ -149,16 +160,11 @@ if __name__ == '__main__':
 
     #Plot parameters, will loop over dicts, naming them as listed.  Counts will be deployed in given format.
 
-    dicts = [None, above_horizon_eventids_dict, above_horizon_full_eventids_dict] #last one currently replaced in loop
+    dicts = [None, above_horizon_eventids_dict, above_horizon_full_eventids_dict] #last one currently replaced in loop for its partial components - 1 if mode == 1.  It is mostly used to get the set of cuts that would be used by it, and they stats are presented for each cut.  Elif mode == 2 then it is ignored altogether. 
     dict_names = ['All RF Events', 'Forward Above Horizon', 'Quality Cuts']
     log_counts = False
     plot_daynight = True
-
-    if plot_daynight:
-        ds.setCurrentPlotBins('sun_el', 'sun_el', None)
-        sun_el_bin_edges = ds.current_bin_edges_x
-        min_daynight = max(sun_el_bin_edges)
-        max_daynight = min(sun_el_bin_edges)
+    daynight_mode = 'time' #'sun' #Time since first event in hours or sun elevation. 
 
 
     for dict_index, eventids_dict in enumerate(dicts):
@@ -188,29 +194,80 @@ if __name__ == '__main__':
         else:
             current_bin_edges = ds.current_bin_edges_x
 
+        if plot_daynight == True:
+            #Want 2 plots in left column and N in the right in this case
+            fig = plt.figure()
+            fig.canvas.set_window_title(current_label)
 
-        fig = plt.figure()
-        fig.canvas.set_window_title(current_label)
+            ax = plt.subplot(2,2,1)
+            plt.grid(which='both', axis='both')
+            ax.minorticks_on()
+            ax.grid(b=True, which='major', color='k', linestyle='-')
+            ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            plt.ylabel('Normalized Counts')
+            plt.xlabel(textwrap.fill(current_label.replace('\n',' '),50))
+        else:
+            #Want them all stacked here.
+            fig = plt.figure()
+            fig.canvas.set_window_title(current_label)
 
-        ax = plt.subplot(len(dicts) + 1 + int(plot_daynight),1,1)
-        plt.grid(which='both', axis='both')
-        ax.minorticks_on()
-        ax.grid(b=True, which='major', color='k', linestyle='-')
-        ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-        plt.ylabel('Normalized Counts')
-        plt.xlabel(current_label)
+            ax = plt.subplot(len(dicts) + 1 + int(plot_daynight),1,1)
+            plt.grid(which='both', axis='both')
+            ax.minorticks_on()
+            ax.grid(b=True, which='major', color='k', linestyle='-')
+            ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            plt.ylabel('Normalized Counts')
+            plt.xlabel(textwrap.fill(current_label.replace('\n',' '),80))
 
         if plot_daynight:
-            ax_daynight = plt.subplot(len(dicts) + 1 + int(plot_daynight),1,len(dicts) + 1 + int(plot_daynight))
+            #Get event trigtimes.
+            time_dict = {}
+
+            start_reference_time = numpy.inf
+            for run_index, run in enumerate(ds.runs):
+                max_min_eventids_dict = {run:[0,ds.data_slicers[run_index].reader.N()-1]}
+                time_dict[run] = ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=max_min_eventids_dict)
+                start_reference_time = min(start_reference_time,min(time_dict[run]))
+
+
+            timezone = pytz.timezone("America/Los_Angeles")
+            start_reference_datetime = datetime.fromtimestamp(start_reference_time, tz=timezone) #Get the date and time of first event in Cali
+            start_reference_datetime = datetime(start_reference_datetime.year, start_reference_datetime.month, start_reference_datetime.day, tzinfo=timezone) #Midnight of first day so time of day is time since start. 
+            start_reference_time = datetime.timestamp(start_reference_datetime) #Rest reference time to the very beginning of the first day.
+
+
+            ax_daynight = plt.subplot(2,2,3)#plt.subplot(len(dicts) + 1 + int(plot_daynight),1,len(dicts) + 1 + int(plot_daynight))
             plt.grid(which='both', axis='both')
             ax_daynight.minorticks_on()
             ax_daynight.grid(b=True, which='major', color='k', linestyle='-')
             ax_daynight.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
             plt.ylabel('Normalized Counts')
-            sun_xlabel = 'Sun Elevation when Event Triggered'
-            plt.xlabel('Sun Elevation when Event Triggered')
 
-        
+            if daynight_mode == 'sun':
+                ds.setCurrentPlotBins('sun_el', 'sun_el', None)
+                daynight_edges = ds.current_bin_edges_x
+                daynight_centers = 0.5*(daynight_edges[1:]+daynight_edges[:-1])
+                daynight_xlabel = 'Sun Elevation when Event Triggered'
+                plt.xlabel(daynight_xlabel)
+                daynight_time_weights = getSunElWeightsFromRunDict(time_dict, daynight_edges)
+            elif daynight_mode == 'time':
+
+                time_bin_h = 15.0/60.0
+                daynight_edges = numpy.arange(0,24 + time_bin_h,time_bin_h)
+                daynight_centers = 0.5*(daynight_edges[1:]+daynight_edges[:-1])
+                daynight_xlabel = 'Time of Day at BEACON'#'Wrapped Time of Day Since %f'%start_reference_time
+                plt.xlabel(daynight_xlabel)
+
+                # hours = mdates.HourLocator(interval = 1)
+                # h_fmt = mdates.DateFormatter('%H:%M')
+                # ax_daynight.xaxis.set_major_locator(hours)
+                # ax_daynight.xaxis.set_major_formatter(h_fmt)
+
+
+
+
+            
+
         if mode == 1:
             if 'similarity' in param_key:
                 plot_UL = True
@@ -224,7 +281,7 @@ if __name__ == '__main__':
             ds.addROI('param',param_dict)
             param_eventids_dict, successive_cut_counts = ds.getCutsFromROI('param',load=False,save=False,verbose=False, return_successive_cut_counts=True, return_total_cut_counts=False)
 
-            dicts[2] = param_eventids_dict
+            dicts[-1] = param_eventids_dict
         else:
             dicts = [dicts[0],dicts[1]]
             plot_UL = True
@@ -238,15 +295,26 @@ if __name__ == '__main__':
             
             #Plot normal histogram
             plt.sca(ax)
-            plt.hist(data, bins=current_bin_edges, log=True, cumulative=False, density=True, label='dict = %s\nOverflow: %i'%(dict_names[dict_index],overflow),alpha=0.6, edgecolor='black', linewidth=1.2)
+            if plot_daynight:
+                plt.hist(data, bins=current_bin_edges, log=True, cumulative=False, density=True, label='%s, Overflow: %i'%(dict_names[dict_index],overflow),alpha=0.6, edgecolor='black', linewidth=1.2)
+            else:
+                plt.hist(data, bins=current_bin_edges, log=True, cumulative=False, density=True, label='%s\nOverflow: %i'%(dict_names[dict_index],overflow),alpha=0.6, edgecolor='black', linewidth=1.2)
             
             #Plot cumulative histogram
-            ax1 = plt.subplot(len(dicts) + 1 + int(plot_daynight),1,dict_index + 2)
+            if plot_daynight == True:
+                ax1 = plt.subplot(len(dicts),2,2*(dict_index + 1))
+            else:
+                ax1 = plt.subplot(len(dicts) + 1 + int(plot_daynight),1,dict_index + 2)
             plt.grid(which='both', axis='both')
             ax1.minorticks_on()
             ax1.grid(b=True, which='major', color='k', linestyle='-')
-            ax1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-            plt.xlabel(current_label)
+            ax1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.25)
+            if dict_index == len(dicts) - 1:
+                #Only label bottom plot.
+                if plot_daynight:
+                    plt.xlabel(textwrap.fill(current_label.replace('\n',' '),50))
+                else:
+                    plt.xlabel(textwrap.fill(current_label.replace('\n',' '),80))
             ax1.set_ylabel(r'% Of Events' + '\n%s'%dict_names[dict_index], color=plt.rcParams['axes.prop_cycle'].by_key()['color'][dict_index]) 
             ax1.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
@@ -265,17 +333,30 @@ if __name__ == '__main__':
             ax2.yaxis.set_major_formatter(FormatStrFormatter('%i'))
 
             if plot_daynight:
-                data = ds.getDataArrayFromParam('sun_el', eventids_dict=eventids_dict)
-                min_daynight = min(min_daynight, min(data))
-                max_daynight = max(max_daynight, max(data))
-                max_count = len(data)
-                overflow = sum(numpy.logical_or(data < min(sun_el_bin_edges), data > max(sun_el_bin_edges)))
-                
-                #Plot normal histogram
-                plt.sca(ax_daynight)
-                plt.hist(data, bins=sun_el_bin_edges, log=True, cumulative=False, density=True, label='dict = %s\nOverflow: %i'%(dict_names[dict_index],overflow),alpha=0.6, edgecolor='black', linewidth=1.2)
-                #import pdb; pdb.set_trace()
+                if daynight_mode == 'sun':
+                    data = ds.getDataArrayFromParam('sun_el', eventids_dict=eventids_dict)
+                    min_daynight = min(min_daynight, min(data))
+                    max_daynight = max(max_daynight, max(data))
+                    max_count = len(data)
+                    overflow = sum(numpy.logical_or(data < min(daynight_edges), data > max(daynight_edges)))
+                    
+                    #Plot normal histogram
+                    plt.sca(ax_daynight)
 
+                    counts = numpy.histogram(data,bins=daynight_edges)[0]
+                    counts = numpy.divide(counts, daynight_time_weights, out=numpy.zeros(len(counts)), where=daynight_time_weights!=0)
+                    #Convert counts to density
+                    counts = counts / (sum(counts) * (daynight_centers[1]-daynight_centers[0]))
+
+                    plt.bar(daynight_centers, counts, width=daynight_centers[1]-daynight_centers[0], label='%s, Overflow: %i'%(dict_names[dict_index],overflow),alpha=0.6, edgecolor='black', linewidth=1.0)
+                    ax_daynight.set_yscale('log')
+                elif daynight_mode == 'time':
+                    min_daynight = 0
+                    max_daynight = 24
+                    data = ((ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=eventids_dict) - start_reference_time)/(60*60))%24
+                    #Plot normal histogram
+                    plt.sca(ax_daynight)
+                    counts = plt.hist(data, bins=daynight_edges, log=True, cumulative=False, density=True, label='%s, Overflow: %i'%(dict_names[dict_index],overflow),alpha=0.6, edgecolor='black', linewidth=1.0)[0]
         if param_key in list(point_of_interest_dict.keys()):
             if 'similarity' in param_key:
                 plot_UL = True
@@ -292,7 +373,10 @@ if __name__ == '__main__':
                     linestyle = '--'
                     linecolor = 'g'
                     if plot_daynight:
-                        val_daynight = ds.getDataArrayFromParam('sun_el', eventids_dict={run:numpy.array([eventid])})[0]
+                        if daynight_mode == 'sun':
+                            val_daynight = ds.getDataArrayFromParam('sun_el', eventids_dict={run:numpy.array([eventid])})[0]
+                        elif daynight_mode == 'time':
+                            val_daynight = ((ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict={run:numpy.array([eventid])})[0] - start_reference_time)/(60*60))%24
                 else:
                     val = point_of_interest_dict[param_key][key]
                     linestyle = '-'
@@ -312,10 +396,11 @@ if __name__ == '__main__':
                     if r'%' in _ax.get_ylabel():
                         continue
                     elif plot_daynight:
-                        if _ax.get_xlabel() == sun_xlabel:
-                            plt.sca(ax_daynight)
-                            plt.axvline(val_daynight, label=key + ' = %0.3f'%val_daynight, linestyle=linestyle,color=linecolor, linewidth=2)
-                            _ax.set_xlim(min_daynight,max_daynight)
+                        if _ax.get_xlabel() == daynight_xlabel:
+                            if point_of_interest_dict[param_key][key] is None:
+                                plt.sca(ax_daynight)
+                                plt.axvline(val_daynight, label=key + ' = %0.3f'%val_daynight, linestyle=linestyle,color=linecolor, linewidth=2)
+                                _ax.set_xlim(min_daynight,max_daynight)
                             continue
 
                     plt.sca(_ax)
@@ -328,11 +413,19 @@ if __name__ == '__main__':
             if r'%' in _ax.get_ylabel():
                 continue
             plt.sca(_ax)
-            legend = plt.legend(loc='center left', fontsize=10, bbox_to_anchor=(1.15, 0.5))
-            legend.get_frame().set_alpha(1)
+            if plot_daynight == False:
+                legend = plt.legend(loc='center left', fontsize=10, bbox_to_anchor=(1.15, 0.5))
+                legend.get_frame().set_alpha(1)
+            else:
+                plt.sca(ax_daynight)
+                legend = plt.legend(loc='upper center', fontsize=10, bbox_to_anchor=(0.5, -0.25))
+                legend.get_frame().set_alpha(1)
 
         plt.tight_layout()
-        plt.subplots_adjust(left=0.1, right=0.7, hspace=0.7)
+        if plot_daynight == False:
+            plt.subplots_adjust(left=0.1, right=0.7, hspace=0.7)
+        else:
+            plt.subplots_adjust(wspace=0.3, left=0.06, right=0.9, hspace=0.5, top=0.95, bottom=0.2)
 
-        fig.savefig(os.path.join('./',param_key + '_%i.png'%(time.time())),dpi=300)
+        # fig.savefig(os.path.join('./',param_key + '_%i.png'%(time.time())),dpi=300)
 

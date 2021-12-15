@@ -32,20 +32,52 @@ matplotlib.rc('font', **font)
 matplotlib.rcParams['figure.figsize'] = [10, 11]
 matplotlib.rcParams.update({'font.size': 16})
 
-def getSunAzEl(timestamp_array_s, lat=37.583342, lon=-118.236484, interp=True, interp_step_s=5*60, plot=False):
+def getSunElWeightsFromRunDict(time_dict, el_bins, lat=37.583342, lon=-118.236484, interp_step_s=5*60):
+    '''
+    This will call getSunElWeights for a set of runs (and their associated start and endpoints), to give weights based
+    on a non-contingent set of runs.  The input dictionary should be formatted as:
+    time_dict = {run_i:[start_timestamp_s_i, stop_timestamp_s_i]}.  
+    '''
+    for run_index, run in enumerate(time_dict.keys()):
+        if run_index == 0:
+            weights = getSunElWeights(min(time_dict[run]), max(time_dict[run]), el_bins, lat=lat, lon=lon, interp_step_s=interp_step_s)
+        else:
+            weights = numpy.add(weights, getSunElWeights(min(time_dict[run]), max(time_dict[run]), el_bins, lat=lat, lon=lon, interp_step_s=interp_step_s))
+    #weights = numpy.divide(weights, sum(weights), out=numpy.zeros(len(weights)), where=daynight_time_weights!=0)
+    return weights/sum(weights)
+
+
+
+def getSunElWeights(min_timestamp_s, max_timestamp_s, el_bins, lat=37.583342, lon=-118.236484, interp_step_s=5*60):
+    '''
+    Given a set of histogram bins and start and stop times, this will determine approximatly how man seconds
+    is spent at each elevation bin in the given range.
+    '''
+    az, el, interpolation_times = getSunAzEl(numpy.arange(min_timestamp_s, max_timestamp_s, 1), lat=lat, lon=lon, interp=True, interp_step_s=interp_step_s, return_interpolation_times=True, plot=False)
+
+    weights = numpy.histogram(el,bins=el_bins)[0]
+    return weights
+
+def getSunAzEl(timestamp_array_s, lat=37.583342, lon=-118.236484, interp=True, interp_step_s=5*60, return_interpolation_times=False, plot=False):
     '''
     Given an array of timestamps and the observation latitude and longitude, this will return the elevation and azimuth
     directions.  For a quicker runtime for large numbers of events, interpolation can be enabled with astropy being
     sampled at the expected step interval of interp_step_s.  These values will then be interpolated.  
     
     Azimuth will be given ranging from -180 to 180, with East as 0 and North as 90.
+
+    You can get the times sampled for building the interpolation model by setting return_interpolation_times to True.  If
+    this is set True then interp will be always be forced to True as well.  THIS WILL ALSO RETURN THE AZ AND EL VALUES
+    ASSOCIATED WITH THOSE INTERPOLATED VALUES.
     '''
     try:
+        if return_interpolation_times == True:
+            interp = True
         if interp == False:
             time = astropy.time.Time(timestamp_array_s,format='unix')
         else:
-            interpolation_times = numpy.arange(min(timestamp_array_s) - interp_step_s*5, max(timestamp_array_s) + interp_step_s*6, interp_step_s)
-            if len(interpolation_times) > len(timestamp_array_s):
+            interpolation_times = numpy.arange(min(timestamp_array_s)-1, max(timestamp_array_s) + interp_step_s + 1, interp_step_s)
+            if len(interpolation_times) > len(timestamp_array_s) and return_interpolation_times == False:
                 print('The interpolated times would be larger in size than the given times, so skipping interpolation.')
                 interp = False
                 del interpolation_times
@@ -79,7 +111,10 @@ def getSunAzEl(timestamp_array_s, lat=37.583342, lon=-118.236484, interp=True, i
             plt.plot(time.value, el)
             plt.ylabel('Elevation Angle')
 
-        return az, el
+        if return_interpolation_times == True:
+            return az, el, interpolation_times
+        else:
+            return az, el
     except Exception as e:
         print('Error in getSagCoords().')
         print(e)

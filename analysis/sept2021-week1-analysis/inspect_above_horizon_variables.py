@@ -68,7 +68,7 @@ if __name__ == '__main__':
     #
     #numpy.arange(5910,5920)
     #numpy.arange(5733,5974)
-    for runs in [numpy.arange(5910,5920)]:
+    for runs in [numpy.arange(5911,5912)]:
 
         print("Preparing dataSlicer")
 
@@ -89,6 +89,8 @@ if __name__ == '__main__':
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
                         n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), remove_incomplete_runs=True)
 
+        ds.eventInspector({5911:numpy.array([73399])})
+        import pdb; pdb.set_trace()
         #ds.addROI('above horizon',{'elevation_best_h':[0,90],'elevation_best_v':[0,90], 'hpol_peak_to_sidelobe':[2.0,300], 'vpol_peak_to_sidelobe':[2.0,300]})#'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.0,300]})
         
         if False:
