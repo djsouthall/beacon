@@ -72,7 +72,7 @@ if __name__ == '__main__':
     map_length = 16384
     map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
 
-    if False:
+    if True:
         #Quicker for testing
         runs = numpy.arange(5910,5912)
     elif True:
@@ -163,9 +163,10 @@ if __name__ == '__main__':
     dicts = [None, above_horizon_eventids_dict, above_horizon_full_eventids_dict] #last one currently replaced in loop for its partial components - 1 if mode == 1.  It is mostly used to get the set of cuts that would be used by it, and they stats are presented for each cut.  Elif mode == 2 then it is ignored altogether. 
     dict_names = ['All RF Events', 'Forward Above Horizon', 'Quality Cuts']
     log_counts = False
-    plot_daynight = True
+    plot_daynight = False
     daynight_mode = 'time' #'sun' #Time since first event in hours or sun elevation. 
-    wrap_daynight = False
+    wrap_daynight = True
+    standalone_daynight = False
 
 
     for dict_index, eventids_dict in enumerate(dicts):
@@ -226,13 +227,16 @@ if __name__ == '__main__':
             #Get event trigtimes.
             time_dict = {}
 
-            start_reference_time = numpy.inf
-            finish_reference_time = -numpy.inf
+            min_event_time = numpy.inf
+            max_event_time = -numpy.inf
             for run_index, run in enumerate(ds.runs):
                 max_min_eventids_dict = {run:[0,ds.data_slicers[run_index].reader.N()-1]}
                 time_dict[run] = ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=max_min_eventids_dict)
-                start_reference_time = min(start_reference_time,min(time_dict[run]))
-                finish_reference_time = max(start_reference_time,max(time_dict[run]))
+                min_event_time = min(min_event_time,min(time_dict[run]))
+                max_event_time = max(max_event_time,max(time_dict[run]))
+
+            start_reference_time = min_event_time #Reference times will change, min max event times wont.  event times used for weights.
+            finish_reference_time = max_event_time
 
 
             timezone = pytz.timezone("America/Los_Angeles")
@@ -244,13 +248,18 @@ if __name__ == '__main__':
             finish_reference_datetime = datetime(finish_reference_datetime.year, finish_reference_datetime.month, finish_reference_datetime.day, tzinfo=timezone) #Midnight of first day so time of day is time since finish. 
             finish_reference_time = datetime.timestamp(finish_reference_datetime) #Rest reference time to the very beginning of the first day.
 
+            f_daynight_wrap = lambda t : ((t - start_reference_time)/(60*60))%24
+
 
             ax_daynight = plt.subplot(2,2,3)#plt.subplot(len(dicts) + 1 + int(plot_daynight),1,len(dicts) + 1 + int(plot_daynight))
             plt.grid(which='both', axis='both')
             ax_daynight.minorticks_on()
             ax_daynight.grid(b=True, which='major', color='k', linestyle='-')
             ax_daynight.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-            plt.ylabel('Normalized Counts')
+            if wrap_daynight == True:
+                plt.ylabel('Counts / % Time Spent in Each Bin')
+            else:
+                plt.ylabel('Counts')
 
             if daynight_mode == 'sun':
                 ds.setCurrentPlotBins('sun_el', 'sun_el', None)
@@ -262,23 +271,36 @@ if __name__ == '__main__':
             elif daynight_mode == 'time':
 
                 time_bin_h = 15.0/60.0
-                daynight_edges = numpy.arange(0,24 + time_bin_h,time_bin_h)
-                daynight_centers = 0.5*(daynight_edges[1:]+daynight_edges[:-1])
                 if wrap_daynight == True:
+                    daynight_edges = numpy.arange(0,24 + time_bin_h,time_bin_h)
                     daynight_xlabel = 'Time of Day at BEACON'#'Wrapped Time of Day Since %f'%start_reference_time
                 else:
+                    daynight_edges = numpy.arange(0,finish_reference_time - start_reference_time + time_bin_h,time_bin_h)
                     daynight_xlabel = textwrap.fill('Time Since %s'%str(start_reference_datetime),50)
+                daynight_centers = 0.5*(daynight_edges[1:]+daynight_edges[:-1])
                 plt.xlabel(daynight_xlabel)
 
-                # hours = mdates.HourLocator(interval = 1)
-                # h_fmt = mdates.DateFormatter('%H:%M')
-                # ax_daynight.xaxis.set_major_locator(hours)
-                # ax_daynight.xaxis.set_major_formatter(h_fmt)
+                if wrap_daynight == True:
+                    daynight_time_weights = numpy.zeros(len(daynight_centers))
+                    for run_index, run in enumerate(time_dict.keys()):
+                        t = numpy.arange(min(time_dict[run]), max(time_dict[run]) + 1, 1) #1 second interval in the window, to go through the same calculation as the data would to get a sense of the % of time spent at each time.
+                        daynight_time_weights = daynight_time_weights + numpy.histogram(f_daynight_wrap(t),bins=daynight_edges)[0]
+                    daynight_time_weights = daynight_time_weights/sum(daynight_time_weights)
 
 
-
-
-            
+            if standalone_daynight == True:
+                #Do it all again for a new plot.  
+                fig_daynight = plt.figure()
+                ax_daynight2 = plt.gca()
+                plt.grid(which='both', axis='both')
+                ax_daynight2.minorticks_on()
+                ax_daynight2.grid(b=True, which='major', color='k', linestyle='-')
+                ax_daynight2.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.xlabel(ax_daynight.get_xlabel())
+                plt.ylabel(ax_daynight.get_ylabel())
+                axs_daynight = [ax_daynight, ax_daynight2]
+            else:
+                axs_daynight = [ax_daynight]
 
         if mode == 1:
             if 'similarity' in param_key:
@@ -300,6 +322,10 @@ if __name__ == '__main__':
             plot_LL = True
 
         for dict_index, eventids_dict in enumerate(dicts):
+            if dict_names[dict_index] == 'Quality Cuts':
+                dict_name = dict_names[dict_index] + ' Except ' + param_key
+            else:
+                dict_name = dict_names[dict_index]
 
             data = ds.getDataArrayFromParam(param_key, eventids_dict=eventids_dict)
             max_count = len(data)
@@ -308,9 +334,9 @@ if __name__ == '__main__':
             #Plot normal histogram
             plt.sca(ax)
             if plot_daynight:
-                plt.hist(data, bins=current_bin_edges, log=True, cumulative=False, density=True, label='%s, Overflow: %i'%(dict_names[dict_index],overflow),alpha=0.6, edgecolor='black', linewidth=1.2)
+                plt.hist(data, bins=current_bin_edges, log=True, cumulative=False, density=True, label='%s, Overflow: %i'%(dict_name,overflow),alpha=0.6, edgecolor='black', linewidth=1.2)
             else:
-                plt.hist(data, bins=current_bin_edges, log=True, cumulative=False, density=True, label='%s\nOverflow: %i'%(dict_names[dict_index],overflow),alpha=0.6, edgecolor='black', linewidth=1.2)
+                plt.hist(data, bins=current_bin_edges, log=True, cumulative=False, density=True, label='%s\nOverflow: %i'%(dict_name,overflow),alpha=0.6, edgecolor='black', linewidth=1.2)
             
             #Plot cumulative histogram
             if plot_daynight == True:
@@ -352,29 +378,40 @@ if __name__ == '__main__':
                     max_count = len(data)
                     overflow = sum(numpy.logical_or(data < min(daynight_edges), data > max(daynight_edges)))
                     
-                    #Plot normal histogram
-                    plt.sca(ax_daynight)
-
                     counts = numpy.histogram(data,bins=daynight_edges)[0]
                     counts = numpy.divide(counts, daynight_time_weights, out=numpy.zeros(len(counts)), where=daynight_time_weights!=0)
                     #Convert counts to density
-                    counts = counts / (sum(counts) * (daynight_centers[1]-daynight_centers[0]))
+                    # counts = counts / (sum(counts) * (daynight_centers[1]-daynight_centers[0]))
 
-                    plt.bar(daynight_centers, counts, width=daynight_centers[1]-daynight_centers[0], label='%s, Overflow: %i'%(dict_names[dict_index],overflow),alpha=0.6, edgecolor='black', linewidth=1.0)
-                    ax_daynight.set_yscale('log')
+                    for _ax_daynight in axs_daynight:
+                        #Plot normal histogram
+                        plt.sca(_ax_daynight)
+                        plt.bar(daynight_centers, counts, width=daynight_centers[1]-daynight_centers[0], label='%s, Overflow: %i'%(dict_name,overflow),alpha=0.6, edgecolor='black', linewidth=1.0)
+                        #_ax_daynight.set_yscale('log')
+
                 elif daynight_mode == 'time':
                     if wrap_daynight == True:
                         min_daynight = 0
                         max_daynight = 24
-                        data = ((ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=eventids_dict) - start_reference_time)/(60*60))%24
+
+                        data = f_daynight_wrap(ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=eventids_dict))
+                        counts = numpy.histogram(data,bins=daynight_edges)[0]
+                        counts = numpy.divide(counts, daynight_time_weights, out=numpy.zeros(len(counts)), where=daynight_time_weights!=0)
                     else:
                         min_daynight = start_reference_time
                         max_daynight = finish_reference_time
                         data = (ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=eventids_dict) - start_reference_time)/(60*60)
+                        counts = numpy.histogram(data,bins=daynight_edges)[0]
+                    # counts = counts / (sum(counts) * (daynight_centers[1]-daynight_centers[0])) #Normalize counts?  I don't think I want to do this actuall, not as visually nice. 
 
-                    #Plot normal histogram
-                    plt.sca(ax_daynight)
-                    counts = plt.hist(data, bins=daynight_edges, log=True, cumulative=False, density=True, label='%s, Overflow: %i'%(dict_names[dict_index],overflow),alpha=0.6, edgecolor='black', linewidth=1.0)[0]
+                    for _ax_daynight in axs_daynight:
+                        #Plot normal histogram
+                        plt.sca(_ax_daynight)
+                        plt.bar(daynight_centers, counts, width=daynight_centers[1]-daynight_centers[0], label='%s, Overflow: %i'%(dict_name,overflow),alpha=0.6, edgecolor='black', linewidth=1.0)
+                        _ax_daynight.set_yscale('log')
+                        # counts = plt.hist(data, bins=daynight_edges, log=True, cumulative=False, density=True, label='%s, Overflow: %i'%(dict_name,overflow),alpha=0.6, edgecolor='black', linewidth=1.0)[0]
+
+
         if param_key in list(point_of_interest_dict.keys()):
             if 'similarity' in param_key:
                 plot_UL = True
@@ -395,7 +432,7 @@ if __name__ == '__main__':
                             val_daynight = ds.getDataArrayFromParam('sun_el', eventids_dict={run:numpy.array([eventid])})[0]
                         elif daynight_mode == 'time':
                             if wrap_daynight == True:
-                                val_daynight = ((ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict={run:numpy.array([eventid])})[0] - start_reference_time)/(60*60))%24
+                                val_daynight = f_daynight_wrap(ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict={run:numpy.array([eventid])})[0])
                             else:
                                 val_daynight = (ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict={run:numpy.array([eventid])})[0] - start_reference_time)/(60*60)
                 else:
@@ -419,9 +456,10 @@ if __name__ == '__main__':
                     elif plot_daynight:
                         if _ax.get_xlabel() == daynight_xlabel:
                             if point_of_interest_dict[param_key][key] is None:
-                                plt.sca(ax_daynight)
-                                plt.axvline(val_daynight, label=key + ' = %0.3f'%val_daynight, linestyle=linestyle,color=linecolor, linewidth=2)
-                                _ax.set_xlim(min_daynight,max_daynight)
+                                for _ax_daynight in axs_daynight:
+                                    plt.sca(_ax_daynight)
+                                    plt.axvline(val_daynight, label=key + ' = %0.3f'%val_daynight, linestyle=linestyle,color=linecolor, linewidth=2)
+                                    _ax.set_xlim(min_daynight,max_daynight)
                             continue
 
                     plt.sca(_ax)
@@ -448,5 +486,11 @@ if __name__ == '__main__':
         else:
             plt.subplots_adjust(wspace=0.3, left=0.06, right=0.9, hspace=0.5, top=0.95, bottom=0.2)
 
+
+
+        if plot_daynight and standalone_daynight:
+            plt.sca(ax_daynight2)
+            legend = plt.legend(loc='upper right', fontsize=10)
+            plt.tight_layout()
         # fig.savefig(os.path.join('./',param_key + '_%i.png'%(time.time())),dpi=300)
 

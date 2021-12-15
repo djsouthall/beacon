@@ -32,6 +32,7 @@ matplotlib.rc('font', **font)
 matplotlib.rcParams['figure.figsize'] = [10, 11]
 matplotlib.rcParams.update({'font.size': 16})
 
+
 def getSunElWeightsFromRunDict(time_dict, el_bins, lat=37.583342, lon=-118.236484, interp_step_s=5*60):
     '''
     This will call getSunElWeights for a set of runs (and their associated start and endpoints), to give weights based
