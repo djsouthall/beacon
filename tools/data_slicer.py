@@ -292,10 +292,23 @@ class dataSlicerSingleRun():
                 self.checkForRateDatasets() #Will append to known param key based on which repeated rate signal datasets are available
                 self.checkForComplementaryBothMapDatasets() #Will append to known param key and prepare for if hilbert used or not.
                 
+                #Angular ranges are handled such that their bin centers are the same as the values sampled by the corrolator class given the same min, max, and n.  
                 self.n_phi = n_phi
                 self.range_phi_deg = numpy.asarray(range_phi_deg)
+                dphi = (max(self.range_phi_deg) - min(self.range_phi_deg)) / (self.n_phi - 1)
+                self.phi_edges = numpy.arange(min(self.range_phi_deg),max(self.range_phi_deg) + 2*dphi, dphi) - dphi/2.0
+                self.phi_centers = 0.5*(self.phi_edges[1:]+self.phi_edges[:-1])
+                # self.phi_edges = numpy.arange(min(self.range_phi_deg) - numpy.diff(numpy.linspace(min(self.range_phi_deg),max(self.range_phi_deg),n_phi))[0]/2, max(self.range_phi_deg) + numpy.diff(numpy.linspace(min(self.range_phi_deg),max(self.range_phi_deg),n_phi))[0]/2, numpy.diff(numpy.linspace(min(self.range_phi_deg),max(self.range_phi_deg),n_phi))[0])
+
                 self.n_theta = n_theta
                 self.range_theta_deg = numpy.asarray(range_theta_deg)
+                dtheta = (max(self.range_theta_deg) - min(self.range_theta_deg)) / (self.n_theta - 1)
+                self.theta_edges = numpy.arange(min(self.range_theta_deg),max(self.range_theta_deg) + 2*dtheta, dtheta) - dtheta/2.0
+                self.theta_centers = 0.5*(self.theta_edges[1:]+self.theta_edges[:-1])
+                # self.theta_edges = numpy.arange(min(self.range_theta_deg) - numpy.diff(numpy.linspace(min(self.range_theta_deg),max(self.range_theta_deg),n_theta))[0]/2, max(self.range_theta_deg) + numpy.diff(numpy.linspace(min(self.range_theta_deg),max(self.range_theta_deg),n_theta))[0]/2, numpy.diff(numpy.linspace(min(self.range_theta_deg),max(self.range_theta_deg),n_theta))[0])
+
+                self.elevation_edges = 90 - self.theta_edges
+                self.elevation_centers = 0.5*(self.elevation_edges[1:]+self.elevation_edges[:-1])                
 
                 self.trigger_types = trigger_types
 
@@ -2972,31 +2985,22 @@ class dataSlicerSingleRun():
                     x_max_val = 60
                     x_min_val = 0
 
-                    # self.n_phi = n_phi
-                    # self.range_phi_deg = range_phi_deg
-                    # self.n_theta = n_theta
-                    # self.range_theta_deg = range_theta_deg
-
                 elif 'hilbert_' not in param_key and 'theta_best_h' in param_key:
                     scope = param_key.replace('theta_best_h','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                         label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
                     else:
                         label = 'Best Reconstructed Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_theta_deg)
-                    x_min_val = numpy.min(self.range_theta_deg)
-                    x_n_bins = self.n_theta
+                    current_bin_edges = self.theta_edges
+                    calculate_bins_from_min_max = False
                 elif 'hilbert_' not in param_key and 'theta_best_v' in param_key:
                     scope = param_key.replace('theta_best_v','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                         label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
                     else:
                         label = 'Best Reconstructed Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_theta_deg)
-                    x_min_val = numpy.min(self.range_theta_deg)
-                    x_n_bins = self.n_theta
+                    current_bin_edges = self.theta_edges
+                    calculate_bins_from_min_max = False
 
                 elif 'hilbert_' not in param_key and 'theta_best_all' in param_key:
                     scope = param_key.replace('theta_best_all','')
@@ -3004,10 +3008,8 @@ class dataSlicerSingleRun():
                         label = 'Best Reconstructed Hilbert Zenith (Deg)\nAll-pol Antennas Only' + ' ' + scope
                     else:
                         label = 'Best Reconstructed Zenith (Deg)\nAll-pol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_theta_deg)
-                    x_min_val = numpy.min(self.range_theta_deg)
-                    x_n_bins = self.n_theta
+                    current_bin_edges = self.theta_edges
+                    calculate_bins_from_min_max = False
 
                 elif 'hilbert_' not in param_key and 'elevation_best_h' in param_key:
                     scope = param_key.replace('elevation_best_h','')
@@ -3015,124 +3017,98 @@ class dataSlicerSingleRun():
                         label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
                     else:
                         label = 'Best Reconstructed Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(90.0 - self.range_theta_deg)
-                    x_min_val = numpy.min(90.0 - self.range_theta_deg)
-                    x_n_bins = self.n_theta
+                        current_bin_edges = self.elevation_edges
+                        calculate_bins_from_min_max = False
+
                 elif 'hilbert_' not in param_key and 'elevation_best_v' in param_key:
                     scope = param_key.replace('elevation_best_v','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                         label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
                     else:
                         label = 'Best Reconstructed Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(90.0 - self.range_theta_deg)
-                    x_min_val = numpy.min(90.0 - self.range_theta_deg)
-                    x_n_bins = self.n_theta
+                        current_bin_edges = self.elevation_edges
+                        calculate_bins_from_min_max = False
+
                 elif 'hilbert_' not in param_key and 'elevation_best_all' in param_key:
                     scope = param_key.replace('elevation_best_all','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                         label = 'Best Reconstructed Hilbert Elevation (Deg)\nAll-pol Antennas Only' + ' ' + scope
                     else:
                         label = 'Best Reconstructed Elevation (Deg)\nAll-pol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(90.0 - self.range_theta_deg)
-                    x_min_val = numpy.min(90.0 - self.range_theta_deg)
-                    x_n_bins = self.n_theta
+                        current_bin_edges = self.elevation_edges
+                        calculate_bins_from_min_max = False
+
                 elif 'hilbert_' not in param_key and 'phi_best_h' in param_key:
                     scope = param_key.replace('phi_best_h','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                         label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
                     else:
                         label = 'Best Reconstructed Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_phi_deg)
-                    x_min_val = numpy.min(self.range_phi_deg)
-                    x_n_bins = self.n_phi
+                    current_bin_edges = self.phi_edges
+                    calculate_bins_from_min_max = False
+
                 elif 'hilbert_' not in param_key and 'phi_best_v' in param_key:
                     scope = param_key.replace('phi_best_v','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                         label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
                     else:
                         label = 'Best Reconstructed Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_phi_deg)
-                    x_min_val = numpy.min(self.range_phi_deg)
-                    x_n_bins = self.n_phi
+                    current_bin_edges = self.phi_edges
+                    calculate_bins_from_min_max = False
                 elif 'hilbert_' not in param_key and 'phi_best_all' in param_key:
                     scope = param_key.replace('phi_best_all','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
                         label = 'Best Reconstructed Hilbert Azimuth (Deg)\nAll-pol Antennas Only' + ' ' + scope
                     else:
                         label = 'Best Reconstructed Azimuth (Deg)\nAll-pol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_phi_deg)
-                    x_min_val = numpy.min(self.range_phi_deg)
-                    x_n_bins = self.n_phi
+                    current_bin_edges = self.phi_edges
+                    calculate_bins_from_min_max = False
 
                 elif 'hilbert_' in param_key and 'theta_best_h' in param_key:
                     scope = param_key.replace('hilbert_theta_best_h','')
                     label = 'Best Reconstructed Hilbert Zenith (Deg)\nHpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_theta_deg)
-                    x_min_val = numpy.min(self.range_theta_deg)
-                    x_n_bins = self.n_theta
+                    current_bin_edges = self.theta_edges
+                    calculate_bins_from_min_max = False
                 elif 'hilbert_' in param_key and 'theta_best_v' in param_key:
                     scope = param_key.replace('hilbert_theta_best_v','')
                     label = 'Best Reconstructed Hilbert Zenith (Deg)\nVpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_theta_deg)
-                    x_min_val = numpy.min(self.range_theta_deg)
-                    x_n_bins = self.n_theta
+                    current_bin_edges = self.theta_edges
+                    calculate_bins_from_min_max = False
                 elif 'hilbert_' in param_key and 'theta_best_all' in param_key:
                     scope = param_key.replace('hilbert_theta_best_all','')
                     label = 'Best Reconstructed Hilbert Zenith (Deg)\nAll-pol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_theta_deg)
-                    x_min_val = numpy.min(self.range_theta_deg)
-                    x_n_bins = self.n_theta
+                    current_bin_edges = self.theta_edges
+                    calculate_bins_from_min_max = False
                 elif 'hilbert_' in param_key and 'elevation_best_h' in param_key:
                     scope = param_key.replace('hilbert_elevation_best_h','')
                     label = 'Best Reconstructed Hilbert Elevation (Deg)\nHpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(90.0 - self.range_theta_deg)
-                    x_min_val = numpy.min(90.0 - self.range_theta_deg)
-                    x_n_bins = self.n_theta
+                    current_bin_edges = self.elevation_edges
+                    calculate_bins_from_min_max = False
                 elif 'hilbert_' in param_key and 'elevation_best_v' in param_key:
                     scope = param_key.replace('hilbert_elevation_best_v','')
                     label = 'Best Reconstructed Hilbert Elevation (Deg)\nVpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(90.0 - self.range_theta_deg)
-                    x_min_val = numpy.min(90.0 - self.range_theta_deg)
-                    x_n_bins = self.n_theta
+                    current_bin_edges = self.elevation_edges
+                    calculate_bins_from_min_max = False
                 elif 'hilbert_' in param_key and 'elevation_best_all' in param_key:
                     scope = param_key.replace('hilbert_elevation_best_all','')
                     label = 'Best Reconstructed Hilbert Elevation (Deg)\nAll-pol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(90.0 - self.range_theta_deg)
-                    x_min_val = numpy.min(90.0 - self.range_theta_deg)
-                    x_n_bins = self.n_theta
+                    current_bin_edges = self.elevation_edges
+                    calculate_bins_from_min_max = False
                 elif 'hilbert_' in param_key and 'phi_best_h' in param_key:
                     scope = param_key.replace('hilbert_phi_best_h','')
                     label = 'Best Reconstructed Hilbert Azimuth (Deg)\nHpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_phi_deg)
-                    x_min_val = numpy.min(self.range_phi_deg)
-                    x_n_bins = self.n_phi
+                    current_bin_edges = self.phi_edges
+                    calculate_bins_from_min_max = False
                 elif 'hilbert_' in param_key and 'phi_best_v' in param_key:
                     scope = param_key.replace('hilbert_phi_best_v','')
                     label = 'Best Reconstructed Hilbert Azimuth (Deg)\nVpol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_phi_deg)
-                    x_min_val = numpy.min(self.range_phi_deg)
-                    x_n_bins = self.n_phi
+                    current_bin_edges = self.phi_edges
+                    calculate_bins_from_min_max = False
                 elif 'hilbert_' in param_key and 'phi_best_all' in param_key:
                     scope = param_key.replace('hilbert_phi_best_all','')
                     label = 'Best Reconstructed Hilbert Azimuth (Deg)\nAll-pol Antennas Only' + ' ' + scope
-                    #x_n_bins = 360
-                    x_max_val = numpy.max(self.range_phi_deg)
-                    x_min_val = numpy.min(self.range_phi_deg)
-                    x_n_bins = self.n_phi
+                    current_bin_edges = self.phi_edges
+                    calculate_bins_from_min_max = False
                 elif 'calibrated_trigtime' == param_key:
                     label = 'Calibrated Trigger Time (s)'
                     with h5py.File(self.analysis_filename, 'r') as file:

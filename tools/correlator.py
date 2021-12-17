@@ -4387,8 +4387,21 @@ if __name__=="__main__":
 
     apply_phase_response=True
 
-    n_phi = 720
-    n_theta = 1080
+    map_resolution_theta = 0.25 #degrees
+    min_theta   = 0
+    max_theta   = 120
+    n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
+
+    map_resolution_phi = 0.1 #degrees
+    min_phi     = -180
+    max_phi     = 180
+    n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
+
+    range_phi_deg = (min_phi, max_phi)
+    range_theta_deg = (min_theta, max_theta)
+
+    # n_phi = 720
+    # n_theta = 1080
     upsample = 2**16
     max_method = 0
 
@@ -4442,7 +4455,7 @@ if __name__=="__main__":
 
 
 
-        cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, n_theta=n_theta, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response, deploy_index=deploy_index, map_source_distance_m=map_source_distance_m)
+        cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response, deploy_index=deploy_index, map_source_distance_m=map_source_distance_m)
         
 
         if sine_subtract:

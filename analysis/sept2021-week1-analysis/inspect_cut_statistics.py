@@ -72,7 +72,7 @@ if __name__ == '__main__':
     map_length = 16384
     map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
 
-    if True:
+    if False:
         #Quicker for testing
         runs = numpy.arange(5910,5912)
     elif True:
@@ -163,7 +163,7 @@ if __name__ == '__main__':
     dicts = [None, above_horizon_eventids_dict, above_horizon_full_eventids_dict] #last one currently replaced in loop for its partial components - 1 if mode == 1.  It is mostly used to get the set of cuts that would be used by it, and they stats are presented for each cut.  Elif mode == 2 then it is ignored altogether. 
     dict_names = ['All RF Events', 'Forward Above Horizon', 'Quality Cuts']
     log_counts = False
-    plot_daynight = False
+    plot_daynight = True
     daynight_mode = 'time' #'sun' #Time since first event in hours or sun elevation. 
     wrap_daynight = True
     standalone_daynight = False
@@ -256,10 +256,19 @@ if __name__ == '__main__':
             ax_daynight.minorticks_on()
             ax_daynight.grid(b=True, which='major', color='k', linestyle='-')
             ax_daynight.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-            if wrap_daynight == True:
-                plt.ylabel('Counts / % Time Spent in Each Bin')
+            log_diff = True
+            if log_diff == False:
+                if wrap_daynight == True:
+                    plt.ylabel('Counts / % Time Spent in Each Bin')
+                else:
+                    plt.ylabel('Counts')
             else:
-                plt.ylabel('Counts')
+                if wrap_daynight == True:
+                    
+                    plt.ylabel(textwrap.fill('log10(Counts / % Time Spent in Each Bin - Mean)*(Sign from Mean)',50))
+                else:
+                    plt.ylabel('log10(Counts - Mean)*(Sign from Mean)')
+
 
             if daynight_mode == 'sun':
                 ds.setCurrentPlotBins('sun_el', 'sun_el', None)
@@ -407,8 +416,11 @@ if __name__ == '__main__':
                     for _ax_daynight in axs_daynight:
                         #Plot normal histogram
                         plt.sca(_ax_daynight)
-                        plt.bar(daynight_centers, counts, width=daynight_centers[1]-daynight_centers[0], label='%s, Overflow: %i'%(dict_name,overflow),alpha=0.6, edgecolor='black', linewidth=1.0)
-                        _ax_daynight.set_yscale('log')
+                        if log_diff == False:
+                            plt.bar(daynight_centers, counts, width=daynight_centers[1]-daynight_centers[0], label='%s'%(dict_name),alpha=0.6, edgecolor='black', linewidth=1.0)
+                            _ax_daynight.set_yscale('log')
+                        else:
+                            plt.bar(daynight_centers, numpy.log10(numpy.abs(counts - numpy.mean(counts)))*numpy.sign(counts-numpy.mean(counts)), width=daynight_centers[1]-daynight_centers[0], label='%s'%(dict_name),alpha=0.6, edgecolor='black', linewidth=1.0)
                         # counts = plt.hist(data, bins=daynight_edges, log=True, cumulative=False, density=True, label='%s, Overflow: %i'%(dict_name,overflow),alpha=0.6, edgecolor='black', linewidth=1.0)[0]
 
 

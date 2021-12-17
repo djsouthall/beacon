@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
     print("Preparing dataSlicer")
 
-    #Should match the source data resolutions.
+    #Should match the source data resolutions, in corrolator they are handled as centers rather than bin edges, so similarly in dataslicer they will be treated as the center of bins despite that not generally not being how bins are handled in ds. 
     map_resolution_theta = 0.25 #degrees
     min_theta   = 0
     max_theta   = 120
@@ -88,26 +88,122 @@ if __name__ == '__main__':
                     snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
                     n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), remove_incomplete_runs=True)
 
-    scopes = ['allsky']#['abovehorizon', 'belowhorizon','allsky']
-    for scope in scopes:
-        fig_og, ax_og, counts = ds.plotROI2dHist('phi_best_h_allsky', 'elevation_best_h_allsky', cmap='cool', eventids_dict=None, return_counts=True, include_roi=False)
-        smoothed_counts = scipy.ndimage.gaussian_filter(counts, 1, order=0, output=None, mode=['wrap','nearest'], cval=0.0, truncate=4.0)
+    ds.addROI('above horizon',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90]})
+    above_horizon_eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
+    ds.addROI('above horizon full',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
+    above_horizon_full_eventids_dict = ds.getCutsFromROI('above horizon full',load=False,save=False,verbose=True, return_successive_cut_counts=False, return_total_cut_counts=False)
 
-        
+    sigma_sets = [0.25,0.5,1.0]#[1.0,0.15,[0.05, 0.15]]
+    for sigma_set in sigma_sets:
+        fig_og, ax_og, counts = ds.plotROI2dHist('phi_best_h_allsky', 'elevation_best_h_allsky', cmap='cool', eventids_dict=above_horizon_eventids_dict, return_counts=True, include_roi=False)
+        smoothed_counts = scipy.ndimage.gaussian_filter(counts/numpy.max(counts), sigma_set, order=0, output=None, mode=['wrap','nearest'], cval=0.0, truncate=10.0)
 
         fig = plt.figure()
         ax = plt.gca(sharex=ax_og,sharey=ax_og)
         im = ax.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, smoothed_counts,cmap=cmap, norm=colors.LogNorm(vmin=0.0001, vmax=smoothed_counts.max()))
-
+        plt.title('Smoothed With Gaussian\nSigma = %s'%str(sigma_set))
         cbar = fig.colorbar(im)
-        cbar.set_label('Counts')
+        cbar.set_label('Counts/Max(Counts)')
 
-        plt.xlabel(ds.current_label_x)
-        plt.ylabel(ds.current_label_y)
+        phi_label = ds.current_label_x
+        theta_label = ds.current_label_y
+        plt.xlabel(phi_label)
+        plt.ylabel(theta_label)
         plt.grid(which='both', axis='both')
         ax.minorticks_on()
         ax.grid(b=True, which='major', color='k', linestyle='-')
         ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
 
-        
+        interp = scipy.interpolate.interp2d(ds.current_bin_centers_mesh_x[0,:], ds.current_bin_centers_mesh_y[:,0], smoothed_counts, kind='cubic', copy=False, bounds_error=False)
+        interp_arb = lambda x, y : numpy.array([interp(_x,_y) for _x, _y in zip(numpy.asarray(x).flatten(),numpy.asarray(y).flatten())]).reshape(numpy.shape(numpy.asarray(x))) #Replicates the output of interp but doesn't assume 2 1d arrays forming a mesh.  Slower but better for interpolating arbitrary input coords.
+        interpolated_values = interp(ds.current_bin_centers_mesh_x[0,:], ds.current_bin_centers_mesh_y[:,0])
+
+        fig = plt.figure()
+        ax = plt.gca(sharex=ax_og,sharey=ax_og)
+        im = ax.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, interpolated_values,cmap=cmap, norm=colors.LogNorm(vmin=0.0001, vmax=smoothed_counts.max()))
+        plt.title('Interpolated value output')
+        cbar = fig.colorbar(im)
+        cbar.set_label('Counts/Max(Counts)')
+
+        plt.xlabel(phi_label)
+        plt.ylabel(theta_label)
+        plt.grid(which='both', axis='both')
+        ax.minorticks_on()
+        ax.grid(b=True, which='major', color='k', linestyle='-')
+        ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+        #Make a plot saying what percent of event cut by certain cut values.  I am considering trying to do it by evenly sampling on sphere and feeding into the interp_arb.
+        sample_points = 10000000
+        theta = 90.0 - numpy.arange(ds.roi['above horizon']['elevation_best_h'][0], ds.roi['above horizon']['elevation_best_h'][0])
+        phi = numpy.arange(ds.roi['above horizon']['phi_best_h'][0], ds.roi['above horizon']['phi_best_h'][0])
+
+        cos_bounds = numpy.cos(numpy.deg2rad(90.0 - numpy.array(ds.roi['above horizon']['elevation_best_h'])))
+        sampled_elevation = 90.0 - numpy.rad2deg(numpy.arccos(numpy.random.uniform(min(cos_bounds), max(cos_bounds), sample_points)))
+        sampled_phi = numpy.random.uniform(min(ds.roi['above horizon']['phi_best_h']),max(ds.roi['above horizon']['phi_best_h']),sample_points)
+        sampled_values = interp_arb(sampled_phi,sampled_elevation)
+
+        #bins = numpy.linspace(0.0,0.00005,1000)
+        bins = numpy.linspace(0.0,0.5,int(10000*sigma_set))
+        centers = 0.5*(bins[1:]+bins[:-1])
+
+        plt.figure()
+        plt.suptitle('Sigmas = ' + str(sigma_set))
+        ax1 = plt.subplot(3,1,1)
+        ax1.set_yscale('log')
+        ax1.set_ylabel('Counts for Uniformly Sampled\nSky Heatmap Values')
+
+        plt.grid(which='both', axis='both')
+        ax1.minorticks_on()
+        ax1.grid(b=True, which='major', color='k', linestyle='-')
+        ax1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+        counts= ax1.hist(sampled_values,bins=bins,color='r')[0]
+        percentage_cut = numpy.cumsum(counts[::-1])[::-1] #for each
+        percent_in_each_bin = 100*counts/len(sampled_values)
+        percentage_with_value_greater_than_bin = numpy.cumsum(counts[::-1])[::-1]*100/len(sampled_values)
+
+        ax2 = plt.subplot(3,1,2, sharex=ax1)
+        plt.suptitle('Sigmas = ' + str(sigma_set))
+
+        plt.xlabel('Interpolated Heat Map Value\nCounts/Max(Counts)')
+        plt.ylabel('Counts')
+        plt.grid(which='both', axis='both')
+        ax2.minorticks_on()
+        ax2.grid(b=True, which='major', color='k', linestyle='-')
+        ax2.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+        ax2.set_yscale('log')
+        ax2.set_yscale('log')
+
+        ax3 = plt.subplot(3,1,3, sharex=ax1)
+
+        plt.grid(which='both', axis='both')
+        ax3.minorticks_on()
+        ax3.grid(b=True, which='major', color='k', linestyle='-')
+        ax3.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+        plt.ylabel('Percentage')
+        plt.xlabel('Heat Map Value')
+        plt.plot(centers, percentage_with_value_greater_than_bin, label='% Of Sky Above X Val', c='r')
+
+
+        #Plot the values that pass each dict and where they lie
+        dicts = [above_horizon_eventids_dict,above_horizon_full_eventids_dict]
+        dict_names = ['Forward Cut', 'Full Cuts']
+
+        for index, eventids_dict in enumerate(dicts):
+            el = ds.getDataArrayFromParam('elevation_best_h_allsky', eventids_dict=eventids_dict)
+            phi = ds.getDataArrayFromParam('phi_best_h_allsky', eventids_dict=eventids_dict)
+            val = interp_arb(phi,el)
+            ax2.hist(val,bins=bins,label=dict_names[index])
+            ax3.plot(centers, 100*numpy.cumsum(numpy.histogram(val,bins=bins)[0])/len(val), label='%% Of Events Remaining for UL Cut at X\n%s'%dict_names[index], c=plt.rcParams['axes.prop_cycle'].by_key()['color'][index])
+            #ax3.hist(val, bins=bins, cumulative=True,weights=numpy.ones(len(val))*100/len(val), label='%% Of Events Remaining for UL Cut at X\n%s'%dict_names[index],alpha=0.8)
+            ax3.set_xlim(0,0.05)
+
+        plt.legend()
+
+        plt.sca(ax3)
+        plt.legend(loc = 'upper right')
+
+
