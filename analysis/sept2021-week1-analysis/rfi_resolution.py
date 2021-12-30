@@ -15,7 +15,8 @@ import scipy
 import scipy.signal
 import pymap3d as pm
 
-from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+#from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
 from beacon.tools.data_handler import loadTriggerTypes
 from beacon.tools.data_handler import createFile
 from beacon.tools.fftmath import TemplateCompareTool

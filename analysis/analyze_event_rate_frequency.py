@@ -11,7 +11,8 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 
-from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+#from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
 from tools.data_handler import createFile, getTimes, loadTriggerTypes, getEventTimes
 
 import matplotlib.pyplot as plt

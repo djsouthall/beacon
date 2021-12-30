@@ -93,9 +93,21 @@ if __name__ == '__main__':
     ds.addROI('above horizon full',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
     above_horizon_full_eventids_dict = ds.getCutsFromROI('above horizon full',load=False,save=False,verbose=True, return_successive_cut_counts=False, return_total_cut_counts=False)
 
-    sigma_sets = [0.25,0.5,1.0]#[1.0,0.15,[0.05, 0.15]]
+    above_horizon_full_eventids_array = []
+    above_horizon_full_runs_array = []
+    for run in above_horizon_full_eventids_dict.keys():
+        above_horizon_full_eventids_array.append(above_horizon_full_eventids_dict[run])
+        above_horizon_full_runs_array.append(numpy.ones(len(above_horizon_full_eventids_dict[run]))*run)
+    above_horizon_full_eventids_array = numpy.vstack((numpy.concatenate(above_horizon_full_runs_array),numpy.concatenate(above_horizon_full_eventids_array))).T
+    del above_horizon_full_runs_array
+
+    el_full = ds.getDataArrayFromParam('elevation_best_h_allsky', eventids_dict=above_horizon_full_eventids_dict)
+    phi_full = ds.getDataArrayFromParam('phi_best_h_allsky', eventids_dict=above_horizon_full_eventids_dict)
+
+    fig_og, ax_og, counts = ds.plotROI2dHist('phi_best_h_allsky', 'elevation_best_h_allsky', cmap='cool', eventids_dict=above_horizon_eventids_dict, return_counts=True, include_roi=False)
+
+    sigma_sets = [1.0]#[0.25,0.5,1.0]#[1.0,0.15,[0.05, 0.15]]
     for sigma_set in sigma_sets:
-        fig_og, ax_og, counts = ds.plotROI2dHist('phi_best_h_allsky', 'elevation_best_h_allsky', cmap='cool', eventids_dict=above_horizon_eventids_dict, return_counts=True, include_roi=False)
         smoothed_counts = scipy.ndimage.gaussian_filter(counts/numpy.max(counts), sigma_set, order=0, output=None, mode=['wrap','nearest'], cval=0.0, truncate=10.0)
 
         fig = plt.figure()
@@ -187,6 +199,8 @@ if __name__ == '__main__':
         plt.xlabel('Heat Map Value')
         plt.plot(centers, percentage_with_value_greater_than_bin, label='% Of Sky Above X Val', c='r')
 
+        sky_percent_interp = scipy.interpolate.interp1d(centers,percentage_with_value_greater_than_bin,kind='cubic',bounds_error=False)
+
 
         #Plot the values that pass each dict and where they lie
         dicts = [above_horizon_eventids_dict,above_horizon_full_eventids_dict]
@@ -206,4 +220,29 @@ if __name__ == '__main__':
         plt.sca(ax3)
         plt.legend(loc = 'upper right')
 
+        vals_full = interp_arb(el_full, phi_full)
 
+        sorted_indices = numpy.argsort(vals_full)
+        n_cut = min(250, len(vals_full))
+        if n_cut == len(vals_full):
+            cut_val = numpy.max(vals_full)
+        else:
+            cut_val = numpy.mean([vals_full[sorted_indices[n_cut - 1]], vals_full[sorted_indices[n_cut]]])
+
+        print('For Sigma Set = %s here is the list of the %i most isolated events passing the quality cuts:'%(str(sigma_set),n_cut))
+        print('(This cut corresponds to a map val of %f, ignoring %f percent of the forward box.'%(cut_val,sky_percent_interp(cut_val)))
+        
+        out_array = above_horizon_full_eventids_array[sorted_indices[0:n_cut]].astype(int)
+        out_array = out_array[numpy.lexsort((out_array[:,1],out_array[:,0]))]
+
+        pprint(out_array)
+
+        min_val_eventid_dict = {}
+        for run in numpy.unique(out_array[:,0]):
+            min_val_eventid_dict[int(run)] = out_array[out_array[:,0] == run][:,1].astype(int)
+            for eventid in out_array[out_array[:,0] == run][:,1].astype(int):
+                print('https://users.rcc.uchicago.edu/~cozzyd/monutau/#event&run=%i&entry=%i'%(run,eventid))
+
+        #ds.eventInspector(min_val_eventid_dict)
+
+    

@@ -19,7 +19,8 @@ import scipy
 import scipy.signal
 import scipy.signal
 
-from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+#from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
 from beacon.tools.data_handler import createFile
 from beacon.tools.fftmath import TemplateCompareTool
 from beacon.tools.fftmath import FFTPrepper
@@ -4601,8 +4602,7 @@ class dataSlicer():
         az_v = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_v_allsky']
         el_v = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_v_allsky']
 
-
-        #import pdb; pdb.set_trace()
+        self.inspector_mpl['current_table'] = list(zip(self.table_params.values(), start_data))
 
         self.data_slicers[run_index].prepareCorrelator()
         self.inspector_mpl['fig1'].canvas.set_window_title('r%ie%i'%(self.runs[run_index],eventid))
@@ -4840,6 +4840,10 @@ class dataSlicer():
 
         self.inspector_eventids_list = self.organizeEventDict(eventids_dict)
         self.inspector_eventids_index = 0
+
+        '''
+        Should add a button to cycle through all events and save a figure for them.
+        '''
 
         class NextEventIterator(ToolBase):
             description = 'This will skip to the next event in the selected event dictionary.'
