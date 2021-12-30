@@ -56,6 +56,7 @@ class sineSubtractedReader(Reader):
     This is the same as Reader on all accounts except it will interface with the stored sine subtraction values.
     '''
     def __init__(self, base_dir, run, debug=False):
+
         self.debug=debug
         self.ss_event_entry = -1
         self.ss_filename = os.path.join(cache_dir, 'sinsub%i.root'%run)
@@ -76,9 +77,12 @@ class sineSubtractedReader(Reader):
 
             for channel in range(8):
                 self.ss_event_tree.SetBranchAddress("result_ch%i"%channel,self.r)
+                # print(self.sine_subtracts[channel].getResult())
+                # print(ROOT.addressof(self.sine_subtracts[channel].getResult()))
 
         super().__init__(base_dir, run)
         
+        self.dt_ns = abs(self.t()[1] - self.t()[0])
 
     def event(self,force_reload = False):
         '''
@@ -146,22 +150,32 @@ class sineSubtractedReader(Reader):
                 ev = self.event() #Want to call the newly defined one to update both trees rather than the original.
 
                 #Load original wf and make output shell for processed wf.
-                original_wf = super().wf(int(channel))#numpy.copy(numpy.frombuffer(ev.getData(channel), numpy.dtype('float64'), ev.getBufferLength()))
-                original_wf -= numpy.mean(original_wf)
+                original_wf = numpy.copy(numpy.frombuffer(ev.getData(int(channel)), numpy.dtype('float64'), ev.getBufferLength()))
+                # original_wf -= numpy.mean(original_wf)
                 original_wf = original_wf.astype(numpy.double)
                 len_wf = len(original_wf)
 
                 #Do the sine subtraction
                 output_wf = numpy.zeros(len_wf,dtype=numpy.double)
 
-                # if self.debug == True:
-                #     #self.sine_subtracts[channel].getResult().Print()
-                #     print('DEBUG in wf: print(self.sine_subtracts[%i].getResult())'%channel)
-                #     print(self.sine_subtracts[channel].getResult())
-                #     print('DEBUG in wf: print(self.getNSines[%i].getNSines())'%channel)
-                #     print(self.sine_subtracts[channel].getNSines())
+                ss_result = getattr(self.ss_event_tree,"result_ch%i"%channel)
 
-                self.sine_subtracts[channel].subtractCW(len_wf,original_wf.data,len_wf,output_wf, getattr(self.ss_event_tree,"result_ch%i"%channel))
+                if self.debug == True:
+                    #self.sine_subtracts[channel].getResult().Print()
+                    print('DEBUG in wf: print(self.sine_subtracts[%i].getResult())'%channel)
+                    print(self.sine_subtracts[channel].getResult())
+                    print('DEBUG in wf: print(self.getNSines[%i].getNSines())'%channel)
+                    print(self.sine_subtracts[channel].getNSines())
+                    test_output_wf = numpy.zeros(len_wf,dtype=numpy.double)
+                    self.sine_subtracts[channel].subtractCW(len_wf, original_wf.data, self.dt_ns, test_output_wf)
+                    print('DEBUG in wf: print(numpy.array(ss_result.powers))')
+                    print(numpy.array(ss_result.powers))
+                    print('DEBUG in wf: ss_result.amps[0]')
+                    print(ss_result.amps[0])
+
+                # self.sine_subtracts[channel].subtractCW(len_wf, original_wf.data, self.dt_ns, output_wf, getattr(self.ss_event_tree,"result_ch%i"%channel))
+                self.sine_subtracts[channel].subtractCW(len_wf, original_wf.data, self.dt_ns, output_wf, ss_result)
+                # import pdb; pdb.set_trace()
 
                 if False:
                     plt.figure()
@@ -215,19 +229,27 @@ class sineSubtractedReader(Reader):
 
             #Load original wf and make output shell for processed wf.
             original_wf = numpy.copy(numpy.frombuffer(ev.getData(channel), numpy.dtype('float64'), ev.getBufferLength()))
-            original_wf -= numpy.mean(original_wf)
+            # original_wf -= numpy.mean(original_wf)
             original_wf = original_wf.astype(numpy.double)
             len_wf = len(original_wf)
 
             #Do the sine subtraction
             output_wf = numpy.zeros(len_wf,dtype=numpy.double)
+
+            self.sine_subtracts[channel].subtractCW(len_wf,original_wf.data,self.dt_ns,output_wf)
+
+            ss_result = self.sine_subtracts[channel].getResult()
+
             if self.debug == True:
                 #self.sine_subtracts[channel].getResult().Print()
                 print('DEBUG in sswf: print(self.sine_subtracts[%i].getResult())'%channel)
                 print(self.sine_subtracts[channel].getResult())
                 print('DEBUG in sswf: print(self.sine_subtracts[%i].getNSines())'%channel)
                 print(self.sine_subtracts[channel].getNSines())
-            self.sine_subtracts[channel].subtractCW(len_wf,original_wf.data,len_wf,output_wf)
+                print('DEBUG in sswf: print(numpy.array(ss_result.powers))')
+                print(numpy.array(ss_result.powers))
+                print('DEBUG in sswf: ss_result.amps[0]')
+                print(ss_result.amps[0])
 
             if True:
                 plt.figure()
@@ -263,6 +285,7 @@ if __name__ == '__main__':
         print('Attempting to precalculate sine subtraction terms for run %i'%run)
         #Prepare event reader and sine subtracts
         reader = Reader(datapath,run)
+        dt_ns = abs(reader.t()[1] - reader.t()[0])
         filename = os.path.join(cache_dir, 'sinsub%i.root'%run)
 
         sine_subtracts = prepareStandardSineSubtractions()
@@ -291,8 +314,13 @@ if __name__ == '__main__':
         for channel in range(8):
             ROOT.dobranch(t,"result_ch%i"%channel,ROOT.addressof(sine_subtracts[channel].getResult()))
 
+        for channel in range(8):
+            print(sine_subtracts[channel].getResult())
+            print(ROOT.addressof(sine_subtracts[channel].getResult()))
 
         for eventid in range(reader.N()):
+            if eventid >= 100:
+                continue
             if (eventid + 1) % 100 == 0:
                 sys.stdout.write('(%i/%i)\t\t\t\n'%(eventid+1,reader.N()))
                 sys.stdout.flush()
@@ -302,14 +330,14 @@ if __name__ == '__main__':
             for channel in range(8):
                 #Get waveform and perform sine subtraction
                 temp_wf = reader.wf(int(channel))
-                temp_wf -= numpy.mean(temp_wf)
+                # temp_wf -= numpy.mean(temp_wf)
                 temp_wf = temp_wf.astype(numpy.double)
 
                 #Do the sine subtraction
-                sine_subtracts[channel].subtractCW(len_wf,temp_wf.data,len_wf,output_wf)#*1e-9,output_wf)#dt_ns_original
+                sine_subtracts[channel].subtractCW(len_wf,temp_wf.data,dt_ns,output_wf)
+            t.Fill() # fill the tree, it will update all 8 results
 
             #Because the branch already knows to expect the result at the specified address of each sine_subtract, that is where it will look when Fill is called for this entry.
-            t.Fill() # fill the tree, it will update all 8 results
         t.Write()
         f.Close()
 
@@ -318,7 +346,7 @@ if __name__ == '__main__':
         Testing
         '''
         plt.close('all')
-        events = [[5733,27718],[5971,27986],[5853,26780]]#[[5733,27718]]#
+        events = [[5733,0]]#[[5733,27718],[5971,27986],[5853,26780]]
         for run, eventid in events:
             # run = 5733
             # eventid = 27718
@@ -331,12 +359,14 @@ if __name__ == '__main__':
             ax = plt.gca()
             plt.plot(wf,label='raw')
             
+            print('\nRunning Loaded Result SS\n')
             reader2 = sineSubtractedReader(datapath,run,debug=True)
             reader2.setEntry(eventid)
             wf2 = reader2.wf(channel)
             plt.sca(ax)
             plt.plot(wf2,label='ss_stored')
 
+            print('\nRunning Recalculated Result SS\n')
             wf3 = reader2.sswf(channel)
             plt.sca(ax)
             plt.plot(wf3,label='ss_new')
@@ -345,4 +375,3 @@ if __name__ == '__main__':
             if numpy.all(wf2 == wf3):
                 print('Seems like sine subtraction from stored values is working.')
             #wf2 should equal wf3        
-        
