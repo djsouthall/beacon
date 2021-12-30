@@ -150,6 +150,7 @@ class sineSubtractedReader(Reader):
 
                 #Load original wf and make output shell for processed wf.
                 original_wf = numpy.copy(numpy.frombuffer(ev.getData(int(channel)), numpy.dtype('float64'), ev.getBufferLength()))
+                original_wf -= numpy.mean(original_wf)
                 original_wf = original_wf.astype(numpy.double)
                 len_wf = len(original_wf)
 
@@ -235,6 +236,7 @@ class sineSubtractedReader(Reader):
 
             #Load original wf and make output shell for processed wf.
             original_wf = numpy.copy(numpy.frombuffer(ev.getData(channel), numpy.dtype('float64'), ev.getBufferLength()))
+            original_wf -= numpy.mean(original_wf)
             original_wf = original_wf.astype(numpy.double)
             len_wf = len(original_wf)
 
@@ -332,6 +334,7 @@ if __name__ == '__main__':
             for channel in range(8):
                 #Get waveform and perform sine subtraction
                 temp_wf = reader.wf(int(channel))
+                temp_wf -= numpy.mean(temp_wf)
                 temp_wf = temp_wf.astype(numpy.double)
 
                 #Do the sine subtraction

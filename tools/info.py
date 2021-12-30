@@ -47,7 +47,10 @@ default_deploy = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/septemb
 
 def returnDefaultWaveformIndexRange():
     #return (100, 611) #was used temporarily, but waveforms were not consistently centered in the window enough.
-    return (None, None)
+    #These are handled inclusively.  So it will index the waveform wf[min:max+1]
+    #They will also typically be upsampled, and when doing so will be zero padded to a longer size.
+    #return (None, None)
+    return (0, 767)
 def returnDefaultSourceDistance():
     return 1e5
 

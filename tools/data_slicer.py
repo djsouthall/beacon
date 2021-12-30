@@ -20,6 +20,7 @@ import scipy.signal
 import scipy.signal
 
 #from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+import beacon.tools.info as info
 from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
 from beacon.tools.data_handler import createFile
 from beacon.tools.fftmath import TemplateCompareTool
