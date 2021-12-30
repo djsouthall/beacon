@@ -711,8 +711,9 @@ if __name__=="__main__":
                                 print('USING MAP SOURCE DISTANCE OF %0.2f m'%(map_source_distance_m))
 
                             else:
-                                waveform_index_range = (100, 611)#This is handled inclusivelym meaning the 611th time is also included.  So 100-611 is a 512 long waveform starting at 200ns into the waveform.  This is shortened around the triggered waveform to improve map snr.  #(None, None) 
-                                map_source_distance_m = 1e6
+
+                                waveform_index_range = info.returnDefaultWaveformIndexRange()#This is handled inclusivelym meaning the 611th time is also included.  So 100-611 is a 512 long waveform starting at 200ns into the waveform.  This is shortened around the triggered waveform to improve map snr.  #(None, None) 
+                                map_source_distance_m = info.returnDefaultSourceDistance()#1e6
 
 
                             file['map_times'].attrs['waveform_index_range_%s'%mode]     = str(waveform_index_range)

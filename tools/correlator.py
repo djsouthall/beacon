@@ -4420,7 +4420,7 @@ if __name__=="__main__":
         all_figs = []
         all_axs = []
         all_cors = []
-        map_source_distance_m = 100000
+        map_source_distance_m = info.returnDefaultSourceDistance()
         if run == 1507:
             waveform_index_range = (1500,None) #Looking at the later bit of the waveform only, 10000 will cap off.  
         elif run == 1509:
@@ -4432,7 +4432,7 @@ if __name__=="__main__":
                 print('Using waveform_index_range of ', str(waveform_index_range))
                 map_source_distance_m = 521.62
         else:
-            waveform_index_range = (100, 611) # Shortens for better peak to sidelobe
+            waveform_index_range = info.returnDefaultWaveformIndexRange()
             #waveform_index_range = (None,None)
         # if True:
         # shorten_signals = False

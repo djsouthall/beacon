@@ -45,6 +45,11 @@ import scipy.interpolate
 #default_deploy = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021.json')#os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config', 'chi2_optimized_deploy_from_rtk-gps-day1-june20-2021.json')
 default_deploy = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/september_2021_minimized_calibration.json')
 
+def returnDefaultWaveformIndexRange():
+    #return (100, 611) #was used temporarily, but waveforms were not consistently centered in the window enough.
+    return (None, None)
+def returnDefaultSourceDistance():
+    return 1e5
 
 def returnDefaultDeploy():
     return default_deploy

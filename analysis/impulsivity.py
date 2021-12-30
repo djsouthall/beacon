@@ -96,7 +96,7 @@ if __name__=="__main__":
         if numpy.isin(run, known_pulser_runs):
             waveform_index_range = (None, None)
         else:
-            waveform_index_range = (100, 611) #Windowing around typical triggered event time window for less contaminated time delays.
+            waveform_index_range = info.returnDefaultWaveformIndexRange()
         print('USING WAVEFORM_INDEX_RANGE OF ', str(waveform_index_range))
 
         if filename is not None:

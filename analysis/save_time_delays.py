@@ -170,7 +170,7 @@ if __name__=="__main__":
                     rf_cut = numpy.ones_like(file['trigger_type'][...] == 2)
                     waveform_index_range = (None, None)
                 else:
-                    waveform_index_range = (100, 611) #Windowing around typical triggered event time window for less contaminated time delays.
+                    waveform_index_range = info.returnDefaultWaveformIndexRange()
                     rf_cut = file['trigger_type'][...] == 2
                 print('USING WAVEFORM_INDEX_RANGE OF ', str(waveform_index_range))
 

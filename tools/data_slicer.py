@@ -436,8 +436,9 @@ class dataSlicerSingleRun():
             upsample = 2**14 #Just upsample in this case, Reduced to 2**14 when the waveform length was reduced, to maintain same time precision with faster execution.
             max_method = 0
 
-            waveform_index_range = (100, 611)#This is handled inclusivelym meaning the 611th time is also included.  So 100-611 is a 512 long waveform starting at 200ns into the waveform.  This is shortened around the triggered waveform to improve map snr.  #(None, None) 
-            map_source_distance_m = 1e6
+            waveform_index_range = info.returnDefaultWaveformIndexRange()
+            map_source_distance_m = info.returnDefaultSourceDistance()
+
             # self.cor = Correlator(self.reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False, sine_subtract=sine_subtract, deploy_index=self.map_deploy_index, map_source_distance_m=map_source_distance_m)
             self.cor = Correlator(self.reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=True, sine_subtract=sine_subtract, deploy_index=self.map_deploy_index, map_source_distance_m=map_source_distance_m)
             if sine_subtract:
