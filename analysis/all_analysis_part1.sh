@@ -5,8 +5,9 @@ echo 'Executing analysis scripts for Run' $1  || exit
 echo 'Attempting to prepare file by executing data_handler.py' || exit
 python3 ${BEACON_ANALYSIS_DIR}tools/data_handler.py $1 || exit
 
-echo 'Attempting to prepare sine subtraction by executing sine_subtract_cache.py' || exit
-python3 ${BEACON_ANALYSIS_DIR}tools/sine_subtract_cache.py $1 || exit
+# Sine subtract cache should be run seperately, but it SHOULD be run.  
+# echo 'Attempting to prepare sine subtraction by executing sine_subtract_cache.py' || exit
+# python3 ${BEACON_ANALYSIS_DIR}tools/sine_subtract_cache.py $1 || exit
 
 echo 'Attempting to prepare time delays by executing save_time_delays.py align_method = 0' || exit
 python3 ${BEACON_ANALYSIS_DIR}analysis/save_time_delays.py $1 0 || exit

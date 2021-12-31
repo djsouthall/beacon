@@ -10,6 +10,7 @@ Note that the levels of ROOT idiosyncrasies here is frustrating and is the cause
 import numpy
 import os
 import sys
+import time
 from array import array
 import inspect
 import ROOT
@@ -289,68 +290,73 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         run = int(sys.argv[1])
 
-        print('Attempting to precalculate sine subtraction terms for run %i'%run)
-        #Prepare event reader and sine subtracts
-        reader = Reader(datapath,run)
-        dt_ns = abs(reader.t()[1] - reader.t()[0])
-        filename = os.path.join(cache_dir, 'sinsub%i.root'%run)
+        if False:
+            #Just to make sure I don't accidentally overwrite.
 
-        sine_subtracts = prepareStandardSineSubtractions()
+            print('Attempting to precalculate sine subtraction terms for run %i'%run)
+            #Prepare event reader and sine subtracts
+            reader = Reader(datapath,run)
+            dt_ns = abs(reader.t()[1] - reader.t()[0])
+            filename = os.path.join(cache_dir, 'sinsub%i.root'%run)
 
-        #Check if the cache directory exists.  If not make it.  This is where the sin subtraction ROOT files will be stored.
-        if not os.path.exists(cache_dir):
-            try:
-                os.mkdir(cache_dir)
-                print('Created cache directory: %s'%cache_dir)
-            except Exception as e:
-                print('Error in sine_subtraction_cache.__main__() when attempting to make cache directory.')
-                print(e)
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                print(exc_type, fname, exc_tb.tb_lineno)
-                sys.exit(0)
+            sine_subtracts = prepareStandardSineSubtractions()
+
+            #Check if the cache directory exists.  If not make it.  This is where the sin subtraction ROOT files will be stored.
+            if not os.path.exists(cache_dir):
+                try:
+                    os.mkdir(cache_dir)
+                    print('Created cache directory: %s'%cache_dir)
+                except Exception as e:
+                    print('Error in sine_subtraction_cache.__main__() when attempting to make cache directory.')
+                    print(e)
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    print(exc_type, fname, exc_tb.tb_lineno)
+                    sys.exit(0)
 
 
-        #By here I want the ROOT file created, whether or not I had to do it or it aready existed.
-        f = ROOT.TFile.Open(filename,"RECREATE") #Change to CREATE once development is over.
-        t = ROOT.TTree("sinsubcache","sinsubcache")
-        
-        len_wf = len(reader.t())
-        output_wf = numpy.zeros(len_wf,dtype=numpy.double)#output_wf is the output array for the subtractCW function, and must be predefined.  Not sure if I can use the same one for all events. 
+            #By here I want the ROOT file created, whether or not I had to do it or it aready existed.
+            f = ROOT.TFile.Open(filename,"RECREATE") #Change to CREATE once development is over.
+            t = ROOT.TTree("sinsubcache","sinsubcache")
+            
+            len_wf = len(reader.t())
+            output_wf = numpy.zeros(len_wf,dtype=numpy.double)#output_wf is the output array for the subtractCW function, and must be predefined.  Not sure if I can use the same one for all events. 
 
-        for channel in range(8):
-            ROOT.dobranch(t,"result_ch%i"%channel,ROOT.addressof(sine_subtracts[channel].getResult()))
-
-        for channel in range(8):
-            print(sine_subtracts[channel].getResult())
-            print(ROOT.addressof(sine_subtracts[channel].getResult()))
-
-        for eventid in range(reader.N()):
-            if (eventid + 1) % 100 == 0:
-                sys.stdout.write('(%i/%i)\t\t\t\n'%(eventid+1,reader.N()))
-                sys.stdout.flush()
-
-            reader.setEntry(eventid)
             for channel in range(8):
-                #Get waveform and perform sine subtraction
-                temp_wf = reader.wf(int(channel))
-                temp_wf -= numpy.mean(temp_wf)
-                temp_wf = temp_wf.astype(numpy.double)
+                ROOT.dobranch(t,"result_ch%i"%channel,ROOT.addressof(sine_subtracts[channel].getResult()))
 
-                #Do the sine subtraction
-                sine_subtracts[channel].subtractCW(len_wf,temp_wf.data,dt_ns,output_wf)
-            t.Fill() # fill the tree, it will update all 8 results
-            #Because the branch already knows to expect the result at the specified address of each sine_subtract, that is where it will look when Fill is called for this entry.
+            for channel in range(8):
+                print(sine_subtracts[channel].getResult())
+                print(ROOT.addressof(sine_subtracts[channel].getResult()))
 
-        t.Write()
-        f.Close()
+            for eventid in range(reader.N()):
+                if (eventid + 1) % 100 == 0:
+                    sys.stdout.write('(%i/%i)\t\t\t\n'%(eventid+1,reader.N()))
+                    sys.stdout.flush()
+
+                reader.setEntry(eventid)
+                for channel in range(8):
+                    #Get waveform and perform sine subtraction
+                    temp_wf = reader.wf(int(channel))
+                    temp_wf -= numpy.mean(temp_wf)
+                    temp_wf = temp_wf.astype(numpy.double)
+
+                    #Do the sine subtraction
+                    sine_subtracts[channel].subtractCW(len_wf,temp_wf.data,dt_ns,output_wf)
+                t.Fill() # fill the tree, it will update all 8 results
+                #Because the branch already knows to expect the result at the specified address of each sine_subtract, that is where it will look when Fill is called for this entry.
+
+            t.Write()
+            f.Close()
+        else:
+            print('Safety settings enabled, change main to True if you wish to rerun the sine subtraction cache creator.')
 
     else:
         '''
         Testing
         '''
         plt.close('all')
-        events = [[5971,27986]]#,[5733,1],[5733,2]#[5733,27718]#[[5971,27986],[5853,26780]]
+        events = [[5733,27718],[5971,27986],[5853,26780]]#,[5733,1],[5733,2]#[5733,27718]#[[5971,27986],[5853,26780]]
         for run, eventid in events:
             # run = 5733
             # eventid = 27718
@@ -381,3 +387,22 @@ if __name__ == '__main__':
 
                 if numpy.all(wf2 == wf3):
                     print('Seems like sine subtraction from stored values is working.')
+
+        if False:
+            run = 5733
+            print('Testing time to load sine subtracted waveforms for a whole run (%i).'%run)
+            start = time.time()
+            reader = sineSubtractedReader(datapath,run,debug=False)
+            for eventid in range(reader.N()):
+                if (eventid + 1) % 100 == 0:
+                    sys.stdout.write('(%i/%i)\t\t\t\n'%(eventid+1,reader.N()))
+                    sys.stdout.flush()
+
+                reader.setEntry(eventid)
+                for channel in range(8):
+                    #Get waveform and perform sine subtraction
+                    wf = reader.wf(int(channel))
+
+            stop = time.time()
+
+            print('Finished processing all 8 channels of %i events of run %i in %0.2f minutes.'%(reader.N(),run,(stop - start)/60.0))

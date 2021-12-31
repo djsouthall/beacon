@@ -70,13 +70,13 @@ if __name__ == "__main__":
         done_runs = numpy.array([])
         analysis_part = 2
         pol == 'both'
-    elif False:
+    elif True:
         #THE ONE I LIkE TO DO NOW
         runs = numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
-        analysis_part = 2 #Need to run 2 at some point after 11//23/2021 if things worked on part 1
+        analysis_part = 1 
         #pol = 'both' #Always treated as both when analysis_part == 3
-    elif True:
+    elif False:
         runs = numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
         analysis_part = 4 # Sine subtraction
@@ -100,11 +100,12 @@ if __name__ == "__main__":
 
         jobname = 'bcn%i'%run
 
-        if False and analysis_part == 2:
+        if True and analysis_part == 2:
             #Runs h then v, then all
+            #Run hpol and vpol jobs in same job, and run the 'all' case as a seperate job. 
+
             script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part2.sh')
 
-            #Run hpol and vpol jobs in same job, and run the 'all' case as a seperate job. 
             
             #Prepare Hpol Job
             batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,jobname+'hv')
@@ -127,12 +128,10 @@ if __name__ == "__main__":
 
             print('Run %i jobs submitted --> Both jid:%i\tAll jid:%i'%(run,both_jobid,all_jobid))
 
-        elif True and analysis_part == 2:
+        elif False and analysis_part == 2:
             # Assumes h and v may already be started, and checks if it is running, then will pull the jobid from that for dependancy rather than running it again
             _jobname = jobname+'hv'
             
-
-
             script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part2.sh')
 
             #Run hpol and vpol jobs in same job, and run the 'all' case as a seperate job. 
@@ -237,7 +236,9 @@ if __name__ == "__main__":
             command_queue = batch + command
             print(command_queue)    
             os.system(command_queue) # Submit to queue
+            
         elif analysis_part == 3:
+            #Does all but submits too many jobs likely if many runs being performed.
             script1 = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part1.sh')
             script2 = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part2.sh')
 
@@ -246,7 +247,7 @@ if __name__ == "__main__":
             command = '%s %i'%(script1, run)
             command_queue = batch + command
 
-            #Submit script1 job and get the jobid to then submit vpol with dependency
+            #Submit script 1 job and get the jobid to then submit vpol with dependency
             print(command_queue)
             script1_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
 
@@ -273,7 +274,7 @@ if __name__ == "__main__":
 
         elif analysis_part == 4:
             script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'tools', 'sine_subtract_cache.py')
-            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,jobname)
+            batch = 'sbatch --partition=%s --job-name=%s --time=12:00:00 '%(partition,jobname)
             command = script + ' %i'%(run)
             command_queue = batch + command
             print(command_queue)    
