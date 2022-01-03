@@ -427,7 +427,7 @@ if __name__=="__main__":
                         file['map_direction'].attrs['min_theta']    = min_theta
                         file['map_direction'].attrs['max_theta']    = max_theta
 
-                        
+
                         for filter_string_index, filter_string in enumerate(filter_strings):
                             '''
                             Prepares output file for data.
@@ -461,129 +461,153 @@ if __name__=="__main__":
                             if not numpy.isin('hpol_ENU_azimuth',map_direction_subsets):
                                 file['map_direction'][filter_string].create_dataset('hpol_ENU_azimuth', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in hpol_ENU_azimuth of %s will be overwritten by this analysis script.'%filename)
+                                if 'hpol' in polarizations:
+                                    print('Values in hpol_ENU_azimuth of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('hpol_ENU_zenith',map_direction_subsets):
                                 file['map_direction'][filter_string].create_dataset('hpol_ENU_zenith', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in hpol_ENU_zenith of %s will be overwritten by this analysis script.'%filename)
+                                if 'hpol' in polarizations:
+                                    print('Values in hpol_ENU_zenith of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_ENU_azimuth',map_direction_subsets):
                                 file['map_direction'][filter_string].create_dataset('vpol_ENU_azimuth', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in vpol_ENU_azimuth of %s will be overwritten by this analysis script.'%filename)
+                                if 'vpol' in polarizations:
+                                    print('Values in vpol_ENU_azimuth of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_ENU_zenith',map_direction_subsets):
                                 file['map_direction'][filter_string].create_dataset('vpol_ENU_zenith', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in vpol_ENU_zenith of %s will be overwritten by this analysis script.'%filename)
+                                if 'vpol' in polarizations:
+                                    print('Values in vpol_ENU_zenith of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('all_ENU_azimuth',map_direction_subsets):
                                 file['map_direction'][filter_string].create_dataset('all_ENU_azimuth', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in all_ENU_azimuth of %s will be overwritten by this analysis script.'%filename)
+                                if 'all' in polarizations:
+                                    print('Values in all_ENU_azimuth of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('all_ENU_zenith',map_direction_subsets):
                                 file['map_direction'][filter_string].create_dataset('all_ENU_zenith', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in all_ENU_zenith of %s will be overwritten by this analysis script.'%filename)
+                                if 'all' in polarizations:
+                                    print('Values in all_ENU_zenith of %s will be overwritten by this analysis script.'%filename)
 
                             #Time Delays for directions
                             #01
                             if not numpy.isin('hpol_0subtract1',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('hpol_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in hpol_0subtract1 of %s will be overwritten by this analysis script.'%filename)
+                                if 'hpol' in polarizations:
+                                    print('Values in hpol_0subtract1 of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_0subtract1',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('vpol_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in vpol_0subtract1 of %s will be overwritten by this analysis script.'%filename)
+                                if 'vpol' in polarizations:
+                                    print('Values in vpol_0subtract1 of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('all_0subtract1',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('all_0subtract1', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in all_0subtract1 of %s will be overwritten by this analysis script.'%filename)
+                                if 'all' in polarizations:
+                                    print('Values in all_0subtract1 of %s will be overwritten by this analysis script.'%filename)
 
                             #02
                             if not numpy.isin('hpol_0subtract2',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('hpol_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in hpol_0subtract2 of %s will be overwritten by this analysis script.'%filename)
+                                if 'hpol' in polarizations:
+                                    print('Values in hpol_0subtract2 of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_0subtract2',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('vpol_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in vpol_0subtract2 of %s will be overwritten by this analysis script.'%filename)
+                                if 'vpol' in polarizations:
+                                    print('Values in vpol_0subtract2 of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('all_0subtract2',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('all_0subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in all_0subtract2 of %s will be overwritten by this analysis script.'%filename)
+                                if 'all' in polarizations:
+                                    print('Values in all_0subtract2 of %s will be overwritten by this analysis script.'%filename)
 
                             #03
                             if not numpy.isin('hpol_0subtract3',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('hpol_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in hpol_0subtract3 of %s will be overwritten by this analysis script.'%filename)
+                                if 'hpol' in polarizations:
+                                    print('Values in hpol_0subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_0subtract3',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('vpol_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in vpol_0subtract3 of %s will be overwritten by this analysis script.'%filename)
+                                if 'vpol' in polarizations:
+                                    print('Values in vpol_0subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('all_0subtract3',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('all_0subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in all_0subtract3 of %s will be overwritten by this analysis script.'%filename)
+                                if 'all' in polarizations:
+                                    print('Values in all_0subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                             #12
                             if not numpy.isin('hpol_1subtract2',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('hpol_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in hpol_1subtract2 of %s will be overwritten by this analysis script.'%filename)
+                                if 'hpol' in polarizations:
+                                    print('Values in hpol_1subtract2 of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_1subtract2',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('vpol_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in vpol_1subtract2 of %s will be overwritten by this analysis script.'%filename)
+                                if 'vpol' in polarizations:
+                                    print('Values in vpol_1subtract2 of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('all_1subtract2',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('all_1subtract2', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in all_1subtract2 of %s will be overwritten by this analysis script.'%filename)
+                                if 'all' in polarizations:
+                                    print('Values in all_1subtract2 of %s will be overwritten by this analysis script.'%filename)
 
                             #13
                             if not numpy.isin('hpol_1subtract3',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('hpol_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in hpol_1subtract3 of %s will be overwritten by this analysis script.'%filename)
+                                if 'hpol' in polarizations:
+                                    print('Values in hpol_1subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_1subtract3',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('vpol_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in vpol_1subtract3 of %s will be overwritten by this analysis script.'%filename)
+                                if 'vpol' in polarizations:
+                                    print('Values in vpol_1subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('all_1subtract3',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('all_1subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in all_1subtract3 of %s will be overwritten by this analysis script.'%filename)
+                                if 'all' in polarizations:
+                                    print('Values in all_1subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                             #23
                             if not numpy.isin('hpol_2subtract3',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('hpol_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in hpol_2subtract3 of %s will be overwritten by this analysis script.'%filename)
+                                if 'hpol' in polarizations:
+                                    print('Values in hpol_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_2subtract3',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('vpol_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in vpol_2subtract3 of %s will be overwritten by this analysis script.'%filename)
+                                if 'vpol' in polarizations:
+                                    print('Values in vpol_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('all_2subtract3',map_times_subsets):
                                 file['map_times'][filter_string].create_dataset('all_2subtract3', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in all_2subtract3 of %s will be overwritten by this analysis script.'%filename)
+                                if 'all' in polarizations:
+                                    print('Values in all_2subtract3 of %s will be overwritten by this analysis script.'%filename)
 
 
                             #import pdb; pdb.set_trace()
@@ -591,34 +615,40 @@ if __name__=="__main__":
                             if not numpy.isin('hpol_peak_to_sidelobe',map_properties_subsets):
                                 file['map_properties'][filter_string].create_dataset('hpol_peak_to_sidelobe', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in hpol_peak_to_sidelobe of %s will be overwritten by this analysis script.'%filename)
+                                if 'hpol' in polarizations:
+                                    print('Values in hpol_peak_to_sidelobe of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_peak_to_sidelobe',map_properties_subsets):
                                 file['map_properties'][filter_string].create_dataset('vpol_peak_to_sidelobe', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in vpol_peak_to_sidelobe of %s will be overwritten by this analysis script.'%filename)
+                                if 'vpol' in polarizations:
+                                    print('Values in vpol_peak_to_sidelobe of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('all_peak_to_sidelobe',map_properties_subsets):
                                 file['map_properties'][filter_string].create_dataset('all_peak_to_sidelobe', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in all_peak_to_sidelobe of %s will be overwritten by this analysis script.'%filename)
+                                if 'all' in polarizations:
+                                    print('Values in all_peak_to_sidelobe of %s will be overwritten by this analysis script.'%filename)
 
 
 
                             if not numpy.isin('hpol_max_possible_map_value',map_properties_subsets):
                                 file['map_properties'][filter_string].create_dataset('hpol_max_possible_map_value', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in hpol_max_possible_map_value of %s will be overwritten by this analysis script.'%filename)
+                                if 'hpol' in polarizations:
+                                    print('Values in hpol_max_possible_map_value of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_max_possible_map_value',map_properties_subsets):
                                 file['map_properties'][filter_string].create_dataset('vpol_max_possible_map_value', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in vpol_max_possible_map_value of %s will be overwritten by this analysis script.'%filename)
+                                if 'vpol' in polarizations:
+                                    print('Values in vpol_max_possible_map_value of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('all_max_possible_map_value',map_properties_subsets):
                                 file['map_properties'][filter_string].create_dataset('all_max_possible_map_value', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in all_max_possible_map_value of %s will be overwritten by this analysis script.'%filename)
+                                if 'all' in polarizations:
+                                    print('Values in all_max_possible_map_value of %s will be overwritten by this analysis script.'%filename)
 
 
 
@@ -626,17 +656,20 @@ if __name__=="__main__":
                             if not numpy.isin('hpol_max_map_value',map_properties_subsets):
                                 file['map_properties'][filter_string].create_dataset('hpol_max_map_value', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in hpol_max_map_value of %s will be overwritten by this analysis script.'%filename)
+                                if 'hpol' in polarizations:
+                                    print('Values in hpol_max_map_value of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('vpol_max_map_value',map_properties_subsets):
                                 file['map_properties'][filter_string].create_dataset('vpol_max_map_value', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in vpol_max_map_value of %s will be overwritten by this analysis script.'%filename)
+                                if 'vpol' in polarizations:
+                                    print('Values in vpol_max_map_value of %s will be overwritten by this analysis script.'%filename)
 
                             if not numpy.isin('all_max_map_value',map_properties_subsets):
                                 file['map_properties'][filter_string].create_dataset('all_max_map_value', (file.attrs['N'],), dtype='f', compression='gzip', compression_opts=4, shuffle=True)
                             else:
-                                print('Values in all_max_map_value of %s will be overwritten by this analysis script.'%filename)
+                                if 'all' in polarizations:
+                                    print('Values in all_max_map_value of %s will be overwritten by this analysis script.'%filename)
 
                             #Fill in attributes for the different map cuts
                             #Determine cut values

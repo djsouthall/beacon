@@ -4657,6 +4657,7 @@ class dataSlicer():
 
         #Populate Table
         name_column = list(self.table_params.values())
+        self.inspector_mpl['fig1_table'].clear() #Clear previous table.
         table = self.inspector_mpl['fig1_table'].table(cellText=list(zip(name_column,start_data)), loc='center', in_layout=True)
         table.auto_set_font_size(False)
         table.set_fontsize(12)
