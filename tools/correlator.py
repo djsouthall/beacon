@@ -12,6 +12,7 @@ import sys
 import gc
 import pymap3d as pm
 import itertools
+import copy
 
 #from    beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
@@ -130,6 +131,11 @@ class Correlator:
     '''
     def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=True, tukey=True, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None, all_alignments=False):
         try:
+            self.reader = None #Before setReader called first time.
+            self.prep = None
+            self.setReader(reader)
+
+
             self.conference_mode = False #Enable to apply any temporary adjustments such as fontsizes or title labels. 
             if deploy_index is None:
                 self.deploy_index = info.returnDefaultDeploy()
@@ -141,13 +147,6 @@ class Correlator:
             n = 1.0003 #Index of refraction of air  #Should use https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.453-11-201507-S!!PDF-E.pdf 
             self.c = 299792458.0/n #m/s
             self.min_elevation_linewidth = 0.5
-            self.reader = reader
-
-            self.ss_reader_mode = False
-            if hasattr(self.reader, "ss_event_file"):
-                if self.reader.ss_event_file is not None:
-                    print('Sine Subtracted Reader detected and ss_event_file appears to be present.  Any sine subtraction added to this Correlator object will be ignored, assuming that it will be automatically handled via precomputed sine subtraction values.')
-                    self.ss_reader_mode = True
 
             if upsample is None:
                 self.upsample = len(self.reader.t())
@@ -217,9 +216,46 @@ class Correlator:
             else:
                 self.map_source_distance_m = map_source_distance_m
             self.recalculateLatLonEl()
-            self.generateTimeIndices() #Must be called again if map_source_distance_m is reset
+            self.generateTimeIndices() #Must be called again if map_source_distance_m is reset or some other timing info is changed.
             self.calculateArrayNormalVector()
 
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def setReader(self,reader,verbose=True):
+        '''
+        This will set the reader to the given reader and do other related preparations.
+        '''
+        try:
+            if verbose:
+                print('Setting reader in correlator to reader for run %i'%reader.run)
+
+            major_changes_made = False
+
+            first_time = self.reader is None #True if first time the reader has been set.
+            self.reader = reader
+            self.reader.setEntry(0)
+            self.ss_reader_mode = False
+            if hasattr(self.reader, "ss_event_file"):
+                if self.reader.ss_event_file is not None:
+                    if verbose:
+                        print('Sine Subtracted Reader detected and ss_event_file appears to be present.  Any sine subtraction added to this Correlator object will be ignored, assuming that it will be automatically handled via precomputed sine subtraction values.')
+                    self.ss_reader_mode = True
+
+            if self.prep is not None:
+                major_changes_made = self.prep.setReader(self.reader,verbose=verbose)
+
+                if major_changes_made:
+                    if verbose:
+                        print('Changes detected in timing when new reader set.  Rerunning self.prepareTimes and self.generateTimeIndices')
+                    self.prepareTimes()
+                    self.generateTimeIndices()
+
+            return major_changes_made
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -4254,6 +4290,33 @@ class Correlator:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+
+class SharedCorrelator(Correlator):
+    '''
+    Whenever called with a template correlator, this will reset all class attributes to the instance attributes of that
+    template class.
+
+    If an instance of this class is then created that is given a reader instead of corelator, it will update the
+    relevant instance attributes to the new reader, while maintaining the underlying template attributes.
+
+    The goal here is to have a shared set of accessible attributes for all correlators with common setup, reducing
+    memory when multiple instances are called for various runs.  
+    '''
+    template_correlator = None
+    def __init__(self, template=None, reader=None):
+        if template is not None:
+            print('Setting all SharedCorrelator instances to match template given corresponding to run %i'%template.reader.run)
+            template_correlator = template
+            SharedCorrelator.__dict__ = copy.copy(template.__dict__)
+
+        if template_correlator is not None:
+            for key, item in template_correlator.__dict__.items():
+                if callable(item):
+                    self.__dict__[key] = item
+
+        if reader is not None:
+            self.reader = reader
 
 def testMain():
     '''

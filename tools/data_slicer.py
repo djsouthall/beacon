@@ -162,6 +162,22 @@ class dataSlicerSingleRun():
     peak_to_sidelobe_n_bins_v : int
         The number of bins to use when plotting the peak to sidelobe param for vpol.
     '''
+    known_param_keys = [    'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
+                            'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
+                            'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',\
+                            'mean_max_corr_h', 'max_max_corr_h','mean_max_corr_v', 'max_max_corr_v','similarity_count_h','similarity_count_v','similarity_fraction_h','similarity_fraction_v',\
+                            'max_corr_0subtract1_h','max_corr_0subtract2_h','max_corr_0subtract3_h','max_corr_1subtract2_h','max_corr_1subtract3_h','max_corr_2subtract3_h',\
+                            'max_corr_0subtract1_v','max_corr_0subtract2_v','max_corr_0subtract3_v','max_corr_1subtract2_v','max_corr_1subtract3_v','max_corr_2subtract3_v',\
+                            'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','elevation_best_all','phi_best_h','phi_best_v','phi_best_all',\
+                            'calibrated_trigtime','triggered_beams','beam_power','hpol_peak_to_sidelobe','vpol_peak_to_sidelobe','all_peak_to_sidelobe','hpol_max_possible_map_value','vpol_max_possible_map_value','all_max_possible_map_value','hpol_max_map_value','vpol_max_map_value','all_max_map_value',\
+                            'map_max_time_delay_0subtract1_h','map_max_time_delay_0subtract2_h','map_max_time_delay_0subtract3_h',\
+                            'map_max_time_delay_1subtract2_h','map_max_time_delay_1subtract3_h','map_max_time_delay_2subtract3_h',\
+                            'map_max_time_delay_0subtract1_v','map_max_time_delay_0subtract2_v','map_max_time_delay_0subtract3_v',\
+                            'map_max_time_delay_1subtract2_v','map_max_time_delay_1subtract3_v','map_max_time_delay_2subtract3_v',\
+                            'map_max_time_delay_0subtract1_all','map_max_time_delay_0subtract2_all','map_max_time_delay_0subtract3_all',\
+                            'map_max_time_delay_1subtract2_all','map_max_time_delay_1subtract3_all','map_max_time_delay_2subtract3_all',\
+                            'sun_az','sun_el']
+
     def __init__(self,  reader, impulsivity_dset_key, time_delays_dset_key, map_dset_key, analysis_data_dir=None, \
                         curve_choice=0, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
@@ -177,8 +193,6 @@ class dataSlicerSingleRun():
                         max_peak_to_sidelobe_val=5,peak_to_sidelobe_n_bins_h=100,peak_to_sidelobe_n_bins_v=100,peak_to_sidelobe_n_bins_all=100):
         try:
             self.updateReader(reader,analysis_data_dir=analysis_data_dir)
-            self.cor = None
-
             self.math_keywords = ['SLICERSUBTRACT', 'SLICERADD', 'SLICERDIVIDE', 'SLICERMULTIPLY', 'SLICERMAX', 'SLICERMIN', 'SLICERMEAN'] #Meta words that will relate 2 known variables and produce a plot with their arithmatic combination. 
 
             if self.reader.failed_setup == False:
@@ -186,31 +200,7 @@ class dataSlicerSingleRun():
                 self.included_hpol_antennas = numpy.array([0,2,4,6])[numpy.isin([0,2,4,6],self.included_antennas)]
                 self.included_vpol_antennas = numpy.array([1,3,5,7])[numpy.isin([1,3,5,7],self.included_antennas)]
 
-                #I want to work on adding: 'std', 'p2p', and 'snr', where snr is p2p/std.  I think these could be interesting, and are already available by default per signal. 
-                #self.known_param_keys = ['impulsivity_hv', 'cr_template_search', 'std', 'p2p', 'snr'] #If it is not listed in here then it cannot be used.
-                #Should add triggered beam to this list of params.
-                #Note that you should also check the datasets handled by checkForComplementaryBothMapDatasets and checkForRateDatasets, which adds custom parameters that can be
-                #cut on that are somewhat dynamic in their definitions.  
-                self.known_param_keys = [   'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
-                                            'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
-                                            'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',\
-                                            'mean_max_corr_h', 'max_max_corr_h','mean_max_corr_v', 'max_max_corr_v','similarity_count_h','similarity_count_v','similarity_fraction_h','similarity_fraction_v',\
-                                            'max_corr_0subtract1_h','max_corr_0subtract2_h','max_corr_0subtract3_h','max_corr_1subtract2_h','max_corr_1subtract3_h','max_corr_2subtract3_h',\
-                                            'max_corr_0subtract1_v','max_corr_0subtract2_v','max_corr_0subtract3_v','max_corr_1subtract2_v','max_corr_1subtract3_v','max_corr_2subtract3_v',\
-                                            'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','phi_best_h','phi_best_v',\
-                                            'calibrated_trigtime','triggered_beams','beam_power','hpol_peak_to_sidelobe','vpol_peak_to_sidelobe','all_peak_to_sidelobe','hpol_max_possible_map_value','vpol_max_possible_map_value','all_max_possible_map_value','hpol_max_map_value','vpol_max_map_value','all_max_map_value',\
-                                            'map_max_time_delay_0subtract1_h','map_max_time_delay_0subtract2_h','map_max_time_delay_0subtract3_h',\
-                                            'map_max_time_delay_1subtract2_h','map_max_time_delay_1subtract3_h','map_max_time_delay_2subtract3_h',\
-                                            'map_max_time_delay_0subtract1_v','map_max_time_delay_0subtract2_v','map_max_time_delay_0subtract3_v',\
-                                            'map_max_time_delay_1subtract2_v','map_max_time_delay_1subtract3_v','map_max_time_delay_2subtract3_v',\
-                                            'map_max_time_delay_0subtract1_all','map_max_time_delay_0subtract2_all','map_max_time_delay_0subtract3_all',\
-                                            'map_max_time_delay_1subtract2_all','map_max_time_delay_1subtract3_all','map_max_time_delay_2subtract3_all',\
-                                            'sun_az','sun_el']
-
                 self.tct = None #This will be defined when necessary by functions below. 
-
-
-
                 #Parameters:
                 #General Params:
 
@@ -399,60 +389,6 @@ class dataSlicerSingleRun():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-
-    def prepareCorrelator(self):
-        '''
-        Will check if a Correlator class already exists for this data slicers run.  If it does not then one will be
-        generated.
-
-        Note that Correlator makes it's own FFTPrep class. 
-
-        This is mostly hardcoded.  If you want higher control then make your own correlator and assign it to this object.
-        '''
-        if self.cor is None:
-            #Using the values that are commonly used in rf_bg_search.py
-            crit_freq_low_pass_MHz = 85
-            low_pass_filter_order = 6
-
-            crit_freq_high_pass_MHz = 25
-            high_pass_filter_order = 8
-
-            sine_subtract = True
-            sine_subtract_min_freq_GHz = 0.00
-            sine_subtract_max_freq_GHz = 0.25
-            sine_subtract_percent = 0.03
-
-            apply_phase_response = True
-
-            map_resolution_theta = 0.25 #degrees
-            min_theta   = 0
-            max_theta   = 120
-            n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
-
-            map_resolution_phi = 0.1 #degrees
-            min_phi     = -180
-            max_phi     = 180
-            n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
-
-            upsample = 2**14 #Just upsample in this case, Reduced to 2**14 when the waveform length was reduced, to maintain same time precision with faster execution.
-            max_method = 0
-
-            waveform_index_range = info.returnDefaultWaveformIndexRange()
-            map_source_distance_m = info.returnDefaultSourceDistance()
-
-            # self.cor = Correlator(self.reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False, sine_subtract=sine_subtract, deploy_index=self.map_deploy_index, map_source_distance_m=map_source_distance_m)
-            self.cor = Correlator(self.reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=True, sine_subtract=sine_subtract, deploy_index=self.map_deploy_index, map_source_distance_m=map_source_distance_m)
-            if sine_subtract:
-                self.cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
-
-    def delCorrelator(self):
-        '''
-        Deletes the currently saved correlator. 
-        '''
-        if hasattr(self, 'cor'):
-            del self.cor
-        self.cor = None
-
 
     def printKnownParamKeys(self):
         '''
@@ -3820,7 +3756,7 @@ class dataSlicer():
             self.roi = {}
             self.data_slicers = []
             self.runs = []#numpy.sort(runs).astype(int)
-
+            self.cor = None
             for run in numpy.sort(runs).astype(int):
                 try:
                     reader = Reader(raw_datapath,run)
@@ -3860,6 +3796,58 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+    def prepareCorrelator(self):
+        '''
+        Will check if a Correlator class already exists for this data slicers run.  If it does not then one will be
+        generated.
+
+        Note that Correlator makes it's own FFTPrep class. 
+
+        This is mostly hardcoded.  If you want higher control then make your own correlator and assign it to this object.
+        '''
+        if self.cor is None:
+            #Using the values that are commonly used in rf_bg_search.py
+            crit_freq_low_pass_MHz = 85
+            low_pass_filter_order = 6
+
+            crit_freq_high_pass_MHz = 25
+            high_pass_filter_order = 8
+
+            sine_subtract = True
+            sine_subtract_min_freq_GHz = 0.00
+            sine_subtract_max_freq_GHz = 0.25
+            sine_subtract_percent = 0.03
+
+            apply_phase_response = True
+
+            map_resolution_theta = 0.25 #degrees
+            min_theta   = 0
+            max_theta   = 120
+            n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
+
+            map_resolution_phi = 0.1 #degrees
+            min_phi     = -180
+            max_phi     = 180
+            n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
+
+            upsample = 2**14 #Just upsample in this case, Reduced to 2**14 when the waveform length was reduced, to maintain same time precision with faster execution.
+            max_method = 0
+
+            waveform_index_range = info.returnDefaultWaveformIndexRange()
+            map_source_distance_m = info.returnDefaultSourceDistance()
+
+            self.cor = Correlator(self.data_slicers[0].reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=True, sine_subtract=sine_subtract, deploy_index=self.data_slicers[0].map_deploy_index, map_source_distance_m=map_source_distance_m)
+            if sine_subtract:
+                self.cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+    def delCorrelator(self):
+        '''
+        Deletes the currently saved correlator. 
+        '''
+        if hasattr(self, 'cor'):
+            del self.cor
+        self.cor = None
 
     def removeIncompleteDataSlicers(self):
         '''
@@ -4603,10 +4591,13 @@ class dataSlicer():
         el_h = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_h_allsky']
         az_v = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_v_allsky']
         el_v = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_v_allsky']
+        if self.show_all:
+            az_all = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_all_allsky']
+            el_all = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_all_allsky']
+
 
         self.inspector_mpl['current_table'] = list(zip(self.table_params.values(), start_data))
 
-        self.data_slicers[run_index].prepareCorrelator()
         self.inspector_mpl['fig1'].canvas.set_window_title('r%ie%i'%(self.runs[run_index],eventid))
         #Clear plot axes
         for key in list(self.inspector_mpl.keys()):
@@ -4617,43 +4608,49 @@ class dataSlicer():
                     for artist in self.inspector_mpl[key].lines + self.inspector_mpl[key].collections:
                         artist.remove()
         #Plot Waveforms
-        self.data_slicers[run_index].cor.reader.setEntry(eventid)
-        t = self.data_slicers[run_index].cor.reader.t()
+        self.cor.setReader(self.data_slicers[run_index].reader, verbose=False)
+        self.cor.reader.setEntry(eventid)
 
-        self.inspector_mpl['fig1_wf_0'].plot(t, self.data_slicers[run_index].cor.reader.wf(0), c=self.mpl_colors[0])
-        self.inspector_mpl['fig1_wf_1'].plot(t, self.data_slicers[run_index].cor.reader.wf(1), c=self.mpl_colors[1])
-        self.inspector_mpl['fig1_wf_2'].plot(t, self.data_slicers[run_index].cor.reader.wf(2), c=self.mpl_colors[2])
-        self.inspector_mpl['fig1_wf_3'].plot(t, self.data_slicers[run_index].cor.reader.wf(3), c=self.mpl_colors[3])
-        self.inspector_mpl['fig1_wf_4'].plot(t, self.data_slicers[run_index].cor.reader.wf(4), c=self.mpl_colors[4])
-        self.inspector_mpl['fig1_wf_5'].plot(t, self.data_slicers[run_index].cor.reader.wf(5), c=self.mpl_colors[5])
-        self.inspector_mpl['fig1_wf_6'].plot(t, self.data_slicers[run_index].cor.reader.wf(6), c=self.mpl_colors[6])
-        self.inspector_mpl['fig1_wf_7'].plot(t, self.data_slicers[run_index].cor.reader.wf(7), c=self.mpl_colors[7])
+        t = self.data_slicers[run_index].reader.t()
+
+        self.inspector_mpl['fig1_wf_0'].plot(t, self.cor.reader.wf(0), c=self.mpl_colors[0])
+        self.inspector_mpl['fig1_wf_1'].plot(t, self.cor.reader.wf(1), c=self.mpl_colors[1])
+        self.inspector_mpl['fig1_wf_2'].plot(t, self.cor.reader.wf(2), c=self.mpl_colors[2])
+        self.inspector_mpl['fig1_wf_3'].plot(t, self.cor.reader.wf(3), c=self.mpl_colors[3])
+        self.inspector_mpl['fig1_wf_4'].plot(t, self.cor.reader.wf(4), c=self.mpl_colors[4])
+        self.inspector_mpl['fig1_wf_5'].plot(t, self.cor.reader.wf(5), c=self.mpl_colors[5])
+        self.inspector_mpl['fig1_wf_6'].plot(t, self.cor.reader.wf(6), c=self.mpl_colors[6])
+        self.inspector_mpl['fig1_wf_7'].plot(t, self.cor.reader.wf(7), c=self.mpl_colors[7])
 
         #Zoom in
-        start = self.data_slicers[run_index].cor.prep.start_waveform_index
-        stop = self.data_slicers[run_index].cor.prep.end_waveform_index+1
+        start = self.cor.prep.start_waveform_index
+        stop = self.cor.prep.end_waveform_index+1
         self.inspector_mpl['fig1_wf_0'].set_xlim(min(t[start:stop]), max(t[start:stop])) #All others will follow
 
         #Plot Maps
-        m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.data_slicers[run_index].cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - el_h, circle_az=az_h, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
-        m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.data_slicers[run_index].cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - el_v, circle_az=az_v, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
-
+        m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - el_h, circle_az=az_h, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+        m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - el_v, circle_az=az_v, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+        if self.show_all:
+            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_all'] = self.cor.map(eventid, 'all', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - el_all, circle_az=az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+        
         #Plot Spectra
         sine_subtract = False
         for apply_filter, ax in [[False, self.inspector_mpl['fig1_spec_raw']], [True, self.inspector_mpl['fig1_spec_filt']]]:
             for channel in numpy.arange(8):
                 channel=int(channel)
                 if sine_subtract == True:
-                    wf, ss_freqs, n_fits = self.data_slicers[run_index].cor.prep.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_filter,sine_subtract=apply_filter and sine_subtract, return_sine_subtract_info=apply_filter and sine_subtract)
+                    wf, ss_freqs, n_fits = self.cor.prep.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_filter,sine_subtract=apply_filter and sine_subtract, return_sine_subtract_info=apply_filter and sine_subtract)
                     if verbose:
                         print(list(zip(n_fits, ss_freqs)))
                 else:
-                    wf = self.data_slicers[run_index].cor.prep.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_filter,sine_subtract=apply_filter and sine_subtract, return_sine_subtract_info=apply_filter and sine_subtract)
+                    wf = self.cor.prep.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_filter,sine_subtract=apply_filter and sine_subtract, return_sine_subtract_info=apply_filter and sine_subtract)
 
-                freqs, spec_dbish, spec = self.data_slicers[run_index].cor.prep.rfftWrapper(t[start:stop], wf)
+                freqs, spec_dbish, spec = self.cor.prep.rfftWrapper(t[start:stop], wf)
                 ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel, c=self.mpl_colors[channel])
             ax.set_ylim(-20,50)
             ax.set_ylabel(apply_filter*'filtered ' + 'db ish')
+            if self.show_all:
+                ax.set_xlim(0,150)
 
         #Populate Table
         name_column = list(self.table_params.values())
@@ -4696,20 +4693,20 @@ class dataSlicer():
             del self.inspector_mpl
 
 
-
-    def eventInspector(self, eventids_dict, mollweide=False):
+    def eventInspector(self, eventids_dict, mollweide=False, show_all=True):
         '''
         This is meant to provide a tool to quickly flick through events from multiple runs.  It will create a one panel
         view of the events info as best as I can manage, and provide easy support for choosing which event you want to
         inspect. 
         '''
+        self.show_all = show_all
+
         self.mpl_colors = [u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf']
 
         non_zero_runs = numpy.array(list(eventids_dict.keys()))[numpy.array([len(eventids_dict[k]) for k in list(eventids_dict.keys())]) > 0]
         non_zero_run_indices = numpy.where(numpy.isin(self.runs, non_zero_runs))[0]
 
-        for ds in self.data_slicers[non_zero_run_indices]:
-            ds.prepareCorrelator()
+        self.prepareCorrelator()
         
         fig1 = plt.figure(constrained_layout=True)
         gs = fig1.add_gridspec(4,5, width_ratios=[1,1,1,1,0.75])
@@ -4772,18 +4769,28 @@ class dataSlicer():
 
 
         if mollweide == True:
-            fig1_map_h = fig1.add_subplot(gs[2:,0], projection='mollweide')
-            fig1_map_v = fig1.add_subplot(gs[2:,1], projection='mollweide', sharex=fig1_map_h, sharey=fig1_map_h)
+            fig1_map_h      = fig1.add_subplot(gs[2:,0], projection='mollweide')
+            fig1_map_v      = fig1.add_subplot(gs[2:,1], projection='mollweide', sharex=fig1_map_h, sharey=fig1_map_h)
+            if self.show_all:
+                fig1_map_all    = fig1.add_subplot(gs[2:,2], projection='mollweide', sharex=fig1_map_h, sharey=fig1_map_h)
         else:
-            fig1_map_h = fig1.add_subplot(gs[2:,0])
-            fig1_map_v = fig1.add_subplot(gs[2:,1], sharex=fig1_map_h, sharey=fig1_map_h)
+            fig1_map_h      = fig1.add_subplot(gs[2:,0])
+            fig1_map_v      = fig1.add_subplot(gs[2:,1], sharex=fig1_map_h, sharey=fig1_map_h)
+            if self.show_all:
+                fig1_map_all    = fig1.add_subplot(gs[2:,2], sharex=fig1_map_h, sharey=fig1_map_h)
 
-        fig1_spec_raw = fig1.add_subplot(gs[2,2:4])
+        if self.show_all:
+            fig1_spec_raw = fig1.add_subplot(gs[2,3:4])
+        else:
+            fig1_spec_raw = fig1.add_subplot(gs[2,2:4])
         fig1_spec_raw.minorticks_on()
         fig1_spec_raw.grid(b=True, which='major', color='k', linestyle='-')
         fig1_spec_raw.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-        fig1_spec_filt = fig1.add_subplot(gs[3,2:4])
+        if self.show_all:
+            fig1_spec_filt = fig1.add_subplot(gs[3,3:4])
+        else:
+            fig1_spec_filt = fig1.add_subplot(gs[3,2:4])
         fig1_spec_filt.minorticks_on()
         fig1_spec_filt.grid(b=True, which='major', color='k', linestyle='-')
         fig1_spec_filt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
@@ -4799,6 +4806,8 @@ class dataSlicer():
         self.table_params['elevation_best_h_allsky'] = 'El H'
         self.table_params['phi_best_v_allsky'] = 'Az V'
         self.table_params['elevation_best_v_allsky'] = 'El V'
+        self.table_params['phi_best_all_allsky'] = 'Az All'
+        self.table_params['elevation_best_all_allsky'] = 'El All'
         self.table_params['hpol_max_map_value_abovehorizon'] = 'Map Max H'
         self.table_params['vpol_max_map_value_abovehorizon'] = 'Map Max V'
         self.table_params['impulsivity_h'] = 'Imp H'
@@ -4811,6 +4820,7 @@ class dataSlicer():
         self.table_params['p2p_v'] = 'P2P V'
         self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
         self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
+        self.table_params['all_peak_to_sidelobe_abovehorizon'] = 'AH P2S All'
         self.table_params['similarity_count_h'] = 'H Simlr'
         self.table_params['similarity_count_v'] = 'V Simlr'
 
@@ -4819,7 +4829,6 @@ class dataSlicer():
         run = non_zero_runs[0]
         eventid = eventids_dict[run][0]
         run_index = int(numpy.where(self.runs == run)[0])#self.data_slicers[]
-        self.data_slicers[run_index].prepareCorrelator() #Run again in case at some later point I make it so you can check the run to soe event that was not passed to this tool. 
 
         self.inspector_mpl = {}
         self.inspector_mpl['fig1'] = fig1
@@ -4834,6 +4843,8 @@ class dataSlicer():
         self.inspector_mpl['fig1_wf_7'] = fig1_wf_7
         self.inspector_mpl['fig1_map_h'] = fig1_map_h
         self.inspector_mpl['fig1_map_v'] = fig1_map_v
+        if self.show_all:
+            self.inspector_mpl['fig1_map_all'] = fig1_map_all
         self.inspector_mpl['fig1_spec_raw'] = fig1_spec_raw
         self.inspector_mpl['fig1_spec_filt'] = fig1_spec_filt
         self.inspector_mpl['fig1_table'] = fig1_table

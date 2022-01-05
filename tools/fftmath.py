@@ -99,19 +99,29 @@ class FFTPrepper:
     '''
     def __init__(self, reader, final_corr_length=2**15, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,tukey_alpha=0.1,tukey_default=False,apply_phase_response=False):
         try:
-            self.reader = reader
-            self.reader.setEntry(0)
-            self.ss_reader_mode = False
-            if hasattr(self.reader, "ss_event_file"):
-                if self.reader.ss_event_file is not None:
-                    print('Sine Subtracted Reader detected and ss_event_file appears to be present.  Any sine subtraction added to this FFTPrepper object will be ignored, assuming that it will be automatically handled via precomputed sine subtraction values.')
-                    self.ss_reader_mode = True
+            self.reader = None #Value before setReader has been called.  If setReader is called multiple times this will be checked each to to throw warnings that some things might not change.
+            
+            # Requested params stored, as they may change internally, but original requests are preserved.
+            self.requested_final_corr_length = final_corr_length
+            self.requested_crit_freq_low_pass_MHz = crit_freq_low_pass_MHz
+            self.requested_crit_freq_high_pass_MHz = crit_freq_high_pass_MHz
+            self.requested_low_pass_filter_order = low_pass_filter_order
+            self.requested_high_pass_filter_order = high_pass_filter_order
+            self.requested_waveform_index_range = waveform_index_range
+            self.requested_plot_filters = plot_filters
+            self.requested_tukey_alpha = tukey_alpha
+            self.requested_tukey_default = tukey_default
+            self.requested_apply_phase_response = apply_phase_response
+            self.raw_buffer_length = reader.header().buffer_length #Value before prepared.  Will be overwriten once prepareWaveformIndexing called.
+            self.interpretFiltersPerChannel(crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, low_pass_filter_order, high_pass_filter_order)
 
-            self.buffer_length = reader.header().buffer_length
+            # Prepare the reader and waveform info.
+            self.setReader(reader) #First call this won't call self.prepareWaveformIndexing, but any subsequent calls will call self.prepareWaveformIndexing.  self.prepareWaveformIndexing is called below on first call and is forced to set everything.  All other times these will only be updated if a difference is detected.
+            self.prepareWaveformIndexing(self.requested_waveform_index_range, force=True, skip_additional_prep=True)
+            self.prepForFFTs(plot=plot_filters,apply_phase_response=self.requested_apply_phase_response) #must be called because skip_additional_prep above is True. 
 
             # self.use_sinc_interpolation = use_sinc_interpolation #Testing this right now.
 
-            self.interpretFiltersPerChannel(crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, low_pass_filter_order, high_pass_filter_order)
             # self.crit_freq_low_pass_MHz = crit_freq_low_pass_MHz
             # self.crit_freq_high_pass_MHz = crit_freq_high_pass_MHz
             # self.low_pass_filter_order = low_pass_filter_order
@@ -126,48 +136,114 @@ class FFTPrepper:
 
             self.persistent_object = [] #For any objects that need to be kept alive/referenced (i.e. interactive plots)
 
-            #Allowing for a subset of the waveform to be isolated.  Helpful to speed this up if you know where signals are in long traces.
-            waveform_index_range = list(waveform_index_range)
-            if waveform_index_range[0] is None:
-                waveform_index_range[0] = 0
-            if waveform_index_range[1] is None:
-                waveform_index_range[1] = self.buffer_length - 1
-
-            if not(waveform_index_range[0] < waveform_index_range[1]):
-                print('Given window range invalid, minimum index greater than or equal to max')
-                print('Setting full range.')
-                self.start_waveform_index = 0
-                self.end_waveform_index = self.buffer_length - 1
-            else:
-                if waveform_index_range[0] < 0:
-                    print('Negative start index given, setting to 0.')
-                    self.start_waveform_index = 0
-                else:
-                    self.start_waveform_index = waveform_index_range[0]
-                if waveform_index_range[1] >= self.buffer_length:
-                    print('Greater than or equal to buffer length given for end index, setting to buffer_length - 1.')
-                    self.end_waveform_index = self.buffer_length - 1
-                else:
-                    self.end_waveform_index = waveform_index_range[1]
-
-            #Resetting buffer length to account for new load in length. 
-            self.buffer_length = self.end_waveform_index - self.start_waveform_index + 1 
-
-            if final_corr_length is None:
-                self.final_corr_length = self.buffer_length 
-            else:
-                self.final_corr_length = final_corr_length #Should be a factor of 2 for fastest performance
-
-
-            self.tukey = scipy.signal.tukey(self.buffer_length, alpha=tukey_alpha, sym=True)
-
-            self.prepForFFTs(plot=plot_filters,apply_phase_response=apply_phase_response)
 
             self.sine_subtracts = []
             self.plot_ss = []
 
             self.averaged_bg_squared_spectrum = None #call calculateAverageNoiseSpectrum to populate this.
 
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def setReader(self,reader,verbose=True):
+        '''
+        This will set the reader to the given reader and do other related preparations.
+
+        Will return True if something signficant about the timing has changed.
+        '''
+        try:
+            if verbose:
+                print('Setting reader to reader of run %i'%reader.run)
+
+            first_time = self.reader is None #True if first time the reader has been set.
+            self.reader = reader
+            self.reader.setEntry(0)
+            self.ss_reader_mode = False
+            if hasattr(self.reader, "ss_event_file"):
+                if self.reader.ss_event_file is not None:
+                    if verbose == True:
+                        print('Sine Subtracted Reader detected and ss_event_file appears to be present.  Any sine subtraction added to this FFTPrepper object will be ignored, assuming that it will be automatically handled via precomputed sine subtraction values.')
+                    self.ss_reader_mode = True
+
+            if first_time == False:
+                '''
+                First time setup will call prepareWaveformIndexing itself.
+                '''
+                major_changes_made = self.prepareWaveformIndexing(self.requested_waveform_index_range, verbose=verbose, force=False, skip_additional_prep=False)
+            else:
+                major_changes_made = True
+
+            return major_changes_made
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def prepareWaveformIndexing(self, waveform_index_range, verbose=True, force=False, skip_additional_prep=False):
+        '''
+        This will inspect the current reader and determine the appropriate waveform index range based upon the requested
+        range and the available range. 
+
+        Will return True if something signficant about the timing has changed.
+        '''
+        try:
+            major_changes_made = False
+            if force == True or self.raw_buffer_length != self.reader.header().buffer_length:
+                '''
+                Reset the buffer length only if there is a mismatch in buffer length from previous reader to current reader,
+                unless forced to.
+                '''
+                major_changes_made = True
+                if verbose:
+                    print('Resetting indexing to match current reader.')
+                self.raw_buffer_length = self.reader.header().buffer_length
+                self.buffer_length = self.reader.header().buffer_length
+                #Allowing for a subset of the waveform to be isolated.  Helpful to speed this up if you know where signals are in long traces.
+                waveform_index_range = list(waveform_index_range)
+                if waveform_index_range[0] is None:
+                    waveform_index_range[0] = 0
+                if waveform_index_range[1] is None:
+                    waveform_index_range[1] = self.buffer_length - 1
+
+                if not(waveform_index_range[0] < waveform_index_range[1]):
+                    if verbose:
+                        print('Given window range invalid, minimum index greater than or equal to max')
+                        print('Setting full range.')
+                    self.start_waveform_index = 0
+                    self.end_waveform_index = self.buffer_length - 1
+                else:
+                    if waveform_index_range[0] < 0:
+                        if verbose:
+                            print('Negative start index given, setting to 0.')
+                        self.start_waveform_index = 0
+                    else:
+                        self.start_waveform_index = waveform_index_range[0]
+                    if waveform_index_range[1] >= self.buffer_length:
+                        if verbose:
+                            print('Greater than or equal to buffer length given for end index, setting to buffer_length - 1.')
+                        self.end_waveform_index = self.buffer_length - 1
+                    else:
+                        self.end_waveform_index = waveform_index_range[1]
+
+                #Resetting buffer length to account for new load in length. 
+                self.buffer_length = self.end_waveform_index - self.start_waveform_index + 1 
+
+                if self.requested_final_corr_length is None:
+                    self.final_corr_length = self.buffer_length 
+                else:
+                    self.final_corr_length = self.requested_final_corr_length
+
+                self.tukey = scipy.signal.tukey(self.buffer_length, alpha=self.requested_tukey_alpha, sym=True)
+
+                if skip_additional_prep == False:
+                    self.prepForFFTs(plot=False,apply_phase_response=self.requested_apply_phase_response)
+            return major_changes_made
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
