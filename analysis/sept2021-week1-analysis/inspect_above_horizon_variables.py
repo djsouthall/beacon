@@ -38,8 +38,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore")
 
 raw_datapath = os.environ['BEACON_DATA']
-processed_datapath = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'backup_pre_all_map_run_12-5-2021')
-#processed_datapath = os.environ['BEACON_PROCESSED_DATA']
+#processed_datapath = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'backup_pre_all_map_run_12-5-2021')
+processed_datapath = os.environ['BEACON_PROCESSED_DATA']
 print('SETTING processed_datapath TO: ', processed_datapath)
 
 
@@ -69,7 +69,13 @@ if __name__ == '__main__':
     #
     #numpy.arange(5910,5920)
     #numpy.arange(5733,5974)
-    for runs in [numpy.arange(5911,5912)]:
+    #numpy.arange(5911,5912)
+    # _runs = numpy.arange(5733,5974)
+    # _runs = _runs[_runs != 5864]
+
+    _runs = numpy.array([5733,5734])
+
+    for runs in [_runs]:
 
         print("Preparing dataSlicer")
 
@@ -90,10 +96,6 @@ if __name__ == '__main__':
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
                         n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), remove_incomplete_runs=True)
 
-        ds.eventInspector({5911:numpy.array([73399])})
-        import pdb; pdb.set_trace()
-        #ds.addROI('above horizon',{'elevation_best_h':[0,90],'elevation_best_v':[0,90], 'hpol_peak_to_sidelobe':[2.0,300], 'vpol_peak_to_sidelobe':[2.0,300]})#'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.0,300]})
-        
         if False:
             plot_params =  [['similarity_count_h','similarity_count_v'], ['similarity_fraction_h','similarity_fraction_v'],['phi_best_h','event_rate_sigma_60.000Hz_20s']]
             print('Generating plots:')
@@ -104,8 +106,6 @@ if __name__ == '__main__':
                 ds.plotROI2dHist(key_x, key_y, cmap=cmap, include_roi=True)
 
         elif True:
-
-
             #This one cuts out ALL events
             #ds.addROI('above horizon',{'elevation_best_h':[5,90], 'hpol_peak_to_sidelobe_abovehorizonSLICERADDvpol_peak_to_sidelobe_abovehorizon':[3,300], 'hpol_peak_to_sidelobe_abovehorizon':[1.5,300], 'impulsivity_hSLICERADDimpulsivity_v':[0.4,300]})
             ds.addROI('above horizon only',{'elevation_best_h':[10,90]})
@@ -114,7 +114,15 @@ if __name__ == '__main__':
             #, 'hpol_peak_to_sidelobe_abovehorizonSLICERADDvpol_peak_to_sidelobe_abovehorizon':[1.5,300]
             #ds.addROI('above horizon',{'hpol_max_map_value_abovehorizonSLICERSUBTRACThpol_max_map_value_belowhorizon':[0.25,1000],'elevation_best_h':[10,90],'phi_best_h':[-90,90]})
             #ds.addROI('above horizon',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10]}) #Should I also exclude any saturating events?
+            
+
             ds.addROI('above horizon',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
+            ds.addROI('above horizon',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100]})
+            # ds.addROI('above horizon',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10]})
+            
+
+
+
             #ds.addROI('tv contaminated maybe',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[-90,0],'similarity_count_h':[0,0.5],'similarity_count_v':[0,0.5],'p2p_h':[0,126.5],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10]}) #Should I also exclude any saturating events?
 
             #above_horizon_eventids_only_dict = ds.getCutsFromROI('above horizon only',load=False,save=False,verbose=False)
@@ -122,9 +130,10 @@ if __name__ == '__main__':
             return_total_cut_counts = True
             above_horizon_eventids_dict, successive_cut_counts, total_cut_counts = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
             
-            if ~numpy.isin(73399, above_horizon_eventids_dict[5911]):
-                print('Warning, the neat event isnt included in current cuts!')
-                ds.eventInspector({5911:numpy.array([73399])})
+            if 5911 in list(above_horizon_eventids_dict.keys()):
+                if ~numpy.isin(73399, above_horizon_eventids_dict[5911]):
+                    print('Warning, the neat event isnt included in current cuts!')
+                    ds.eventInspector({5911:numpy.array([73399])})
             # print('Hard bipassing the horizon dict')
             # above_horizon_eventids_dict = {5911:numpy.array([73399])}
 
@@ -156,13 +165,12 @@ if __name__ == '__main__':
                 del time_data
                 del pass_cut
 
-            if ~numpy.isin(73399, above_horizon_eventids_dict[5911]):
-                print('Warning, the neat event isnt included in current cuts!')
-                ds.eventInspector({5911:numpy.array([73399])})
+            if 5911 in list(above_horizon_eventids_dict.keys()):
+                if ~numpy.isin(73399, above_horizon_eventids_dict[5911]):
+                    print('Warning, the neat event isnt included in current cuts!')
+                    ds.eventInspector({5911:numpy.array([73399])})
             
             above_horizon_eventids_array = ds.organizeEventDict(above_horizon_eventids_dict)
-
-            
 
             if False:  
                 ds.addROI('cluster',{'elevation_best_h':[19,21],'phi_best_h':[33,34]}) #Don't need full cut because adding it to eventids_dict param below
@@ -170,7 +178,7 @@ if __name__ == '__main__':
                 ds.eventInspector(above_horizon_eventids_dict)
 
             else:
-                ds.resetAllROI()
+                #ds.resetAllROI()
                 #ds.addROI('test',{'hpol_peak_to_sidelobe_abovehorizonSLICERADDvpol_peak_to_sidelobe_abovehorizon':[2.0,300]})
                 # roi_eventid_dict = ds.getCutsFromROI('test',load=False,save=False,verbose=False)
                 # roi_eventid_dict = ds.returnCommonEvents(above_horizon_eventids_dict, roi_eventid_dict)
@@ -220,7 +228,7 @@ if __name__ == '__main__':
                     if len(above_horizon_eventids_array) > 0:
                         ds.plotROI2dHist('phi_best_h_belowhorizon','elevation_best_h_belowhorizon', cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=True)
 
-                        plot_params = [['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['phi_best_v_belowhorizon','elevation_best_v_belowhorizon'],['phi_best_h_belowhorizon','elevation_best_h_belowhorizon'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'] ,['similarity_count_h','similarity_count_v']]
+                        plot_params = [['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['phi_best_all','elevation_best_all'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['all_peak_to_sidelobe','elevation_best_all'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'] ,['similarity_count_h','similarity_count_v']]
                         print('Generating plots:')
 
                         #plot_params = [['hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe']]
@@ -233,22 +241,22 @@ if __name__ == '__main__':
                         if len(above_horizon_eventids_array) < 100:
                             print(above_horizon_eventids_array)
                             ds.eventInspector(above_horizon_eventids_dict)
-
-                    # print('successive_cut_counts:')
-                    # pprint(successive_cut_counts)
-                    # print('total_cut_counts:')
-                    # pprint(total_cut_counts)
-                    
-                    roi_key = 'above horizon'
-                    for key in list(successive_cut_counts.keys()):
-                        #ds.roi[roi_key][key]
-                        if key == 'initial':
-                            print('Initial Event Count is %i'%(successive_cut_counts[key]))
                         else:
-                            print('%0.3f%% events then cut by %s with bounds %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key, str(ds.roi[roi_key][key])))
-                            print('%0.3f%% of initial events would be cut by %s with bounds %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key, str(ds.roi[roi_key][key])))
-                            print('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]))
-                        previous_count = successive_cut_counts[key]
+                            print('Number of remaining events above 100, printing them here:')
+                            pprint(above_horizon_eventids_array)
+
+
+                    if return_successive_cut_counts:
+                        roi_key = 'above horizon'
+                        for key in list(successive_cut_counts.keys()):
+                            #ds.roi[roi_key][key]
+                            if key == 'initial':
+                                print('Initial Event Count is %i'%(successive_cut_counts[key]))
+                            else:
+                                print('%0.3f%% events then cut by %s with bounds %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key, str(ds.roi[roi_key][key])))
+                                print('%0.3f%% of initial events would be cut by %s with bounds %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key, str(ds.roi[roi_key][key])))
+                                print('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]))
+                            previous_count = successive_cut_counts[key]
                     
                     # for key in list(successive_cut_counts.keys()):
                     #     if key == 'initial':

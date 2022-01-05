@@ -78,6 +78,7 @@ if __name__ == '__main__':
         runs = numpy.arange(5910,5912)
     elif True:
         runs = numpy.arange(5733,5974)
+        runs = runs[runs != 5864]
     else:
         runs = numpy.arange(5910,5934)#numpy.arange(5733,5974)#numpy.arange(5910,5912)
 

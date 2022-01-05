@@ -68,6 +68,7 @@ if __name__ == '__main__':
         runs = numpy.arange(5910,5921)
     else:
         runs = numpy.arange(5733,5974)
+        runs = runs[runs != 5864]
 
     print("Preparing dataSlicer")
 
@@ -88,10 +89,18 @@ if __name__ == '__main__':
                     snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
                     n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), remove_incomplete_runs=True)
 
-    ds.addROI('above horizon',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90]})
-    above_horizon_eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
-    ds.addROI('above horizon full',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
-    above_horizon_full_eventids_dict = ds.getCutsFromROI('above horizon full',load=False,save=False,verbose=True, return_successive_cut_counts=False, return_total_cut_counts=False)
+    if True:
+        #Forces both maps to point in box
+        ds.addROI('above horizon',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90]})
+        above_horizon_eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
+        ds.addROI('above horizon full',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
+        above_horizon_full_eventids_dict = ds.getCutsFromROI('above horizon full',load=False,save=False,verbose=True, return_successive_cut_counts=False, return_total_cut_counts=False)
+    else:
+        #Forces both all baseline maps to point in box
+        ds.addROI('above horizon',{'elevation_best_all':[10,90],'phi_best_all':[-90,90]})
+        above_horizon_eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
+        ds.addROI('above horizon full',{'elevation_best_all':[10,90],'phi_best_all':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
+        above_horizon_full_eventids_dict = ds.getCutsFromROI('above horizon full',load=False,save=False,verbose=True, return_successive_cut_counts=False, return_total_cut_counts=False)
 
     above_horizon_full_eventids_array = []
     above_horizon_full_runs_array = []
@@ -223,7 +232,7 @@ if __name__ == '__main__':
         vals_full = interp_arb(el_full, phi_full)
 
         sorted_indices = numpy.argsort(vals_full)
-        n_cut = min(250, len(vals_full))
+        n_cut = min(50, len(vals_full))
         if n_cut == len(vals_full):
             cut_val = numpy.max(vals_full)
         else:
@@ -243,6 +252,6 @@ if __name__ == '__main__':
             for eventid in out_array[out_array[:,0] == run][:,1].astype(int):
                 print('https://users.rcc.uchicago.edu/~cozzyd/monutau/#event&run=%i&entry=%i'%(run,eventid))
 
-        #ds.eventInspector(min_val_eventid_dict)
+        ds.eventInspector(min_val_eventid_dict) #only run on sinteractive with a lot of memory
 
     

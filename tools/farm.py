@@ -72,9 +72,9 @@ if __name__ == "__main__":
         pol == 'both'
     elif True:
         #THE ONE I LIkE TO DO NOW
-        runs = numpy.arange(5733,5974,dtype=int)
+        runs = numpy.array([5864])#numpy.arange(5733,5974,dtype=int)#numpy.array([5864])#numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
-        analysis_part = 1 
+        analysis_part = 2 
         #pol = 'both' #Always treated as both when analysis_part == 3
     elif False:
         runs = numpy.arange(5733,5974,dtype=int)
