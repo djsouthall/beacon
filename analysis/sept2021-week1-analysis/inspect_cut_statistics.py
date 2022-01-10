@@ -45,8 +45,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore")
 
 raw_datapath = os.environ['BEACON_DATA']
-processed_datapath = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'backup_pre_all_map_run_12-5-2021')
-#processed_datapath = os.environ['BEACON_PROCESSED_DATA']
+#processed_datapath = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'backup_pre_all_map_run_12-5-2021')
+processed_datapath = os.environ['BEACON_PROCESSED_DATA']
 print('SETTING processed_datapath TO: ', processed_datapath)
 
 

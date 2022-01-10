@@ -445,7 +445,7 @@ class FFTPrepper:
             self.sine_subtracts.append(sine_subtract)
 
 
-    def wf(self, channel, apply_filter=False, hilbert=False, tukey=None, sine_subtract=False, return_sine_subtract_info=False, ss_first=True):
+    def wf(self, channel, apply_filter=False, hilbert=False, tukey=None, sine_subtract=False, return_sine_subtract_info=False, ss_first=True, attempt_raw_reader=False):
         '''
         This loads a wf but only the section that is selected by the start and end indices specified.
 
@@ -455,9 +455,13 @@ class FFTPrepper:
 
         If ss_first is True then the waveform index range will only be applied AFTER sine subtraction is applied to
         help the filtering. 
+
+        If attempt_raw_reader == True AND self.ss_reader_mode is true (and thus the raw_wf callable is presnt), this 
+        will use the raw_wf method instead.  This avoids using stored sine subtraction and can be helpful for
+        comparison.  Only works if sine_subtract and 
         '''
         try:
-            if self.ss_reader_mode == True and numpy.logical_and(sine_subtract, return_sine_subtract_info) == False:
+            if self.ss_reader_mode == True and numpy.logical_and(sine_subtract, return_sine_subtract_info == False):
                 temp_wf = self.reader.wf(int(channel))[self.start_waveform_index:self.end_waveform_index+1]
             else:
                 if self.ss_reader_mode == True:
@@ -1908,7 +1912,9 @@ class TimeDelayCalculator(FFTPrepper):
                 #Else use the given waveforms, assumed to have sampling of self.dt_ns_upsampled
 
             rolls = (time_delays/self.dt_ns_upsampled).astype(int)
-
+            #[0-1H,0-2H,0-3H,1-2H,1-3H,2-3H,0-1V,0-2V,0-3V,1-2V,1-3V,2-3V]
+            #rolls[0:3] = [0-1H,0-2H,0-3H]
+            #rolls[6:9] = [0-1V,0-2V,0-3V]
             hpols_rolls = numpy.append(numpy.array([0]),rolls[0:3])#How much to roll hpol
             vpols_rolls = numpy.append(numpy.array([0]),rolls[6:9])#How much to roll vpol
             times = self.dt_ns_upsampled*numpy.arange(numpy.shape(upsampled_waveforms)[1])

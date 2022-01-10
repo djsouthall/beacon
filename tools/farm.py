@@ -72,14 +72,14 @@ if __name__ == "__main__":
         pol == 'both'
     elif True:
         #THE ONE I LIkE TO DO NOW
-        runs = numpy.array([5864])#numpy.arange(5733,5974,dtype=int)#numpy.array([5864])#numpy.arange(5733,5974,dtype=int)
+        runs = numpy.arange(5733,5974,dtype=int)#numpy.array([5864])#numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
-        analysis_part = 2 
+        analysis_part = 3
         #pol = 'both' #Always treated as both when analysis_part == 3
     elif False:
         runs = numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
-        analysis_part = 4 # Sine subtraction
+        analysis_part = 5 # Sine subtraction
     else:
         runs = numpy.array([5630, 5631, 5632, 5638, 5639, 5640, 5641, 5642, 5643, 5644, 5645, 5646, 5647, 5648, 5649, 5656, 5657, 5659, 5660], dtype=int)
         done_runs = numpy.array([])
@@ -236,8 +236,24 @@ if __name__ == "__main__":
             command_queue = batch + command
             print(command_queue)    
             os.system(command_queue) # Submit to queue
-            
+
         elif analysis_part == 3:
+            #Runs h then v, then all
+            #Run hpol and vpol jobs in same job, and run the 'all' case as a seperate job. 
+
+            script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part3.sh')            
+            #Prepare Job
+            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,jobname)
+            command = '%s %i %s %s'%(script, run, deploy_index, 'both')
+            command_queue = batch + command
+
+            #Submit job and get the jobid
+            print(command_queue)
+            jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
+            
+            print('Run %i jobs submitted --> jid:%i'%(run,jobid))
+            
+        elif analysis_part == 4:
             #Does all but submits too many jobs likely if many runs being performed.
             script1 = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part1.sh')
             script2 = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part2.sh')
@@ -272,7 +288,7 @@ if __name__ == "__main__":
 
             print('Run %i jobs submitted --> HPol jid:%i\tVPol jid:%i'%(run,hpol_jobid,vpol_jobid))
 
-        elif analysis_part == 4:
+        elif analysis_part == 5:
             script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'tools', 'sine_subtract_cache.py')
             batch = 'sbatch --partition=%s --job-name=%s --time=12:00:00 '%(partition,jobname)
             command = script + ' %i'%(run)

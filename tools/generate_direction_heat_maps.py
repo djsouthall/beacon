@@ -33,8 +33,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore")
 
 raw_datapath = os.environ['BEACON_DATA']
-processed_datapath = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'backup_pre_all_map_run_12-5-2021')
-#processed_datapath = os.environ['BEACON_PROCESSED_DATA']
+#processed_datapath = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'backup_pre_all_map_run_12-5-2021')
+processed_datapath = os.environ['BEACON_PROCESSED_DATA']
 print('SETTING processed_datapath TO: ', processed_datapath)
 
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
         runs = numpy.arange(5910,5921)
     else:
         runs = numpy.arange(5733,5974)
-        runs = runs[runs != 5864]
+        #runs = runs[runs != 5864]
 
     print("Preparing dataSlicer")
 
@@ -90,17 +90,26 @@ if __name__ == '__main__':
                     n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), remove_incomplete_runs=True)
 
     if True:
+        #Forces both all baseline map to point in box
+        ds.addROI('above horizon',{'elevation_best_all':[10,90],'phi_best_all':[-90,90]})
+        above_horizon_eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
+        ds.addROI('above horizon full',{'elevation_best_all':[10,90],'phi_best_all':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
+        above_horizon_full_eventids_dict = ds.getCutsFromROI('above horizon full',load=False,save=False,verbose=True, return_successive_cut_counts=False, return_total_cut_counts=False)
+        skymap_mode = 'all'
+    elif False:
         #Forces both maps to point in box
         ds.addROI('above horizon',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90]})
         above_horizon_eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
         ds.addROI('above horizon full',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
         above_horizon_full_eventids_dict = ds.getCutsFromROI('above horizon full',load=False,save=False,verbose=True, return_successive_cut_counts=False, return_total_cut_counts=False)
+        skymap_mode = 'h'
     else:
         #Forces both all baseline maps to point in box
         ds.addROI('above horizon',{'elevation_best_all':[10,90],'phi_best_all':[-90,90]})
         above_horizon_eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
         ds.addROI('above horizon full',{'elevation_best_all':[10,90],'phi_best_all':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
         above_horizon_full_eventids_dict = ds.getCutsFromROI('above horizon full',load=False,save=False,verbose=True, return_successive_cut_counts=False, return_total_cut_counts=False)
+        skymap_mode = 'h'
 
     above_horizon_full_eventids_array = []
     above_horizon_full_runs_array = []
@@ -110,10 +119,10 @@ if __name__ == '__main__':
     above_horizon_full_eventids_array = numpy.vstack((numpy.concatenate(above_horizon_full_runs_array),numpy.concatenate(above_horizon_full_eventids_array))).T
     del above_horizon_full_runs_array
 
-    el_full = ds.getDataArrayFromParam('elevation_best_h_allsky', eventids_dict=above_horizon_full_eventids_dict)
-    phi_full = ds.getDataArrayFromParam('phi_best_h_allsky', eventids_dict=above_horizon_full_eventids_dict)
+    el_full = ds.getDataArrayFromParam('elevation_best_%s_allsky'%skymap_mode, eventids_dict=above_horizon_full_eventids_dict)
+    phi_full = ds.getDataArrayFromParam('phi_best_%s_allsky'%skymap_mode, eventids_dict=above_horizon_full_eventids_dict)
 
-    fig_og, ax_og, counts = ds.plotROI2dHist('phi_best_h_allsky', 'elevation_best_h_allsky', cmap='cool', eventids_dict=above_horizon_eventids_dict, return_counts=True, include_roi=False)
+    fig_og, ax_og, counts = ds.plotROI2dHist('phi_best_%s_allsky'%skymap_mode, 'elevation_best_%s_allsky'%skymap_mode, cmap='cool', eventids_dict=above_horizon_eventids_dict, return_counts=True, include_roi=False)
 
     sigma_sets = [1.0]#[0.25,0.5,1.0]#[1.0,0.15,[0.05, 0.15]]
     for sigma_set in sigma_sets:
@@ -157,12 +166,12 @@ if __name__ == '__main__':
 
         #Make a plot saying what percent of event cut by certain cut values.  I am considering trying to do it by evenly sampling on sphere and feeding into the interp_arb.
         sample_points = 10000000
-        theta = 90.0 - numpy.arange(ds.roi['above horizon']['elevation_best_h'][0], ds.roi['above horizon']['elevation_best_h'][0])
-        phi = numpy.arange(ds.roi['above horizon']['phi_best_h'][0], ds.roi['above horizon']['phi_best_h'][0])
+        theta = 90.0 - numpy.arange(ds.roi['above horizon']['elevation_best_%s'%skymap_mode][0], ds.roi['above horizon']['elevation_best_%s'%skymap_mode][0])
+        phi = numpy.arange(ds.roi['above horizon']['phi_best_%s'%skymap_mode][0], ds.roi['above horizon']['phi_best_%s'%skymap_mode][0])
 
-        cos_bounds = numpy.cos(numpy.deg2rad(90.0 - numpy.array(ds.roi['above horizon']['elevation_best_h'])))
+        cos_bounds = numpy.cos(numpy.deg2rad(90.0 - numpy.array(ds.roi['above horizon']['elevation_best_%s'%skymap_mode])))
         sampled_elevation = 90.0 - numpy.rad2deg(numpy.arccos(numpy.random.uniform(min(cos_bounds), max(cos_bounds), sample_points)))
-        sampled_phi = numpy.random.uniform(min(ds.roi['above horizon']['phi_best_h']),max(ds.roi['above horizon']['phi_best_h']),sample_points)
+        sampled_phi = numpy.random.uniform(min(ds.roi['above horizon']['phi_best_%s'%skymap_mode]),max(ds.roi['above horizon']['phi_best_%s'%skymap_mode]),sample_points)
         sampled_values = interp_arb(sampled_phi,sampled_elevation)
 
         #bins = numpy.linspace(0.0,0.00005,1000)
@@ -216,8 +225,8 @@ if __name__ == '__main__':
         dict_names = ['Forward Cut', 'Full Cuts']
 
         for index, eventids_dict in enumerate(dicts):
-            el = ds.getDataArrayFromParam('elevation_best_h_allsky', eventids_dict=eventids_dict)
-            phi = ds.getDataArrayFromParam('phi_best_h_allsky', eventids_dict=eventids_dict)
+            el = ds.getDataArrayFromParam('elevation_best_%s_allsky'%skymap_mode, eventids_dict=eventids_dict)
+            phi = ds.getDataArrayFromParam('phi_best_%s_allsky'%skymap_mode, eventids_dict=eventids_dict)
             val = interp_arb(phi,el)
             ax2.hist(val,bins=bins,label=dict_names[index])
             ax3.plot(centers, 100*numpy.cumsum(numpy.histogram(val,bins=bins)[0])/len(val), label='%% Of Events Remaining for UL Cut at X\n%s'%dict_names[index], c=plt.rcParams['axes.prop_cycle'].by_key()['color'][index])
@@ -232,7 +241,7 @@ if __name__ == '__main__':
         vals_full = interp_arb(el_full, phi_full)
 
         sorted_indices = numpy.argsort(vals_full)
-        n_cut = min(50, len(vals_full))
+        n_cut = min(100, len(vals_full))
         if n_cut == len(vals_full):
             cut_val = numpy.max(vals_full)
         else:
@@ -252,6 +261,6 @@ if __name__ == '__main__':
             for eventid in out_array[out_array[:,0] == run][:,1].astype(int):
                 print('https://users.rcc.uchicago.edu/~cozzyd/monutau/#event&run=%i&entry=%i'%(run,eventid))
 
-        ds.eventInspector(min_val_eventid_dict) #only run on sinteractive with a lot of memory
+        #ds.eventInspector(min_val_eventid_dict) #only run on sinteractive with a lot of memory
 
     

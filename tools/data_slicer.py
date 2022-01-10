@@ -4195,13 +4195,14 @@ class dataSlicer():
         try:
             if set_bins == True:
                 self.setCurrentPlotBins(main_param_key_x,main_param_key_y,eventids_dict)
+            print('\tGetting counts from 2dhists for %s v.s. %s'%(main_param_key_x,main_param_key_y))
             counts = numpy.zeros_like(self.current_bin_centers_mesh_x) #Need to double check this works. 
-            print('\tLoading data for %s'%main_param_key_x)
-            param_x = self.getDataFromParam(eventids_dict, main_param_key_x)
-            print('\tLoading data for %s'%main_param_key_y)
-            param_y = self.getDataFromParam(eventids_dict, main_param_key_y)
-            print('\tGetting counts from 2dhist')
-            counts = numpy.histogram2d(self.concatenateParamDict(param_x), self.concatenateParamDict(param_y), bins = [self.current_bin_edges_x,self.current_bin_edges_y])[0].T #Outside of file being open 
+            for key, item in eventids_dict.items():
+                #Loop to save memory, only need to store one runs worth of values at a time. 
+                param_x = self.getDataFromParam({key:item}, main_param_key_x)
+                param_y = self.getDataFromParam({key:item}, main_param_key_y)
+                counts += numpy.histogram2d(self.concatenateParamDict(param_x), self.concatenateParamDict(param_y), bins = [self.current_bin_edges_x,self.current_bin_edges_y])[0].T #Outside of file being open 
+
             if mask_top_N_bins > 0:
                 counts = self.returnMaskedArray(counts,mask_top_N_bins,fill_value=fill_value)
             return counts
@@ -4634,16 +4635,11 @@ class dataSlicer():
             m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_all'] = self.cor.map(eventid, 'all', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - el_all, circle_az=az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
         
         #Plot Spectra
-        sine_subtract = False
+        sine_subtract = True
         for apply_filter, ax in [[False, self.inspector_mpl['fig1_spec_raw']], [True, self.inspector_mpl['fig1_spec_filt']]]:
             for channel in numpy.arange(8):
                 channel=int(channel)
-                if sine_subtract == True:
-                    wf, ss_freqs, n_fits = self.cor.prep.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_filter,sine_subtract=apply_filter and sine_subtract, return_sine_subtract_info=apply_filter and sine_subtract)
-                    if verbose:
-                        print(list(zip(n_fits, ss_freqs)))
-                else:
-                    wf = self.cor.prep.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_filter,sine_subtract=apply_filter and sine_subtract, return_sine_subtract_info=apply_filter and sine_subtract)
+                wf = self.cor.prep.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_filter,sine_subtract=apply_filter and sine_subtract, return_sine_subtract_info=False)
 
                 freqs, spec_dbish, spec = self.cor.prep.rfftWrapper(t[start:stop], wf)
                 ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel, c=self.mpl_colors[channel])
@@ -4818,6 +4814,12 @@ class dataSlicer():
         self.table_params['std_v'] = 'SDev V'
         self.table_params['p2p_h'] = 'P2P H'
         self.table_params['p2p_v'] = 'P2P V'
+        self.table_params['hpol_peak_to_sidelobe_allsky'] = 'ASky P2S H'
+        self.table_params['vpol_peak_to_sidelobe_allsky'] = 'ASky P2S V'
+        self.table_params['all_peak_to_sidelobe_allsky'] = 'ASky P2S All'
+        self.table_params['hpol_peak_to_sidelobe_belowhorizon'] = 'BH P2S H'
+        self.table_params['vpol_peak_to_sidelobe_belowhorizon'] = 'BH P2S V'
+        self.table_params['all_peak_to_sidelobe_belowhorizon'] = 'BH P2S All'
         self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
         self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
         self.table_params['all_peak_to_sidelobe_abovehorizon'] = 'AH P2S All'

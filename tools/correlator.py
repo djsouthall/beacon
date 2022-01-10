@@ -2639,10 +2639,12 @@ class Correlator:
                     map_ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
                 
                 if zenith_cut_array_plane is not None:
-                    #Plot upper zenith array cut
-                    im = self.addCurveToMap(im, upper_plane_xy, ax=map_ax,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
-                    #Plot lower zenith array cut
-                    im = self.addCurveToMap(im, lower_plane_xy, ax=map_ax,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
+                    if numpy.all([len(numpy.unique(upper_plane_xy[0])) == 1,len(numpy.unique(upper_plane_xy[1])) == 1]) == False:
+                        #Plot upper zenith array cut
+                        im = self.addCurveToMap(im, upper_plane_xy, ax=map_ax,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
+                    if numpy.all([len(numpy.unique(lower_plane_xy[0])) == 1,len(numpy.unique(lower_plane_xy[1])) == 1]) == False:
+                        #Plot lower zenith array cut
+                        im = self.addCurveToMap(im, lower_plane_xy, ax=map_ax,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
 
 
                 if pol != 'all':

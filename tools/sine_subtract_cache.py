@@ -57,7 +57,8 @@ class sineSubtractedReader(Reader):
     This is the same as Reader on all accounts except it will interface with the stored sine subtraction values.
     '''
     def __init__(self, base_dir, run, debug=False):
-
+        if run >= 6644:
+            print('WARNING, RUNS ABOVE 6644 BELIEVED TO ONLY HAVE 7 OPERATIONAL ANTENNAS.  BE SURE TO ACCOUNT FOR THIS.')
         self.debug=debug
         self.ss_event_entry = -1
         self.ss_filename = os.path.join(cache_dir, 'sinsub%i.root'%run)
