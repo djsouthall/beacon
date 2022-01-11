@@ -168,7 +168,7 @@ class dataSlicerSingleRun():
                             'mean_max_corr_h', 'max_max_corr_h','mean_max_corr_v', 'max_max_corr_v','similarity_count_h','similarity_count_v','similarity_fraction_h','similarity_fraction_v',\
                             'max_corr_0subtract1_h','max_corr_0subtract2_h','max_corr_0subtract3_h','max_corr_1subtract2_h','max_corr_1subtract3_h','max_corr_2subtract3_h',\
                             'max_corr_0subtract1_v','max_corr_0subtract2_v','max_corr_0subtract3_v','max_corr_1subtract2_v','max_corr_1subtract3_v','max_corr_2subtract3_v',\
-                            'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','elevation_best_all','phi_best_h','phi_best_v','phi_best_all',\
+                            'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','elevation_best_all','elevation_best_p2p','phi_best_h','phi_best_v','phi_best_all','phi_best_p2p',\
                             'calibrated_trigtime','triggered_beams','beam_power','hpol_peak_to_sidelobe','vpol_peak_to_sidelobe','all_peak_to_sidelobe','hpol_max_possible_map_value','vpol_max_possible_map_value','all_max_possible_map_value','hpol_max_map_value','vpol_max_map_value','all_max_map_value',\
                             'map_max_time_delay_0subtract1_h','map_max_time_delay_0subtract2_h','map_max_time_delay_0subtract3_h',\
                             'map_max_time_delay_1subtract2_h','map_max_time_delay_1subtract3_h','map_max_time_delay_2subtract3_h',\
@@ -544,6 +544,7 @@ class dataSlicerSingleRun():
                         for k in added_keys:
                             self.known_param_keys.append(k)
                     
+                    #Checking abovehorizon
                     _map_dset_key = _map_dset_key.replace('scope_allsky','scope_abovehorizon')
                     if _map_dset_key in map_direction_keys:
                         self.abovehorizon_normal_map = True
@@ -552,6 +553,7 @@ class dataSlicerSingleRun():
                         for k in added_keys:
                             self.known_param_keys.append(k)
                     
+                    #Checking belowhorizon
                     _map_dset_key = _map_dset_key.replace('scope_abovehorizon','scope_belowhorizon')
                     if _map_dset_key in map_direction_keys:
                         self.belowhorizon_normal_map = True
@@ -560,6 +562,11 @@ class dataSlicerSingleRun():
                         for k in added_keys:
                             self.known_param_keys.append(k)
 
+                    #Checking best from p2p calculation
+                    _map_dset_key = _map_dset_key.replace('scope_belowhorizon','scope_best')
+                    if _map_dset_key in map_direction_keys:
+                        self.calculated_best_normal_map = True
+                        self.map_dset_calculated_best = copy.copy(_map_dset_key)
 
                     #check for specific predefined horizon-based cut versions of the map
                     _map_dset_key = self.map_dset_key.replace(initial_hilbert, 'Hilb_1')
@@ -574,6 +581,7 @@ class dataSlicerSingleRun():
                         for k in added_keys:
                             self.known_param_keys.append(k)
                     
+                    #Checking abovehorizon
                     _map_dset_key = _map_dset_key.replace('scope_allsky','scope_abovehorizon')
                     if _map_dset_key in map_direction_keys:
                         self.abovehorizon_hilbert_map = True
@@ -582,13 +590,20 @@ class dataSlicerSingleRun():
                         for k in added_keys:
                             self.known_param_keys.append(k)
                     
+                    #Checking belowhorizon
                     _map_dset_key = _map_dset_key.replace('scope_abovehorizon','scope_belowhorizon')
                     if _map_dset_key in map_direction_keys:
-                        self.below_hilbert_map = True
+                        self.belowhorizon_hilbert_map = True
                         self.map_dset_key_hilbert_below = copy.copy(_map_dset_key)
                         added_keys = ['hilbert_theta_best_h_belowhorizon','hilbert_theta_best_v_belowhorizon','hilbert_theta_best_all_belowhorizon','hilbert_elevation_best_h_belowhorizon','hilbert_elevation_best_v_belowhorizon','hilbert_elevation_best_all_belowhorizon','hilbert_phi_best_h_belowhorizon','hilbert_phi_best_v_belowhorizon','hilbert_phi_best_all_belowhorizon','hilbert_hpol_peak_to_sidelobe_belowhorizon','hilbert_vpol_peak_to_sidelobe_belowhorizon','hilbert_all_peak_to_sidelobe_belowhorizon','hilbert_hpol_max_possible_map_value_belowhorizon','hilbert_vpol_max_possible_map_value_belowhorizon','hilbert_all_max_possible_map_value_belowhorizon','hilbert_hpol_max_map_value_belowhorizon','hilbert_vpol_max_map_value_belowhorizon','hilbert_all_max_map_value_belowhorizon','hilbert_map_max_time_delay_0subtract1_h_belowhorizon','hilbert_map_max_time_delay_0subtract2_h_belowhorizon','hilbert_map_max_time_delay_0subtract3_h_belowhorizon','hilbert_map_max_time_delay_1subtract2_h_belowhorizon','hilbert_map_max_time_delay_1subtract3_h_belowhorizon','hilbert_map_max_time_delay_2subtract3_h_belowhorizon','hilbert_map_max_time_delay_0subtract1_v_belowhorizon','hilbert_map_max_time_delay_0subtract2_v_belowhorizon','hilbert_map_max_time_delay_0subtract3_v_belowhorizon','hilbert_map_max_time_delay_1subtract2_v_belowhorizon','hilbert_map_max_time_delay_1subtract3_v_belowhorizon','hilbert_map_max_time_delay_2subtract3_v_belowhorizon','hilbert_map_max_time_delay_0subtract1_all_belowhorizon','hilbert_map_max_time_delay_0subtract2_all_belowhorizon','hilbert_map_max_time_delay_0subtract3_all_belowhorizon','hilbert_map_max_time_delay_1subtract2_all_belowhorizon','hilbert_map_max_time_delay_1subtract3_all_belowhorizon','hilbert_map_max_time_delay_2subtract3_all_belowhorizon']
                         for k in added_keys:
                             self.known_param_keys.append(k)
+
+                    #Checking best from p2p calculation # I don't really plan for this to be used at all with hilbert.
+                    _map_dset_key = _map_dset_key.replace('scope_belowhorizon','scope_best')
+                    if _map_dset_key in map_direction_keys:
+                        self.calculated_best_hilbert_map = True
+                        self.map_dset_calculated_best = copy.copy(_map_dset_key)
 
 
                 if verbose:
@@ -997,6 +1012,23 @@ class dataSlicerSingleRun():
                                     linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
                                 param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
                         
+                        elif param_key == 'theta_best_p2p':
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_calculated_best]['best_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_calculated_best]['best_ENU_zenith'][...][eventids]
+                        elif param_key == 'elevation_best_p2p':
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_calculated_best]['best_ENU_zenith'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_calculated_best]['best_ENU_zenith'][...][eventids]
+                            param = 90.0 - param
+                        elif param_key == 'phi_best_p2p':
+                            if len_eventids < 500:
+                                param = file['map_direction'][self.map_dset_calculated_best]['best_ENU_azimuth'][eventids]
+                            else:
+                                param = file['map_direction'][self.map_dset_calculated_best]['best_ENU_azimuth'][...][eventids]
+
                         elif 'hilbert' not in param_key and 'theta_best_h_allsky' in param_key:
                             if len_eventids < 500:
                                 param = file['map_direction'][self.map_dset_key_normal_allsky]['hpol_ENU_zenith'][eventids]
@@ -2924,6 +2956,34 @@ class dataSlicerSingleRun():
                     x_max_val = 60
                     x_min_val = 0
 
+
+                elif 'theta_best_p2p' in param_key:
+                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
+                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nCalculated from Best P2P of All Maps'
+                    else:
+                        label = 'Best Reconstructed Zenith (Deg)\nCalculated from Best P2P of All Maps'
+                    current_bin_edges = self.theta_edges
+                    calculate_bins_from_min_max = False
+
+                elif 'elevation_best_p2p' in param_key:
+                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
+                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nCalculated from Best P2P of All Maps'
+                    else:
+                        label = 'Best Reconstructed Elevation (Deg)\nCalculated from Best P2P of All Maps'
+                    current_bin_edges = self.elevation_edges
+                    calculate_bins_from_min_max = False
+
+                elif 'phi_best_p2p' in param_key:
+                    if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
+                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nCalculated from Best P2P of All Maps'
+                    else:
+                        label = 'Best Reconstructed Azimuth (Deg)\nCalculated from Best P2P of All Maps'
+                    current_bin_edges = self.phi_edges
+                    calculate_bins_from_min_max = False
+
+
+
+
                 elif 'hilbert_' not in param_key and 'theta_best_h' in param_key:
                     scope = param_key.replace('theta_best_h','')
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
@@ -4588,14 +4648,26 @@ class dataSlicer():
         '''
         '''
         start_data = numpy.round(self.getSingleEventTableValues(self.table_params, run_index, eventid),decimals=3) #Meta information about the event that will be put in the table.
-        az_h = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_h_allsky']
-        el_h = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_h_allsky']
-        az_v = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_v_allsky']
-        el_v = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_v_allsky']
-        if self.show_all:
-            az_all = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_all_allsky']
-            el_all = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_all_allsky']
 
+        try:
+            az_best = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_p2p']
+            el_best = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_p2p']
+            az_h = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_h_allsky'] , az_best)
+            el_h = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_h_allsky'] , el_best)
+            az_v = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_v_allsky'] , az_best)
+            el_v = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_v_allsky'] , el_best)
+
+            if self.show_all:
+                az_all = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_all_allsky'], az_best)
+                el_all = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_all_allsky'], el_best)
+        except:
+            az_h = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_h_allsky']
+            el_h = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_h_allsky']
+            az_v = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_v_allsky']
+            el_v = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_v_allsky']
+            if self.show_all:
+                az_all = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_all_allsky']
+                el_all = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_all_allsky']
 
         self.inspector_mpl['current_table'] = list(zip(self.table_params.values(), start_data))
 
@@ -4798,14 +4870,10 @@ class dataSlicer():
         #Format is param_key : 'Name In Table'
         self.table_params['run'] = 'Run'
         self.table_params['eventid'] = 'Event id'
-        self.table_params['phi_best_h_allsky'] = 'Az H'
-        self.table_params['elevation_best_h_allsky'] = 'El H'
-        self.table_params['phi_best_v_allsky'] = 'Az V'
-        self.table_params['elevation_best_v_allsky'] = 'El V'
-        self.table_params['phi_best_all_allsky'] = 'Az All'
-        self.table_params['elevation_best_all_allsky'] = 'El All'
-        self.table_params['hpol_max_map_value_abovehorizon'] = 'Map Max H'
-        self.table_params['vpol_max_map_value_abovehorizon'] = 'Map Max V'
+        self.table_params['phi_best_p2p'] = 'Az (BEST)'
+        self.table_params['elevation_best_p2p'] = 'El (BEST)'
+        self.table_params['hpol_max_map_value_allsky'] = 'Map Max H'
+        self.table_params['vpol_max_map_value_allsky'] = 'Map Max V'
         self.table_params['impulsivity_h'] = 'Imp H'
         self.table_params['impulsivity_v'] = 'Imp V'
         self.table_params['cr_template_search_h'] = 'CR XC H'
@@ -4814,17 +4882,23 @@ class dataSlicer():
         self.table_params['std_v'] = 'SDev V'
         self.table_params['p2p_h'] = 'P2P H'
         self.table_params['p2p_v'] = 'P2P V'
-        self.table_params['hpol_peak_to_sidelobe_allsky'] = 'ASky P2S H'
-        self.table_params['vpol_peak_to_sidelobe_allsky'] = 'ASky P2S V'
-        self.table_params['all_peak_to_sidelobe_allsky'] = 'ASky P2S All'
+        self.table_params['similarity_count_h'] = 'H Simlr'
+        self.table_params['similarity_count_v'] = 'V Simlr'
+        self.table_params['hpol_peak_to_sidelobe_allsky'] = 'AS P2S H'
+        self.table_params['vpol_peak_to_sidelobe_allsky'] = 'AS P2S V'
+        self.table_params['all_peak_to_sidelobe_allsky'] = 'AS P2S All'
         self.table_params['hpol_peak_to_sidelobe_belowhorizon'] = 'BH P2S H'
         self.table_params['vpol_peak_to_sidelobe_belowhorizon'] = 'BH P2S V'
         self.table_params['all_peak_to_sidelobe_belowhorizon'] = 'BH P2S All'
         self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
         self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
         self.table_params['all_peak_to_sidelobe_abovehorizon'] = 'AH P2S All'
-        self.table_params['similarity_count_h'] = 'H Simlr'
-        self.table_params['similarity_count_v'] = 'V Simlr'
+        self.table_params['phi_best_h_allsky'] = 'Az H'
+        self.table_params['elevation_best_h_allsky'] = 'El H'
+        self.table_params['phi_best_v_allsky'] = 'Az V'
+        self.table_params['elevation_best_v_allsky'] = 'El V'
+        self.table_params['phi_best_all_allsky'] = 'Az All'
+        self.table_params['elevation_best_all_allsky'] = 'El All'
 
 
         #Sample eventid, would normally be selected from and changeable

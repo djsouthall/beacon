@@ -2658,24 +2658,32 @@ class Correlator:
 
                 if circle_az is not None:
                     if circle_zenith is not None:
-                        if circle_az is list:
+                        if type(circle_az) == list:
                             circle_az = numpy.array(circle_az)
-                        elif circle_az != numpy.ndarray:
+                        elif type(circle_az) != numpy.ndarray:
                             circle_az = numpy.array([circle_az])
 
                         _circle_az = circle_az.copy() #These were changing when 'both' was called for pol.  So copying them to ensure original input maintains values.
 
-                        if circle_zenith is list:
+                        if type(circle_zenith) == list:
                             circle_zenith = numpy.array(circle_zenith)
-                        elif circle_zenith != numpy.ndarray:
+                        elif type(circle_zenith) != numpy.ndarray:
                             circle_zenith = numpy.array([circle_zenith])
 
                         _circle_zenith = circle_zenith.copy() #These were changing when 'both' was called for pol.  So copying them to ensure original input maintains values.
 
                         if len(_circle_zenith) == len(_circle_az):
                             additional_circles = []
+
+                            if len(_circle_az) == 1:
+                                _cs = ['fuchsia']
+                            elif len(_circle_az) == 2:
+                                _cs = ['fuchsia','gold']
+                            else:
+                                _cs = plt.cm.rainbow(numpy.linspace(0,1,len(_circle_az)))
+
                             for i in range(len(_circle_az)):
-                                ax, _circ = self.addCircleToMap(map_ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='fuchsia', linewidth=0.5,fill=False)
+                                ax, _circ = self.addCircleToMap(map_ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color=_cs[i], linewidth=0.5,fill=False)
                                 additional_circles.append(_circ)
 
                 if add_airplanes:
