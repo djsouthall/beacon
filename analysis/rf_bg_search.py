@@ -76,75 +76,6 @@ def getEventIds(reader, trigger_type=None):
 
 datapath = os.environ['BEACON_DATA']
 
-
-
-# def batchedMapMax(filter_string, map_max_mode, event_index, cor, eventid, lock, debug=False):
-#     '''
-#     This is to allow multiprocessing specifically on the portion of the code where the maximum value and peak to
-#     sidelobe is calculated for each of the different filter strings.
-#     '''
-#     if debug == True:
-#         if event_index == 0:
-#             m, max_possible_map_value = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert,return_max_possible_map_value=True)
-#     else:
-#         m, max_possible_map_value = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert,return_max_possible_map_value=True)
-
-#     for filter_string_index, filter_string in enumerate(filter_strings):
-#         file['map_properties'][filter_string]['%s_max_possible_map_value'%mode][eventid] = max_possible_map_value #doesn't really depend on filter_string but would depend on calibration, so keeping it sorted.
-#         #Determine cut values
-#         if mapmax_cut_modes[filter_string_index] == 'abovehorizon':
-#             # print('abovehorizon')
-#             zenith_cut_ENU=[0,90] #leaving some tolerance
-#             zenith_cut_array_plane=None
-#         elif mapmax_cut_modes[filter_string_index] == 'belowhorizon':
-#             # print('belowhorizon')
-#             zenith_cut_ENU=[90,180]
-#             zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
-#         elif mapmax_cut_modes[filter_string_index] == 'allsky':
-#             # print('allsky')
-#             zenith_cut_ENU=None
-#             zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
-#         else:
-#             zenith_cut_ENU=None
-#             zenith_cut_array_plane=None
-
-#         #Calculate best reconstruction direction
-#         if debug == True:
-#             if event_index == 0:
-#                 if max_method is not None:
-#                     linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
-#                 else:
-#                     linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
-#         else:
-#             if max_method is not None:
-#                 linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
-#             else:
-#                 linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True)
-
-#         if debug == True:
-#             if event_index == 0:
-#                 file['map_direction'][filter_string]['%s_ENU_zenith'%mode][eventid] = theta_best 
-#                 file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][eventid] = phi_best 
-#                 file['map_times'][filter_string]['%s_0subtract1'%mode][eventid] = t_0subtract1 
-#                 file['map_times'][filter_string]['%s_0subtract2'%mode][eventid] = t_0subtract2 
-#                 file['map_times'][filter_string]['%s_0subtract3'%mode][eventid] = t_0subtract3 
-#                 file['map_times'][filter_string]['%s_1subtract2'%mode][eventid] = t_1subtract2 
-#                 file['map_times'][filter_string]['%s_1subtract3'%mode][eventid] = t_1subtract3 
-#                 file['map_times'][filter_string]['%s_2subtract3'%mode][eventid] = t_2subtract3
-#                 file['map_properties'][filter_string]['%s_peak_to_sidelobe'%mode][eventid] = peak_to_sidelobe
-#         else:
-#             file['map_direction'][filter_string]['%s_ENU_zenith'%mode][eventid] = theta_best 
-#             file['map_direction'][filter_string]['%s_ENU_azimuth'%mode][eventid] = phi_best 
-#             file['map_times'][filter_string]['%s_0subtract1'%mode][eventid] = t_0subtract1 
-#             file['map_times'][filter_string]['%s_0subtract2'%mode][eventid] = t_0subtract2 
-#             file['map_times'][filter_string]['%s_0subtract3'%mode][eventid] = t_0subtract3 
-#             file['map_times'][filter_string]['%s_1subtract2'%mode][eventid] = t_1subtract2 
-#             file['map_times'][filter_string]['%s_1subtract3'%mode][eventid] = t_1subtract3 
-#             file['map_times'][filter_string]['%s_2subtract3'%mode][eventid] = t_2subtract3
-#             file['map_properties'][filter_string]['%s_peak_to_sidelobe'%mode][eventid] = peak_to_sidelobe
-
-
-
 known_pulser_ids = info.load2021PulserEventids()
 index_window_dict = {'hpol': {'d2sa': (1250, 2274),
                               'd3sa': (2273, 3297),
@@ -192,16 +123,6 @@ pulser_run_sites = {}
 for site in list(known_pulser_ids.keys()):
     for run in numpy.unique(numpy.append(numpy.unique(known_pulser_ids[site]['hpol']['run']),numpy.unique(known_pulser_ids[site]['vpol']['run']))):
         pulser_run_sites[run] = site
-
-# This one was double checking that there are no runs that have multiple pulsing sites in them.
-# pulser_run_sites = {}
-# for site in list(known_pulser_ids.keys()):
-#     for run in numpy.unique(numpy.append(numpy.unique(known_pulser_ids[site]['hpol']['run']),numpy.unique(known_pulser_ids[site]['vpol']['run']))):
-#         if run not in list(pulser_run_sites.keys()):
-#             pulser_run_sites[run] = [site]
-#         else:
-#             pulser_run_sites[run].append(site)
-
 
 if __name__=="__main__":
     starting_timestamp = datetime.timestamp(datetime.now())
@@ -704,62 +625,6 @@ if __name__=="__main__":
                                 if 'all' in polarizations:
                                     print('Values in all_max_map_value of %s will be overwritten by this analysis script.'%filename)
 
-                            #Fill in attributes for the different map cuts
-                            #Determine cut values
-                            if mapmax_cut_modes[filter_string_index] == 'abovehorizon':
-                                # print('abovehorizon')
-                                zenith_cut_ENU=[0,90] #leaving some tolerance
-                                zenith_cut_array_plane=None
-                            elif mapmax_cut_modes[filter_string_index] == 'belowhorizon':
-                                # print('belowhorizon')
-                                zenith_cut_ENU=[90,180]
-                                zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
-                            elif mapmax_cut_modes[filter_string_index] == 'allsky':
-                                # print('allsky')
-                                zenith_cut_ENU=None
-                                zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
-                            else:
-                                zenith_cut_ENU=None
-                                zenith_cut_array_plane=None
-
-                            #Record cut values, only needs to be done once, not per event                        
-                            if zenith_cut_ENU is None:
-                                file['map_direction'][filter_string].attrs['zenith_cut_ENU'] = 'None' 
-                                file['map_times'][filter_string].attrs['zenith_cut_ENU'] = 'None' 
-                            else:
-                                _zenith_cut_ENU = []
-                                if zenith_cut_ENU[0] is None:
-                                    _zenith_cut_ENU.append('None')
-                                else:
-                                    _zenith_cut_ENU.append(zenith_cut_ENU[0])
-                                if zenith_cut_ENU[1] is None:
-                                    _zenith_cut_ENU.append('None')
-                                else:
-                                    _zenith_cut_ENU.append(zenith_cut_ENU[1])
-
-                                file['map_direction'][filter_string].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
-                                file['map_times'][filter_string].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
-
-                            if zenith_cut_array_plane is None:
-                                file['map_direction'][filter_string].attrs['zenith_cut_array_plane'] = 'None'
-                                file['map_times'][filter_string].attrs['zenith_cut_array_plane'] = 'None' 
-                            else:
-                                _zenith_cut_array_plane = []
-                                if zenith_cut_array_plane[0] is None:
-                                    _zenith_cut_array_plane.append('None')
-                                else:
-                                    _zenith_cut_array_plane.append(zenith_cut_array_plane[0])
-                                if zenith_cut_array_plane[1] is None:
-                                    _zenith_cut_array_plane.append('None')
-                                else:
-                                    _zenith_cut_array_plane.append(zenith_cut_array_plane[1])
-
-
-                                file['map_direction'][filter_string].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane
-                                file['map_times'][filter_string].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane
-
-
-
                         for mode in polarizations:
                             if impose_time_limit is not None:
                                 if datetime.timestamp(datetime.now()) - starting_timestamp >= 3600*impose_time_limit:
@@ -819,7 +684,7 @@ if __name__=="__main__":
                                 if mapmax_cut_modes[filter_string_index] == 'abovehorizon':
                                     # print('abovehorizon')
                                     zenith_cut_ENU=[0,90] #leaving some tolerance
-                                    zenith_cut_array_plane=None
+                                    zenith_cut_array_plane=[0,91]
                                 elif mapmax_cut_modes[filter_string_index] == 'belowhorizon':
                                     # print('belowhorizon')
                                     zenith_cut_ENU=[90,180]
@@ -833,6 +698,42 @@ if __name__=="__main__":
                                     zenith_cut_array_plane=None
 
                                 theta_cuts[filter_string] = cor.generateThetaCutMask(mode, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
+                                
+                                #Record cut values, only needs to be done once, not per event                        
+                                if zenith_cut_ENU is None:
+                                    file['map_direction'][filter_string].attrs['zenith_cut_ENU'] = 'None' 
+                                    file['map_times'][filter_string].attrs['zenith_cut_ENU'] = 'None' 
+                                else:
+                                    _zenith_cut_ENU = []
+                                    if zenith_cut_ENU[0] is None:
+                                        _zenith_cut_ENU.append('None')
+                                    else:
+                                        _zenith_cut_ENU.append(zenith_cut_ENU[0])
+                                    if zenith_cut_ENU[1] is None:
+                                        _zenith_cut_ENU.append('None')
+                                    else:
+                                        _zenith_cut_ENU.append(zenith_cut_ENU[1])
+
+                                    file['map_direction'][filter_string].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
+                                    file['map_times'][filter_string].attrs['zenith_cut_ENU'] = _zenith_cut_ENU 
+
+                                if zenith_cut_array_plane is None:
+                                    file['map_direction'][filter_string].attrs['zenith_cut_array_plane'] = 'None'
+                                    file['map_times'][filter_string].attrs['zenith_cut_array_plane'] = 'None' 
+                                else:
+                                    _zenith_cut_array_plane = []
+                                    if zenith_cut_array_plane[0] is None:
+                                        _zenith_cut_array_plane.append('None')
+                                    else:
+                                        _zenith_cut_array_plane.append(zenith_cut_array_plane[0])
+                                    if zenith_cut_array_plane[1] is None:
+                                        _zenith_cut_array_plane.append('None')
+                                    else:
+                                        _zenith_cut_array_plane.append(zenith_cut_array_plane[1])
+
+
+                                    file['map_direction'][filter_string].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane
+                                    file['map_times'][filter_string].attrs['zenith_cut_array_plane'] = _zenith_cut_array_plane
 
                             for event_index, eventid in enumerate(eventids):
                                 if False:
@@ -863,39 +764,18 @@ if __name__=="__main__":
                                     m, max_possible_map_value = cor.map(eventid, mode, plot_map=False, plot_corr=False, verbose=False, hilbert=hilbert,return_max_possible_map_value=True)
 
                                 for filter_string_index, filter_string in enumerate(filter_strings):
-                                    #Determine cut values
-                                    if mapmax_cut_modes[filter_string_index] == 'abovehorizon':
-                                        # print('abovehorizon')
-                                        zenith_cut_ENU=[0,90] #leaving some tolerance
-                                        zenith_cut_array_plane=None
-                                        theta_cut = theta_cuts[filter_string]
-                                    elif mapmax_cut_modes[filter_string_index] == 'belowhorizon':
-                                        # print('belowhorizon')
-                                        zenith_cut_ENU=[90,180]
-                                        zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
-                                        theta_cut = theta_cuts[filter_string]
-                                    elif mapmax_cut_modes[filter_string_index] == 'allsky':
-                                        # print('allsky')
-                                        zenith_cut_ENU=None
-                                        zenith_cut_array_plane=[0,91] #Up to 1 degree below projected array plane.
-                                        theta_cut = theta_cuts[filter_string]
-                                    else:
-                                        zenith_cut_ENU=None
-                                        zenith_cut_array_plane=None
-                                        theta_cut = theta_cuts[filter_string]
-
                                     #Calculate best reconstruction direction
                                     if debug == True:
                                         if event_index == 0:
                                             if max_method is not None:
-                                                linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True, theta_cut=theta_cut)
+                                                linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,pol=mode, return_peak_to_sidelobe=True, theta_cut=theta_cuts[filter_string])
                                             else:
-                                                linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True, theta_cut=theta_cut)
+                                                linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,pol=mode, return_peak_to_sidelobe=True, theta_cut=theta_cuts[filter_string])
                                     else:
                                         if max_method is not None:
-                                            linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True, theta_cut=theta_cut)
+                                            linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,max_method=max_method,verbose=False,pol=mode, return_peak_to_sidelobe=True, theta_cut=theta_cuts[filter_string])
                                         else:
-                                            linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol=mode, return_peak_to_sidelobe=True, theta_cut=theta_cut)
+                                            linear_max_index, theta_best, phi_best, t_0subtract1, t_0subtract2, t_0subtract3, t_1subtract2, t_1subtract3, t_2subtract3, peak_to_sidelobe = cor.mapMax(m,verbose=False,pol=mode, return_peak_to_sidelobe=True, theta_cut=theta_cuts[filter_string])
 
                                     map_max_value = m.flat[linear_max_index] #different per scope
                                     

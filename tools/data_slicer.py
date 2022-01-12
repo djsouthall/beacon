@@ -3847,6 +3847,8 @@ class dataSlicer():
             if len(self.runs) == 0:
                 print('\nWARNING!!! No runs worked on dataSlicer preperations.\n')
 
+            #self.checkForComplementaryBothMapDatasets(verbose=False)
+
             print('\ndataSlicer Peparations Complete.  Excluding Runs:')
             print(numpy.array(runs)[~numpy.isin(runs,self.runs)])
             print('\n')
@@ -4108,7 +4110,8 @@ class dataSlicer():
 
         for run_index, run in enumerate(self.runs):
             if verbose:
-                print('Run %i'%run)
+                sys.stdout.write('Run %i/%i\r'%(run_index+1,len(self.runs)))
+                sys.stdout.flush()
 
             if run in eventids_dict.keys():
                 if return_successive_cut_counts and return_total_cut_counts:

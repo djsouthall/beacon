@@ -2,7 +2,7 @@
 # This will execute all of the current analysis scripts in turn for a given run number.
 echo 'Executing analysis scripts for Run' $1  || exit
 echo 'Where relevant using calibration/deploy_index ' $2 || exit
-echo 'Using Polarization  ' $3 || exit
+# echo 'Using Polarization  ' $3 || exit
 #echo 'Where relevant only using specified polarization: ' $3 || exit
 # echo 'Attempting to prepare file by executing data_handler.py' || exit
 # python3 ${BEACON_ANALYSIS_DIR}tools/data_handler.py $1 || exit

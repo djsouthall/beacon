@@ -96,7 +96,7 @@ if __name__=="__main__":
 
                         #Get filter strings but ignoring the scope. Each filter string but with scope subbed put will have
                         #the same result.
-                        filter_string_roots = numpy.unique([m.replace('allsky','SCOPEROOT').replace('belowhorizon','SCOPEROOT').replace('abovehorizon','SCOPEROOT').replace('abovehorizon','best') for m in map_direction_dsets])
+                        filter_string_roots = numpy.unique([m.replace('allsky','SCOPEROOT').replace('belowhorizon','SCOPEROOT').replace('abovehorizon','SCOPEROOT').replace('best','SCOPEROOT') for m in map_direction_dsets])
 
                         #Check which roots have all necessary datasets
                         paired_options = {}
@@ -124,7 +124,7 @@ if __name__=="__main__":
 
                             mapmax_cut_modes = []
                             for filter_string in map_direction_dsets:
-                                if filter_string_root.split('SCOPEROOT')[0] in filter_string and filter_string_root.split('SCOPEROOT')[1] in filter_string:
+                                if filter_string_root.split('SCOPEROOT')[0] in filter_string and filter_string_root.split('SCOPEROOT')[1] in filter_string and filter_string != output_filter_string:
                                     mapmax_cut_modes.append(filter_string.replace(filter_string_root.split('SCOPEROOT')[0],'').replace(filter_string_root.split('SCOPEROOT')[1],''))
                                     keys = list(file['map_direction'][filter_string].keys()) #Must be inthe truth of this scoperoot
                             mapmax_cut_modes = numpy.array(mapmax_cut_modes)[numpy.isin(mapmax_cut_modes,possible_mapmax_cut_modes)] #Cut out the scope called 'best' created by this. 
@@ -147,7 +147,7 @@ if __name__=="__main__":
 
                         for filter_string_root in filter_string_roots:
                             output_filter_string = filter_string_root.replace('SCOPEROOT','best')
-                            print('Making calculations for %s'output_filter_string)
+                            print('Making calculations for %s'%output_filter_string)
 
                             print('Best pulled from following combinations for %s'%output_filter_string)
                             pprint(paired_options[filter_string_root])

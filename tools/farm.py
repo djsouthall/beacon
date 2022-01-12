@@ -75,7 +75,6 @@ if __name__ == "__main__":
         runs = numpy.arange(5733,5974,dtype=int)#numpy.array([5864])#numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
         analysis_part = 3
-        #pol = 'both' #Always treated as both when analysis_part == 3
     elif False:
         runs = numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
