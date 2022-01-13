@@ -70,8 +70,9 @@ if __name__ == '__main__':
     #numpy.arange(5733,5974)
     #numpy.arange(5911,5912)
     #_runs = numpy.arange(5733,5974)
-    _runs = numpy.arange(5733,5740)
+    _runs = numpy.arange(5733,5833)
     #_runs = numpy.array([5733,5734])
+    _runs = [5740]
 
     for runs in [_runs]:
 
@@ -88,6 +89,7 @@ if __name__ == '__main__':
         n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
 
 
+
         ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                         std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
@@ -95,22 +97,33 @@ if __name__ == '__main__':
                         n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), remove_incomplete_runs=True)
 
         
-        ds.addROI('No Similar',{'similarity_count_vSLICERMINsimilarity_count_h':[0,1]})
-        nosmlr_eventids_dict = ds.getCutsFromROI('No Similar',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
-        ds.addROI('above horizon',{'elevation_best_all':[10,90],'phi_best_all':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
+        ds.addROI('above horizon',{'elevation_best_p2p':[10,90],'phi_best_p2p':[-90,90],'similarity_count_h':[0,0.5],'similarity_count_v':[0,0.5],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
         eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
         
-        plot_params = ['phi_best_allSLICERSUBTRACTphi_best_h','phi_best_allSLICERSUBTRACTphi_best_v'],['elevation_best_allSLICERSUBTRACTelevation_best_h','elevation_best_allSLICERSUBTRACTelevation_best_v']
+        ds.resetAllROI()
+        ds.addROI('cluster',{'elevation_best_p2p':[12.5,17.5],'phi_best_p2p':[35,40],'similarity_count_h':[0,0.5],'similarity_count_v':[0,0.5],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
+        cluster_dict = ds.getCutsFromROI('cluster',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
+        #ds.eventInspector(cluster_dict)
+
+        #plot_params = ['phi_best_allSLICERSUBTRACTphi_best_h','phi_best_allSLICERSUBTRACTphi_best_v'],['elevation_best_allSLICERSUBTRACTelevation_best_h','elevation_best_allSLICERSUBTRACTelevation_best_v']
         #[['phi_best_all','elevation_best_all'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'] ,['similarity_count_h','similarity_count_v']]
+        
         print('Generating plots:')
 
-        ds.plotROI2dHist('phi_best_h','elevation_best_h', cmap=cmap, eventids_dict=None, include_roi=False)
-        ds.plotROI2dHist('phi_best_h','elevation_best_h', cmap=cmap, eventids_dict=nosmlr_eventids_dict, include_roi=False)
+        #Perhaps some other cut can get rid of these rather than a best map calculation or a multipeaks?
+        
+        ds.plotROI2dHist('hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_map_value_belowhorizon','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_map_value_belowhorizon', cmap=cmap, eventids_dict=None, include_roi=False)
+        ds.plotROI2dHist('hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_map_value_belowhorizon','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_map_value_belowhorizon', cmap=cmap, eventids_dict=eventids_dict, include_roi=True)
 
-        for key_x, key_y in plot_params:
-            print('Generating %s plot'%(key_x + ' vs ' + key_y))
-            ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=eventids_dict, include_roi=False)
 
-        # ds.addROI()
-        ds.plotROI2dHist('hpol_peak_to_sidelobe','vpol_peak_to_sidelobe', cmap=cmap, eventids_dict=eventids_dict, include_roi=False)
-        ds.eventInspector(eventids_dict)
+
+        ds.plotROI2dHist('phi_best_p2p','elevation_best_p2p', cmap=cmap, eventids_dict=None, include_roi=False)
+        ds.plotROI2dHist('phi_best_p2p','elevation_best_p2p', cmap=cmap, eventids_dict=eventids_dict, include_roi=False)
+
+        # for key_x, key_y in plot_params:
+        #     print('Generating %s plot'%(key_x + ' vs ' + key_y))
+        #     ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=eventids_dict, include_roi=False)
+
+        # # ds.addROI()
+        # ds.plotROI2dHist('hpol_peak_to_sidelobe','vpol_peak_to_sidelobe', cmap=cmap, eventids_dict=eventids_dict, include_roi=False)
+        # ds.eventInspector(eventids_dict)

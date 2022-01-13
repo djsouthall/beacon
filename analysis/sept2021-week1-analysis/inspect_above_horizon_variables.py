@@ -63,15 +63,10 @@ if __name__ == '__main__':
     cmap = 'cool'#'coolwarm'
     impulsivity_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     time_delays_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
-    map_length = 16384#32768
+    map_length = 16384
     map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
-    #numpy.arange(5732,5790)
-    #
-    #numpy.arange(5910,5920)
-    #numpy.arange(5733,5974)
-    #numpy.arange(5911,5912)
+
     _runs = numpy.arange(5733,5974)
-    #_runs = numpy.array([5733,5734])
 
     for runs in [_runs]:
 
@@ -107,11 +102,11 @@ if __name__ == '__main__':
             #This one cuts out ALL events
             # ds.addROI('above horizon only',{'elevation_best_h':[10,90]})
             # ds.addROI('above horizon',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
-            ds.addROI('above horizon only',{'elevation_best_all':[10,90],'phi_best_all':[-90,90]})
-            ds.addROI('above horizon',{'elevation_best_all':[10,90],'phi_best_all':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
+            ds.addROI('above horizon only',{'elevation_best_p2p':[10,90],'phi_best_p2p':[-90,90]})
+            ds.addROI('above horizon',{'elevation_best_p2p':[10,90],'phi_best_p2p':[-90,90],'similarity_count_h':[0,1],'similarity_count_v':[0,1],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
 
-            return_successive_cut_counts = True
-            return_total_cut_counts = True
+            return_successive_cut_counts = False
+            return_total_cut_counts = False
             above_horizon_eventids_dict, successive_cut_counts, total_cut_counts = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
             above_horizon_only_eventids_dict = ds.getCutsFromROI('above horizon only',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
             
@@ -151,13 +146,25 @@ if __name__ == '__main__':
                 # ds.plotROI2dHist('phi_best_all_belowhorizon','elevation_best_all_belowhorizon', cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=True)
 
                 # plot_params = [['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['phi_best_all','elevation_best_all'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['all_peak_to_sidelobe','elevation_best_all'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'] ,['similarity_count_h','similarity_count_v']]
-                plot_params = [['phi_best_all','elevation_best_all'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'] ,['similarity_count_h','similarity_count_v']]
+                plot_params = [['phi_best_p2p','elevation_best_p2p'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'] ,['similarity_count_h','similarity_count_v']]
                 print('Generating plots:')
 
+                # possible_polarizations = ['hpol', 'vpol', 'all'] #used to exclude best case scenario created here
+                # possible_mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky']
+
+                # for key_x, key_y in [['phi_best_h_belowhorizon','elevation_best_h_belowhorizon'],['phi_best_h_abovehorizon','elevation_best_h_abovehorizon'],['phi_best_h_allsky','elevation_best_h_allsky']]:
+                #     print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                #     ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None, include_roi=False)
+
+                # for key_x, key_y in [['phi_best_p2p','elevation_best_p2p'],['phi_best_all','elevation_best_all'],['phi_best_h','elevation_best_h']]:
+                #     print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                #     ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None, include_roi=False)
+
+                ds.plotROI2dHist('phi_best_p2p','elevation_best_p2p', cmap=cmap, eventids_dict=None, include_roi=False)
                 for key_x, key_y in plot_params:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
-                    ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None, include_roi=False)
-                    ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_only_eventids_dict, include_roi=False)
+                    # ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None, include_roi=False)
+                    # ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_only_eventids_dict, include_roi=False)
                     ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=False)
 
                 # if len(above_horizon_eventids_array) < 100:
