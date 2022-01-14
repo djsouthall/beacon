@@ -37,8 +37,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore")
 
 raw_datapath = os.environ['BEACON_DATA']
-#processed_datapath = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'backup_pre_all_map_run_12-5-2021')
-processed_datapath = os.environ['BEACON_PROCESSED_DATA']
+processed_datapath = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'backup_jan12_2022')
+# processed_datapath = os.environ['BEACON_PROCESSED_DATA']
 print('SETTING processed_datapath TO: ', processed_datapath)
 
 
@@ -69,10 +69,10 @@ if __name__ == '__main__':
     #numpy.arange(5910,5920)
     #numpy.arange(5733,5974)
     #numpy.arange(5911,5912)
-    #_runs = numpy.arange(5733,5974)
+    # _runs = numpy.arange(5733,5974)
     _runs = numpy.arange(5733,5833)
     #_runs = numpy.array([5733,5734])
-    _runs = [5740]
+    # _runs = [5740]
 
     for runs in [_runs]:
 
@@ -116,7 +116,8 @@ if __name__ == '__main__':
         ds.plotROI2dHist('hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_map_value_belowhorizon','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_map_value_belowhorizon', cmap=cmap, eventids_dict=eventids_dict, include_roi=True)
 
 
-
+        ds.plotROI2dHist('phi_best_h','elevation_best_h', cmap=cmap, eventids_dict=None, include_roi=False)
+        ds.plotROI2dHist('phi_best_all','elevation_best_all', cmap=cmap, eventids_dict=None, include_roi=False)
         ds.plotROI2dHist('phi_best_p2p','elevation_best_p2p', cmap=cmap, eventids_dict=None, include_roi=False)
         ds.plotROI2dHist('phi_best_p2p','elevation_best_p2p', cmap=cmap, eventids_dict=eventids_dict, include_roi=False)
 

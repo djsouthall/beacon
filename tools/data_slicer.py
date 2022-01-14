@@ -4764,7 +4764,7 @@ class dataSlicer():
             del self.inspector_mpl
 
 
-    def eventInspector(self, eventids_dict, mollweide=False, show_all=True):
+    def eventInspector(self, eventids_dict, mollweide=False, show_all=False):
         '''
         This is meant to provide a tool to quickly flick through events from multiple runs.  It will create a one panel
         view of the events info as best as I can manage, and provide easy support for choosing which event you want to

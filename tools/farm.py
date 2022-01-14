@@ -74,7 +74,7 @@ if __name__ == "__main__":
         #THE ONE I LIkE TO DO NOW
         runs = numpy.arange(5733,5974,dtype=int)#numpy.array([5864])#numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
-        analysis_part = 3
+        analysis_part = 2
     elif False:
         runs = numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
