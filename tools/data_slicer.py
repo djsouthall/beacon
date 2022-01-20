@@ -40,6 +40,7 @@ import matplotlib.colors as colors
 from matplotlib import cm, ticker
 from matplotlib.patches import Rectangle
 from matplotlib.backend_tools import ToolBase, ToolToggleBase, ToolQuit
+from matplotlib.widgets import TextBox
 plt.ion()
 
 import astropy.units as apu
@@ -99,6 +100,9 @@ class dataSlicerSingleRun():
         'hilbert_phi_best_v' will all refer to the hilbert envelope versions.  If only the given dataset exists
         REGARDLESS OF WHETHER IT IS HILBERT OR NOT, it will just use the default keys, though titles will appropriately
         reflect if it is hilbert or not.  
+    skip_common_setup : bool
+        Should always be false unless running as a smaller portion of a whole, like in dataSlicer.  In taht case
+        dataSlicer will calcualte the bins and store them in a non-redundent was as class attributes.
     curve_choice : int
         Which curve/cr template you wish to use when loading the template search results from the cr template search.
         Currently the only option is 0, which corresponds to a simple bi-polar delta function convolved with the known
@@ -162,13 +166,13 @@ class dataSlicerSingleRun():
     peak_to_sidelobe_n_bins_v : int
         The number of bins to use when plotting the peak to sidelobe param for vpol.
     '''
-    known_param_keys = [    'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
+    known_param_keys = [    'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v',\
                             'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
                             'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',\
                             'mean_max_corr_h', 'max_max_corr_h','mean_max_corr_v', 'max_max_corr_v','similarity_count_h','similarity_count_v','similarity_fraction_h','similarity_fraction_v',\
                             'max_corr_0subtract1_h','max_corr_0subtract2_h','max_corr_0subtract3_h','max_corr_1subtract2_h','max_corr_1subtract3_h','max_corr_2subtract3_h',\
                             'max_corr_0subtract1_v','max_corr_0subtract2_v','max_corr_0subtract3_v','max_corr_1subtract2_v','max_corr_1subtract3_v','max_corr_2subtract3_v',\
-                            'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','elevation_best_all','elevation_best_p2p','phi_best_h','phi_best_v','phi_best_all','phi_best_p2p',\
+                            'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','elevation_best_all','elevation_best_choice','phi_best_h','phi_best_v','phi_best_all','phi_best_choice',\
                             'calibrated_trigtime','triggered_beams','beam_power','hpol_peak_to_sidelobe','vpol_peak_to_sidelobe','all_peak_to_sidelobe','hpol_max_possible_map_value','vpol_max_possible_map_value','all_max_possible_map_value','hpol_max_map_value','vpol_max_map_value','all_max_map_value',\
                             'map_max_time_delay_0subtract1_h','map_max_time_delay_0subtract2_h','map_max_time_delay_0subtract3_h',\
                             'map_max_time_delay_1subtract2_h','map_max_time_delay_1subtract3_h','map_max_time_delay_2subtract3_h',\
@@ -176,9 +180,9 @@ class dataSlicerSingleRun():
                             'map_max_time_delay_1subtract2_v','map_max_time_delay_1subtract3_v','map_max_time_delay_2subtract3_v',\
                             'map_max_time_delay_0subtract1_all','map_max_time_delay_0subtract2_all','map_max_time_delay_0subtract3_all',\
                             'map_max_time_delay_1subtract2_all','map_max_time_delay_1subtract3_all','map_max_time_delay_2subtract3_all',\
-                            'sun_az','sun_el']
+                            'sun_az','sun_el','coincidence_method_1_h','coincidence_method_1_v','coincidence_method_2_h','coincidence_method_2_v']
 
-    def __init__(self,  reader, impulsivity_dset_key, time_delays_dset_key, map_dset_key, analysis_data_dir=None, \
+    def __init__(self,  reader, impulsivity_dset_key, time_delays_dset_key, map_dset_key, skip_common_setup=False, analysis_data_dir=None, \
                         curve_choice=0, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
                         impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
@@ -186,7 +190,7 @@ class dataSlicerSingleRun():
                         max_corr_n_bins=200,\
                         std_n_bins_h=200,std_n_bins_v=200,max_std_val=None,\
                         p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=None,\
+                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=128,\
                         n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180),\
                         max_possible_map_value_n_bins_h=100, max_possible_map_value_n_bins_v=100, max_possible_map_value_n_bins_all=100,\
                         max_map_value_n_bins_h=100, max_map_value_n_bins_v=100, max_map_value_n_bins_all=100,\
@@ -196,11 +200,31 @@ class dataSlicerSingleRun():
             self.math_keywords = ['SLICERSUBTRACT', 'SLICERADD', 'SLICERDIVIDE', 'SLICERMULTIPLY', 'SLICERMAX', 'SLICERMIN', 'SLICERMEAN'] #Meta words that will relate 2 known variables and produce a plot with their arithmatic combination. 
 
             if self.reader.failed_setup == False:
+                if skip_common_setup == False:
+                    #Angular ranges are handled such that their bin centers are the same as the values sampled by the corrolator class given the same min, max, and n.  
+                    self.n_phi = n_phi
+                    self.range_phi_deg = numpy.asarray(range_phi_deg)
+                    dphi = (max(self.range_phi_deg) - min(self.range_phi_deg)) / (self.n_phi - 1)
+                    self.phi_edges = numpy.arange(min(self.range_phi_deg),max(self.range_phi_deg) + 2*dphi, dphi) - dphi/2.0
+                    self.phi_centers = 0.5*(self.phi_edges[1:]+self.phi_edges[:-1])
+                    # self.phi_edges = numpy.arange(min(self.range_phi_deg) - numpy.diff(numpy.linspace(min(self.range_phi_deg),max(self.range_phi_deg),n_phi))[0]/2, max(self.range_phi_deg) + numpy.diff(numpy.linspace(min(self.range_phi_deg),max(self.range_phi_deg),n_phi))[0]/2, numpy.diff(numpy.linspace(min(self.range_phi_deg),max(self.range_phi_deg),n_phi))[0])
+
+                    self.n_theta = n_theta
+                    self.range_theta_deg = numpy.asarray(range_theta_deg)
+                    dtheta = (max(self.range_theta_deg) - min(self.range_theta_deg)) / (self.n_theta - 1)
+                    self.theta_edges = numpy.arange(min(self.range_theta_deg),max(self.range_theta_deg) + 2*dtheta, dtheta) - dtheta/2.0
+                    self.theta_centers = 0.5*(self.theta_edges[1:]+self.theta_edges[:-1])
+                    # self.theta_edges = numpy.arange(min(self.range_theta_deg) - numpy.diff(numpy.linspace(min(self.range_theta_deg),max(self.range_theta_deg),n_theta))[0]/2, max(self.range_theta_deg) + numpy.diff(numpy.linspace(min(self.range_theta_deg),max(self.range_theta_deg),n_theta))[0]/2, numpy.diff(numpy.linspace(min(self.range_theta_deg),max(self.range_theta_deg),n_theta))[0])
+
+                    self.elevation_edges = 90 - self.theta_edges
+                    self.elevation_centers = 0.5*(self.elevation_edges[1:]+self.elevation_edges[:-1])
+                
+                self.tct = None #This will be defined when necessary by functions below. 
+
                 self.included_antennas = included_antennas#[0,1,2,3,4,5,6,7]
                 self.included_hpol_antennas = numpy.array([0,2,4,6])[numpy.isin([0,2,4,6],self.included_antennas)]
                 self.included_vpol_antennas = numpy.array([1,3,5,7])[numpy.isin([1,3,5,7],self.included_antennas)]
 
-                self.tct = None #This will be defined when necessary by functions below. 
                 #Parameters:
                 #General Params:
 
@@ -229,9 +253,6 @@ class dataSlicerSingleRun():
                 self.min_max_corr_val = 0.0
                 self.max_max_corr_val = 1.0
                 self.max_corr_n_bins = max_corr_n_bins
-
-
-
 
                 #std Plot Params:
                 self.min_std_val = 1.0 #To be rewritten, setting a reasonable lower bound for when max_std_val is given. 
@@ -284,27 +305,8 @@ class dataSlicerSingleRun():
                 self.checkForRateDatasets() #Will append to known param key based on which repeated rate signal datasets are available
                 self.checkForComplementaryBothMapDatasets() #Will append to known param key and prepare for if hilbert used or not.
                 
-                #Angular ranges are handled such that their bin centers are the same as the values sampled by the corrolator class given the same min, max, and n.  
-                self.n_phi = n_phi
-                self.range_phi_deg = numpy.asarray(range_phi_deg)
-                dphi = (max(self.range_phi_deg) - min(self.range_phi_deg)) / (self.n_phi - 1)
-                self.phi_edges = numpy.arange(min(self.range_phi_deg),max(self.range_phi_deg) + 2*dphi, dphi) - dphi/2.0
-                self.phi_centers = 0.5*(self.phi_edges[1:]+self.phi_edges[:-1])
-                # self.phi_edges = numpy.arange(min(self.range_phi_deg) - numpy.diff(numpy.linspace(min(self.range_phi_deg),max(self.range_phi_deg),n_phi))[0]/2, max(self.range_phi_deg) + numpy.diff(numpy.linspace(min(self.range_phi_deg),max(self.range_phi_deg),n_phi))[0]/2, numpy.diff(numpy.linspace(min(self.range_phi_deg),max(self.range_phi_deg),n_phi))[0])
-
-                self.n_theta = n_theta
-                self.range_theta_deg = numpy.asarray(range_theta_deg)
-                dtheta = (max(self.range_theta_deg) - min(self.range_theta_deg)) / (self.n_theta - 1)
-                self.theta_edges = numpy.arange(min(self.range_theta_deg),max(self.range_theta_deg) + 2*dtheta, dtheta) - dtheta/2.0
-                self.theta_centers = 0.5*(self.theta_edges[1:]+self.theta_edges[:-1])
-                # self.theta_edges = numpy.arange(min(self.range_theta_deg) - numpy.diff(numpy.linspace(min(self.range_theta_deg),max(self.range_theta_deg),n_theta))[0]/2, max(self.range_theta_deg) + numpy.diff(numpy.linspace(min(self.range_theta_deg),max(self.range_theta_deg),n_theta))[0]/2, numpy.diff(numpy.linspace(min(self.range_theta_deg),max(self.range_theta_deg),n_theta))[0])
-
-                self.elevation_edges = 90 - self.theta_edges
-                self.elevation_centers = 0.5*(self.elevation_edges[1:]+self.elevation_edges[:-1])                
 
                 self.trigger_types = trigger_types
-
-                self.eventids_matching_trig = self.getEventidsFromTriggerType() #Opens file, so has to be called outside of with statement.
                 
                 #In progress.
                 #ROI  List
@@ -904,49 +906,97 @@ class dataSlicerSingleRun():
                                 std = file['std'][eventids]
                             else:
                                 std = file['std'][...][eventids]
-                            param = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                            param = numpy.mean(std[:,self.included_hpol_antennas],axis=1) 
                         elif param_key == 'std_v':
                             if len_eventids < 500:
                                 std = file['std'][eventids]
                             else:
                                 std = file['std'][...][eventids]
-                            param = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                            param = numpy.mean(std[:,self.included_vpol_antennas],axis=1) 
                         elif param_key == 'p2p_h': 
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                            param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) 
                         elif param_key == 'p2p_v': 
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                            param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) 
                         elif param_key == 'snr_h':
                             if len_eventids < 500:
                                 std = file['std'][eventids]
                             else:
                                 std = file['std'][...][eventids]
-                            param_1 = numpy.mean(std[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                            param_1 = numpy.mean(std[:,self.included_hpol_antennas],axis=1) 
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param_2 = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) #hpol correlation values # SHOULD CONSIDER ADDING ANTENNA DEPENDANT CUTS TO THIS FOR TIMES WHEN ANTENNAS ARE DEAD
+                            param_2 = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) 
                             param = numpy.divide(param_2, param_1)
+                        elif param_key == 'min_snr_h':
+                            if len_eventids < 500:
+                                std = file['std'][eventids]
+                            else:
+                                std = file['std'][...][eventids]
+                            param_1 = std[:,self.included_hpol_antennas]
+                            if len_eventids < 500:
+                                p2p = file['p2p'][eventids]
+                            else:
+                                p2p = file['p2p'][...][eventids]
+                            param_2 = p2p[:,self.included_hpol_antennas]
+                            param = numpy.min(numpy.divide(param_2, param_1),axis=1)
+                        elif param_key == 'snr_gap_h':
+                            if len_eventids < 500:
+                                std = file['std'][eventids]
+                            else:
+                                std = file['std'][...][eventids]
+                            param_1 = std[:,self.included_hpol_antennas]
+                            if len_eventids < 500:
+                                p2p = file['p2p'][eventids]
+                            else:
+                                p2p = file['p2p'][...][eventids]
+                            param_2 = p2p[:,self.included_hpol_antennas]
+                            param = numpy.max(numpy.divide(param_2, param_1),axis=1) - numpy.min(numpy.divide(param_2, param_1),axis=1)
                         elif param_key == 'snr_v':
                             if len_eventids < 500:
                                 std = file['std'][eventids]
                             else:
                                 std = file['std'][...][eventids]
-                            param_1 = numpy.mean(std[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                            param_1 = numpy.mean(std[:,self.included_vpol_antennas],axis=1) 
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param_2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+                            param_2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) 
                             param = numpy.divide(param_2, param_1)
+                        elif param_key == 'min_snr_v':
+                            if len_eventids < 500:
+                                std = file['std'][eventids]
+                            else:
+                                std = file['std'][...][eventids]
+                            param_1 = std[:,self.included_vpol_antennas]
+                            if len_eventids < 500:
+                                p2p = file['p2p'][eventids]
+                            else:
+                                p2p = file['p2p'][...][eventids]
+                            param_2 = p2p[:,self.included_vpol_antennas]
+                            param = numpy.min(numpy.divide(param_2, param_1),axis=1)
+                        elif param_key == 'snr_gap_v':
+                            if len_eventids < 500:
+                                std = file['std'][eventids]
+                            else:
+                                std = file['std'][...][eventids]
+                            param_1 = std[:,self.included_vpol_antennas]
+                            if len_eventids < 500:
+                                p2p = file['p2p'][eventids]
+                            else:
+                                p2p = file['p2p'][...][eventids]
+                            param_2 = p2p[:,self.included_vpol_antennas]
+                            param = numpy.max(numpy.divide(param_2, param_1),axis=1) - numpy.min(numpy.divide(param_2, param_1),axis=1)
                         elif 'time_delay_' in param_key and 'map' not in param_key:
                             split_param_key = param_key.split('_')
                             dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
@@ -1012,18 +1062,18 @@ class dataSlicerSingleRun():
                                     linear_magnitude = file['cw']['linear_magnitude'][...][eventids]
                                 param = 10.0*numpy.log10( linear_magnitude**2 / len(self.cw_prep.t()) )
                         
-                        elif param_key == 'theta_best_p2p':
+                        elif param_key == 'theta_best_choice':
                             if len_eventids < 500:
                                 param = file['map_direction'][self.map_dset_calculated_best]['best_ENU_zenith'][eventids]
                             else:
                                 param = file['map_direction'][self.map_dset_calculated_best]['best_ENU_zenith'][...][eventids]
-                        elif param_key == 'elevation_best_p2p':
+                        elif param_key == 'elevation_best_choice':
                             if len_eventids < 500:
                                 param = file['map_direction'][self.map_dset_calculated_best]['best_ENU_zenith'][eventids]
                             else:
                                 param = file['map_direction'][self.map_dset_calculated_best]['best_ENU_zenith'][...][eventids]
                             param = 90.0 - param
-                        elif param_key == 'phi_best_p2p':
+                        elif param_key == 'phi_best_choice':
                             if len_eventids < 500:
                                 param = file['map_direction'][self.map_dset_calculated_best]['best_ENU_azimuth'][eventids]
                             else:
@@ -1407,6 +1457,31 @@ class dataSlicerSingleRun():
                             param = self.reader.returnTriggerInfo()[0][eventids]
                         elif 'beam_power' == param_key:
                             param = self.reader.returnTriggerInfo()[1][eventids]
+
+
+
+                        elif 'coincidence_method_1_h' == param_key:
+                            if len_eventids < 500:
+                                param = file['coincidence_count']['method_1']['hpol'][eventids]
+                            else:
+                                param = file['coincidence_count']['method_1']['hpol'][...][eventids]
+                        elif 'coincidence_method_1_v' == param_key:
+                            if len_eventids < 500:
+                                param = file['coincidence_count']['method_1']['vpol'][eventids]
+                            else:
+                                param = file['coincidence_count']['method_1']['vpol'][...][eventids]
+                        elif 'coincidence_method_2_h' == param_key:
+                            if len_eventids < 500:
+                                param = numpy.mean(file['coincidence_count']['method_2'][eventids,0:8:2],axis=1)
+                            else:
+                                param = numpy.mean(file['coincidence_count']['method_2'][...][eventids,0:8:2],axis=1)
+
+                        elif 'coincidence_method_2_v' == param_key:
+                            if len_eventids < 500:
+                                param = numpy.mean(file['coincidence_count']['method_2'][eventids,1:8:2],axis=1)
+                            else:
+                                param = numpy.mean(file['coincidence_count']['method_2'][...][eventids,1:8:2],axis=1)
+
 
                         elif 'hilbert' not in param_key and 'hpol_peak_to_sidelobe_allsky' in param_key:
                             if len_eventids < 500:
@@ -2474,10 +2549,7 @@ class dataSlicerSingleRun():
                 if roi_key in list(self.roi.keys()):
                     if eventids is None:
                         try:
-                            if self.eventids_matching_trig is None:
-                                eventids = numpy.array([])
-                            else:
-                                eventids = numpy.asarray(self.eventids_matching_trig).copy()
+                            eventids = numpy.asarray(self.getEventidsFromTriggerType())
                         except Exception as e:
                             import pdb; pdb.set_trace()
 
@@ -2486,8 +2558,6 @@ class dataSlicerSingleRun():
                     if return_total_cut_counts == True:
                         total_cut_counts['initial'] = len(eventids)
                         master_cut = numpy.ones_like(eventids,dtype=bool)
-
-
 
                     if len(eventids) > 0:
                         for param_key in list(self.roi[roi_key].keys()):
@@ -2764,8 +2834,8 @@ class dataSlicerSingleRun():
                     if verbose:
                         print('\tPreparing to get counts for %s'%param_key)
                     if self.max_snr_val is None:
-                        std_requiring_params = ['std_h','std_v','snr_h','snr_v'] #List all params that might require max snr to be calculated if hard limit not given.
-                        p2p_requiring_params = ['p2p_h','p2p_v','snr_h','snr_v'] #List all params that might require max p2p to be calculated if hard limit not given.
+                        std_requiring_params = ['std_h','std_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v'] #List all params that might require max snr to be calculated if hard limit not given.
+                        p2p_requiring_params = ['p2p_h','p2p_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v'] #List all params that might require max p2p to be calculated if hard limit not given.
                     else:
                         std_requiring_params = ['std_h','std_v'] #List all params that might require max snr to be calculated if hard limit not given.
                         p2p_requiring_params = ['p2p_h','p2p_v'] #List all params that might require max p2p to be calculated if hard limit not given.
@@ -2843,12 +2913,32 @@ class dataSlicerSingleRun():
                     x_max_val = self.max_p2p_val
                     x_min_val = 0
                 elif param_key == 'snr_h':
-                    label = 'Mean SNR (hpol)\n P2P/STD'
+                    label = 'SNR (hpol)\n max(P2P)/min(STD)'
+                    x_n_bins = self.snr_n_bins_h
+                    x_max_val = self.max_snr_val
+                    x_min_val = 0
+                elif param_key == 'min_snr_h':
+                    label = 'Min SNR (hpol)\n min(P2P/STD)'
+                    x_n_bins = self.snr_n_bins_h
+                    x_max_val = self.max_snr_val
+                    x_min_val = 0
+                elif param_key == 'snr_gap_h':
+                    label = 'Max - Min SNR (hpol)'
                     x_n_bins = self.snr_n_bins_h
                     x_max_val = self.max_snr_val
                     x_min_val = 0
                 elif param_key == 'snr_v':
-                    label = 'Mean SNR (vpol)\n P2P/STD'
+                    label = 'SNR (vpol)\n max(P2P)/min(STD)'
+                    x_n_bins = self.snr_n_bins_v
+                    x_max_val = self.max_snr_val
+                    x_min_val = 0
+                elif param_key == 'min_snr_v':
+                    label = 'Min SNR (vpol)\n min(P2P/STD)'
+                    x_n_bins = self.snr_n_bins_v
+                    x_max_val = self.max_snr_val
+                    x_min_val = 0
+                elif param_key == 'snr_gap_v':
+                    label = 'Max - Min SNR (vpol)'
                     x_n_bins = self.snr_n_bins_v
                     x_max_val = self.max_snr_val
                     x_min_val = 0
@@ -2957,27 +3047,27 @@ class dataSlicerSingleRun():
                     x_min_val = 0
 
 
-                elif 'theta_best_p2p' in param_key:
+                elif 'theta_best_choice' in param_key:
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nCalculated from Best P2P of All Maps'
+                        label = 'Best Reconstructed Hilbert Zenith (Deg)\nCalculated from Best P2P*Max of All Maps'
                     else:
-                        label = 'Best Reconstructed Zenith (Deg)\nCalculated from Best P2P of All Maps'
+                        label = 'Best Reconstructed Zenith (Deg)\nCalculated from Best P2P*Max of All Maps'
                     current_bin_edges = self.theta_edges
                     calculate_bins_from_min_max = False
 
-                elif 'elevation_best_p2p' in param_key:
+                elif 'elevation_best_choice' in param_key:
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nCalculated from Best P2P of All Maps'
+                        label = 'Best Reconstructed Hilbert Elevation (Deg)\nCalculated from Best P2P*Max of All Maps'
                     else:
-                        label = 'Best Reconstructed Elevation (Deg)\nCalculated from Best P2P of All Maps'
+                        label = 'Best Reconstructed Elevation (Deg)\nCalculated from Best P2P*Max of All Maps'
                     current_bin_edges = self.elevation_edges
                     calculate_bins_from_min_max = False
 
-                elif 'phi_best_p2p' in param_key:
+                elif 'phi_best_choice' in param_key:
                     if numpy.logical_and(self.hilbert_map == True, self.normal_map == False):
-                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nCalculated from Best P2P of All Maps'
+                        label = 'Best Reconstructed Hilbert Azimuth (Deg)\nCalculated from Best P2P*Max of All Maps'
                     else:
-                        label = 'Best Reconstructed Azimuth (Deg)\nCalculated from Best P2P of All Maps'
+                        label = 'Best Reconstructed Azimuth (Deg)\nCalculated from Best P2P*Max of All Maps'
                     current_bin_edges = self.phi_edges
                     calculate_bins_from_min_max = False
 
@@ -3153,6 +3243,11 @@ class dataSlicerSingleRun():
                     x_max_val = self.peak_to_sidelobe_max_val
                     x_min_val = 1.0
 
+
+                elif 'coincidence_method_' in param_key:
+                    label = 'Coincident Event Count Method %s'%(param_key.replace('coincidence_method_','').replace('_',' '))
+                    current_bin_edges = numpy.arange(-0.5,11,1)
+                    calculate_bins_from_min_max = False
 
 
                 elif 'max_possible_map_value' in param_key:
@@ -3817,11 +3912,35 @@ class dataSlicer():
             self.data_slicers = []
             self.runs = []#numpy.sort(runs).astype(int)
             self.cor = None
+
+
+            try:
+                #Angular ranges are handled such that their bin centers are the same as the values sampled by the corrolator class given the same min, max, and n.  
+                dataSlicerSingleRun.n_phi = kwargs['n_phi']
+                dataSlicerSingleRun.range_phi_deg = numpy.asarray(kwargs['range_phi_deg'])
+                dphi = (max(dataSlicerSingleRun.range_phi_deg) - min(dataSlicerSingleRun.range_phi_deg)) / (dataSlicerSingleRun.n_phi - 1)
+                dataSlicerSingleRun.phi_edges = numpy.arange(min(dataSlicerSingleRun.range_phi_deg),max(dataSlicerSingleRun.range_phi_deg) + 2*dphi, dphi) - dphi/2.0
+                dataSlicerSingleRun.phi_centers = 0.5*(dataSlicerSingleRun.phi_edges[1:]+dataSlicerSingleRun.phi_edges[:-1])
+
+                dataSlicerSingleRun.n_theta = kwargs['n_theta']
+                dataSlicerSingleRun.range_theta_deg = numpy.asarray(kwargs['range_theta_deg'])
+                dtheta = (max(dataSlicerSingleRun.range_theta_deg) - min(dataSlicerSingleRun.range_theta_deg)) / (dataSlicerSingleRun.n_theta - 1)
+                dataSlicerSingleRun.theta_edges = numpy.arange(min(dataSlicerSingleRun.range_theta_deg),max(dataSlicerSingleRun.range_theta_deg) + 2*dtheta, dtheta) - dtheta/2.0
+                dataSlicerSingleRun.theta_centers = 0.5*(dataSlicerSingleRun.theta_edges[1:]+dataSlicerSingleRun.theta_edges[:-1])
+
+                dataSlicerSingleRun.elevation_edges = 90 - dataSlicerSingleRun.theta_edges
+                dataSlicerSingleRun.elevation_centers = 0.5*(dataSlicerSingleRun.elevation_edges[1:]+dataSlicerSingleRun.elevation_edges[:-1])
+                skip_common_setup=True
+                print('WARNING! dataSlicer has just set class attributes for dataSlicerSingleRun')
+            except Exception as e:
+                skip_common_setup=False
+                print(e)
+
             for run in numpy.sort(runs).astype(int):
                 try:
                     reader = Reader(raw_datapath,run)
                     if reader.failed_setup == False:
-                        ds = dataSlicerSingleRun(reader,impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs)
+                        ds = dataSlicerSingleRun(reader,impulsivity_dset_key, time_delays_dset_key, map_dset_key, skip_common_setup=skip_common_setup, **kwargs)
                         can_open = ds.openSuccess()
                         if can_open == True:
                             #If above fails then it won't be appended to either runs or data slicers.
@@ -3846,6 +3965,9 @@ class dataSlicer():
 
             if len(self.runs) == 0:
                 print('\nWARNING!!! No runs worked on dataSlicer preperations.\n')
+
+            if skip_common_setup:
+                print('WARNING! dataSlicer has just set class attributes for dataSlicerSingleRun')
 
             #self.checkForComplementaryBothMapDatasets(verbose=False)
 
@@ -3889,8 +4011,8 @@ class dataSlicer():
             n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
 
             map_resolution_phi = 0.1 #degrees
-            min_phi     = -180
-            max_phi     = 180
+            min_phi     = -90#-180
+            max_phi     = 90#180
             n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
 
             upsample = 2**14 #Just upsample in this case, Reduced to 2**14 when the waveform length was reduced, to maintain same time precision with faster execution.
@@ -4085,14 +4207,21 @@ class dataSlicer():
         '''
         Key should be run number as int.  Will return data for all events given in the eventids_dict.
         '''
-        data = {}
-        for run_index, run in enumerate(self.runs):
-            if run in list(eventids_dict.keys()):
-                if verbose:
-                    print('Run %i'%run)
-                eventids = eventids_dict[run]
-                data[run] = self.data_slicers[run_index].getDataFromParam(eventids, param_key)
-        return data
+        try:
+            data = {}
+            for run_index, run in enumerate(self.runs):
+                if run in list(eventids_dict.keys()):
+                    if verbose:
+                        print('Run %i'%run)
+                    eventids = eventids_dict[run]
+                    data[run] = self.data_slicers[run_index].getDataFromParam(eventids, param_key)
+            return data
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
     def getCutsFromROI(self,roi_key,eventids_dict=None,load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False):
         '''
         Note that cuts are conducted in the order the are supplied to the ROI definition.
@@ -4276,6 +4405,24 @@ class dataSlicer():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def get1dHistCounts(self, main_param_key, eventids_dict, set_bins=True):
+        try:
+            if set_bins == True:
+                self.setCurrentPlotBins(main_param_key,main_param_key,eventids_dict)
+            print('\tGetting counts from 1dhists for %s'%(main_param_key))
+            counts = numpy.zeros(len(self.current_bin_edges_x) - 1)
+            for key, item in eventids_dict.items():
+                #Loop to save memory, only need to store one runs worth of values at a time. 
+                param = self.getDataFromParam({key:item}, main_param_key)
+                counts += numpy.histogram(self.concatenateParamDict(param), bins = self.current_bin_edges_x)[0]
+            return counts
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
     def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids_dict, title=None,cmap='coolwarm', lognorm=True, return_counts=False, mask_top_N_bins=0, fill_value=0):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
@@ -4371,6 +4518,50 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+    def plot1dHist(self, main_param_key, eventids_dict, title=None, lognorm=True, return_counts=False):
+        '''
+        This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
+        (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
+        up as a contour on the plot.  
+        '''
+        try:
+            #Should make eventids a self.eventids so I don't need to call this every time.
+            counts = self.get1dHistCounts(main_param_key,eventids_dict,set_bins=True) #set_bins should only be called on first call, not on contours.
+            _fig, _ax = plt.subplots()
+
+            if title is None:
+                if numpy.all(numpy.diff(list(eventids_dict.keys()))) == 1:
+                    title = '%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types))
+                else:
+                    title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key,str(list(eventids_dict.keys())),str(self.trigger_types))
+            plt.title(title)
+
+            bin_centers = (self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2
+            bin_width = self.current_bin_edges_x[1] - self.current_bin_edges_x[0]
+
+            plt.bar(bin_centers, counts, width=bin_width)
+
+            if lognorm == True:
+                _ax.set_yscale('log')
+            plt.xlabel(self.current_label_x)
+            plt.ylabel(self.current_label_y)
+            plt.grid(which='both', axis='both')
+            _ax.minorticks_on()
+            _ax.grid(b=True, which='major', color='k', linestyle='-')
+            _ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            if return_counts:
+                return _fig, _ax, counts
+            else:
+                return _fig, _ax
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
     def addContour(self, ax, main_param_key_x, main_param_key_y, contour_eventids_dict, contour_color, n_contour=5, alpha=0.85, log_contour=True, mask=None, fill_value=None):
         '''
         Given the plot made from plot2dHist, this will add contours to it for the events specified by contour_eventids.
@@ -4650,108 +4841,124 @@ class dataSlicer():
     def updateEventInspect(self, run_index, eventid, mollweide=False):
         '''
         '''
-        start_data = numpy.round(self.getSingleEventTableValues(self.table_params, run_index, eventid),decimals=3) #Meta information about the event that will be put in the table.
-
         try:
-            az_best = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_p2p']
-            el_best = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_p2p']
-            az_h = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_h_allsky'] , az_best)
-            el_h = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_h_allsky'] , el_best)
-            az_v = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_v_allsky'] , az_best)
-            el_v = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_v_allsky'] , el_best)
+            start_data = numpy.round(self.getSingleEventTableValues(self.table_params, run_index, eventid),decimals=3) #Meta information about the event that will be put in the table.
+            self.mollweide = mollweide
+            try:
+                self.az_best = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_choice']
+                self.el_best = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_choice']
+                self.az_h = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_h_allsky'] , self.az_best)
+                self.el_h = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_h_allsky'] , self.el_best)
+                self.az_v = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_v_allsky'] , self.az_best)
+                self.el_v = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_v_allsky'] , self.el_best)
 
+                if self.show_all:
+                    self.az_all = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_all_allsky'], self.az_best)
+                    self.el_all = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_all_allsky'], self.el_best)
+            except:
+                self.az_h = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_h_allsky']
+                self.el_h = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_h_allsky']
+                self.az_v = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_v_allsky']
+                self.el_v = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_v_allsky']
+                if self.show_all:
+                    self.az_all = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_all_allsky']
+                    self.el_all = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_all_allsky']
+
+            self.inspector_mpl['current_table'] = list(zip(self.table_params.values(), start_data))
+
+            self.inspector_mpl['fig1'].canvas.set_window_title('r%ie%i'%(self.runs[run_index],eventid))
+            #Clear plot axes
+            for key in list(self.inspector_mpl.keys()):
+                if str(type(self.inspector_mpl[key])) == "<class 'matplotlib.axes._subplots.AxesSubplot'>":
+                    if 'fig1_map_' in key:
+                        self.inspector_mpl[key].clear()
+                    else:
+                        for artist in self.inspector_mpl[key].lines + self.inspector_mpl[key].collections:
+                            artist.remove()
+            #Plot Waveforms
+            self.cor.setReader(self.data_slicers[run_index].reader, verbose=False)
+            self.cor.reader.setEntry(eventid)
+
+            t = self.data_slicers[run_index].reader.t()
+
+            self.inspector_mpl['fig1_wf_0'].plot(t, self.cor.reader.wf(0), c=self.mpl_colors[0])
+            self.inspector_mpl['fig1_wf_1'].plot(t, self.cor.reader.wf(1), c=self.mpl_colors[1])
+            self.inspector_mpl['fig1_wf_2'].plot(t, self.cor.reader.wf(2), c=self.mpl_colors[2])
+            self.inspector_mpl['fig1_wf_3'].plot(t, self.cor.reader.wf(3), c=self.mpl_colors[3])
+            self.inspector_mpl['fig1_wf_4'].plot(t, self.cor.reader.wf(4), c=self.mpl_colors[4])
+            self.inspector_mpl['fig1_wf_5'].plot(t, self.cor.reader.wf(5), c=self.mpl_colors[5])
+            self.inspector_mpl['fig1_wf_6'].plot(t, self.cor.reader.wf(6), c=self.mpl_colors[6])
+            self.inspector_mpl['fig1_wf_7'].plot(t, self.cor.reader.wf(7), c=self.mpl_colors[7])
+
+            #Zoom in
+            start = self.cor.prep.start_waveform_index
+            stop = self.cor.prep.end_waveform_index+1
+            self.inspector_mpl['fig1_wf_0'].set_xlim(min(t[start:stop]), max(t[start:stop])) #All others will follow
+
+            #Plot Maps
+            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_h, circle_az=self.az_h, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+            self.inspector_mpl['fig1_map_h'].set_xlim(self.cor.range_phi_deg)
+            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_v, circle_az=self.az_v, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+            self.inspector_mpl['fig1_map_v'].set_xlim(self.cor.range_phi_deg)
             if self.show_all:
-                az_all = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_all_allsky'], az_best)
-                el_all = numpy.append(start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_all_allsky'], el_best)
-        except:
-            az_h = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_h_allsky']
-            el_h = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_h_allsky']
-            az_v = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_v_allsky']
-            el_v = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_v_allsky']
-            if self.show_all:
-                az_all = start_data[numpy.array(list(self.table_params.keys())) == 'phi_best_all_allsky']
-                el_all = start_data[numpy.array(list(self.table_params.keys())) == 'elevation_best_all_allsky']
+                m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_all'] = self.cor.map(eventid, 'all', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_all, circle_az=self.az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+                self.inspector_mpl['fig1_map_all'].set_xlim(self.cor.range_phi_deg)
+            #Plot Spectra
+            sine_subtract = True
+            for apply_filter, ax in [[False, self.inspector_mpl['fig1_spec_raw']], [True, self.inspector_mpl['fig1_spec_filt']]]:
+                for channel in numpy.arange(8):
+                    channel=int(channel)
+                    wf = self.cor.prep.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_filter,sine_subtract=apply_filter and sine_subtract, return_sine_subtract_info=False)
 
-        self.inspector_mpl['current_table'] = list(zip(self.table_params.values(), start_data))
+                    freqs, spec_dbish, spec = self.cor.prep.rfftWrapper(t[start:stop], wf)
+                    ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel, c=self.mpl_colors[channel])
+                ax.set_ylim(-20,50)
+                ax.set_ylabel(apply_filter*'filtered ' + 'db ish')
+                if self.show_all:
+                    ax.set_xlim(0,150)
 
-        self.inspector_mpl['fig1'].canvas.set_window_title('r%ie%i'%(self.runs[run_index],eventid))
-        #Clear plot axes
-        for key in list(self.inspector_mpl.keys()):
-            if str(type(self.inspector_mpl[key])) == "<class 'matplotlib.axes._subplots.AxesSubplot'>":
-                if 'fig1_map_' in key:
-                    self.inspector_mpl[key].clear()
-                else:
-                    for artist in self.inspector_mpl[key].lines + self.inspector_mpl[key].collections:
-                        artist.remove()
-        #Plot Waveforms
-        self.cor.setReader(self.data_slicers[run_index].reader, verbose=False)
-        self.cor.reader.setEntry(eventid)
+            #Populate Table
+            name_column = list(self.table_params.values())
+            self.inspector_mpl['fig1_table'].clear() #Clear previous table.
+            table = self.inspector_mpl['fig1_table'].table(cellText=list(zip(name_column,start_data)), loc='center', in_layout=True)
+            table.auto_set_font_size(False)
+            table.set_fontsize(12)
+            #table.scale(1,4)
+            self.inspector_mpl['fig1_table'].axis('tight')
+            self.inspector_mpl['fig1_table'].axis('off')
 
-        t = self.data_slicers[run_index].reader.t()
-
-        self.inspector_mpl['fig1_wf_0'].plot(t, self.cor.reader.wf(0), c=self.mpl_colors[0])
-        self.inspector_mpl['fig1_wf_1'].plot(t, self.cor.reader.wf(1), c=self.mpl_colors[1])
-        self.inspector_mpl['fig1_wf_2'].plot(t, self.cor.reader.wf(2), c=self.mpl_colors[2])
-        self.inspector_mpl['fig1_wf_3'].plot(t, self.cor.reader.wf(3), c=self.mpl_colors[3])
-        self.inspector_mpl['fig1_wf_4'].plot(t, self.cor.reader.wf(4), c=self.mpl_colors[4])
-        self.inspector_mpl['fig1_wf_5'].plot(t, self.cor.reader.wf(5), c=self.mpl_colors[5])
-        self.inspector_mpl['fig1_wf_6'].plot(t, self.cor.reader.wf(6), c=self.mpl_colors[6])
-        self.inspector_mpl['fig1_wf_7'].plot(t, self.cor.reader.wf(7), c=self.mpl_colors[7])
-
-        #Zoom in
-        start = self.cor.prep.start_waveform_index
-        stop = self.cor.prep.end_waveform_index+1
-        self.inspector_mpl['fig1_wf_0'].set_xlim(min(t[start:stop]), max(t[start:stop])) #All others will follow
-
-        #Plot Maps
-        m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - el_h, circle_az=az_h, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
-        m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - el_v, circle_az=az_v, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
-        if self.show_all:
-            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_all'] = self.cor.map(eventid, 'all', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - el_all, circle_az=az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
-        
-        #Plot Spectra
-        sine_subtract = True
-        for apply_filter, ax in [[False, self.inspector_mpl['fig1_spec_raw']], [True, self.inspector_mpl['fig1_spec_filt']]]:
-            for channel in numpy.arange(8):
-                channel=int(channel)
-                wf = self.cor.prep.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_filter,sine_subtract=apply_filter and sine_subtract, return_sine_subtract_info=False)
-
-                freqs, spec_dbish, spec = self.cor.prep.rfftWrapper(t[start:stop], wf)
-                ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel, c=self.mpl_colors[channel])
-            ax.set_ylim(-20,50)
-            ax.set_ylabel(apply_filter*'filtered ' + 'db ish')
-            if self.show_all:
-                ax.set_xlim(0,150)
-
-        #Populate Table
-        name_column = list(self.table_params.values())
-        self.inspector_mpl['fig1_table'].clear() #Clear previous table.
-        table = self.inspector_mpl['fig1_table'].table(cellText=list(zip(name_column,start_data)), loc='center', in_layout=True)
-        table.auto_set_font_size(False)
-        table.set_fontsize(12)
-        #table.scale(1,4)
-        self.inspector_mpl['fig1_table'].axis('tight')
-        self.inspector_mpl['fig1_table'].axis('off')
-
-        self.inspector_mpl['fig1'].canvas.draw()
-        # self.inspector_mpl['fig1'].canvas.flush_events()
-        # plt.show()
-        # plt.pause(0.05)
-        return
+            self.inspector_mpl['fig1'].canvas.draw()
+            # self.inspector_mpl['fig1'].canvas.flush_events()
+            # plt.show()
+            # plt.pause(0.05)
+            return
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def getSingleEventTableValues(self, table_dict, run_index, eventid):
         '''
         Given a run and eventid this will pull the values for the param keys listed in the table dict.
         '''
-        out_array = numpy.zeros(len(list(table_dict.keys())))
-        for param_index, param_key in enumerate(list(table_dict.keys())):
-            if param_key == 'eventid':
-                out_array[param_index] = eventid
-            elif param_key == 'run':
-                out_array[param_index] = self.runs[run_index]
-            else:
-                out_array[param_index] = self.data_slicers[run_index].getDataFromParam([eventid], param_key)
-        return out_array
+        try:
+            out_array = numpy.zeros(len(list(table_dict.keys())))
+            for param_index, param_key in enumerate(list(table_dict.keys())):
+                if param_key == 'eventid':
+                    out_array[param_index] = eventid
+                elif param_key == 'run':
+                    out_array[param_index] = self.runs[run_index]
+                else:
+                    out_array[param_index] = self.data_slicers[run_index].getDataFromParam([eventid], param_key)
+            return out_array
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def delInspector(self):
         for ds in self.data_slicers:
@@ -4770,221 +4977,328 @@ class dataSlicer():
         view of the events info as best as I can manage, and provide easy support for choosing which event you want to
         inspect. 
         '''
-        self.show_all = show_all
+        try:
+            self.show_all = show_all
 
-        self.mpl_colors = [u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf']
+            self.mpl_colors = [u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf']
 
-        non_zero_runs = numpy.array(list(eventids_dict.keys()))[numpy.array([len(eventids_dict[k]) for k in list(eventids_dict.keys())]) > 0]
-        non_zero_run_indices = numpy.where(numpy.isin(self.runs, non_zero_runs))[0]
+            non_zero_runs = numpy.array(list(eventids_dict.keys()))[numpy.array([len(eventids_dict[k]) for k in list(eventids_dict.keys())]) > 0]
+            non_zero_run_indices = numpy.where(numpy.isin(self.runs, non_zero_runs))[0]
 
-        self.prepareCorrelator()
-        
-        fig1 = plt.figure(constrained_layout=True)
-        gs = fig1.add_gridspec(4,5, width_ratios=[1,1,1,1,0.75])
+            self.prepareCorrelator()
+            
+            fig1 = plt.figure(constrained_layout=True)
+            gs = fig1.add_gridspec(4,5, width_ratios=[1,1,1,1,0.75])
 
-        fig1_wf_0 = fig1.add_subplot(gs[0,0])
-        fig1_wf_0.set_ylabel('0H')
-        fig1_wf_0.yaxis.label.set_color(self.mpl_colors[0])
-        fig1_wf_0.minorticks_on()
-        fig1_wf_0.grid(b=True, which='major', color='k', linestyle='-')
-        fig1_wf_0.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            fig1_wf_0 = fig1.add_subplot(gs[0,0])
+            fig1_wf_0.set_ylabel('0H')
+            fig1_wf_0.yaxis.label.set_color(self.mpl_colors[0])
+            fig1_wf_0.minorticks_on()
+            fig1_wf_0.grid(b=True, which='major', color='k', linestyle='-')
+            fig1_wf_0.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-        fig1_wf_1 = fig1.add_subplot(gs[0,1], sharex=fig1_wf_0, sharey=fig1_wf_0)
-        fig1_wf_1.set_ylabel('0V')
-        fig1_wf_1.yaxis.label.set_color(self.mpl_colors[1])
-        fig1_wf_1.minorticks_on()
-        fig1_wf_1.grid(b=True, which='major', color='k', linestyle='-')
-        fig1_wf_1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            fig1_wf_1 = fig1.add_subplot(gs[0,1], sharex=fig1_wf_0, sharey=fig1_wf_0)
+            fig1_wf_1.set_ylabel('0V')
+            fig1_wf_1.yaxis.label.set_color(self.mpl_colors[1])
+            fig1_wf_1.minorticks_on()
+            fig1_wf_1.grid(b=True, which='major', color='k', linestyle='-')
+            fig1_wf_1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-        fig1_wf_2 = fig1.add_subplot(gs[0,2], sharex=fig1_wf_0, sharey=fig1_wf_0)
-        fig1_wf_2.set_ylabel('1H')
-        fig1_wf_2.yaxis.label.set_color(self.mpl_colors[2])
-        fig1_wf_2.minorticks_on()
-        fig1_wf_2.grid(b=True, which='major', color='k', linestyle='-')
-        fig1_wf_2.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            fig1_wf_2 = fig1.add_subplot(gs[0,2], sharex=fig1_wf_0, sharey=fig1_wf_0)
+            fig1_wf_2.set_ylabel('1H')
+            fig1_wf_2.yaxis.label.set_color(self.mpl_colors[2])
+            fig1_wf_2.minorticks_on()
+            fig1_wf_2.grid(b=True, which='major', color='k', linestyle='-')
+            fig1_wf_2.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-        fig1_wf_3 = fig1.add_subplot(gs[0,3], sharex=fig1_wf_0, sharey=fig1_wf_0)
-        fig1_wf_3.set_ylabel('1V')
-        fig1_wf_3.yaxis.label.set_color(self.mpl_colors[3])
-        fig1_wf_3.minorticks_on()
-        fig1_wf_3.grid(b=True, which='major', color='k', linestyle='-')
-        fig1_wf_3.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            fig1_wf_3 = fig1.add_subplot(gs[0,3], sharex=fig1_wf_0, sharey=fig1_wf_0)
+            fig1_wf_3.set_ylabel('1V')
+            fig1_wf_3.yaxis.label.set_color(self.mpl_colors[3])
+            fig1_wf_3.minorticks_on()
+            fig1_wf_3.grid(b=True, which='major', color='k', linestyle='-')
+            fig1_wf_3.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-        fig1_wf_4 = fig1.add_subplot(gs[1,0], sharex=fig1_wf_0, sharey=fig1_wf_0)
-        fig1_wf_4.set_ylabel('2H')
-        fig1_wf_4.yaxis.label.set_color(self.mpl_colors[4])
-        fig1_wf_4.minorticks_on()
-        fig1_wf_4.grid(b=True, which='major', color='k', linestyle='-')
-        fig1_wf_4.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            fig1_wf_4 = fig1.add_subplot(gs[1,0], sharex=fig1_wf_0, sharey=fig1_wf_0)
+            fig1_wf_4.set_ylabel('2H')
+            fig1_wf_4.yaxis.label.set_color(self.mpl_colors[4])
+            fig1_wf_4.minorticks_on()
+            fig1_wf_4.grid(b=True, which='major', color='k', linestyle='-')
+            fig1_wf_4.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-        fig1_wf_5 = fig1.add_subplot(gs[1,1], sharex=fig1_wf_0, sharey=fig1_wf_0)
-        fig1_wf_5.set_ylabel('2V')
-        fig1_wf_5.yaxis.label.set_color(self.mpl_colors[5])
-        fig1_wf_5.minorticks_on()
-        fig1_wf_5.grid(b=True, which='major', color='k', linestyle='-')
-        fig1_wf_5.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            fig1_wf_5 = fig1.add_subplot(gs[1,1], sharex=fig1_wf_0, sharey=fig1_wf_0)
+            fig1_wf_5.set_ylabel('2V')
+            fig1_wf_5.yaxis.label.set_color(self.mpl_colors[5])
+            fig1_wf_5.minorticks_on()
+            fig1_wf_5.grid(b=True, which='major', color='k', linestyle='-')
+            fig1_wf_5.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-        fig1_wf_6 = fig1.add_subplot(gs[1,2], sharex=fig1_wf_0, sharey=fig1_wf_0)
-        fig1_wf_6.set_ylabel('3H')
-        fig1_wf_6.yaxis.label.set_color(self.mpl_colors[6])
-        fig1_wf_6.minorticks_on()
-        fig1_wf_6.grid(b=True, which='major', color='k', linestyle='-')
-        fig1_wf_6.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            fig1_wf_6 = fig1.add_subplot(gs[1,2], sharex=fig1_wf_0, sharey=fig1_wf_0)
+            fig1_wf_6.set_ylabel('3H')
+            fig1_wf_6.yaxis.label.set_color(self.mpl_colors[6])
+            fig1_wf_6.minorticks_on()
+            fig1_wf_6.grid(b=True, which='major', color='k', linestyle='-')
+            fig1_wf_6.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-        fig1_wf_7 = fig1.add_subplot(gs[1,3], sharex=fig1_wf_0, sharey=fig1_wf_0)
-        fig1_wf_7.set_ylabel('3V')
-        fig1_wf_7.yaxis.label.set_color(self.mpl_colors[7])
-        fig1_wf_7.minorticks_on()
-        fig1_wf_7.grid(b=True, which='major', color='k', linestyle='-')
-        fig1_wf_7.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            fig1_wf_7 = fig1.add_subplot(gs[1,3], sharex=fig1_wf_0, sharey=fig1_wf_0)
+            fig1_wf_7.set_ylabel('3V')
+            fig1_wf_7.yaxis.label.set_color(self.mpl_colors[7])
+            fig1_wf_7.minorticks_on()
+            fig1_wf_7.grid(b=True, which='major', color='k', linestyle='-')
+            fig1_wf_7.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
 
-        if mollweide == True:
-            fig1_map_h      = fig1.add_subplot(gs[2:,0], projection='mollweide')
-            fig1_map_v      = fig1.add_subplot(gs[2:,1], projection='mollweide', sharex=fig1_map_h, sharey=fig1_map_h)
+            if mollweide == True:
+                fig1_map_h      = fig1.add_subplot(gs[2:,0], projection='mollweide')
+                fig1_map_v      = fig1.add_subplot(gs[2:,1], projection='mollweide', sharex=fig1_map_h, sharey=fig1_map_h)
+                if self.show_all:
+                    fig1_map_all    = fig1.add_subplot(gs[2:,2], projection='mollweide', sharex=fig1_map_h, sharey=fig1_map_h)
+            else:
+                fig1_map_h      = fig1.add_subplot(gs[2:,0])
+                fig1_map_v      = fig1.add_subplot(gs[2:,1], sharex=fig1_map_h, sharey=fig1_map_h)
+                if self.show_all:
+                    fig1_map_all    = fig1.add_subplot(gs[2:,2], sharex=fig1_map_h, sharey=fig1_map_h)
+
             if self.show_all:
-                fig1_map_all    = fig1.add_subplot(gs[2:,2], projection='mollweide', sharex=fig1_map_h, sharey=fig1_map_h)
-        else:
-            fig1_map_h      = fig1.add_subplot(gs[2:,0])
-            fig1_map_v      = fig1.add_subplot(gs[2:,1], sharex=fig1_map_h, sharey=fig1_map_h)
+                fig1_spec_raw = fig1.add_subplot(gs[2,3:4])
+            else:
+                fig1_spec_raw = fig1.add_subplot(gs[2,2:4])
+            fig1_spec_raw.minorticks_on()
+            fig1_spec_raw.grid(b=True, which='major', color='k', linestyle='-')
+            fig1_spec_raw.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
             if self.show_all:
-                fig1_map_all    = fig1.add_subplot(gs[2:,2], sharex=fig1_map_h, sharey=fig1_map_h)
+                fig1_spec_filt = fig1.add_subplot(gs[3,3:4])
+            else:
+                fig1_spec_filt = fig1.add_subplot(gs[3,2:4])
+            fig1_spec_filt.minorticks_on()
+            fig1_spec_filt.grid(b=True, which='major', color='k', linestyle='-')
+            fig1_spec_filt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-        if self.show_all:
-            fig1_spec_raw = fig1.add_subplot(gs[2,3:4])
-        else:
-            fig1_spec_raw = fig1.add_subplot(gs[2,2:4])
-        fig1_spec_raw.minorticks_on()
-        fig1_spec_raw.grid(b=True, which='major', color='k', linestyle='-')
-        fig1_spec_raw.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-        if self.show_all:
-            fig1_spec_filt = fig1.add_subplot(gs[3,3:4])
-        else:
-            fig1_spec_filt = fig1.add_subplot(gs[3,2:4])
-        fig1_spec_filt.minorticks_on()
-        fig1_spec_filt.grid(b=True, which='major', color='k', linestyle='-')
-        fig1_spec_filt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-        fig1_table = fig1.add_subplot(gs[:,4])
-        
-        #[['phi_best_h','elevation_best_h'],['hpol_max_map_value_abovehorizon','vpol_max_map_value_abovehorizon'], ['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'], ['hpol_max_map_value','vpol_max_map_value'], ['hpol_peak_to_sidelobe_abovehorizon', 'vpol_peak_to_sidelobe_abovehorizon'],['hpol_peak_to_sidelobe_belowhorizon','hpol_peak_to_sidelobe_abovehorizon'], ['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'], ['hpol_max_possible_map_value','vpol_max_possible_map_value']]
-        self.table_params = OrderedDict()
-        #Format is param_key : 'Name In Table'
-        self.table_params['run'] = 'Run'
-        self.table_params['eventid'] = 'Event id'
-        self.table_params['phi_best_p2p'] = 'Az (BEST)'
-        self.table_params['elevation_best_p2p'] = 'El (BEST)'
-        self.table_params['hpol_max_map_value_allsky'] = 'Map Max H'
-        self.table_params['vpol_max_map_value_allsky'] = 'Map Max V'
-        self.table_params['impulsivity_h'] = 'Imp H'
-        self.table_params['impulsivity_v'] = 'Imp V'
-        self.table_params['cr_template_search_h'] = 'CR XC H'
-        self.table_params['cr_template_search_v'] = 'CR XC V'
-        self.table_params['std_h'] = 'SDev H'
-        self.table_params['std_v'] = 'SDev V'
-        self.table_params['p2p_h'] = 'P2P H'
-        self.table_params['p2p_v'] = 'P2P V'
-        self.table_params['similarity_count_h'] = 'H Simlr'
-        self.table_params['similarity_count_v'] = 'V Simlr'
-        self.table_params['hpol_peak_to_sidelobe_allsky'] = 'AS P2S H'
-        self.table_params['vpol_peak_to_sidelobe_allsky'] = 'AS P2S V'
-        self.table_params['all_peak_to_sidelobe_allsky'] = 'AS P2S All'
-        self.table_params['hpol_peak_to_sidelobe_belowhorizon'] = 'BH P2S H'
-        self.table_params['vpol_peak_to_sidelobe_belowhorizon'] = 'BH P2S V'
-        self.table_params['all_peak_to_sidelobe_belowhorizon'] = 'BH P2S All'
-        self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
-        self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
-        self.table_params['all_peak_to_sidelobe_abovehorizon'] = 'AH P2S All'
-        self.table_params['phi_best_h_allsky'] = 'Az H'
-        self.table_params['elevation_best_h_allsky'] = 'El H'
-        self.table_params['phi_best_v_allsky'] = 'Az V'
-        self.table_params['elevation_best_v_allsky'] = 'El V'
-        self.table_params['phi_best_all_allsky'] = 'Az All'
-        self.table_params['elevation_best_all_allsky'] = 'El All'
+            fig1_table = fig1.add_subplot(gs[:,4])
+            
+            #[['phi_best_h','elevation_best_h'],['hpol_max_map_value_abovehorizon','vpol_max_map_value_abovehorizon'], ['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'], ['hpol_max_map_value','vpol_max_map_value'], ['hpol_peak_to_sidelobe_abovehorizon', 'vpol_peak_to_sidelobe_abovehorizon'],['hpol_peak_to_sidelobe_belowhorizon','hpol_peak_to_sidelobe_abovehorizon'], ['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'], ['hpol_max_possible_map_value','vpol_max_possible_map_value']]
+            self.table_params = OrderedDict()
+            #Format is param_key : 'Name In Table'
+            self.table_params['run'] = 'Run'
+            self.table_params['eventid'] = 'Event id'
+            self.table_params['phi_best_choice'] = 'Az (BEST)'
+            self.table_params['elevation_best_choice'] = 'El (BEST)'
+            self.table_params['hpol_max_map_value_allsky'] = 'Map Max H'
+            self.table_params['vpol_max_map_value_allsky'] = 'Map Max V'
+            self.table_params['impulsivity_h'] = 'Imp H'
+            self.table_params['impulsivity_v'] = 'Imp V'
+            self.table_params['cr_template_search_h'] = 'CR XC H'
+            self.table_params['cr_template_search_v'] = 'CR XC V'
+            self.table_params['std_h'] = 'SDev H'
+            self.table_params['std_v'] = 'SDev V'
+            self.table_params['p2p_h'] = 'P2P H'
+            self.table_params['p2p_v'] = 'P2P V'
+            self.table_params['similarity_count_h'] = 'H Simlr'
+            self.table_params['similarity_count_v'] = 'V Simlr'
 
 
-        #Sample eventid, would normally be selected from and changeable
-        run = non_zero_runs[0]
-        eventid = eventids_dict[run][0]
-        run_index = int(numpy.where(self.runs == run)[0])#self.data_slicers[]
 
-        self.inspector_mpl = {}
-        self.inspector_mpl['fig1'] = fig1
-        self.inspector_mpl['gs'] = gs
-        self.inspector_mpl['fig1_wf_0'] = fig1_wf_0
-        self.inspector_mpl['fig1_wf_1'] = fig1_wf_1
-        self.inspector_mpl['fig1_wf_2'] = fig1_wf_2
-        self.inspector_mpl['fig1_wf_3'] = fig1_wf_3
-        self.inspector_mpl['fig1_wf_4'] = fig1_wf_4
-        self.inspector_mpl['fig1_wf_5'] = fig1_wf_5
-        self.inspector_mpl['fig1_wf_6'] = fig1_wf_6
-        self.inspector_mpl['fig1_wf_7'] = fig1_wf_7
-        self.inspector_mpl['fig1_map_h'] = fig1_map_h
-        self.inspector_mpl['fig1_map_v'] = fig1_map_v
-        if self.show_all:
-            self.inspector_mpl['fig1_map_all'] = fig1_map_all
-        self.inspector_mpl['fig1_spec_raw'] = fig1_spec_raw
-        self.inspector_mpl['fig1_spec_filt'] = fig1_spec_filt
-        self.inspector_mpl['fig1_table'] = fig1_table
-        
-        
-        self.updateEventInspect(run_index, eventid, mollweide=mollweide)
+            self.table_params['hpol_peak_to_sidelobe_allskySLICERMULTIPLYhpol_max_map_value_allsky'] = 'AS - H'
+            self.table_params['vpol_peak_to_sidelobe_allskySLICERMULTIPLYvpol_max_map_value_allsky'] = 'AS - V'
+            self.table_params['all_peak_to_sidelobe_allskySLICERMULTIPLYall_max_map_value_allsky'] = 'AS - All'
+            self.table_params['hpol_peak_to_sidelobe_belowhorizonSLICERMULTIPLYhpol_max_map_value_belowhorizon'] = 'BH - H'
+            self.table_params['vpol_peak_to_sidelobe_belowhorizonSLICERMULTIPLYvpol_max_map_value_belowhorizon'] = 'BH - V'
+            self.table_params['all_peak_to_sidelobe_belowhorizonSLICERMULTIPLYall_max_map_value_belowhorizon'] = 'BH - All'
+            self.table_params['hpol_peak_to_sidelobe_abovehorizonSLICERMULTIPLYhpol_max_map_value_abovehorizon'] = 'AH - H'
+            self.table_params['vpol_peak_to_sidelobe_abovehorizonSLICERMULTIPLYvpol_max_map_value_abovehorizon'] = 'AH - V'
+            self.table_params['all_peak_to_sidelobe_abovehorizonSLICERMULTIPLYall_max_map_value_abovehorizon'] = 'AH - All'
+            
 
-        self.inspector_eventids_list = self.organizeEventDict(eventids_dict)
-        self.inspector_eventids_index = 0
+            # self.table_params['hpol_peak_to_sidelobe_allsky'] = 'AS P2S H'
+            # self.table_params['vpol_peak_to_sidelobe_allsky'] = 'AS P2S V'
+            # self.table_params['all_peak_to_sidelobe_allsky'] = 'AS P2S All'
+            # self.table_params['hpol_peak_to_sidelobe_belowhorizon'] = 'BH P2S H'
+            # self.table_params['vpol_peak_to_sidelobe_belowhorizon'] = 'BH P2S V'
+            # self.table_params['all_peak_to_sidelobe_belowhorizon'] = 'BH P2S All'
+            # self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
+            # self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
+            # self.table_params['all_peak_to_sidelobe_abovehorizon'] = 'AH P2S All'
+            
 
+            self.table_params['phi_best_h_allsky'] = 'Az H'
+            self.table_params['elevation_best_h_allsky'] = 'El H'
+            self.table_params['phi_best_v_allsky'] = 'Az V'
+            self.table_params['elevation_best_v_allsky'] = 'El V'
+            self.table_params['phi_best_all_allsky'] = 'Az All'
+            self.table_params['elevation_best_all_allsky'] = 'El All'
+
+            self.table_params['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value'] = 'H AH Peak/Opt'
+            self.table_params['vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'] = 'V AH Peak/Opt'
+
+            self.table_params['coincidence_method_1_h'] = 'coin m1H'
+            self.table_params['coincidence_method_1_v'] = 'coin m1V'
+            self.table_params['coincidence_method_2_h'] = 'coin m2H'
+            self.table_params['coincidence_method_2_v'] = 'coin m2V'
+
+
+            #Sample eventid, would normally be selected from and changeable
+            run = non_zero_runs[0]
+            eventid = eventids_dict[run][0]
+            run_index = int(numpy.where(self.runs == run)[0])#self.data_slicers[]
+
+            self.inspector_mpl = {}
+            self.inspector_mpl['fig1'] = fig1
+            self.inspector_mpl['gs'] = gs
+            self.inspector_mpl['fig1_wf_0'] = fig1_wf_0
+            self.inspector_mpl['fig1_wf_1'] = fig1_wf_1
+            self.inspector_mpl['fig1_wf_2'] = fig1_wf_2
+            self.inspector_mpl['fig1_wf_3'] = fig1_wf_3
+            self.inspector_mpl['fig1_wf_4'] = fig1_wf_4
+            self.inspector_mpl['fig1_wf_5'] = fig1_wf_5
+            self.inspector_mpl['fig1_wf_6'] = fig1_wf_6
+            self.inspector_mpl['fig1_wf_7'] = fig1_wf_7
+            self.inspector_mpl['fig1_map_h'] = fig1_map_h
+            self.inspector_mpl['fig1_map_v'] = fig1_map_v
+            if self.show_all:
+                self.inspector_mpl['fig1_map_all'] = fig1_map_all
+            self.inspector_mpl['fig1_spec_raw'] = fig1_spec_raw
+            self.inspector_mpl['fig1_spec_filt'] = fig1_spec_filt
+            self.inspector_mpl['fig1_table'] = fig1_table
+            
+            
+            self.updateEventInspect(run_index, eventid, mollweide=mollweide)
+
+            self.inspector_eventids_list = self.organizeEventDict(eventids_dict)
+            self.inspector_eventids_index = 0
+
+            '''
+            Should add a button to cycle through all events and save a figure for them.
+            '''
+
+            class NextEventIterator(ToolBase):
+                description = 'This will skip to the next event in the selected event dictionary.'
+                image = os.path.join(matplotlib.matplotlib_fname().replace('matplotlibrc','images'), 'forward.png')
+                def __init__(self, toolmanager, name, outer):
+                    self._name = name
+                    self._toolmanager = toolmanager
+                    self._figure = None
+                    self.outer = outer
+                def trigger(self, sender, event, data=None):
+                    '''
+                    What actually happens when the button is pressed.
+                    '''
+                    self.outer.inspector_eventids_index = (self.outer.inspector_eventids_index + 1)%len(self.outer.inspector_eventids_list)
+                    self.outer.updateEventInspect(self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['run_index'],self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['eventid'])
+
+            class PreviousEventIterator(ToolBase):
+                description = 'This will skip to the previous event in the selected event dictionary.'
+                image = os.path.join(matplotlib.matplotlib_fname().replace('matplotlibrc','images'), 'back.png')
+                def __init__(self, toolmanager, name, outer):
+                    self._name = name
+                    self._toolmanager = toolmanager
+                    self._figure = None
+                    self.outer = outer
+                def trigger(self, sender, event, data=None):
+                    '''
+                    What actually happens when the button is pressed.
+                    '''
+                    self.outer.inspector_eventids_index = (self.outer.inspector_eventids_index - 1)%len(self.outer.inspector_eventids_list)
+                    self.outer.updateEventInspect(self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['run_index'],self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['eventid'])
+
+            class SaveBook(ToolBase):
+                description = 'This save an image of every event in the current event browser.'
+                image = os.path.join(matplotlib.matplotlib_fname().replace('matplotlibrc','images'), 'filesave.png')
+                def __init__(self, toolmanager, name, outer):
+                    self._name = name
+                    self._toolmanager = toolmanager
+                    self._figure = None
+                    self.outer = outer
+                def trigger(self, sender, event, data=None):
+                    '''
+                    What actually happens when the button is pressed.
+                    '''
+                    outpath = './event_flipbook_%i'%time.time() 
+                    os.mkdir(outpath)
+
+                    self.outer.inspector_mpl['fig1'].set_size_inches(25, 12.5)
+                    print()
+                    for i in range(len(self.outer.inspector_eventids_list)):
+                        sys.stdout.write('Saving Figure %i/%i\r'%(i+1,len(self.outer.inspector_eventids_list)))
+                        sys.stdout.flush()
+                        self.outer.inspector_eventids_index = (self.outer.inspector_eventids_index + 1)%len(self.outer.inspector_eventids_list)
+                        run_index = self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['run_index']
+                        run = self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['run']
+                        eventid = self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['eventid']
+                        self.outer.updateEventInspect(run_index,eventid)
+                        self.outer.inspector_mpl['fig1'].savefig(os.path.join(outpath, 'r%ie%i.png'%(run,eventid)), dpi=300, bbox_inches='tight')
+
+            class UpdateMapWindow(ToolBase):
+                description = 'This will generate a map using the currently cropped and visible portion of the waveforms.'
+                image = os.path.join(matplotlib.matplotlib_fname().replace('matplotlibrc','images'), 'matplotlib.png')
+                def __init__(self, toolmanager, name, outer):
+                    self._name = name
+                    self._toolmanager = toolmanager
+                    self._figure = None
+                    self.outer = outer
+                def trigger(self, sender, event, data=None):
+                    '''
+                    What actually happens when the button is pressed.
+                    '''
+                    override_to_time_window = self.outer.inspector_mpl['fig1_wf_0'].get_xlim()
+                    #import pdb; pdb.set_trace()
+
+                    #Plot Maps
+                    m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_h'] = self.outer.cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_h, circle_az=self.outer.az_h, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
+                    m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_v'] = self.outer.cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_v, circle_az=self.outer.az_v, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
+                    if self.outer.show_all:
+                        m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_all'] = self.outer.cor.map(eventid, 'all', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_all, circle_az=self.outer.az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
+                    self.outer.inspector_mpl['fig1'].canvas.draw()
+
+            tm = self.inspector_mpl['fig1'].canvas.manager.toolmanager
+            #import pdb; pdb.set_trace()
+            tm.add_tool('Save Book', SaveBook, self)
+            self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Save Book'), 'toolgroup')
+            tm.add_tool('Previous', PreviousEventIterator, self)
+            self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Previous'), 'toolgroup')
+            tm.add_tool('Next', NextEventIterator, self)
+            self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Next'), 'toolgroup')
+            tm.add_tool('Update Map', UpdateMapWindow, self)
+            self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Update Map'), 'toolgroup')
+            # tm.add_tool('Quit', ToolQuit)
+            # self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Quit'), 'toolgroup')
+            return
+
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def calculateTimeDelayCommonality(self, eventids_dict, verbose=False, return_eventids_array=False):
         '''
-        Should add a button to cycle through all events and save a figure for them.
+        This will generate a histogram for each time delay.  The height of the bin containing each event will be added
+        to that events total sum.  This is repeated for each baseline and polarization.  Events with a high value in the
+        returned array thus should be clustered or "highly common".  Effects of sidelobes will effect the resulting output.
         '''
+        try:
+            eventids_array = self.organizeEventDict(eventids_dict)
+            common = numpy.zeros(len(eventids_array))
+            if verbose:
+                print('Calculating Time Delay Commonality')
+            for key in ['time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h','time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v']:
+                if verbose:
+                    print('On %s'%key)
+                self.setCurrentPlotBins(key,key,eventids_dict)
+                indices = numpy.digitize( self.getDataArrayFromParam(key, trigger_types=None, eventids_dict=eventids_dict) , self.current_bin_edges_x)
+                uvals, uindices, ucounts = numpy.unique(indices,return_inverse=True, return_counts=True)
+                common += ucounts[uindices]
 
-        class NextEventIterator(ToolBase):
-            description = 'This will skip to the next event in the selected event dictionary.'
-            image = os.path.join(matplotlib.matplotlib_fname().replace('matplotlibrc','images'), 'forward.png')
-            '''
-            Currently does nothing
-            '''
-            def __init__(self, toolmanager, name, outer):
-                self._name = name
-                self._toolmanager = toolmanager
-                self._figure = None
-                self.outer = outer
-            def trigger(self, sender, event, data=None):
-                '''
-                What actually happens when the button is pressed.
-                '''
-                self.outer.inspector_eventids_index = (self.outer.inspector_eventids_index + 1)%len(self.outer.inspector_eventids_list)
-                self.outer.updateEventInspect(self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['run_index'],self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['eventid'])
-
-        class PreviousEventIterator(ToolBase):
-            description = 'This will skip to the previous event in the selected event dictionary.'
-            image = os.path.join(matplotlib.matplotlib_fname().replace('matplotlibrc','images'), 'back.png')
-            '''
-            Currently does nothing
-            '''
-            def __init__(self, toolmanager, name, outer):
-                self._name = name
-                self._toolmanager = toolmanager
-                self._figure = None
-                self.outer = outer
-            def trigger(self, sender, event, data=None):
-                '''
-                What actually happens when the button is pressed.
-                '''
-                self.outer.inspector_eventids_index = (self.outer.inspector_eventids_index - 1)%len(self.outer.inspector_eventids_list)
-                self.outer.updateEventInspect(self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['run_index'],self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['eventid'])
-
-        tm = self.inspector_mpl['fig1'].canvas.manager.toolmanager
-        #import pdb; pdb.set_trace()
-        tm.add_tool('Previous', PreviousEventIterator, self)
-        self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Previous'), 'toolgroup')
-        tm.add_tool('Next', NextEventIterator, self)
-        self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Next'), 'toolgroup')
-        tm.add_tool('Quit', ToolQuit)
-        self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Quit'), 'toolgroup')
-        return
-
-
+            if return_eventids_array:
+                return common, eventids_array
+            else:
+                return common
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
 if __name__ == '__main__':
     plt.close('all')

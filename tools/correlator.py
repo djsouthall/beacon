@@ -1285,7 +1285,7 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def interactivePlotter(self, event, eventid=None, pol=None, hilbert=None, mollweide = False, center_dir='E', all_alignments=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0):
+    def interactivePlotter(self, event, eventid=None, pol=None, hilbert=None, mollweide = False, center_dir='E', all_alignments=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, time_window_mask=None):
         '''
         This hopefully will make a plot when called by a double click in the map.
         '''
@@ -1340,6 +1340,10 @@ class Correlator:
                     waveforms = self.wf(eventid, channels, div_std=False, hilbert=hilbert, apply_filter=self.apply_filter, tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract)
                     if shorten_signals == True:
                         waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+
+                    if time_window_mask is not None:
+                        waveforms = waveforms * time_window_mask
+
                     t_best_0subtract1 = self.t_hpol_0subtract1[theta_index,phi_index]
                     t_best_0subtract2 = self.t_hpol_0subtract2[theta_index,phi_index]
                     t_best_0subtract3 = self.t_hpol_0subtract3[theta_index,phi_index]
@@ -1351,6 +1355,10 @@ class Correlator:
                     waveforms = self.wf(eventid, channels, div_std=False, hilbert=hilbert, apply_filter=self.apply_filter, tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract)
                     if shorten_signals == True:
                         waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+
+                    if time_window_mask is not None:
+                        waveforms = waveforms * time_window_mask
+
                     t_best_0subtract1 = self.t_vpol_0subtract1[theta_index,phi_index]
                     t_best_0subtract2 = self.t_vpol_0subtract2[theta_index,phi_index]
                     t_best_0subtract3 = self.t_vpol_0subtract3[theta_index,phi_index]
@@ -1362,6 +1370,10 @@ class Correlator:
                     waveforms = self.wf(eventid, channels, div_std=False, hilbert=hilbert, apply_filter=self.apply_filter, tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract)
                     if shorten_signals == True:
                         waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+
+                    if time_window_mask is not None:
+                        waveforms = waveforms * time_window_mask
+
                     
                     t_best_0subtract1_h = self.t_hpol_0subtract1[theta_index,phi_index]
                     t_best_0subtract2_h = self.t_hpol_0subtract2[theta_index,phi_index]
@@ -2218,7 +2230,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)  
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True, override_to_time_window=(None,None)):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -2270,6 +2282,10 @@ class Correlator:
         return_max_possible_map_value : bool
             If True, then an additional value will be returned that attempts to predict the maximum possible correlation
             value achievable based upon the cross correlations. 
+        override_to_time_window : tuple of 2 floats
+            This will window the waveforms to the specified time window *given in ns*.  The time window is assumed to
+            be applied *after the initial waveform_index_range* which was specified on the construction of the
+            correlator.  
         '''
         try:
             if hilbert == True:
@@ -2281,9 +2297,20 @@ class Correlator:
                 time_delay_dict['hpol'] = {}
             if ~numpy.isin('vpol', list(time_delay_dict.keys())):
                 time_delay_dict['vpol'] = {}
+            
+            if len(override_to_time_window) == 2:
+                if override_to_time_window[0] is not None and override_to_time_window[1] is not None:
+                    _waveform_index_range = (numpy.argmin(numpy.abs(self.times_resampled-min(override_to_time_window))) , numpy.argmin(numpy.abs(self.times_resampled-max(override_to_time_window))))
+                    time_window = True
+                else:
+                    time_window = False
+            else:
+                _waveform_index_range = (0,len(self.times_resampled))
+                time_window = False
+            mask = None
             if pol == 'both':
-                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe)
-                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe)
+                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe, override_to_time_window=override_to_time_window)
+                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe, override_to_time_window=override_to_time_window)
                 return hpol_result, vpol_result
                 # elif pol == 'all':
                 #     hpol_result = self.map(eventid,'hpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe)
@@ -2315,6 +2342,11 @@ class Correlator:
 
                     if shorten_signals == True:
                         waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+
+                    if time_window:
+                        mask = numpy.zeros(len(self.times_resampled))
+                        mask[_waveform_index_range[0]:_waveform_index_range[1]] += 1
+                        waveforms = waveforms * mask
 
                 #TODO: Could consider upsample only the cross correlations AFTER, rather than upsampling the waveforms, also consider passing scipy.signal.correlate the desired method
 
@@ -2359,6 +2391,10 @@ class Correlator:
 
                     if shorten_signals == True:
                         waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+                    if time_window:
+                        mask = numpy.zeros(len(self.times_resampled))
+                        mask[_waveform_index_range[0]:_waveform_index_range[1]] += 1
+                        waveforms = waveforms * mask
 
                 #TODO: Could consider upsample only the cross correlations AFTER, rather than upsampling the waveforms, also consider passing scipy.signal.correlate the desired method
 
@@ -2402,7 +2438,10 @@ class Correlator:
 
                     if shorten_signals == True:
                         waveforms = self.shortenSignals(waveforms,shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
-
+                    if time_window:
+                        mask = numpy.zeros(len(self.times_resampled))
+                        mask[_waveform_index_range[0]:_waveform_index_range[1]] += 1
+                        waveforms = waveforms * mask
                 #TODO: Could consider upsample only the cross correlations AFTER, rather than upsampling the waveforms, also consider passing scipy.signal.correlate the desired method
 
                 corr01 = (numpy.asarray(scipy.signal.correlate(waveforms[0],waveforms[1])))/(len(self.times_resampled))
@@ -2720,7 +2759,7 @@ class Correlator:
                     if event.inaxes==self.ax1: self.fig.mpl_connect('pick_event', self._onpick_plot_1)
                     '''
                     # map_ax.figure.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event, pol=pol, hilbert=hilbert, eventid=eventid, mollweide=mollweide, center_dir=center_dir, all_alignments=self.all_alignments, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading))
-                    map_ax.figure.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event, pol=pol, hilbert=hilbert, eventid=eventid, mollweide=mollweide, center_dir=center_dir, all_alignments=self.all_alignments, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading) if event.inaxes == map_ax else None)
+                    map_ax.figure.canvas.mpl_connect('button_press_event',lambda event : self.interactivePlotter(event, pol=pol, hilbert=hilbert, eventid=eventid, mollweide=mollweide, center_dir=center_dir, all_alignments=self.all_alignments, shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading, time_window_mask=mask) if event.inaxes == map_ax else None)
                     
                 #map_ax.legend(loc='lower left')
                 #self.figs.append(fig)
@@ -4538,9 +4577,9 @@ if __name__=="__main__":
         reader = Reader(datapath,run)
 
 
-        if False:
+        if True:
             for map_source_distance_m in [1e3,1e4,1e5,1e6]:
-                cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response, deploy_index=deploy_index, map_source_distance_m=map_source_distance_m)
+                cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, deploy_index=deploy_index, map_source_distance_m=map_source_distance_m)
                 
 
                 if sine_subtract:
