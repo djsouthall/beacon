@@ -180,7 +180,7 @@ if __name__=="__main__":
 
 
     #This code will loop over all options included here, and they will be stored as seperate dsets.  Each of these applies different cuts to mapmax when it is attempting to select the best reconstruction direction.
-    mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky']
+    mapmax_cut_modes = ['abovehorizon']#['abovehorizon','belowhorizon','allsky']
     #['hpol','vpol'] #Will loop over both if hpol and vpol present
     hilbert_modes = [False]#[True,False] #Will loop over both if True and False present
 

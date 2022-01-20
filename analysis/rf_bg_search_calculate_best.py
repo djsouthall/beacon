@@ -56,18 +56,6 @@ if __name__=="__main__":
     print('Running rf_bg_search_calculate_best.py')
     if len(sys.argv) > 1:
         run = int(sys.argv[1])
-        if len(sys.argv) >= 3:
-            deploy_index = str(sys.argv[2])
-        elif run in numpy.arange(1643,1729):
-            deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config', 'chi2_optimized_deploy_from_rtk-gps-day1-june20-2021.json')
-        else:
-            deploy_index = None
-
-    if deploy_index is None:
-        deploy_index = info.returnDefaultDeploy()
-
-    print('DEPLOY INDEX:')
-    print(deploy_index)
 
     possible_polarizations = ['hpol', 'vpol', 'all'] #used to exclude best case scenario created here
     possible_mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky']
@@ -192,7 +180,7 @@ if __name__=="__main__":
                                     file['map_direction'][output_filter_string]['best_ENU_azimuth'][eventid] = azimuth
 
                                 elif debug == True:
-                                    if eventid not in [ 4053,  6438, 16956, 45475]:
+                                    if eventid not in [ 2865, 4053,  6438, 16956, 45475]:
                                         continue
                                     elif 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_16384-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_SCOPEROOT':
                                         if True:
@@ -244,6 +232,10 @@ if __name__=="__main__":
                                         azimuth = file['map_direction'][filter_string_root.replace('SCOPEROOT',paired_options[filter_string_root]['pairs'][optimal_index][0])]['%s_ENU_azimuth'%paired_options[filter_string_root]['pairs'][optimal_index][1]][eventid]
                                         print(90.0-zenith,azimuth)
                                         if eventid == 45475:
+                                            for i in list(zip(paired_options[filter_string_root]['pairs'],  elevations, azimuths, metric, peak_to_sidelobes, mapmax_values)):
+                                                print(i)
+                                            import pdb; pdb.set_trace()
+                                        elif eventid == 2865:
                                             for i in list(zip(paired_options[filter_string_root]['pairs'],  elevations, azimuths, metric, peak_to_sidelobes, mapmax_values)):
                                                 print(i)
                                             import pdb; pdb.set_trace()
