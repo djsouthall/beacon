@@ -9,10 +9,11 @@ import os
 import inspect
 
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.info as info
 import tools.field_fox as ff
+from tools.fftmath import TimeDelayCalculator
 
 import numpy
 import scipy
@@ -322,9 +323,10 @@ class CosmicRayGenerator():
         This is the time offset within the given time serious the signal should start.  What "start" means will be 
         model dependant likely.  Descriptions of meanings for each model are:
         'bi-delta' : The initial rise time value will occur at the time step closest to this offset (rounded up).
+    filter_x : numpy.ndarray of frequencies
     """
 
-    def __init__(self, t_ns, t_offset=0, model='bi-delta'):
+    def __init__(self, t_ns, tdc=None, t_offset=0, model='bi-delta'):
         try:
             self.accepted_model_list = ['bi-delta']
             if not type(model) == str:
@@ -388,12 +390,32 @@ class CosmicRayGenerator():
         else:
             self.efield_convolved_t_ns = t_ns
 
-    def eFieldGenerator(self,plot=False,curve_choice=0):
+    def adjustFilterToTime(self, t_ns, filter_t_time_domain, filter_y_time_domain):
+        '''
+        '''
+        resample_factor = (filter_t_time_domain[1] - filter_t_time_domain[0])/(t_ns[1] - t_ns[0])
+        #If resample_factor > 1 then responses need to be upsampled by this factor to have the same time step.
+        #Less concerned about overall length, more concerned about matching time step for convolution.
+        filter_y_time_domain, filter_x_time_domain  = scipy.signal.resample(filter_y_time_domaine,int(len(filter_t_time_domain)*resample_factor),t=filter_t_time_domain*1e9)
+        self.preamp_response_resampled, self.response_t_s_resampled  = scipy.signal.resample(self.preamp_response,int(len(self.response_t_s)*self.resample_factor),t=self.response_t_s)
+        if len(self.response_t_s_resampled) > len(t_ns):
+            #convolve mode 'same' will match max length of input array.  Can cut down the signal after matching.
+            #should ultimately match len(t_ns)
+            self.efield_convolved_t_ns = self.response_t_s_resampled*1e9
+        else:
+            self.efield_convolved_t_ns = t_ns
+
+    def eFieldGenerator(self,plot=False,curve_choice=0, filter_x_time_domain=None, filter_y_time_domain=None):
         '''
         For a given set of time data this will produce a signal for the set model.
 
         Parameters
         ----------
+
+        filter_x_time_domain and filter_y_time_domain should come from prep.returnTimeDomainFilter() using the same 
+        reader and times as those used to get t_ns.  I.e. it should already be a time domain filter of the correct 
+        time and length.  Note that filter_y_time_domain should be a 1 dimensional array.  For multiple channels loop
+        over this function.
         
 
         Returns
@@ -441,7 +463,19 @@ class CosmicRayGenerator():
 
                 #Use impulse response to get signal.
                 efield_convolved = numpy.convolve(numpy.convolve(efield,self.stage2_response_resampled,mode='same'),1.0e6*self.preamp_response_resampled,mode='same')
+                if filter_x_time_domain is not None and filter_y_time_domain is not None:
+                    if filter_x_time_domain[1] - filter_x_time_domain[0] == self.efield_convolved_t_ns[1] - self.efield_convolved_t_ns[0]:
+                        #Same timestep so can convolve
+                        efield_convolved = numpy.convolve(efield_convolved,filter_y_time_domain,mode='same')
+                    else:
+                        print('WARNING!!!  Given filter_x_time_domain implies the filter timing is not in the correct format.')
+                        import pdb; pdb.set_trace()
+                        filter_y_time_domain = None
+
                 #Time precalculated to be self.efield_convolved_t_ns for requested time series. 
+
+                # if filter_x is not None and filter_y is not None:
+
 
                 #Plot efield signal.
                 if plot == True:
@@ -451,12 +485,14 @@ class CosmicRayGenerator():
                     plt.plot(self.response_t_s_resampled*1e9,self.stage2_response_resampled/numpy.max(numpy.abs(self.stage2_response_resampled)),linewidth=3,label='stage2')
                     plt.plot(self.response_t_s_resampled*1e9,self.preamp_response_resampled/numpy.max(numpy.abs(self.preamp_response_resampled)),linewidth=3,label='preamp')
                     plt.plot(self.t_ns,efield/numpy.max(numpy.abs(efield)),linewidth=3,label='bipolar delta')
+                    if filter_x_time_domain is not None and filter_y_time_domain is not None:
+                        plt.plot(self.t_ns,filter_y_time_domain/numpy.max(numpy.abs(filter_y_time_domain)),linewidth=3,label='Filter', c='c')
             
                     plt.plot(self.efield_convolved_t_ns,efield_convolved/numpy.max(numpy.abs(efield_convolved)),c='r',linewidth=4,label='Resultant Convolved "E Field" Signal')#Where the output convolved signal will be plotted.  
 
                     plt.ylabel('Normalized Responses and Signals')
                     plt.xlabel('ns')
-                    plt.xlim(700,1000)
+                    plt.xlim(400,1400)
                     plt.legend()
                     plt.minorticks_on()
                     plt.grid(b=True, which='major', color='k', linestyle='-')
@@ -468,7 +504,11 @@ class CosmicRayGenerator():
                     plt.plot(plot_freq_A/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(self.preamp_response_resampled/numpy.max(numpy.abs(self.preamp_response_resampled))))),linewidth=3,label='preamp')
                     
                     plot_freq_B = numpy.fft.rfftfreq(len(self.t_ns),(self.t_ns[1]-self.t_ns[0])/1.0e9)
-                    plt.plot(plot_freq_B/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(efield/numpy.max(numpy.abs(efield))))),linewidth=3,label='bipolar delta')
+                    plt.plot(plot_freq_B/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(efield/numpy.max(numpy.abs(efield))))),linewidth=3,label='bipolar delta', c='c')
+
+                    if filter_x_time_domain is not None and filter_y_time_domain is not None:
+                        plot_freq_filter = numpy.fft.rfftfreq(len(filter_x_time_domain),(filter_x_time_domain[1]-filter_x_time_domain[0])/1.0e9)
+                        plt.plot(plot_freq_filter/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(filter_y_time_domain/numpy.max(numpy.abs(filter_y_time_domain))))),linewidth=3,label='bipolar delta')
                     
                     plot_freq_C = numpy.fft.rfftfreq(len(self.efield_convolved_t_ns),(self.efield_convolved_t_ns[1]-self.efield_convolved_t_ns[0])/1.0e9)
                     plt.plot(plot_freq_C/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(efield_convolved/numpy.max(numpy.abs(efield_convolved))))),c='r',linewidth=4,label='Resultant Convolved "E Field" Signal')#Where the output convolved signal will be plotted.  
@@ -490,7 +530,7 @@ class CosmicRayGenerator():
 
                     plt.ylabel('Normalized CR Signal')
                     plt.xlabel('ns')
-                    plt.xlim(700,1000)
+                    plt.xlim(400,1000)
                     plt.legend()
                     plt.minorticks_on()
                     plt.grid(b=True, which='major', color='k', linestyle='-')
@@ -528,41 +568,129 @@ if __name__ == '__main__':
     try:
         plt.close('all')
         #Get timing info from real BEACON data for testing.
-        run = 1509
-        known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
-        eventid = known_pulser_ids['run%i'%run]['hpol'][0]
+        if False:
+            run = 1509
+            known_pulser_ids = info.loadPulserEventids(remove_ignored=True)
+            eventid = known_pulser_ids['run%i'%run]['hpol'][0]
+            sample_label = 'Pulser Signal'
+        else:
+            run = 5911
+            eventid = 73399
+            sample_label = 'r%ie%i'%(5911,73399)
+
         reader = Reader(datapath,run)
         reader.setEntry(eventid)
-        test_t = reader.t()
-        test_pulser_adu = reader.wf(0)
 
-        #Creating test signal
-        cr_gen = CosmicRayGenerator(test_t,t_offset=800.0,model='bi-delta')
-        for curve_choice in range(4):
-            out_t, out_E = cr_gen.eFieldGenerator(plot=True,curve_choice=curve_choice)
-                  
-        plt.figure()
-        plt.subplot(2,1,1)
-        plt.plot(test_t,test_pulser_adu,label='Pulser Signal')
-        plt.ylabel('E (adu)')
-        plt.xlabel('t (ns)')
+        datapath = os.environ['BEACON_DATA']
+        align_method_13_n = 2
 
-        plt.legend()
-        plt.minorticks_on()
-        plt.grid(b=True, which='major', color='k', linestyle='-')
-        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+        crit_freq_low_pass_MHz = 80
+        low_pass_filter_order = 14
 
-        plt.subplot(2,1,2)
-        plt.plot(out_t,out_E,label='Test CR Signal')
-        plt.scatter(out_t,out_E,c='r')
-        plt.ylabel('E (adu)')
-        plt.xlabel('t (ns)')
+        crit_freq_high_pass_MHz = 20
+        high_pass_filter_order = 4
 
-        plt.legend()
-        plt.minorticks_on()
-        plt.grid(b=True, which='major', color='k', linestyle='-')
-        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+        sine_subtract = True
+        sine_subtract_min_freq_GHz = 0.00
+        sine_subtract_max_freq_GHz = 0.25
+        sine_subtract_percent = 0.03
+
+        apply_phase_response = True
+
+        shorten_signals = False
+        shorten_thresh = 0.7
+        shorten_delay = 10.0
+        shorten_length = 90.0
+
+        plot_filter = True
         
+        waveform_index_range = (None, None)
+
+        notch_tv = True
+        misc_notches = True
+
+        hilbert=False
+        final_corr_length = 2**17
+
+        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filter,apply_phase_response=apply_phase_response, notch_tv=notch_tv, misc_notches=misc_notches)
+        if sine_subtract:
+            tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
+
+        filter_wfs, filter_t = tdc.returnTimeDomainFilter(plot=True)
+
+
+
+
+        if True:
+            curve_choice = 0
+            #Creating test signal
+            test_t = reader.t()
+            reader.setEntry(eventid)
+            test_pulser_adu = reader.wf(0)
+
+            cr_gen = CosmicRayGenerator(test_t,t_offset=500.0,model='bi-delta')
+            
+            for channel in range(2):            
+                out_t, out_E = cr_gen.eFieldGenerator(plot=True,curve_choice=curve_choice, filter_x_time_domain=filter_t, filter_y_time_domain=filter_wfs[channel])
+
+                plt.figure()
+                plt.suptitle('Channel %i'%channel)
+                plt.subplot(2,1,1)
+                sample_t = tdc.t()
+                sample_wf = tdc.wf(channel, apply_filter=True, hilbert=False, tukey=None, sine_subtract=True, return_sine_subtract_info=False, ss_first=True, attempt_raw_reader=False)
+
+                plt.plot(test_t,test_pulser_adu,label=sample_label)
+                plt.ylabel('E (adu)')
+                plt.xlabel('t (ns)')
+
+                plt.legend()
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                plt.subplot(2,1,2)
+                plt.plot(out_t,out_E,label='Test CR Signal')
+                plt.scatter(out_t,out_E,c='r')
+                plt.ylabel('E (adu)')
+                plt.xlabel('t (ns)')
+
+                plt.legend()
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+        elif True:
+            test_t = reader.t()
+            reader.setEntry(eventid)
+            test_pulser_adu = reader.wf(0)
+
+
+            #Creating test signal
+            cr_gen = CosmicRayGenerator(test_t,t_offset=500.0,model='bi-delta')
+            for curve_choice in range(4):
+                out_t, out_E = cr_gen.eFieldGenerator(plot=True,curve_choice=curve_choice)
+                      
+            plt.figure()
+            plt.subplot(2,1,1)
+            plt.plot(test_t,test_pulser_adu,label=sample_label)
+            plt.ylabel('E (adu)')
+            plt.xlabel('t (ns)')
+
+            plt.legend()
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+            plt.subplot(2,1,2)
+            plt.plot(out_t,out_E,label='Test CR Signal')
+            plt.scatter(out_t,out_E,c='r')
+            plt.ylabel('E (adu)')
+            plt.xlabel('t (ns)')
+
+            plt.legend()
+            plt.minorticks_on()
+            plt.grid(b=True, which='major', color='k', linestyle='-')
+            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            
 
 
     except Exception as e:
