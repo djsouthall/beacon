@@ -53,6 +53,10 @@ if __name__=="__main__":
     sine_subtract_max_freq_GHz = 0.25
     sine_subtract_percent = 0.03
 
+    notch_tv = False
+    misc_notches = False
+    # , notch_tv=notch_tv, misc_notches=misc_notches
+
     hilbert=False
     final_corr_length = 2**13
 
@@ -63,7 +67,7 @@ if __name__=="__main__":
         run = int(run)
 
         reader = Reader(datapath,run)
-        prep = FFTPrepper(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=(None,None), plot_filters=False)
+        prep = FFTPrepper(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=(None,None), plot_filters=False, notch_tv=notch_tv, misc_notches=misc_notches)
         prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=5, verbose=False, plot=False)
         
         try:

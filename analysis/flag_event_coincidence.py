@@ -61,9 +61,13 @@ class CoincidenceCalculator():
     shorten_delay = 10.0
     shorten_length = 90.0
 
+    notch_tv = True
+    misc_notches = True
+    # , notch_tv=notch_tv, misc_notches=misc_notches
+
     def __init__(self,  reader):
         self.reader = reader
-        self.tdc = TimeDelayCalculator(self.reader, final_corr_length=CoincidenceCalculator.final_corr_length, crit_freq_low_pass_MHz=CoincidenceCalculator.crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=CoincidenceCalculator.crit_freq_high_pass_MHz, low_pass_filter_order=CoincidenceCalculator.low_pass_filter_order, high_pass_filter_order=CoincidenceCalculator.high_pass_filter_order,waveform_index_range=CoincidenceCalculator.waveform_index_range,plot_filters=CoincidenceCalculator.plot_filters,apply_phase_response=CoincidenceCalculator.apply_phase_response)
+        self.tdc = TimeDelayCalculator(self.reader, final_corr_length=CoincidenceCalculator.final_corr_length, crit_freq_low_pass_MHz=CoincidenceCalculator.crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=CoincidenceCalculator.crit_freq_high_pass_MHz, low_pass_filter_order=CoincidenceCalculator.low_pass_filter_order, high_pass_filter_order=CoincidenceCalculator.high_pass_filter_order,waveform_index_range=CoincidenceCalculator.waveform_index_range,plot_filters=CoincidenceCalculator.plot_filters,apply_phase_response=CoincidenceCalculator.apply_phase_response, notch_tv=notch_tv, misc_notches=misc_notches)
         self.tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=5, verbose=False, plot=False)
 
         self.method1_normalization = numpy.correlate(numpy.ones_like(self.tdc.t()),numpy.ones_like(self.tdc.t()),mode='same')

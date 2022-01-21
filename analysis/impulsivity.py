@@ -67,6 +67,10 @@ if __name__=="__main__":
     max_method = 0
     impulsivity_window = 400
 
+    notch_tv = True
+    misc_notches = True
+    # , notch_tv=notch_tv, misc_notches=misc_notches
+
     hpol_pairs  = numpy.array(list(itertools.combinations((0,2,4,6), 2)))
     vpol_pairs  = numpy.array(list(itertools.combinations((1,3,5,7), 2)))
     pairs       = numpy.vstack((hpol_pairs,vpol_pairs)) 
@@ -157,7 +161,7 @@ if __name__=="__main__":
 
                         #Add two functions to TimeDelayCalculator: calculateImpulsivityFromDelay and calculateImpulsivityFromEventid, these can then be use below to get the impulsivity.
 
-                        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filter,apply_phase_response=apply_phase_response)
+                        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filter,apply_phase_response=apply_phase_response, notch_tv=notch_tv, misc_notches=misc_notches)
                         if sine_subtract:
                             tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 

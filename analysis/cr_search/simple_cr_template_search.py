@@ -73,6 +73,10 @@ if __name__ == '__main__':
             shorten_delay = 10.0
             shorten_length = 90.0
 
+            notch_tv = True
+            misc_notches = True
+            # , notch_tv=notch_tv, misc_notches=misc_notches
+
             align_method = None
 
             hilbert=False
@@ -153,17 +157,6 @@ if __name__ == '__main__':
             run = int(sys.argv[1])
             reader = Reader(datapath,run)
 
-            #Prepare for Correlations
-            reader.setEntry(0)
-            waveform_times = reader.t()
-            waveform_sample = reader.wf(0)
-            waveform_sample, waveform_times = scipy.signal.resample(waveform_sample,len(waveform_sample)*upsample_factor,t=waveform_times) #upsample times to desired amount.
-
-            cr_gen = crt.CosmicRayGenerator(waveform_times,t_offset=800.0,model='bi-delta')
-            template_t, template_E = cr_gen.eFieldGenerator(plot=True,curve_choice=curve_choice)
-            
-            len_t = len(template_t)
-            template_E = template_E/(numpy.std(template_E)*len_t) #Pre dividing to handle normalization of cross correlation.
             
 
             if calculate_correlation_values == True:
@@ -207,11 +200,27 @@ if __name__ == '__main__':
 
                         output_correlation_values = numpy.zeros((file.attrs['N'],8),dtype=float) #Fill this, write to hdf5 once.
 
-                        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response)
+                        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=plot_filter,apply_phase_response=apply_phase_response, notch_tv=notch_tv, misc_notches=misc_notches)
                         if sine_subtract:
                             tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
+                        filter_wfs, filter_t = tdc.returnTimeDomainFilter(plot=False)
+
+
+                        #Prepare for Correlations
+                        reader.setEntry(0)
+                        waveform_times = reader.t()
+                        waveform_sample = reader.wf(0)
+                        waveform_sample, waveform_times = scipy.signal.resample(waveform_sample,len(waveform_sample)*upsample_factor,t=waveform_times) #upsample times to desired amount.
+
+                        cr_gen = crt.CosmicRayGenerator(reader.t(),t_offset=500.0,model='bi-delta')
                         
+                        len_t = len(cr_gen.efield_convolved_t_ns)
+                        template_E = numpy.zeros((8,len_t))
+                        for channel in range(8):
+                            template_t, _template_E = cr_gen.eFieldGenerator(plot=False,curve_choice=curve_choice, filter_x_time_domain=filter_t, filter_y_time_domain=filter_wfs[channel])
+                            template_E[channel] = _template_E/(numpy.std(_template_E)*len_t)
+                                                
                         for eventid_index, eventid in enumerate(eventids): 
                             if eventid%500 == 0:
                                 sys.stdout.write('(%i/%i)\r'%(eventid,len(eventids)))
@@ -222,7 +231,7 @@ if __name__ == '__main__':
                             for channel in range(8):
                                 wf = tdc.wf(channel, apply_filter=True, hilbert=hilbert, tukey=True, sine_subtract=sine_subtract, return_sine_subtract_info=False, ss_first=True)
                                 wf = scipy.signal.resample(wf,len_t) #I don't need the times.
-                                cc = scipy.signal.correlate(template_E, wf)/wf.std() #template_E already normalized for cc
+                                cc = scipy.signal.correlate(template_E[channel], wf)/wf.std() #template_E already normalized for cc
                                 output_correlation_values[eventid,channel] = numpy.max(numpy.abs(cc))
 
 

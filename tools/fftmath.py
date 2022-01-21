@@ -743,25 +743,30 @@ class FFTPrepper:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+    def returnTimeDomainFilter(self, plot=False):
+        '''
+        This will take the inverse fourier transforms of the filters for each channel and return them with t.
+        '''
+        try:
+            t = self.t()
+            out_wf = numpy.zeros((8,len(t)))
+            for channel in range(8):
+                out_wf[channel] = numpy.fft.fftshift(numpy.fft.irfft(self.filter_original[channel],n=self.buffer_length)) #Might need additional normalization
 
-    # def sincInterp(self, x, s, u):
-    #     """
-    #     Interpolates x, sampled at "s" instants
-    #     Output y is sampled at "u" instants ("u" for "upsampled")
-        
-    #     from Matlab:
-    #     http://phaseportrait.blogspot.com/2008/06/sinc-interpolation-in-matlab.html        
-    #     """
-        
-    #     # if len(x) != len(s):
-    #     #     raise Exception, 'x and s must be the same length'
-        
-    #     # Find the period    
-    #     T = s[1] - s[0]
-        
-    #     sincM = numpy.tile(u, (len(s), 1)) - numpy.tile(s[:, numpy.newaxis], (1, len(u)))
-    #     y = numpy.dot(x, numpy.sinc(sincM/T))
-    #     return y
+            if plot == True:
+                plt.figure()
+                for channel in range(8):
+                    plt.plot(t, out_wf[channel], label='ch %i filter'%channel)
+                plt.ylabel('arb')
+                plt.xlabel('ns')
+                plt.legend()
+            return out_wf, t
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
     def shortenSignals(self, waveforms, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0,shorten_keep_leading=100):
         '''

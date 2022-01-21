@@ -76,6 +76,11 @@ if __name__=="__main__":
     shorten_delay = 10.0
     shorten_length = 90.0
 
+    notch_tv = True
+    misc_notches = True
+    # , notch_tv=notch_tv, misc_notches=misc_notches
+
+
     hilbert=False
     final_corr_length = 2**17
 
@@ -398,7 +403,7 @@ if __name__=="__main__":
 
                 if sum(rf_cut) > 0:
                     #rf_cut = numpy.multiply(rf_cut ,numpy.cumsum(rf_cut) < 10) #limits it to the first 100 Trues for testing.
-                    tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filter,apply_phase_response=apply_phase_response)
+                    tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=waveform_index_range,plot_filters=plot_filter,apply_phase_response=apply_phase_response, notch_tv=notch_tv, misc_notches=misc_notches)
                     if sine_subtract:
                         tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
