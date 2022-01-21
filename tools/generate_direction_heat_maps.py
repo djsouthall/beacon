@@ -107,7 +107,7 @@ if __name__ == '__main__':
         #Forces uses the "best map" method
         ds.addROI('above horizon',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90]})
         above_horizon_eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
-        ds.addROI('above horizon full',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90],'similarity_count_h':[0,1],'similarity_count_v':[0,1],'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':[1.2,10000],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERMAXcr_template_search_v':[0.5,100],'min_snr_hSLICERADDmin_snr_v':[20,1000]})#'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]
+        ds.addROI('above horizon full',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90],'similarity_count_h':[0,1],'similarity_count_v':[0,1],'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':[1.2,10000],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERMAXcr_template_search_v':[0.5,100],'min_snr_hSLICERADDmin_snr_v':[10,1000]})#'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]
         above_horizon_full_eventids_dict = ds.getCutsFromROI('above horizon full',load=False,save=False,verbose=True, return_successive_cut_counts=False, return_total_cut_counts=False)
         skymap_mode = 'best'
     else:

@@ -4021,7 +4021,7 @@ class dataSlicer():
             waveform_index_range = info.returnDefaultWaveformIndexRange()
             map_source_distance_m = info.returnDefaultSourceDistance()
 
-            self.cor = Correlator(self.data_slicers[0].reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=True, sine_subtract=sine_subtract, deploy_index=self.data_slicers[0].map_deploy_index, map_source_distance_m=map_source_distance_m)
+            self.cor = Correlator(self.data_slicers[0].reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=True, sine_subtract=sine_subtract, deploy_index=self.data_slicers[0].map_deploy_index, map_source_distance_m=map_source_distance_m,notch_tv=True,misc_notches=True)
             if sine_subtract:
                 self.cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
@@ -4879,21 +4879,32 @@ class dataSlicer():
             self.cor.setReader(self.data_slicers[run_index].reader, verbose=False)
             self.cor.reader.setEntry(eventid)
 
-            t = self.data_slicers[run_index].reader.t()
+            #t = self.data_slicers[run_index].reader.t()
+            #t = self.cor.times_resampled
+            waveforms = self.cor.wf(eventid, numpy.array([0,1,2,3,4,5,6,7]),div_std=False,hilbert=False,apply_filter=True,tukey=True, sine_subtract=True)
+            
+            self.inspector_mpl['fig1_wf_0'].plot(self.cor.times_resampled, waveforms[0], c=self.mpl_colors[0])
+            self.inspector_mpl['fig1_wf_0'].set_ylim(-70,70)
+            self.inspector_mpl['fig1_wf_1'].plot(self.cor.times_resampled, waveforms[1], c=self.mpl_colors[1])
+            self.inspector_mpl['fig1_wf_1'].set_ylim(-70,70)
+            self.inspector_mpl['fig1_wf_2'].plot(self.cor.times_resampled, waveforms[2], c=self.mpl_colors[2])
+            self.inspector_mpl['fig1_wf_2'].set_ylim(-70,70)
+            self.inspector_mpl['fig1_wf_3'].plot(self.cor.times_resampled, waveforms[3], c=self.mpl_colors[3])
+            self.inspector_mpl['fig1_wf_3'].set_ylim(-70,70)
+            self.inspector_mpl['fig1_wf_4'].plot(self.cor.times_resampled, waveforms[4], c=self.mpl_colors[4])
+            self.inspector_mpl['fig1_wf_4'].set_ylim(-70,70)
+            self.inspector_mpl['fig1_wf_5'].plot(self.cor.times_resampled, waveforms[5], c=self.mpl_colors[5])
+            self.inspector_mpl['fig1_wf_5'].set_ylim(-70,70)
+            self.inspector_mpl['fig1_wf_6'].plot(self.cor.times_resampled, waveforms[6], c=self.mpl_colors[6])
+            self.inspector_mpl['fig1_wf_6'].set_ylim(-70,70)
+            self.inspector_mpl['fig1_wf_7'].plot(self.cor.times_resampled, waveforms[7], c=self.mpl_colors[7])
+            self.inspector_mpl['fig1_wf_7'].set_ylim(-70,70)
 
-            self.inspector_mpl['fig1_wf_0'].plot(t, self.cor.reader.wf(0), c=self.mpl_colors[0])
-            self.inspector_mpl['fig1_wf_1'].plot(t, self.cor.reader.wf(1), c=self.mpl_colors[1])
-            self.inspector_mpl['fig1_wf_2'].plot(t, self.cor.reader.wf(2), c=self.mpl_colors[2])
-            self.inspector_mpl['fig1_wf_3'].plot(t, self.cor.reader.wf(3), c=self.mpl_colors[3])
-            self.inspector_mpl['fig1_wf_4'].plot(t, self.cor.reader.wf(4), c=self.mpl_colors[4])
-            self.inspector_mpl['fig1_wf_5'].plot(t, self.cor.reader.wf(5), c=self.mpl_colors[5])
-            self.inspector_mpl['fig1_wf_6'].plot(t, self.cor.reader.wf(6), c=self.mpl_colors[6])
-            self.inspector_mpl['fig1_wf_7'].plot(t, self.cor.reader.wf(7), c=self.mpl_colors[7])
-
+            raw_t = self.data_slicers[run_index].reader.t()
             #Zoom in
             start = self.cor.prep.start_waveform_index
             stop = self.cor.prep.end_waveform_index+1
-            self.inspector_mpl['fig1_wf_0'].set_xlim(min(t[start:stop]), max(t[start:stop])) #All others will follow
+            self.inspector_mpl['fig1_wf_0'].set_xlim(min(raw_t[start:stop]), max(raw_t[start:stop])) #All others will follow
 
             #Plot Maps
             m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_h, circle_az=self.az_h, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
@@ -4910,7 +4921,7 @@ class dataSlicer():
                     channel=int(channel)
                     wf = self.cor.prep.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_filter,sine_subtract=apply_filter and sine_subtract, return_sine_subtract_info=False)
 
-                    freqs, spec_dbish, spec = self.cor.prep.rfftWrapper(t[start:stop], wf)
+                    freqs, spec_dbish, spec = self.cor.prep.rfftWrapper(raw_t[start:stop], wf)
                     ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel, c=self.mpl_colors[channel])
                 ax.set_ylim(-20,50)
                 ax.set_ylabel(apply_filter*'filtered ' + 'db ish')
@@ -5067,9 +5078,9 @@ class dataSlicer():
             fig1_spec_raw.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
             if self.show_all:
-                fig1_spec_filt = fig1.add_subplot(gs[3,3:4])
+                fig1_spec_filt = fig1.add_subplot(gs[3,3:4], sharex=fig1_spec_raw)
             else:
-                fig1_spec_filt = fig1.add_subplot(gs[3,2:4])
+                fig1_spec_filt = fig1.add_subplot(gs[3,2:4], sharex=fig1_spec_raw)
             fig1_spec_filt.minorticks_on()
             fig1_spec_filt.grid(b=True, which='major', color='k', linestyle='-')
             fig1_spec_filt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)

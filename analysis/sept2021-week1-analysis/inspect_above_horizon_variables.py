@@ -105,7 +105,7 @@ if __name__ == '__main__':
             # ds.addROI('above horizon',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
             ds.addROI('above horizon only',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90]})
             #ds.addROI('above horizon',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90],'similarity_count_h':[0,1],'similarity_count_v':[0,1],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERMAXcr_template_search_v':[0.5,100]})#'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]
-            ds.addROI('above horizon',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90],'similarity_count_h':[0,1],'similarity_count_v':[0,1],'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':[1.2,10000],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERMAXcr_template_search_v':[0.5,100],'min_snr_hSLICERADDmin_snr_v':[20,1000]})#'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]
+            ds.addROI('above horizon',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90],'similarity_count_h':[0,1],'similarity_count_v':[0,1],'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':[1.2,10000],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERMAXcr_template_search_v':[0.5,100],'min_snr_hSLICERADDmin_snr_v':[10,1000]})#'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]
 
 
             return_successive_cut_counts = False
@@ -178,6 +178,8 @@ if __name__ == '__main__':
                 # ds.plotROI2dHist('time_delay_0subtract1_h','time_delay_0subtract2_h', cmap=cmap, eventids_dict=cluster_dict, include_roi=False)
 
                 ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=None, include_roi=False)
+                # ds.resetAllROI()
+                # ds.addROI('snr cut',{'min_snr_hSLICERADDmin_snr_v':[20,1000]})
                 for key_x, key_y in plot_params:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
                     # ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None, include_roi=False)
@@ -198,25 +200,26 @@ if __name__ == '__main__':
                 common_run, common_run_index, common_eventid = common_eventids_array[numpy.argmax(common)]
                 uncommon_run, uncommon_run_index, uncommon_eventid = common_eventids_array[numpy.argmin(common)]
 
+                if False:
 
-                plt.figure()
-                plt.hist(common, bins=200)
+                    plt.figure()
+                    plt.hist(common, bins=200)
 
-                ds.eventInspector({uncommon_run:numpy.array([uncommon_eventid])})
+                    #ds.eventInspector({uncommon_run:numpy.array([uncommon_eventid])})
 
-                reduced_events = common_eventids_array[common < 100]
-                reduced_common = common[common < 100]
-                # sorted_reduced_events = reduced_events[numpy.argsort(reduced_common)]
-                reduced_eventid_dict = {}
-                for run in numpy.unique(reduced_events['run']):
-                    reduced_eventid_dict[run] = numpy.sort(reduced_events[reduced_events['run'] == run]['eventid'])
-                ds.eventInspector(reduced_eventid_dict)
+                    reduced_events = common_eventids_array[common < 100]
+                    reduced_common = common[common < 100]
+                    # sorted_reduced_events = reduced_events[numpy.argsort(reduced_common)]
+                    reduced_eventid_dict = {}
+                    for run in numpy.unique(reduced_events['run']):
+                        reduced_eventid_dict[run] = numpy.sort(reduced_events[reduced_events['run'] == run]['eventid'])
+                    ds.eventInspector(reduced_eventid_dict)
 
-                ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=False)
-                ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=reduced_eventid_dict, include_roi=False)
+                    ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=False)
+                    ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=reduced_eventid_dict, include_roi=False)
 
 
-
+                # ds.eventInspector(above_horizon_eventids_dict)
             if return_successive_cut_counts:
                 roi_key = 'above horizon'
                 for key in list(successive_cut_counts.keys()):

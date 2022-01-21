@@ -97,7 +97,7 @@ class FFTPrepper:
     --------
     examples.beacon_data_reader.reader
     '''
-    def __init__(self, reader, final_corr_length=2**15, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,tukey_alpha=0.1,tukey_default=False,apply_phase_response=False):
+    def __init__(self, reader, final_corr_length=2**15, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,tukey_alpha=0.1,tukey_default=False,apply_phase_response=False, notch_tv=True, misc_notches=True):
         try:
             self.reader = None #Value before setReader has been called.  If setReader is called multiple times this will be checked each to to throw warnings that some things might not change.
             
@@ -117,8 +117,8 @@ class FFTPrepper:
 
             # Prepare the reader and waveform info.
             self.setReader(reader) #First call this won't call self.prepareWaveformIndexing, but any subsequent calls will call self.prepareWaveformIndexing.  self.prepareWaveformIndexing is called below on first call and is forced to set everything.  All other times these will only be updated if a difference is detected.
-            self.prepareWaveformIndexing(self.requested_waveform_index_range, force=True, skip_additional_prep=True)
-            self.prepForFFTs(plot=plot_filters,apply_phase_response=self.requested_apply_phase_response) #must be called because skip_additional_prep above is True. 
+            self.prepareWaveformIndexing(self.requested_waveform_index_range, force=True, skip_additional_prep=True,notch_tv=notch_tv, misc_notches=misc_notches)
+            self.prepForFFTs(plot=plot_filters,apply_phase_response=self.requested_apply_phase_response, notch_tv=notch_tv, misc_notches=misc_notches) #must be called because skip_additional_prep above is True. 
 
             # self.use_sinc_interpolation = use_sinc_interpolation #Testing this right now.
 
@@ -185,7 +185,7 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def prepareWaveformIndexing(self, waveform_index_range, verbose=True, force=False, skip_additional_prep=False):
+    def prepareWaveformIndexing(self, waveform_index_range, verbose=True, force=False, skip_additional_prep=False, notch_tv=True, misc_notches=True):
         '''
         This will inspect the current reader and determine the appropriate waveform index range based upon the requested
         range and the available range. 
@@ -242,7 +242,7 @@ class FFTPrepper:
                 self.tukey = scipy.signal.tukey(self.buffer_length, alpha=self.requested_tukey_alpha, sym=True)
 
                 if skip_additional_prep == False:
-                    self.prepForFFTs(plot=False,apply_phase_response=self.requested_apply_phase_response)
+                    self.prepForFFTs(plot=False,apply_phase_response=self.requested_apply_phase_response, notch_tv=notch_tv, misc_notches=misc_notches)
             return major_changes_made
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -548,7 +548,7 @@ class FFTPrepper:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def prepForFFTs(self,plot=False,apply_phase_response=False):
+    def prepForFFTs(self,plot=False,apply_phase_response=False , notch_tv=True, misc_notches=True):
         '''
         This will get timing information from the reader and use it to determine values such as timestep
         that will be used when performing ffts later.  
@@ -580,7 +580,7 @@ class FFTPrepper:
             self.corr_index_to_delay_index = -numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1) #Negative because with how it is programmed you would want to roll the template the normal amount, but I will be rolling the waveforms.
 
             #Prepare Filters
-            self.filter_original = self.makeFilter(self.freqs_original, plot_filter=plot, apply_phase_response=apply_phase_response)
+            self.filter_original = self.makeFilter(self.freqs_original, plot_filter=plot, apply_phase_response=apply_phase_response, notch_tv=notch_tv, misc_notches=misc_notches)
             #self.filter_padded_to_power2 = self.makeFilter(self.freqs_padded_to_power2,plot_filter=False)
             #self.filter_corr = self.makeFilter(self.freqs_corr,plot_filter=False)
             
@@ -608,7 +608,7 @@ class FFTPrepper:
         return numpy.arange(-(self.final_corr_length-1)//2,(self.final_corr_length-1)//2 + 1)*self.dt_ns_upsampled
     
 
-    def makeFilter(self,freqs, plot_filter=False,apply_phase_response=False):
+    def makeFilter(self,freqs, plot_filter=False,apply_phase_response=False, notch_tv=True, misc_notches=True):
         '''
         This will make a frequency domain filter based on the given specifications. 
 
@@ -625,7 +625,7 @@ class FFTPrepper:
         '''
         try:
             filter_x = freqs
-            filter_y = numpy.zeros((8,len(filter_x)),dtype='complex128')
+            filter_y = numpy.ones((8,len(filter_x)),dtype='complex128')
             
             if apply_phase_response == True:
                 phase_response_filter = self.prepPhaseFilter(filter_x)
@@ -644,7 +644,32 @@ class FFTPrepper:
                 fig.canvas.set_window_title('Filter')
                 numpy.seterr(divide = 'ignore') 
                 plt.suptitle('Butterworth filter frequency response')
+
+            fs = freqs[1] - freqs[0]
             
+            #Calculate non-channel specific filters
+
+            #TV Notch filter
+            if notch_tv == True:
+                notch_tv_start_MHz = 52.5
+                notch_tv_stop_MHz = 60.25
+                tv_b, tv_a = scipy.signal.butter(3, (notch_tv_start_MHz*1e6, notch_tv_stop_MHz*1e6), 'bandstop', analog=True)
+                filter_x_tv_notch, filter_y_tv_notch = scipy.signal.freqs(tv_b, tv_a,worN=freqs)
+            else:
+                filter_y_tv_notch = numpy.ones_like(filter_x)
+                filter_x_tv_notch = filter_x
+
+            #Apply Miscellanous notches for known sources
+            if misc_notches:
+                filter_y_misc_notches = numpy.ones(len(filter_x),dtype='complex128')
+                for notch_start_MHz, notch_stop_MHz in ((26,28),(88,89),(106,108),(117,119),(125,127)):
+                    notch_b, notch_a = scipy.signal.butter(4, (notch_start_MHz*1e6, notch_stop_MHz*1e6), 'bandstop', analog=True)
+                    filter_x_misc_notches, filter_y_notch = scipy.signal.freqs(notch_b, notch_a, worN=freqs)
+                    filter_y_misc_notches = numpy.multiply(filter_y_misc_notches , filter_y_notch)
+            else:
+                filter_y_misc_notches = numpy.ones_like(filter_x)
+                filter_x_misc_notches = filter_x
+
             for channel in range(8):
                 if numpy.logical_and(self.low_pass_filter_order is not None, self.crit_freq_low_pass_MHz is not None):
                     b, a = scipy.signal.butter(self.low_pass_filter_order[channel], self.crit_freq_low_pass_MHz[channel]*1e6, 'low', analog=True)
@@ -660,8 +685,6 @@ class FFTPrepper:
                     filter_x_high_pass = filter_x
                     filter_y_high_pass = numpy.ones_like(filter_x)
 
-
-                
                 if apply_phase_response == True:
                     # print(filter_y.shape)
                     # print(phase_response_filter[channel].shape)
@@ -669,9 +692,15 @@ class FFTPrepper:
                     # version = ".".join(map(str, sys.version_info[:3]))
                     # print(version)
                     # import pdb; pdb.set_trace()
-                    filter_y[channel] = numpy.multiply(phase_response_filter[channel],numpy.multiply(filter_y_low_pass,filter_y_high_pass))
-                else:
-                    filter_y[channel] = numpy.multiply(filter_y_low_pass,filter_y_high_pass)
+                    filter_y[channel] = numpy.multiply(filter_y[channel], phase_response_filter[channel])
+
+                filter_y[channel] = numpy.multiply(filter_y[channel],numpy.multiply(filter_y_low_pass,filter_y_high_pass))
+
+                if notch_tv == True and channel%2 == 0:
+                    filter_y[channel] = numpy.multiply(filter_y[channel] , filter_y_tv_notch)
+
+                if misc_notches:
+                    filter_y[channel] = numpy.multiply(filter_y[channel] , filter_y_misc_notches)
                 
                 if plot_filter == True:
                     plt.subplot(4,2,channel+1)
@@ -684,6 +713,13 @@ class FFTPrepper:
                         plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_high_pass)),color='orange',linestyle='--',label='high pass = order %i'%self.high_pass_filter_order[channel])
                     else:
                         plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_high_pass)),color='orange',linestyle='--',label='high pass = order [None]')
+
+                    if misc_notches:
+                        plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_misc_notches)),color='lime',linestyle='--',label='Notched Misc Frequency')
+
+                    if notch_tv == True and channel%2 == 0:
+                        plt.plot(filter_x/1e6, 20 * numpy.log10(abs(filter_y_tv_notch)),color='b',linestyle='--',label='Notched TV Frequency')
+
                     numpy.seterr(divide = 'warn') 
                     if channel %2 == 0:
                         plt.ylabel('Amplitude [dB]')
@@ -698,7 +734,7 @@ class FFTPrepper:
                         plt.axvline(self.crit_freq_high_pass_MHz[channel], color='cyan',label='HP Crit at %0.2f MHz'%self.crit_freq_high_pass_MHz[channel]) # cutoff frequency
                     plt.xlim(0,200)
                     plt.ylim(-50,10)
-                    plt.legend()
+                    #plt.legend()
 
             return filter_y
         except Exception as e:

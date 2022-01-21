@@ -129,7 +129,7 @@ class Correlator:
         meters away).  To change the distance call the overwriteSourceDistance() function, which will implement the
         necessary adjustments for the new source distance.
     '''
-    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=True, tukey=True, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None, all_alignments=False):
+    def __init__(self, reader,  upsample=None, n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180), crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False, waveform_index_range=(None,None), apply_phase_response=True, tukey=True, sine_subtract=True, map_source_distance_m=1e6, deploy_index=None, all_alignments=False, notch_tv=True, misc_notches=True):
         try:
             self.reader = None #Before setReader called first time.
             self.prep = None
@@ -161,7 +161,7 @@ class Correlator:
             internally.  FFTPrepper is being used to apply filters to the loaded waveforms such that any changes to
             filtering only need to happen in a single location/class.
             '''
-            self.prep = FFTPrepper(self.reader, final_corr_length=2**10, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filter,tukey_alpha=0.1,tukey_default=False,apply_phase_response=apply_phase_response)
+            self.prep = FFTPrepper(self.reader, final_corr_length=2**10, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, waveform_index_range=waveform_index_range, plot_filters=plot_filter,tukey_alpha=0.1,tukey_default=False,apply_phase_response=apply_phase_response,notch_tv=notch_tv, misc_notches=misc_notches)
             self.prepareTimes() 
             if numpy.all(self.prep.filter_original == 1.0):
                 self.apply_filter = False
