@@ -274,14 +274,14 @@ if __name__ == '__main__':
 
         pprint(out_array)
 
-        min_val_eventid_dict = {}
+        min_val_eventids_dict = {}
         for run in numpy.unique(out_array[:,0]):
-            min_val_eventid_dict[int(run)] = out_array[out_array[:,0] == run][:,1].astype(int)
+            min_val_eventids_dict[int(run)] = out_array[out_array[:,0] == run][:,1].astype(int)
             for eventid in out_array[out_array[:,0] == run][:,1].astype(int):
                 print('https://users.rcc.uchicago.edu/~cozzyd/monutau/#event&run=%i&entry=%i'%(run,eventid))
 
-        ds.plotROI2dHist(azimuth_key, elevation_key, cmap='cool', eventids_dict=min_val_eventid_dict, return_counts=True, include_roi=False)
+        ds.plotROI2dHist(azimuth_key, elevation_key, cmap='cool', eventids_dict=min_val_eventids_dict, return_counts=True, include_roi=False)
 
-        ds.eventInspector(min_val_eventid_dict) #only run on sinteractive with a lot of memory
+        ds.eventInspector(min_val_eventids_dict) #only run on sinteractive with a lot of memory
 
     
