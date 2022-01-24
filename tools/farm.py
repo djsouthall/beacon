@@ -74,7 +74,7 @@ if __name__ == "__main__":
         #THE ONE I LIkE TO DO NOW
         runs = numpy.arange(5733,5974,dtype=int)#numpy.array([5864])#numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
-        analysis_part = 2
+        analysis_part = 3
         # Jan/15/2022
         # redo for just all numpy.array([5821,5808])
         # redo for hv and all numpy.array([5954,5949,5947,5925,5921,5943,5905,5903,5941,5901,5899,5893,5936])
@@ -95,7 +95,8 @@ if __name__ == "__main__":
     ### Script ###
     ###--------###
 
-    jobid_dict = parseJobIDs(partition,username,max_expected_column_width=8)
+    max_expected_column_width = 8
+    jobid_dict = parseJobIDs(partition,username,max_expected_column_width=max_expected_column_width)
 
     for run in runs:
         print('\nRun %i'%run)
@@ -290,7 +291,45 @@ if __name__ == "__main__":
                 print(command_queue)
                 hpol_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n','')) 
 
-        elif analysis_part == 3:
+        elif True and analysis_part == 3:
+            # *** This one will check for existing jobs running with name 'a' and use their jobids as necessary to start.
+            # If 'a' (all pol) jobs are not available it will confirm that no jobs are running for that job, then just
+            # submit it normally.
+
+            #Runs h then v, then all
+            #Run hpol and vpol jobs in same job, and run the 'all' case as a seperate job. 
+
+            check_str = str(jobname+'all')[0:max_expected_column_width] #imposing characterlimit of dict
+
+            if check_str in list(jobid_dict.keys()):
+                jobid = int(jobid_dict[check_str])
+            elif numpy.any(numpy.array(['bcn%i'%run in a for a in list(jobid_dict.keys())])):
+                print('A job showed up for run %i but ALL was not visible.  This is unexpected, and this run is being ignored.'%run)
+                continue
+            else:
+                jobid = 0
+
+            #Prepare Job
+
+            if jobid == 0:
+                batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition, jobname)
+            else:
+                batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition, jobname, jobid)
+
+            script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part3.sh')
+
+            command = '%s %i %s %s'%(script, run, deploy_index, 'both')
+            command_queue = batch + command
+
+            #Submit job and get the jobid
+            print(command_queue)
+            _jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
+            
+            if jobid == 0:
+                print('Run %i jobs submitted --> jid:%i'%(run,_jobid))
+            else:
+                print('Run %i jobs submitted --> jid:%i dependant on jid:%i'%(run,_jobid, jobid))
+        elif False and analysis_part == 3:
             #Runs h then v, then all
             #Run hpol and vpol jobs in same job, and run the 'all' case as a seperate job. 
 

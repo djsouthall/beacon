@@ -504,11 +504,11 @@ class CosmicRayGenerator():
                     plt.plot(plot_freq_A/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(self.preamp_response_resampled/numpy.max(numpy.abs(self.preamp_response_resampled))))),linewidth=3,label='preamp')
                     
                     plot_freq_B = numpy.fft.rfftfreq(len(self.t_ns),(self.t_ns[1]-self.t_ns[0])/1.0e9)
-                    plt.plot(plot_freq_B/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(efield/numpy.max(numpy.abs(efield))))),linewidth=3,label='bipolar delta', c='c')
+                    plt.plot(plot_freq_B/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(efield/numpy.max(numpy.abs(efield))))),linewidth=3,label='bipolar delta')
 
                     if filter_x_time_domain is not None and filter_y_time_domain is not None:
                         plot_freq_filter = numpy.fft.rfftfreq(len(filter_x_time_domain),(filter_x_time_domain[1]-filter_x_time_domain[0])/1.0e9)
-                        plt.plot(plot_freq_filter/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(filter_y_time_domain/numpy.max(numpy.abs(filter_y_time_domain))))),linewidth=3,label='bipolar delta')
+                        plt.plot(plot_freq_filter/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(filter_y_time_domain/numpy.max(numpy.abs(filter_y_time_domain))))),linewidth=3,label='Filter', c='c')
                     
                     plot_freq_C = numpy.fft.rfftfreq(len(self.efield_convolved_t_ns),(self.efield_convolved_t_ns[1]-self.efield_convolved_t_ns[0])/1.0e9)
                     plt.plot(plot_freq_C/1.0e6,20*numpy.log10(numpy.abs(numpy.fft.rfft(efield_convolved/numpy.max(numpy.abs(efield_convolved))))),c='r',linewidth=4,label='Resultant Convolved "E Field" Signal')#Where the output convolved signal will be plotted.  
