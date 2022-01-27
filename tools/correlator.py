@@ -1952,7 +1952,7 @@ class Correlator:
 
                 if numpy.isin(pair_index ,include_baselines ):
                     linestyle = '-'
-                    linewidth = 4.0*self.min_elevation_linewidth
+                    linewidth = 2.0*self.min_elevation_linewidth
                 else:
                     linestyle = '--'
                     linewidth = self.min_elevation_linewidth

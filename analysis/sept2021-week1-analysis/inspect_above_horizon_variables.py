@@ -66,11 +66,12 @@ if __name__ == '__main__':
     map_length = 16384
     map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
 
-    _runs = numpy.arange(5733,5974)
-    # _runs = numpy.arange(5733,5800)
+    _runs = numpy.arange(5733,5974)#[0:100]
+    bad_runs = numpy.array([5775])
+    #_runs = numpy.arange(5733,5800)
 
     for runs in [_runs]:
-
+        runs = runs[~numpy.isin(runs,bad_runs)]
         print("Preparing dataSlicer")
 
         map_resolution_theta = 0.25 #degrees
@@ -105,8 +106,12 @@ if __name__ == '__main__':
             # ds.addROI('above horizon',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
             ds.addROI('above horizon only',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90]})
             #ds.addROI('above horizon',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90],'similarity_count_h':[0,1],'similarity_count_v':[0,1],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERMAXcr_template_search_v':[0.5,100]})#'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]
-            ds.addROI('above horizon',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90],'similarity_count_h':[0,1],'similarity_count_v':[0,1],'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':[1.2,10000],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERMAXcr_template_search_v':[0.5,100],'min_snr_hSLICERADDmin_snr_v':[10,1000]})#'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]
+            ds.addROI('above horizon',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90],'similarity_count_h':[-0.1,10],'similarity_count_v':[-0.1,10],'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':[1.2,10000],'impulsivity_hSLICERADDimpulsivity_v':[0.3,100],'cr_template_search_hSLICERMAXcr_template_search_v':[0.4,100]})#'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]
 
+            # ds.addROI('streak',{'elevation_best_choice':[17,20],'phi_best_choice':[8.63,10.97]})
+            # streak_dict = ds.getCutsFromROI('streak',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
+            # ds.eventInspector(streak_dict)
+            #ds.organizeEventDict(above_horizon_eventids_dict)
 
             return_successive_cut_counts = False
             return_total_cut_counts = False
@@ -118,6 +123,15 @@ if __name__ == '__main__':
                 above_horizon_eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
             above_horizon_only_eventids_dict = ds.getCutsFromROI('above horizon only',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
             
+            if True:
+                for remove_box_az, remove_el in [ [[44.5,50], [-6,0]] , [[-11,-8], [-7,-3]] , [[-3,-1], [-12,0]] , [[24.5,28], [-7.75,-1]] , [[30.75,30], [-6,-1]] , [[6,8.5], [-12,-4]] ]:
+                    cluster_cut_dict = copy.deepcopy(ds.roi['above horizon'])
+                    cluster_cut_dict['phi_best_all_belowhorizon'] = remove_box_az
+                    cluster_cut_dict['elevation_best_all_belowhorizon'] = remove_el
+                    ds.addROI('below horizon cluster',cluster_cut_dict)
+                    remove_from_above_horizon_eventids_dict = ds.getCutsFromROI('below horizon cluster',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
+                    above_horizon_eventids_dict = ds.returnEventsAWithoutB(above_horizon_eventids_dict, remove_from_above_horizon_eventids_dict)
+                    #ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=False)
             # ds.addROI('cluster',{'elevation_best_choice':[15,17.5],'phi_best_choice':[36.5,38.25],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
             # cluster_dict = ds.getCutsFromROI('cluster',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
             # # ds.eventInspector(cluster_dict)
@@ -183,7 +197,7 @@ if __name__ == '__main__':
                 for key_x, key_y in plot_params:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
                     # ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None, include_roi=False)
-                    # ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_only_eventids_dict, include_roi=False)
+                    ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_only_eventids_dict, include_roi=False)
                     ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=False)
 
 
@@ -200,6 +214,10 @@ if __name__ == '__main__':
                 common_run, common_run_index, common_eventid = common_eventids_array[numpy.argmax(common)]
                 uncommon_run, uncommon_run_index, uncommon_eventid = common_eventids_array[numpy.argmin(common)]
 
+                # ds.plotROI2dHist('phi_best_all_belowhorizon','elevation_best_all_belowhorizon', cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=False)
+
+                
+                #cluster_dict = ds.getCutsFromROI('cluster',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
                 if False:
 
                     plt.figure()

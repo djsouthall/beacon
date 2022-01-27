@@ -42,6 +42,7 @@ echo 'Where relevant using calibration/deploy_index ' $2 || exit
 echo 'Attempting to prepare current pointing directions by executing rf_bg_search_calculate_best.py' || exit
 python3 ${BEACON_ANALYSIS_DIR}analysis/rf_bg_search_calculate_best.py $1 || exit
 
-echo 'Attempting to characterize coincident events by executing flag_event_coincidence.py' || exit
-python3 ${BEACON_ANALYSIS_DIR}analysis/flag_event_coincidence.py $1 || exit
+# Currently broken
+# echo 'Attempting to characterize coincident events by executing flag_event_coincidence.py' || exit
+# python3 ${BEACON_ANALYSIS_DIR}analysis/flag_event_coincidence.py $1 || exit
 

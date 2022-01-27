@@ -84,7 +84,7 @@ if __name__ == '__main__':
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
                         n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), remove_incomplete_runs=True)
 
-        ds.eventInspector({run:[eventid]}, show_all=True)
+        ds.eventInspector({run:[eventid]}, show_all=True, include_time_delays=True)
         fig = ds.inspector_mpl['fig1']
         print('https://users.rcc.uchicago.edu/~cozzyd/monutau/#event&run=%i&entry=%i'%(run,eventid))
 

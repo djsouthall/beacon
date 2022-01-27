@@ -801,6 +801,28 @@ class dataSlicerSingleRun():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def getTimeDelayDictSingleEvent(self, eventid):
+        '''
+        '''
+        time_delay_dict = {}
+        time_delay_dict['hpol'] = {}
+        time_delay_dict['vpol'] = {}
+        pairs = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]
+        try:
+            for pair in pairs:
+
+                time_delay_dict['hpol']['[%i, %i]'%(pair[0],pair[1])] = [self.getDataFromParam([eventid], 'time_delay_%isubtract%i_h'%(pair[0],pair[1]))[0]]
+                time_delay_dict['vpol']['[%i, %i]'%(pair[0],pair[1])] = [self.getDataFromParam([eventid], 'time_delay_%isubtract%i_v'%(pair[0],pair[1]))[0]]
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print('Run: ',self.reader.run)
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+        return time_delay_dict
+
     def getModifiedDataFromParam(self, eventids, param_key, verbose=True):
         '''
         This will attempt to return param data similar to getDataFromParam, but will do so assuming that the given
@@ -4906,10 +4928,21 @@ class dataSlicer():
             stop = self.cor.prep.end_waveform_index+1
             self.inspector_mpl['fig1_wf_0'].set_xlim(min(raw_t[start:stop]), max(raw_t[start:stop])) #All others will follow
 
+
+            # time_delay_dict : dict of list of floats
+            # The first level of the dict should specify 'hpol' and/or 'vpol'
+            # The following key within should have each of the baseline pairs that you wish to plot.  Each of these
+            # will correspond to a list of floats with all of the time delays for that baseline you want plotted.
+
+            if self.include_time_delays:
+                time_delay_dict = self.data_slicers[run_index].getTimeDelayDictSingleEvent(eventid)
+            else:
+                time_delay_dict = {}
+
             #Plot Maps
-            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_h, circle_az=self.az_h, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_h, circle_az=self.az_h, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
             self.inspector_mpl['fig1_map_h'].set_xlim(self.cor.range_phi_deg)
-            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_v, circle_az=self.az_v, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_v, circle_az=self.az_v, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
             self.inspector_mpl['fig1_map_v'].set_xlim(self.cor.range_phi_deg)
             if self.show_all:
                 m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_all'] = self.cor.map(eventid, 'all', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_all, circle_az=self.az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
@@ -4982,13 +5015,17 @@ class dataSlicer():
             del self.inspector_mpl
 
 
-    def eventInspector(self, eventids_dict, mollweide=False, show_all=False):
+    def eventInspector(self, eventids_dict, mollweide=False, show_all=False, include_time_delays=False):
         '''
         This is meant to provide a tool to quickly flick through events from multiple runs.  It will create a one panel
         view of the events info as best as I can manage, and provide easy support for choosing which event you want to
         inspect. 
+
+        This should be a class so I can have multiple open with different settings, but with RAM limitations probably
+        not worth the effort.  
         '''
         try:
+            self.include_time_delays = include_time_delays
             self.show_all = show_all
 
             self.mpl_colors = [u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf']
@@ -5141,10 +5178,13 @@ class dataSlicer():
             self.table_params['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value'] = 'H AH Peak/Opt'
             self.table_params['vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'] = 'V AH Peak/Opt'
 
-            self.table_params['coincidence_method_1_h'] = 'coin m1H'
-            self.table_params['coincidence_method_1_v'] = 'coin m1V'
-            self.table_params['coincidence_method_2_h'] = 'coin m2H'
-            self.table_params['coincidence_method_2_v'] = 'coin m2V'
+
+            self.table_params['mean_max_corr_h'] = 'Mean Corr H'
+            self.table_params['mean_max_corr_v'] = 'Mean Corr V'
+            # self.table_params['coincidence_method_1_h'] = 'coin m1H'
+            # self.table_params['coincidence_method_1_v'] = 'coin m1V'
+            # self.table_params['coincidence_method_2_h'] = 'coin m2H'
+            # self.table_params['coincidence_method_2_v'] = 'coin m2V'
 
 
             #Sample eventid, would normally be selected from and changeable
@@ -5254,8 +5294,23 @@ class dataSlicer():
                     #import pdb; pdb.set_trace()
 
                     #Plot Maps
-                    m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_h'] = self.outer.cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_h, circle_az=self.outer.az_h, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
-                    m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_v'] = self.outer.cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_v, circle_az=self.outer.az_v, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
+                    run = self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['run']
+                    run_index = self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['run_index']
+                    eventid = self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['eventid']
+
+                    if self.outer.cor.reader.run != run:
+                        self.outer.cor.setReader(self.outer.data_slicers[run_index].reader, verbose=False)
+                    
+                    self.outer.cor.reader.setEntry(eventid)
+
+                    #I don't think I need to re-plot these
+                    if False and self.outer.include_time_delays:
+                        time_delay_dict = self.outer.data_slicers[run_index].getTimeDelayDictSingleEvent(eventid)
+                    else:
+                        time_delay_dict = {}
+
+                    m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_h'] = self.outer.cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_h, circle_az=self.outer.az_h, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
+                    m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_v'] = self.outer.cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_v, circle_az=self.outer.az_v, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
                     if self.outer.show_all:
                         m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_all'] = self.outer.cor.map(eventid, 'all', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_all, circle_az=self.outer.az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
                     self.outer.inspector_mpl['fig1'].canvas.draw()
