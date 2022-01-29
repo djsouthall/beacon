@@ -3473,7 +3473,12 @@ class dataSlicerSingleRun():
                         plane_xy = cor.getPlaneZenithCurves(cor.n_hpol.copy(), 'hpol', 90.0, azimuth_offset_deg=0.0)
                     elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'v', main_param_key_y.split('_')[-1] == 'v'):
                         plane_xy = cor.getPlaneZenithCurves(cor.n_vpol.copy(), 'vpol', 90.0, azimuth_offset_deg=0.0)
+                    elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'all', main_param_key_y.split('_')[-1] == 'all'):
+                        plane_xy = cor.getPlaneZenithCurves(cor.n_all.copy(), 'all', 90.0, azimuth_offset_deg=0.0)
+                    elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'choice', main_param_key_y.split('_')[-1] == 'choice'):
+                        plane_xy = cor.getPlaneZenithCurves(cor.n_all.copy(), 'all', 90.0, azimuth_offset_deg=0.0)
                     else:
+                        import pdb; pdb.set_trace()
                         plane_xy = None
                     if plane_xy is not None:
                         if 'elevation_best_' in main_param_key_y:
@@ -4475,12 +4480,18 @@ class dataSlicer():
                     plt.plot(self.current_bin_centers_mesh_y[:,0],self.current_bin_centers_mesh_y[:,0],linewidth=1,linestyle='--',color='tab:gray',alpha=0.5)
                 if numpy.logical_and('phi_best_' in main_param_key_x,numpy.logical_or('theta_best_' in main_param_key_y,'elevation_best_' in main_param_key_y)):
                     #Make cor to plot the array plane.
+                            
                     cor = Correlator(self.data_slicers[0].reader,  upsample=2**10, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,apply_phase_response=False, tukey=False, sine_subtract=False, deploy_index=self.data_slicers[0].map_deploy_index) #only for array plane
-                    if numpy.logical_and(main_param_key_x.replace('_allsky','').replace('_abovehorizon','').replace('_belowhorizon','').split('_')[-1] == 'h', main_param_key_y.replace('_allsky','').replace('_abovehorizon','').replace('_belowhorizon','').split('_')[-1] == 'h'):
+                    if numpy.logical_and(main_param_key_x.split('_')[-1] == 'h', main_param_key_y.split('_')[-1] == 'h'):
                         plane_xy = cor.getPlaneZenithCurves(cor.n_hpol.copy(), 'hpol', 90.0, azimuth_offset_deg=0.0)
-                    elif numpy.logical_and(main_param_key_x.replace('_allsky','').replace('_abovehorizon','').replace('_belowhorizon','').split('_')[-1] == 'v', main_param_key_y.replace('_allsky','').replace('_abovehorizon','').replace('_belowhorizon','').split('_')[-1] == 'v'):
+                    elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'v', main_param_key_y.split('_')[-1] == 'v'):
                         plane_xy = cor.getPlaneZenithCurves(cor.n_vpol.copy(), 'vpol', 90.0, azimuth_offset_deg=0.0)
+                    elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'all', main_param_key_y.split('_')[-1] == 'all'):
+                        plane_xy = cor.getPlaneZenithCurves(cor.n_all.copy(), 'all', 90.0, azimuth_offset_deg=0.0)
+                    elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'choice', main_param_key_y.split('_')[-1] == 'choice'):
+                        plane_xy = cor.getPlaneZenithCurves(cor.n_all.copy(), 'all', 90.0, azimuth_offset_deg=0.0)
                     else:
+                        import pdb; pdb.set_trace()
                         plane_xy = None
                     if plane_xy is not None:
                         if 'elevation_best_' in main_param_key_y:
@@ -5181,6 +5192,17 @@ class dataSlicer():
 
             self.table_params['mean_max_corr_h'] = 'Mean Corr H'
             self.table_params['mean_max_corr_v'] = 'Mean Corr V'
+
+            
+            self.table_params['elevation_best_choice'] = '[10,90]'
+            self.table_params['phi_best_choice'] = '[-90,90]'
+            self.table_params['similarity_count_h'] = '[-0.1,10]'
+            self.table_params['similarity_count_v'] = '[-0.1,10]'
+            self.table_params['hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe'] = '[1.2,10000]'
+            self.table_params['impulsivity_hSLICERADDimpulsivity_v'] = '[0.3,100]'
+            self.table_params['cr_template_search_hSLICERMAXcr_template_search_v'] = '[0.4,100]'
+
+
             # self.table_params['coincidence_method_1_h'] = 'coin m1H'
             # self.table_params['coincidence_method_1_v'] = 'coin m1V'
             # self.table_params['coincidence_method_2_h'] = 'coin m2H'

@@ -2731,7 +2731,7 @@ class Correlator:
                                 additional_circles.append(_circ)
 
                 if add_airplanes:
-                    map_ax, airplane_direction_dict = self.addAirplanesToMap([eventid], pol, map_ax, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=False, color='r', min_approach_cut_km=500,plot_distance_cut_limit=500)
+                    map_ax, airplane_direction_dict = self.addAirplanesToMap([eventid], pol, map_ax, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=False, color='r', min_approach_cut_km=500,plot_distance_cut_limit=500, time_window_s=3600.0)
                     if verbose:
                         print('airplane_direction_dict:')
                         print(airplane_direction_dict)
@@ -4220,7 +4220,7 @@ class Correlator:
         '''
         return pt.getENUTrackDict(*args, **kwargs)
 
-    def addAirplanesToMap(self, eventids, pol, ax, azimuth_offset_deg=0, mollweide=False, radius = 1.0, crosshair=False, color='k', min_approach_cut_km=100,plot_distance_cut_limit=100, time_window_s = 60.0):
+    def addAirplanesToMap(self, eventids, pol, ax, azimuth_offset_deg=0, mollweide=False, radius = 1.0, crosshair=False, color='k', min_approach_cut_km=100,plot_distance_cut_limit=100, time_window_s = 60.0, debug=False):
         '''
         This will add circles to a map for every airplane that is expected to be present in the sky at the time of the
         event.  If a range of events are given then this will plot trajectories of planes ovr the map.
@@ -4275,7 +4275,15 @@ class Correlator:
             else:
                 origin = self.A0_latlonel_physical
 
+
             flight_tracks_ENU, all_vals = self.getENUTrackDict(start,stop,min_approach_cut_km,hour_window=2,flights_of_interest=[],origin=origin)
+            if debug == True:
+                print('flight_tracks_ENU.keys()',flight_tracks_ENU.keys())
+                print(start)
+                print(stop)
+                print(min_approach_cut_km)
+                print(origin)
+                import pdb; pdb.set_trace()
 
             # Get interpolated airplane trajectories. 
             airplane_direction_dict = {}
@@ -4288,10 +4296,16 @@ class Correlator:
                 original_norms = numpy.sqrt(flight_tracks_ENU[key][:,0]**2 + flight_tracks_ENU[key][:,1]**2 + flight_tracks_ENU[key][:,2]**2 )
                 # import pdb; pdb.set_trace()
                 #cut = numpy.logical_and(original_norms/1000.0 < plot_distance_cut_limit,numpy.logical_and(min(flight_tracks_ENU[key][:,3]) <= start ,max(flight_tracks_ENU[key][:,3]) >= stop))
-                cut = numpy.logical_and(original_norms/1000.0 < plot_distance_cut_limit,numpy.logical_and(flight_tracks_ENU[key][:,3] >= start ,flight_tracks_ENU[key][:,3]) <= stop)
+                cut = numpy.logical_and(original_norms/1000.0 < plot_distance_cut_limit,numpy.logical_and(flight_tracks_ENU[key][:,3] >= start ,flight_tracks_ENU[key][:,3] <= stop))
                 if numpy.sum(cut) == 0:
                     continue
-                poly = pt.PlanePoly(flight_tracks_ENU[key][cut,3],(flight_tracks_ENU[key][cut,0],flight_tracks_ENU[key][cut,1],flight_tracks_ENU[key][cut,2]),order=5,plot=False)
+                elif sum(cut) < 40:
+                    order = 3
+                elif sum(cut) < 80:
+                    order = 5
+                else:
+                    order = 7
+                poly = pt.PlanePoly(flight_tracks_ENU[key][cut,3],(flight_tracks_ENU[key][cut,0],flight_tracks_ENU[key][cut,1],flight_tracks_ENU[key][cut,2]),order=order,plot=False)
                 interpolated_airplane_locations = poly.poly(event_times)
                 if len(poly.poly_funcs) > 0:
                     

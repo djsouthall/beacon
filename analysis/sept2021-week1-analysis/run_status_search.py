@@ -166,7 +166,8 @@ if __name__ == '__main__':
     map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
 
     runs = numpy.arange(5733,5974)
-    flipbook_path = '/home/dsouthall/scratch-midway2/event_flipbook_1642725413'
+    runs = runs[~numpy.isin(runs, [5775])]
+    flipbook_path = '/home/dsouthall/scratch-midway2/event_flipbook_1643154940'#'/home/dsouthall/scratch-midway2/event_flipbook_1642725413'
     weather_data_path = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'data', 'barcroft-weather-data-06-01-2021_01-21-2022.csv')
 
     print("Preparing dataSlicer")
@@ -255,7 +256,7 @@ if __name__ == '__main__':
             plt.ylabel(key.split(' ')[-1])
             plt.xlabel('Date')
             plt.xticks(rotation = 45)
-            plt.legend()
+            plt.legend(fontsize=10)
             plt.tight_layout()
             #Want to do similar for trigger rates. 
     else:
@@ -299,7 +300,7 @@ if __name__ == '__main__':
             first_run = False
         else:
             plt.axvline(run_start_times_datetime[run_index],linewidth=linewidth,c=c, alpha=alpha)
-    plt.legend()
+    plt.legend(fontsize=10)
     # ax_beams.get_xaxis().set_ticklabels([])
     plt.ylim(0,100)
 
@@ -376,7 +377,7 @@ if __name__ == '__main__':
             first_run = False
         else:
             plt.axvline(run_start_times_datetime[run_index],linewidth=linewidth,c=c, alpha=alpha)
-    plt.legend()
+    plt.legend(fontsize=10)
     plt.xticks(rotation = 45)
     plt.tight_layout()
 

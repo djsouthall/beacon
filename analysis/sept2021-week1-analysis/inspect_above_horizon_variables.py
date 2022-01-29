@@ -25,6 +25,7 @@ from beacon.tools.fftmath import FFTPrepper
 from beacon.tools.correlator import Correlator
 from beacon.tools.data_slicer import dataSlicer
 from beacon.tools.line_of_sight import circleSource
+from beacon.tools.flipbook_reader import flipbookToDict
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -60,15 +61,20 @@ print('SETTING processed_datapath TO: ', processed_datapath)
 
 if __name__ == '__main__':
     plt.close('all')
-    cmap = 'cool'#'coolwarm'
+    cmap = 'cool'
     impulsivity_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     time_delays_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     map_length = 16384
     map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
 
-    _runs = numpy.arange(5733,5974)#[0:100]
-    bad_runs = numpy.array([5775])
-    #_runs = numpy.arange(5733,5800)
+    _runs = numpy.arange(5733,5974)
+    bad_runs = numpy.array([])
+
+    flipbook_path = '/home/dsouthall/scratch-midway2/event_flipbook_1643154940'#'/home/dsouthall/scratch-midway2/event_flipbook_1642725413'
+    sorted_dict = flipbookToDict(flipbook_path)
+    good_dict = sorted_dict['very-good']['eventids_dict']
+    maybe_dict = sorted_dict['maybe']['eventids_dict']
+    bad_dict = sorted_dict['bad']['eventids_dict']
 
     for runs in [_runs]:
         runs = runs[~numpy.isin(runs,bad_runs)]
@@ -122,7 +128,7 @@ if __name__ == '__main__':
             else:
                 above_horizon_eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
             above_horizon_only_eventids_dict = ds.getCutsFromROI('above horizon only',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
-            
+
             if True:
                 for remove_box_az, remove_el in [ [[44.5,50], [-6,0]] , [[-11,-8], [-7,-3]] , [[-3,-1], [-12,0]] , [[24.5,28], [-7.75,-1]] , [[30.75,30], [-6,-1]] , [[6,8.5], [-12,-4]] ]:
                     cluster_cut_dict = copy.deepcopy(ds.roi['above horizon'])
@@ -131,10 +137,6 @@ if __name__ == '__main__':
                     ds.addROI('below horizon cluster',cluster_cut_dict)
                     remove_from_above_horizon_eventids_dict = ds.getCutsFromROI('below horizon cluster',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
                     above_horizon_eventids_dict = ds.returnEventsAWithoutB(above_horizon_eventids_dict, remove_from_above_horizon_eventids_dict)
-                    #ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=False)
-            # ds.addROI('cluster',{'elevation_best_choice':[15,17.5],'phi_best_choice':[36.5,38.25],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
-            # cluster_dict = ds.getCutsFromROI('cluster',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
-            # # ds.eventInspector(cluster_dict)
 
 
             if 5911 in list(above_horizon_eventids_dict.keys()):
@@ -169,56 +171,39 @@ if __name__ == '__main__':
             
             above_horizon_eventids_array = ds.organizeEventDict(above_horizon_eventids_dict)
 
-            if len(above_horizon_eventids_array) > 0:
-                # ds.plotROI2dHist('phi_best_all_belowhorizon','elevation_best_all_belowhorizon', cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=True)
-
-                # plot_params = [['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['phi_best_all','elevation_best_all'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['all_peak_to_sidelobe','elevation_best_all'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'] ,['similarity_count_h','similarity_count_v']]
+            # ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=None, include_roi=False)
+            ds.plotROI2dHist('phi_best_h','elevation_best_h', cmap=cmap, eventids_dict=None, include_roi=False)
+            ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=None, include_roi=False)
+            
+            if len(above_horizon_eventids_array) > 0 or False:
                 plot_params = [['min_snr_h','min_snr_v'],['snr_gap_h','snr_gap_v'], ['snr_h', 'snr_v'], ['phi_best_choice','elevation_best_choice'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'],['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value']]
                 
 
                 print('Generating plots:')
 
-                # possible_polarizations = ['hpol', 'vpol', 'all'] #used to exclude best case scenario created here
-                # possible_mapmax_cut_modes = ['abovehorizon','belowhorizon','allsky']
-
-                # for key_x, key_y in [['phi_best_h_belowhorizon','elevation_best_h_belowhorizon'],['phi_best_h_abovehorizon','elevation_best_h_abovehorizon'],['phi_best_h_allsky','elevation_best_h_allsky']]:
-                #     print('Generating %s plot'%(key_x + ' vs ' + key_y))
-                #     ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None, include_roi=False)
-
-                # for key_x, key_y in [['phi_best_choice','elevation_best_choice'],['phi_best_all','elevation_best_all'],['phi_best_h','elevation_best_h']]:
-                #     print('Generating %s plot'%(key_x + ' vs ' + key_y))
-                #     ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None, include_roi=False)
-
-                # ds.plotROI2dHist('time_delay_0subtract1_h','time_delay_0subtract2_h', cmap=cmap, eventids_dict=cluster_dict, include_roi=False)
-
-                ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=None, include_roi=False)
                 # ds.resetAllROI()
                 # ds.addROI('snr cut',{'min_snr_hSLICERADDmin_snr_v':[20,1000]})
                 for key_x, key_y in plot_params:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
                     # ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None, include_roi=False)
-                    ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_only_eventids_dict, include_roi=False)
+                    # ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_only_eventids_dict, include_roi=False)
                     ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=False)
+                    if True:
+                        fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=good_dict, include_roi=False)
+                        plt.sca(ax)
+                        plt.title('Events Sorted as Good')
+                        fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=maybe_dict, include_roi=False)
+                        plt.sca(ax)
+                        plt.title('Events Sorted as Maybe')
+                        fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=bad_dict, include_roi=False)
+                        plt.sca(ax)
+                        plt.title('Events Sorted as Bad')
 
 
-
-                # if len(above_horizon_eventids_array) < 100:
-                #     print(above_horizon_eventids_array)
-                #     ds.eventInspector(above_horizon_eventids_dict)
-                # else:
-                #     print('Number of remaining events above 100, printing them here:')
-                #     pprint(above_horizon_eventids_array)
-
-
-                common, common_eventids_array = ds.calculateTimeDelayCommonality(above_horizon_eventids_dict, verbose=True, return_eventids_array=True)
-                common_run, common_run_index, common_eventid = common_eventids_array[numpy.argmax(common)]
-                uncommon_run, uncommon_run_index, uncommon_eventid = common_eventids_array[numpy.argmin(common)]
-
-                # ds.plotROI2dHist('phi_best_all_belowhorizon','elevation_best_all_belowhorizon', cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=False)
-
-                
-                #cluster_dict = ds.getCutsFromROI('cluster',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
                 if False:
+                    common, common_eventids_array = ds.calculateTimeDelayCommonality(above_horizon_eventids_dict, verbose=True, return_eventids_array=True)
+                    common_run, common_run_index, common_eventid = common_eventids_array[numpy.argmax(common)]
+                    uncommon_run, uncommon_run_index, uncommon_eventid = common_eventids_array[numpy.argmin(common)]
 
                     plt.figure()
                     plt.hist(common, bins=200)
