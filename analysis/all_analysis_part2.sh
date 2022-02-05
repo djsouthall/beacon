@@ -38,3 +38,11 @@ echo 'Using Polarization  ' $3 || exit
 # NOTE: RF BG SEARCH IS TIME INSTENSIVE.  POSSIBLE THAT JOBS WILL BE CANCELLED BEFORE FOLLOWING SCRIPTS CAN FINISH.
 echo 'Attempting to prepare current pointing directions by executing rf_bg_search.py' || exit
 python3 ${BEACON_ANALYSIS_DIR}analysis/rf_bg_search.py $1 $2 $3 || exit
+
+if [ $3 == 'all' ]; then
+    echo 'Attempting to prepare current pointing directions by executing rf_bg_search_calculate_best.py' || exit
+    python3 ${BEACON_ANALYSIS_DIR}analysis/rf_bg_search_calculate_best.py $1 || exit
+fi
+
+
+
