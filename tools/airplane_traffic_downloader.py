@@ -187,6 +187,7 @@ if __name__ == '__main__':
                         stop    =   stop_time_utc_timestamp,
                         bounds  =   airspace_bbox,
                         return_flight = False,
+                        cached=False,
                         )
 
                     print('Pickling pandas dataframe')

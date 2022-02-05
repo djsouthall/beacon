@@ -79,14 +79,21 @@ if __name__ == "__main__":
         # redo for just all numpy.array([5821,5808])
         # redo for hv and all numpy.array([5954,5949,5947,5925,5921,5943,5905,5903,5941,5901,5899,5893,5936])
         #runs = numpy.array([5954,5949,5947,5925,5921,5943,5905,5903,5941,5901,5899,5893,5936,5821,5808])
-
     elif False:
         runs = numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
         analysis_part = 5 # Sine subtraction
     elif True:
-        #THIS WILL RUN ALL ANALYSIS FOR A RUN, AND CAN'T BE USED FOR TOO MANY RUNS AT ONCE.
-        runs = numpy.array([5775])
+        # This will run sine subtraction, the analysis, then maps.  Makes 4 jobs per run, so limit to less than 125 runs
+        # at a time.
+        batch_number = 0 #Add 1 to get next set of runs, starting at 0
+        # batch_number = 0 executed on 2/5/2022
+
+        
+        batch_length = 100
+        max_run_to_include = 6640
+        runs = 5974 + batch_number*batch_length + numpy.arange(batch_length)
+        runs = runs[runs <= max_run_to_include]
         done_runs = numpy.array([])
         analysis_part = 4
     else:
@@ -351,52 +358,53 @@ if __name__ == "__main__":
             print('Run %i jobs submitted --> jid:%i'%(run,jobid))
             
         elif analysis_part == 4:
-            #Does all but submits too many jobs likely if many runs being performed.
-            script1 = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part1.sh')
-            script2 = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part2.sh')
-            script3 = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part3.sh')
+            # Execute each script, but assuming the they are dependant on order.
 
-            #Prepare Script 1
-            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 '%(partition,jobname+'s1')
-            command = '%s %i'%(script1, run)
+            first   = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'tools', 'sine_subtract_cache.py')
+            second  = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part1.sh')
+            third   = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part2.sh')
+
+            #Prepare Sine Subtraction
+
+            batch = 'sbatch --partition=%s --job-name=%s --time=12:00:00 '%(partition,jobname + 'ss')
+            command = script + ' %i'%(run)
+            command_queue = batch + command
+            
+            #Submit sine subtraction and get the jobid
+            print(command_queue)
+            first_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
+
+
+            #Prepare Non-Map Analysis
+            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition, jobname, first_jobid)
+            command = '%s %i'%(second, run)
             command_queue = batch + command
 
-            #Submit script 1 job and get the jobid
+            #Submit Non-Map Analysis and get the jobid
             print(command_queue)
-            script1_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
+            second_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
 
-            #Prepare Both Job
-            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition,jobname+'hv', script1_jobid)
-            command = '%s %i %s %s'%(script2, run, deploy_index, 'both')
+            #Prepare Maps for H and V pol Job
+            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition,jobname+'hv', second_jobid)
+            command = '%s %i %s %s'%(second, run, deploy_index, 'both')
             command_queue = batch + command
 
             #Submit hpol job and get the jobid to then submit vpol with dependency
             print(command_queue)
             both_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
 
-            
+
+            #All job must be done second, because "best map" selection is call when all is, so hv must already be done.
             #Prepare All Job
             batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition,jobname+'all', both_jobid)
-            command = '%s %i %s %s'%(script2, run, deploy_index, 'all')
+            command = '%s %i %s %s'%(second, run, deploy_index, 'all')
             command_queue = batch + command
 
-            #Submit vpol job
+            #Submit All job
             print(command_queue)
             all_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
 
-
-            #Prepare Script 3 Job
-            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition,jobname, all_jobid)
-            command = '%s %i %s %s'%(script3, run, deploy_index, 'both')
-            command_queue = batch + command
-
-            #Submit job and get the jobid
-            print(command_queue)
-            script3_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
-
-
-
-            print('Run %i jobs submitted --> \nPart 1 jid:%i\nPart 2 Both jid:%i\tAll jid:%i\nPart 3 jid:%i'%(run,script1_jobid,both_jobid,all_jobid,script3_jobid))
+            print('Run %i jobs submitted --> \nSine Subtraction jid:%i\nNon-Map Analysis jid:%i\tBoth jid:%i\tAll jid:%i'%(run,first_jobid,second_jobid,both_jobid,all_jobid))
 
         elif analysis_part == 5:
             script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'tools', 'sine_subtract_cache.py')

@@ -24,6 +24,9 @@ from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
 from beacon.tools.data_handler import createFile
 from beacon.tools.data_slicer import dataSlicer
 from beacon.tools.flipbook_reader import flipbookToDict
+from beacon.tools.get_plane_tracks import plotAirplaneTrackerStatus
+
+
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -154,6 +157,14 @@ def getTriggerTimes(eventids_dict):
         out_dict[run] = raw_approx_trigger_time[eventids_dict[run].astype(int)] + raw_approx_trigger_time_nsecs[eventids_dict[run].astype(int)]/1e9
     return out_dict
 
+def getTriggerDatetimes(eventids_dict, tz='America/Los_Angeles'):
+    time_dict = getTriggerTimes(eventids_dict)
+    out_dict = {}
+    for run in list(eventids_dict.keys()):
+        reader = Reader(raw_datapath,run)
+        out_dict[run] = numpy.array([datetime.fromtimestamp(t).replace(tzinfo=pytz.timezone(tz)) for t in time_dict[run]])
+    return out_dict
+
 
 
 
@@ -193,7 +204,7 @@ if __name__ == '__main__':
 
     sorted_dict = flipbookToDict(flipbook_path)
 
-    good_eventids_dict = sorted_dict['good']['eventids_dict']
+    good_eventids_dict = sorted_dict['very-good']['eventids_dict']
 
     good_eventids_times_dict = getTriggerTimes(good_eventids_dict)
 
@@ -205,6 +216,16 @@ if __name__ == '__main__':
     ####
     # Plot Weather Events
     ####
+
+    if True:
+        fig, ax, datetime_bin_centers, number_of_airplanes = plotAirplaneTrackerStatus(start_time_utc_timestamp=1630454400, stop_time_utc_timestamp=1635790699, interval_s=3600*6, min_approach_cut_km=300)
+        datetimes = getTriggerDatetimes(good_eventids_dict)
+        for run, dt in datetimes.items():
+            for d in dt:
+                ax.axvline(d,linewidth = 1, c='r')
+
+        import pdb; pdb.set_trace()
+
 
     
     if plot_weather:

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 '''
 This script is intended to interface with the dataframes downloaded using airplane_traffic_loader.py
 
@@ -24,6 +25,7 @@ plt.ion()
 
 airplane_datapath = os.path.join(os.environ['BEACON_PICKLED_AIRPLANE_DATA'],'box_-120p23761867_34p589339_-113p23761867_40p589339')
 deploy_index = info.returnDefaultDeploy()
+default_origin = info.loadAntennaZeroLocation(deploy_index=info.returnDefaultDeploy())
 
 def getFileNamesFromTimestamps(start_time_utc_timestamp, stop_time_utc_timestamp, verbose=False):
     '''
@@ -70,75 +72,141 @@ def getFileNamesFromTimestamps(start_time_utc_timestamp, stop_time_utc_timestamp
     return filenames
 
 
-
-
-
-def getDataFrames(start_time_utc_timestamp, stop_time_utc_timestamp, query=None, verbose=False):
+def enu2Spherical(enu):
     '''
-    Given 2 timestamps, this will load in all pandas dataframes which have timestamps between those 2 times.
+    2d array like ((e_0, n_0, u_0), (e_1, n_1, u_1), ... , (e_i, n_i, u_i))
+
+    Return in degrees
     '''
-    filenames = getFileNamesFromTimestamps(start_time_utc_timestamp, stop_time_utc_timestamp, verbose=verbose)
+    r = numpy.linalg.norm(enu, axis=1)
+    phi = numpy.degrees(numpy.arctan2(enu[:,1],enu[:,0]))
+    theta = numpy.degrees(numpy.arccos(enu[:,2]/r))
+    # import pdb; pdb.set_trace()
+    return numpy.vstack((r,phi,theta)).T
 
-    for index, filename in enumerate(filenames):
-        df = pd.read_pickle(filename)
+def addDirectionInformationToDataFrame(df, origin=default_origin, altitude_str='geoaltitude'):
+    '''
+    This will add ENU, and distance, azimuth, and zenith information to the dataframe.
 
-        # print('\n' + filename)
-        # print(df.loc[0])
+    Note that both geoaltitude and altitude (barometric) are available.
+    '''
+    e = numpy.zeros(len(df.index))
+    n = numpy.zeros(len(df.index))
+    u = numpy.zeros(len(df.index))
+    utc_timestamp = numpy.zeros(len(df.index))
 
-        if index == 0:
-            if query is None:
-                df = pd.read_pickle(filename)
-            else:
-                df = pd.read_pickle(filename).query(query)
-        else:
-            if query is None:
-                # df = df.merge(pd.read_pickle(filename))
-                df.merge(pd.read_pickle(filename))
-            else:
-                # df = df.merge(pd.read_pickle(filename).query(query))
-                df.merge(pd.read_pickle(filename).query(query))
+    #import pdb; pdb.set_trace()
+
+    for i, (index, row) in enumerate(df.iterrows()):
+        e[i], n[i], u[i] = pm.geodetic2enu(row['latitude'], row['longitude'], row[altitude_str]*0.3048, origin[0], origin[1], origin[2])
+        utc_timestamp[i] = row['timestamp'].timestamp()
+
+    r, phi, theta = enu2Spherical(numpy.vstack((e,n,u)).T).T
+
+    df['east'] = e
+    df['north'] = n
+    df['up'] = u
+
+    df['distance'] = r
+    df['azimuth'] = phi
+    df['zenith'] = theta
+
+    df['utc_timestamp'] = utc_timestamp
+    return df
+
+def readPickle(filename):
+    '''
+    This executes pandas.read_pickle, but also adds a column for utc timestamp.
+
+    This is for easier time slicing before calculations are performed.  
+    '''
+    df = pd.read_pickle(filename)
+    df['utc_timestamp'] = numpy.array([row['timestamp'].timestamp() for index, row in df.iterrows()])
     return df
 
 
-'''
-Need to convert the lat lon alt info to enu and then theta phi.  Consider using pm.geodetic2enu(location[0],location[1],location[2],origin[0],origin[1],origin[2])
-origin = info.loadAntennaZeroLocation(deploy_index=deploy_index)
-'''
+
+def getDataFrames(start_time_utc_timestamp, stop_time_utc_timestamp, origin=default_origin, query=None, verbose=False):
+    '''
+    Given 2 timestamps, this will load in all pandas dataframes which have timestamps between those 2 times.
+
+    A query is automatically used to match table to given timestamps.
+    '''
+    filenames = getFileNamesFromTimestamps(start_time_utc_timestamp, stop_time_utc_timestamp, verbose=verbose)
+
+    time_query = 'utc_timestamp >= %f and utc_timestamp <= %f'%(start_time_utc_timestamp, stop_time_utc_timestamp)
+
+    if len(filenames) > 0:
+        for index, filename in enumerate(filenames):
+            df = pd.read_pickle(filename)
+
+            # print('\n' + filename)
+            # print(df.loc[0])
+
+            if index == 0:
+                if query is None:
+                    df = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin)
+                else:
+                    df = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin).query(query)
+            else:
+                if query is None:
+                    # df = df.merge(addDirectionInformationToDataFrame(, origin=originreadPickle(filename).query(time_query)))
+                    df.merge(addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin))
+                else:
+                    # df = df.merge(addDirectionInformationToDataFrame(, origin=originreadPickle(filename).query(time_query)).query(query))
+                    df.merge(addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin).query(query))
+
+        return df
+    else:
+        return None
+
 
 if __name__ == '__main__':
     eventid = 86227
     run = 5903
     timestamp = 1632289193.891936
-    # flight_icao24 = "a0a8da"
-
-    # filenames = getFileNamesFromTimestamps(timestamp - 3600*2, timestamp + 3600*2)
-
-    filenames = [   '/home/dsouthall/scratch-midway2/airplane_tracker_data/box_-120p23761867_34p589339_-113p23761867_40p589339/2021-08-31_0.pkl',
-                    '/home/dsouthall/scratch-midway2/airplane_tracker_data/box_-120p23761867_34p589339_-113p23761867_40p589339/2021-08-31_1.pkl',
-                    '/home/dsouthall/scratch-midway2/airplane_tracker_data/box_-120p23761867_34p589339_-113p23761867_40p589339/2021-08-31_2.pkl',
-                    '/home/dsouthall/scratch-midway2/airplane_tracker_data/box_-120p23761867_34p589339_-113p23761867_40p589339/2021-08-31_3.pkl']
+    flight_icao24 = "a0a8da"
+    flight_date_y_m_d = "2021-09-22"
 
 
+    if True:
+        start_time_utc_timestamp = timestamp - 10*60
+        stop_time_utc_timestamp = timestamp + 10*60 
+        df = getDataFrames(start_time_utc_timestamp, stop_time_utc_timestamp, origin=default_origin, query=None, verbose=False)
 
-    # df = pd.read_pickle(filenames[0])
-    query = 'altitude > 12000'
-    for index, filename in enumerate(filenames):
-        df = pd.read_pickle(filename)
+    else:
 
-        # print('\n' + filename)
-        # print(df.loc[0])
+        # flight_icao24 = "a0a8da"
 
-        if index == 0:
-            if query is None:
-                df = pd.read_pickle(filename)
+        # filenames = getFileNamesFromTimestamps(timestamp - 3600*2, timestamp + 3600*2)
+
+        filenames = [   '/home/dsouthall/scratch-midway2/airplane_tracker_data/box_-120p23761867_34p589339_-113p23761867_40p589339/2021-08-31_0.pkl',
+                        '/home/dsouthall/scratch-midway2/airplane_tracker_data/box_-120p23761867_34p589339_-113p23761867_40p589339/2021-08-31_1.pkl',
+                        '/home/dsouthall/scratch-midway2/airplane_tracker_data/box_-120p23761867_34p589339_-113p23761867_40p589339/2021-08-31_2.pkl',
+                        '/home/dsouthall/scratch-midway2/airplane_tracker_data/box_-120p23761867_34p589339_-113p23761867_40p589339/2021-08-31_3.pkl']
+
+
+
+        # df = pd.read_pickle(filenames[0])
+        
+        query = 'altitude > 12000'
+        for index, filename in enumerate(filenames):
+            df = pd.read_pickle(filename)
+
+            # print('\n' + filename)
+            # print(df.loc[0])
+
+            if index == 0:
+                if query is None:
+                    df = pd.read_pickle(filename)
+                else:
+                    df = pd.read_pickle(filename).query(query)
             else:
-                df = pd.read_pickle(filename).query(query)
-        else:
-            if query is None:
-                # df = df.merge(pd.read_pickle(filename))
-                df.merge(pd.read_pickle(filename))
-            else:
-                # df = df.merge(pd.read_pickle(filename).query(query))
-                df.merge(pd.read_pickle(filename).query(query))
+                if query is None:
+                    # df = df.merge(pd.read_pickle(filename))
+                    df.merge(pd.read_pickle(filename))
+                else:
+                    # df = df.merge(pd.read_pickle(filename).query(query))
+                    df.merge(pd.read_pickle(filename).query(query))
 
-    # df = getDataFrames(timestamp - 3600*2, timestamp + 3600*2, query=None)
+        df = addDirectionInformationToDataFrame(df, origin=default_origin)

@@ -180,7 +180,9 @@ class dataSlicerSingleRun():
                             'map_max_time_delay_1subtract2_v','map_max_time_delay_1subtract3_v','map_max_time_delay_2subtract3_v',\
                             'map_max_time_delay_0subtract1_all','map_max_time_delay_0subtract2_all','map_max_time_delay_0subtract3_all',\
                             'map_max_time_delay_1subtract2_all','map_max_time_delay_1subtract3_all','map_max_time_delay_2subtract3_all',\
-                            'sun_az','sun_el','coincidence_method_1_h','coincidence_method_1_v','coincidence_method_2_h','coincidence_method_2_v']
+                            'sun_az','sun_el']
+
+    #'coincidence_method_1_h','coincidence_method_1_v','coincidence_method_2_h','coincidence_method_2_v'
 
     def __init__(self,  reader, impulsivity_dset_key, time_delays_dset_key, map_dset_key, skip_common_setup=False, analysis_data_dir=None, \
                         curve_choice=0, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\

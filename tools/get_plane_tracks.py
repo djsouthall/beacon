@@ -640,11 +640,13 @@ def plotAirplaneTrackerStatus(start_time_utc_timestamp=None, stop_time_utc_times
     ax.xaxis.set_major_formatter(xfmt)
     plt.xticks(rotation=45)
     fig.tight_layout()
+    return fig, ax, datetime_bin_centers, number_of_airplanes
 
 if __name__ == '__main__':
     plt.close('all')
+    # from beacon.tools.get_plane_tracks import plotAirplaneTrackerStatus
+    fig, ax, datetime_bin_centers, number_of_airplanes = plotAirplaneTrackerStatus(start_time_utc_timestamp=1630454400, stop_time_utc_timestamp=1635790699, interval_s=3600*6, min_approach_cut_km=300)
 
-    plotAirplaneTrackerStatus(start_time_utc_timestamp=1630454400, stop_time_utc_timestamp=1635790699, interval_s=3600*6, min_approach_cut_km=300)
     #plotAirplaneTrackerStatus(start_time_utc_timestamp=None, stop_time_utc_timestamp=None, interval_s=3600*24, min_approach_cut_km=300)
 
     sys.exit()
