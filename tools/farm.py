@@ -9,6 +9,7 @@ import subprocess
 import time
 import numpy
 import yaml
+from pprint import pprint
 
 
 def parseJobIDs(partition,user,max_expected_column_width=8):
@@ -86,16 +87,41 @@ if __name__ == "__main__":
     elif True:
         # This will run sine subtraction, the analysis, then maps.  Makes 4 jobs per run, so limit to less than 125 runs
         # at a time.
-        batch_number = 0 #Add 1 to get next set of runs, starting at 0
-        # batch_number = 0 executed on 2/5/2022
 
-        
+        # Add 1 to batch_number to get next set of runs, starting at 0, submits 400 jobs, and a total allowed is 500,
+        # so don't submit unless < 100 jobs in queue.
+        batch_number = 1  
+
+        # batch_number = 0 executed on 2/4/2022 , 5974 - 6073
+        # batch_number = 1 executed on 2/6/2022 , 6074 - 6173
+        # batch_number = 2 not yet executed     , 6174 - 6273
+        # batch_number = 3 not yet executed     , 6274 - 6373
+        # batch_number = 4 not yet executed     , 6374 - 6473
+        # batch_number = 5 not yet executed     , 6474 - 6573
+        # batch_number = 6 not yet executed     , 6574 - 6640
+
+
         batch_length = 100
         max_run_to_include = 6640
         runs = 5974 + batch_number*batch_length + numpy.arange(batch_length)
         runs = runs[runs <= max_run_to_include]
         done_runs = numpy.array([])
         analysis_part = 4
+
+        bad_node_numbers = [15]
+        if len(runs) == 0:
+            print('You dont need to submit any more jobs, you have done it all.')
+            import pdb; pdb.set_trace()
+        else:
+            print('Submitting Jobs for Runs:')
+            pprint(runs)
+            print('Is this okay?  Press c to proceed, crtl-d to exit.')
+            import pdb; pdb.set_trace()
+
+
+        bad_node_string = "--exclude=midway2-%s"%str(['{:04d}'.format(node) for node in bad_node_numbers]).replace("'","")
+        bad_node_list = ["midway2-{:04d}".format(node) for node in bad_node_numbers]
+
     else:
         runs = numpy.array([5630, 5631, 5632, 5638, 5639, 5640, 5641, 5642, 5643, 5644, 5645, 5646, 5647, 5648, 5649, 5656, 5657, 5659, 5660], dtype=int)
         done_runs = numpy.array([])
@@ -106,6 +132,7 @@ if __name__ == "__main__":
     ###--------###
     ### Script ###
     ###--------###
+
 
     max_expected_column_width = 8
     jobid_dict = parseJobIDs(partition,username,max_expected_column_width=max_expected_column_width)
@@ -366,8 +393,8 @@ if __name__ == "__main__":
 
             #Prepare Sine Subtraction
 
-            batch = 'sbatch --partition=%s --job-name=%s --time=12:00:00 '%(partition,jobname + 'ss')
-            command = script + ' %i'%(run)
+            batch = 'sbatch --partition=%s %s --job-name=%s --time=12:00:00 '%(partition, bad_node_string, jobname + 'ss')
+            command = first + ' %i'%(run)
             command_queue = batch + command
             
             #Submit sine subtraction and get the jobid
@@ -376,7 +403,7 @@ if __name__ == "__main__":
 
 
             #Prepare Non-Map Analysis
-            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition, jobname, first_jobid)
+            batch = 'sbatch --partition=%s %s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition, bad_node_string, jobname, first_jobid)
             command = '%s %i'%(second, run)
             command_queue = batch + command
 
@@ -385,8 +412,8 @@ if __name__ == "__main__":
             second_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
 
             #Prepare Maps for H and V pol Job
-            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition,jobname+'hv', second_jobid)
-            command = '%s %i %s %s'%(second, run, deploy_index, 'both')
+            batch = 'sbatch --partition=%s %s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition, bad_node_string, jobname+'hv', second_jobid)
+            command = '%s %i %s %s'%(third, run, deploy_index, 'both')
             command_queue = batch + command
 
             #Submit hpol job and get the jobid to then submit vpol with dependency
@@ -396,8 +423,8 @@ if __name__ == "__main__":
 
             #All job must be done second, because "best map" selection is call when all is, so hv must already be done.
             #Prepare All Job
-            batch = 'sbatch --partition=%s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition,jobname+'all', both_jobid)
-            command = '%s %i %s %s'%(second, run, deploy_index, 'all')
+            batch = 'sbatch --partition=%s %s --job-name=%s --time=36:00:00 --dependency=afterok:%i '%(partition, bad_node_string, jobname+'all', both_jobid)
+            command = '%s %i %s %s'%(third, run, deploy_index, 'all')
             command_queue = batch + command
 
             #Submit All job
