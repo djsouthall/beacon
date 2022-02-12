@@ -46,3 +46,4 @@ fi
 
 
 
+echo 'Completed Analysis Part 2' || exit

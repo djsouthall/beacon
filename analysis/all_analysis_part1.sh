@@ -28,3 +28,5 @@ python3 ${BEACON_ANALYSIS_DIR}analysis/impulsivity.py $1 || exit
 
 echo 'Attempting to prepare simple CR template search executing simple_cr_template_search.py' || exit
 python3 ${BEACON_ANALYSIS_DIR}analysis/cr_search/simple_cr_template_search.py $1 1 || exit
+
+echo 'Completed Analysis Part 1' || exit

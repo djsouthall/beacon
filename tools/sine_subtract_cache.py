@@ -291,7 +291,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         run = int(sys.argv[1])
 
-        if False:
+        if True:
             #Just to make sure I don't accidentally overwrite.
 
             print('Attempting to precalculate sine subtraction terms for run %i'%run)

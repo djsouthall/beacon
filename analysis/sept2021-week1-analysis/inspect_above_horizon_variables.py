@@ -70,11 +70,13 @@ if __name__ == '__main__':
     _runs = numpy.arange(5733,5974)
     bad_runs = numpy.array([])
 
-    flipbook_path = '/home/dsouthall/scratch-midway2/event_flipbook_1643154940'#'/home/dsouthall/scratch-midway2/event_flipbook_1642725413'
-    sorted_dict = flipbookToDict(flipbook_path)
-    good_dict = sorted_dict['very-good']['eventids_dict']
-    maybe_dict = sorted_dict['maybe']['eventids_dict']
-    bad_dict = sorted_dict['bad']['eventids_dict']
+    plot_flipbook = False
+    if plot_flipbook == True:
+        flipbook_path = '/home/dsouthall/scratch-midway2/event_flipbook_1643154940'#'/home/dsouthall/scratch-midway2/event_flipbook_1642725413'
+        sorted_dict = flipbookToDict(flipbook_path)
+        good_dict = sorted_dict['very-good']['eventids_dict']
+        maybe_dict = sorted_dict['maybe']['eventids_dict']
+        bad_dict = sorted_dict['bad']['eventids_dict']
 
     for runs in [_runs]:
         runs = runs[~numpy.isin(runs,bad_runs)]
@@ -113,6 +115,14 @@ if __name__ == '__main__':
             ds.addROI('above horizon only',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90]})
             #ds.addROI('above horizon',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90],'similarity_count_h':[0,1],'similarity_count_v':[0,1],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERMAXcr_template_search_v':[0.5,100]})#'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]
             ds.addROI('above horizon',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90],'similarity_count_h':[-0.1,10],'similarity_count_v':[-0.1,10],'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':[1.2,10000],'impulsivity_hSLICERADDimpulsivity_v':[0.3,100],'cr_template_search_hSLICERMAXcr_template_search_v':[0.4,100]})#'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]
+
+            # elevation best choice         :   [10,90]
+            # phi best choice               :   [-90,90]
+            # similarity count h            :   [-0.1,10]
+            # similarity count v            :   [-0.1,10]
+            # max(hpol peak to sidelobe , vpol peak to sidelobe)  :   [1.2,10000]
+            # impulsivity h + impulsivity v                       :   [0.3,100]
+            # max(cr template search h + cr template search v)    :   [0.4,100]
 
             # ds.addROI('streak',{'elevation_best_choice':[17,20],'phi_best_choice':[8.63,10.97]})
             # streak_dict = ds.getCutsFromROI('streak',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
@@ -188,7 +198,7 @@ if __name__ == '__main__':
                     # ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=None, include_roi=False)
                     # ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_only_eventids_dict, include_roi=False)
                     ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=False)
-                    if True:
+                    if plot_flipbook == True:
                         fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=good_dict, include_roi=False)
                         plt.sca(ax)
                         plt.title('Events Sorted as Good')

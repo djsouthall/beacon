@@ -201,18 +201,18 @@ class dataSlicerSingleRun():
             self.updateReader(reader,analysis_data_dir=analysis_data_dir)
             self.math_keywords = ['SLICERSUBTRACT', 'SLICERADD', 'SLICERDIVIDE', 'SLICERMULTIPLY', 'SLICERMAX', 'SLICERMIN', 'SLICERMEAN'] #Meta words that will relate 2 known variables and produce a plot with their arithmatic combination. 
 
+            self.range_phi_deg = numpy.asarray(range_phi_deg)
+            self.range_theta_deg = numpy.asarray(range_theta_deg)
             if self.reader.failed_setup == False:
                 if skip_common_setup == False:
                     #Angular ranges are handled such that their bin centers are the same as the values sampled by the corrolator class given the same min, max, and n.  
                     self.n_phi = n_phi
-                    self.range_phi_deg = numpy.asarray(range_phi_deg)
                     dphi = (max(self.range_phi_deg) - min(self.range_phi_deg)) / (self.n_phi - 1)
                     self.phi_edges = numpy.arange(min(self.range_phi_deg),max(self.range_phi_deg) + 2*dphi, dphi) - dphi/2.0
                     self.phi_centers = 0.5*(self.phi_edges[1:]+self.phi_edges[:-1])
                     # self.phi_edges = numpy.arange(min(self.range_phi_deg) - numpy.diff(numpy.linspace(min(self.range_phi_deg),max(self.range_phi_deg),n_phi))[0]/2, max(self.range_phi_deg) + numpy.diff(numpy.linspace(min(self.range_phi_deg),max(self.range_phi_deg),n_phi))[0]/2, numpy.diff(numpy.linspace(min(self.range_phi_deg),max(self.range_phi_deg),n_phi))[0])
 
                     self.n_theta = n_theta
-                    self.range_theta_deg = numpy.asarray(range_theta_deg)
                     dtheta = (max(self.range_theta_deg) - min(self.range_theta_deg)) / (self.n_theta - 1)
                     self.theta_edges = numpy.arange(min(self.range_theta_deg),max(self.range_theta_deg) + 2*dtheta, dtheta) - dtheta/2.0
                     self.theta_centers = 0.5*(self.theta_edges[1:]+self.theta_edges[:-1])
@@ -3983,6 +3983,9 @@ class dataSlicer():
             self.runs = numpy.asarray(self.runs)
             cut = numpy.array([ds.dsets_present*ds.openSuccess() for ds in self.data_slicers])
 
+            self.range_phi_deg = self.data_slicers[0].range_phi_deg
+            self.range_theta_deg = self.data_slicers[0].range_theta_deg
+            
             #self.data_slicers = numpy.array([dataSlicerSingleRun(Reader(raw_datapath,run),impulsivity_dset_key, time_delays_dset_key, map_dset_key, **kwargs) for run in self.runs])
             if len(self.runs) > 0:
                 self.trigger_types = self.data_slicers[0].trigger_types
@@ -4035,13 +4038,13 @@ class dataSlicer():
             apply_phase_response = True
 
             map_resolution_theta = 0.25 #degrees
-            min_theta   = 0
-            max_theta   = 120
+            min_theta   = min(self.range_theta_deg)#0
+            max_theta   = max(self.range_theta_deg)#120
             n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
 
             map_resolution_phi = 0.1 #degrees
-            min_phi     = -90#-180
-            max_phi     = 90#180
+            min_phi     = min(self.range_phi_deg)#-90#-180
+            max_phi     = max(self.range_phi_deg)#90#180
             n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
 
             upsample = 2**14 #Just upsample in this case, Reduced to 2**14 when the waveform length was reduced, to maintain same time precision with faster execution.
@@ -4916,6 +4919,7 @@ class dataSlicer():
 
             #t = self.data_slicers[run_index].reader.t()
             #t = self.cor.times_resampled
+            #self.cor.prep.redefineNotches([(62,63.5)],append=True,plot_filters=True,verbose=True)
             waveforms = self.cor.wf(eventid, numpy.array([0,1,2,3,4,5,6,7]),div_std=False,hilbert=False,apply_filter=True,tukey=True, sine_subtract=True)
             
             self.inspector_mpl['fig1_wf_0'].plot(self.cor.times_resampled, waveforms[0], c=self.mpl_colors[0])
@@ -4952,14 +4956,21 @@ class dataSlicer():
             else:
                 time_delay_dict = {}
 
+
+
+
+
             #Plot Maps
-            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_h, circle_az=self.az_h, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
-            self.inspector_mpl['fig1_map_h'].set_xlim(self.cor.range_phi_deg)
-            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_v, circle_az=self.az_v, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
-            self.inspector_mpl['fig1_map_v'].set_xlim(self.cor.range_phi_deg)
+            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_h, circle_az=self.az_h, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+            self.inspector_mpl['fig1_map_h'].set_xlim(-90,90)
+            self.inspector_mpl['fig1_map_h'].set_ylim(-30,90)
+            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.cor.map(eventid, 'vpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_v, circle_az=self.az_v, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+            self.inspector_mpl['fig1_map_v'].set_xlim(-90,90)
+            self.inspector_mpl['fig1_map_v'].set_ylim(-30,90)
             if self.show_all:
-                m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_all'] = self.cor.map(eventid, 'all', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_all, circle_az=self.az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
-                self.inspector_mpl['fig1_map_all'].set_xlim(self.cor.range_phi_deg)
+                m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_all'] = self.cor.map(eventid, 'all', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_all, circle_az=self.az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+                self.inspector_mpl['fig1_map_all'].set_xlim(-90,90)
+                self.inspector_mpl['fig1_map_all'].set_ylim(-30,90)
             #Plot Spectra
             sine_subtract = True
             for apply_filter, ax in [[False, self.inspector_mpl['fig1_spec_raw']], [True, self.inspector_mpl['fig1_spec_filt']]]:
@@ -5028,7 +5039,7 @@ class dataSlicer():
             del self.inspector_mpl
 
 
-    def eventInspector(self, eventids_dict, mollweide=False, show_all=False, include_time_delays=False):
+    def eventInspector(self, eventids_dict, mollweide=False, show_all=False, include_time_delays=False, append_notches=None, include_baselines=numpy.array([0,1,2,3,4,5])):
         '''
         This is meant to provide a tool to quickly flick through events from multiple runs.  It will create a one panel
         view of the events info as best as I can manage, and provide easy support for choosing which event you want to
@@ -5038,6 +5049,7 @@ class dataSlicer():
         not worth the effort.  
         '''
         try:
+            self.inspector_include_baselines=include_baselines
             self.include_time_delays = include_time_delays
             self.show_all = show_all
 
@@ -5047,6 +5059,8 @@ class dataSlicer():
             non_zero_run_indices = numpy.where(numpy.isin(self.runs, non_zero_runs))[0]
 
             self.prepareCorrelator()
+            if append_notches is not None:
+                self.cor.prep.redefineNotches(append_notches,append=True,plot_filters=False,verbose=True)
             
             fig1 = plt.figure(constrained_layout=True)
             gs = fig1.add_gridspec(4,5, width_ratios=[1,1,1,1,0.75])
@@ -5136,6 +5150,17 @@ class dataSlicer():
             fig1_spec_filt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
             fig1_table = fig1.add_subplot(gs[:,4])
+            #fig1_table = fig1.add_subplot(gs[0:3,4])
+
+            #Could not get this working
+            # def submit(text):
+            #     print(text)
+                #eval(text)
+                #Rerun update event.  Should account for anything done to waveform cropping as well.  
+            # ax_textbox = fig1.add_subplot(gs[3,4])
+            # self.text_box = TextBox(ax_textbox, 'Apply', initial='[(  ,  )]')#
+            # self.text_box.on_submit(submit)
+
             
             #[['phi_best_h','elevation_best_h'],['hpol_max_map_value_abovehorizon','vpol_max_map_value_abovehorizon'], ['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'], ['hpol_max_map_value','vpol_max_map_value'], ['hpol_peak_to_sidelobe_abovehorizon', 'vpol_peak_to_sidelobe_abovehorizon'],['hpol_peak_to_sidelobe_belowhorizon','hpol_peak_to_sidelobe_abovehorizon'], ['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'], ['hpol_max_possible_map_value','vpol_max_possible_map_value']]
             self.table_params = OrderedDict()
@@ -5333,10 +5358,16 @@ class dataSlicer():
                     else:
                         time_delay_dict = {}
 
-                    m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_h'] = self.outer.cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_h, circle_az=self.outer.az_h, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
-                    m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_v'] = self.outer.cor.map(eventid, 'vpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_v, circle_az=self.outer.az_v, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
+                    m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_h'] = self.outer.cor.map(eventid, 'hpol', include_baselines=self.outer.inspector_include_baselines, plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_h, circle_az=self.outer.az_h, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
+                    self.outer.inspector_mpl['fig1_map_h'].set_xlim(-90,90)
+                    self.outer.inspector_mpl['fig1_map_h'].set_ylim(-30,90)
+                    m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_v'] = self.outer.cor.map(eventid, 'vpol', include_baselines=self.outer.inspector_include_baselines, plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_v, circle_az=self.outer.az_v, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
+                    self.outer.inspector_mpl['fig1_map_v'].set_xlim(-90,90)
+                    self.outer.inspector_mpl['fig1_map_v'].set_ylim(-30,90)
                     if self.outer.show_all:
-                        m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_all'] = self.outer.cor.map(eventid, 'all', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_all, circle_az=self.outer.az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
+                        m, self.outer.inspector_mpl['fig1'], self.outer.inspector_mpl['fig1_map_all'] = self.outer.cor.map(eventid, 'all', include_baselines=self.outer.inspector_include_baselines, plot_map=True, map_ax=self.outer.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.outer.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.outer.el_all, circle_az=self.outer.az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, override_to_time_window=override_to_time_window)
+                        self.outer.inspector_mpl['fig1_map_all'].set_xlim(-90,90)
+                        self.outer.inspector_mpl['fig1_map_all'].set_ylim(-30,90)
                     self.outer.inspector_mpl['fig1'].canvas.draw()
 
             tm = self.inspector_mpl['fig1'].canvas.manager.toolmanager

@@ -90,15 +90,15 @@ if __name__ == "__main__":
 
         # Add 1 to batch_number to get next set of runs, starting at 0, submits 400 jobs, and a total allowed is 500,
         # so don't submit unless < 100 jobs in queue.
-        batch_number = 1  
+        batch_number = 5 
 
-        # batch_number = 0 executed on 2/4/2022 , 5974 - 6073
-        # batch_number = 1 executed on 2/6/2022 , 6074 - 6173
-        # batch_number = 2 not yet executed     , 6174 - 6273
-        # batch_number = 3 not yet executed     , 6274 - 6373
-        # batch_number = 4 not yet executed     , 6374 - 6473
-        # batch_number = 5 not yet executed     , 6474 - 6573
-        # batch_number = 6 not yet executed     , 6574 - 6640
+        # batch_number = 0 executed on 2/ 4/2022 , 5974 - 6073
+        # batch_number = 1 executed on 2/ 6/2022 , 6074 - 6173
+        # batch_number = 2 executed on 2/ 8/2022 , 6174 - 6273
+        # batch_number = 3 executed on 2/ 9/2022 , 6274 - 6373
+        # batch_number = 4 executed on 2/11/2022 , 6374 - 6473
+        # batch_number = 5 not yet executed      , 6474 - 6573
+        # batch_number = 6 not yet executed      , 6574 - 6640
 
 
         batch_length = 100
@@ -118,9 +118,13 @@ if __name__ == "__main__":
             print('Is this okay?  Press c to proceed, crtl-d to exit.')
             import pdb; pdb.set_trace()
 
+        if len(bad_node_numbers) == 0:
+            bad_node_string = ''
+            bad_node_list = []
+        else:
+            bad_node_string = "--exclude=midway2-%s"%str(['{:04d}'.format(node) for node in bad_node_numbers]).replace("'","")
+            bad_node_list = ["midway2-{:04d}".format(node) for node in bad_node_numbers]
 
-        bad_node_string = "--exclude=midway2-%s"%str(['{:04d}'.format(node) for node in bad_node_numbers]).replace("'","")
-        bad_node_list = ["midway2-{:04d}".format(node) for node in bad_node_numbers]
 
     else:
         runs = numpy.array([5630, 5631, 5632, 5638, 5639, 5640, 5641, 5642, 5643, 5644, 5645, 5646, 5647, 5648, 5649, 5656, 5657, 5659, 5660], dtype=int)

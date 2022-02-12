@@ -10,6 +10,7 @@ import os
 import sys
 import csv
 import h5py
+import inspect
 
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
@@ -67,8 +68,28 @@ class CoincidenceCalculator():
     # , notch_tv=notch_tv, misc_notches=misc_notches
 
     def __init__(self,  reader):
+        try:
+            final_corr_length=CoincidenceCalculator.final_corr_length
+            crit_freq_low_pass_MHz=CoincidenceCalculator.crit_freq_low_pass_MHz
+            crit_freq_high_pass_MHz=CoincidenceCalculator.crit_freq_high_pass_MHz
+            low_pass_filter_order=CoincidenceCalculator.low_pass_filter_order
+            high_pass_filter_order=CoincidenceCalculator.high_pass_filter_order
+            waveform_index_range=CoincidenceCalculator.waveform_index_range
+            plot_filters=CoincidenceCalculator.plot_filters
+            apply_phase_response=CoincidenceCalculator.apply_phase_response
+            notch_tv=CoincidenceCalculator.notch_tv
+            misc_notches=CoincidenceCalculator.misc_notches
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+        import pdb; pdb.set_trace()
+        
+
         self.reader = reader
-        self.tdc = TimeDelayCalculator(self.reader, final_corr_length=CoincidenceCalculator.final_corr_length, crit_freq_low_pass_MHz=CoincidenceCalculator.crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=CoincidenceCalculator.crit_freq_high_pass_MHz, low_pass_filter_order=CoincidenceCalculator.low_pass_filter_order, high_pass_filter_order=CoincidenceCalculator.high_pass_filter_order,waveform_index_range=CoincidenceCalculator.waveform_index_range,plot_filters=CoincidenceCalculator.plot_filters,apply_phase_response=CoincidenceCalculator.apply_phase_response, notch_tv=notch_tv, misc_notches=misc_notches)
+        self.tdc = TimeDelayCalculator(self.reader, final_corr_length=CoincidenceCalculator.final_corr_length, crit_freq_low_pass_MHz=CoincidenceCalculator.crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=CoincidenceCalculator.crit_freq_high_pass_MHz, low_pass_filter_order=CoincidenceCalculator.low_pass_filter_order, high_pass_filter_order=CoincidenceCalculator.high_pass_filter_order,waveform_index_range=CoincidenceCalculator.waveform_index_range,plot_filters=CoincidenceCalculator.plot_filters,apply_phase_response=CoincidenceCalculator.apply_phase_response, notch_tv=CoincidenceCalculator.notch_tv, misc_notches=CoincidenceCalculator.misc_notches)
         self.tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=5, verbose=False, plot=False)
 
         self.method1_normalization = numpy.correlate(numpy.ones_like(self.tdc.t()),numpy.ones_like(self.tdc.t()),mode='same')
@@ -287,7 +308,7 @@ if __name__=="__main__":
         print('No Run Given')
         sys.exit(1)
 
-    debug = False
+    debug = True
 
     if debug == True:
         read_mode = 'r'

@@ -158,6 +158,7 @@ def getDataFrames(start_time_utc_timestamp, stop_time_utc_timestamp, origin=defa
 
         return df
     else:
+        print('No filenames matched the given time window.')
         return None
 
 

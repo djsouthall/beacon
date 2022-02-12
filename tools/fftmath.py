@@ -101,6 +101,7 @@ class FFTPrepper:
         try:
             self.reader = None #Value before setReader has been called.  If setReader is called multiple times this will be checked each to to throw warnings that some things might not change.
             
+
             # Requested params stored, as they may change internally, but original requests are preserved.
             self.requested_final_corr_length = final_corr_length
             self.requested_crit_freq_low_pass_MHz = crit_freq_low_pass_MHz
@@ -113,10 +114,19 @@ class FFTPrepper:
             self.requested_tukey_default = tukey_default
             self.requested_apply_phase_response = apply_phase_response
             self.raw_buffer_length = reader.header().buffer_length #Value before prepared.  Will be overwriten once prepareWaveformIndexing called.
+            
+
+            self.default_list_of_misc_notches = [(26,28),(88,89),(106,108),(117,119),(125,127)] #If misc_notches == True then these will be applied.
+            self.list_of_misc_notches = self.default_list_of_misc_notches #The actual living copy of the the notches, which might be changed by redefineNotches()
+            
             self.interpretFiltersPerChannel(crit_freq_low_pass_MHz, crit_freq_high_pass_MHz, low_pass_filter_order, high_pass_filter_order)
 
             # Prepare the reader and waveform info.
             self.setReader(reader) #First call this won't call self.prepareWaveformIndexing, but any subsequent calls will call self.prepareWaveformIndexing.  self.prepareWaveformIndexing is called below on first call and is forced to set everything.  All other times these will only be updated if a difference is detected.
+            
+            self.notch_tv = notch_tv
+            self.misc_notches = misc_notches
+
             self.prepareWaveformIndexing(self.requested_waveform_index_range, force=True, skip_additional_prep=True,notch_tv=notch_tv, misc_notches=misc_notches)
             self.prepForFFTs(plot=plot_filters,apply_phase_response=self.requested_apply_phase_response, notch_tv=notch_tv, misc_notches=misc_notches) #must be called because skip_additional_prep above is True. 
 
@@ -148,6 +158,30 @@ class FFTPrepper:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+    def redefineNotches(self, new_notches,append=False,plot_filters=False,verbose=False):
+        '''
+        This will replace the existing misc_notch_filters with new ones.  If append == True then it will take whatever
+        the existing set of notches is and append to it. 
+
+        It will the rerun the prepForFFTs function.
+        '''
+        if append == True:
+            for i in new_notches:
+                if len(i) == 2:
+                    self.list_of_misc_notches.append(i)
+                else:
+                    print('WARNING!!! new_notches not given in the correct format, skipping: ', i)
+        else:
+            self.list_of_misc_notches = new_notches
+        self.prepForFFTs(plot=plot_filters,apply_phase_response=self.requested_apply_phase_response, notch_tv=self.notch_tv, misc_notches=self.misc_notches)
+
+        if verbose:
+            print('misc notch filters redefined as: ')
+            print(self.list_of_misc_notches)
+            print('self.misc_notches = ', self.misc_notches)
+
+
 
     def setReader(self,reader,verbose=True):
         '''
@@ -662,7 +696,8 @@ class FFTPrepper:
             #Apply Miscellanous notches for known sources
             if misc_notches:
                 filter_y_misc_notches = numpy.ones(len(filter_x),dtype='complex128')
-                for notch_start_MHz, notch_stop_MHz in ((26,28),(88,89),(106,108),(117,119),(125,127)):
+                notches = self.list_of_misc_notches
+                for notch_start_MHz, notch_stop_MHz in notches:
                     notch_b, notch_a = scipy.signal.butter(4, (notch_start_MHz*1e6, notch_stop_MHz*1e6), 'bandstop', analog=True)
                     filter_x_misc_notches, filter_y_notch = scipy.signal.freqs(notch_b, notch_a, worN=freqs)
                     filter_y_misc_notches = numpy.multiply(filter_y_misc_notches , filter_y_notch)

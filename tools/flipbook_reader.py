@@ -6,6 +6,7 @@ import os
 import sys
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import numpy
+import copy
 
 
 def flipbookToDictRecursive(path):
@@ -30,7 +31,7 @@ def flipbookToDictRecursive(path):
     out_dict['eventids_dict'] = {}
     for run in numpy.unique(out_dict['events']['run']):
         out_dict['eventids_dict'][run] = out_dict['events']['eventid'][out_dict['events']['run'] == run]
-    return out_dict
+    return copy.deepcopy(out_dict)
 
 def flipbookToDict(path):
     '''
@@ -39,7 +40,43 @@ def flipbookToDict(path):
     out_dict['unsorted'] = {}
     out_dict['unsorted']['events'] = out_dict['events']
     del out_dict['events']
-    return out_dict
+    return copy.deepcopy(out_dict)
+
+def concatenateFlipbookToArray(flipbook):
+    '''
+    takes an existing event flipbook and takes the event arrays from each dub directory and puts them into a single 
+    array.
+    '''
+    out_array = None
+    for key in list(flipbook.keys()):
+        if key == 'events':
+            if out_array is None:
+                out_array = flipbook['events']
+            else:
+                out_array = numpy.append(out_array, flipbook['events'])
+        else:
+            if type(flipbook[key]) is dict:
+                _out_array = concatenateFlipbookToArray(flipbook[key])
+                if _out_array is not None:
+                    if out_array is None:
+                        out_array = _out_array
+                    else:
+                        out_array = numpy.append(out_array, _out_array)
+    if out_array is not None:
+        out_array = numpy.sort(numpy.unique(out_array),order=('run','eventid'))
+    return out_array
+
+def concatenateFlipbookToDict(flipbook):
+    '''
+    Does what concatenateFlipbookToArray does but to a eventids_dict.
+    '''
+    sorted_array = concatenateFlipbookToArray(flipbook)
+    out_dict = {}
+    for run in numpy.unique(sorted_array['run']):
+        out_dict[run] = sorted_array[sorted_array['run'] == run]['eventid']
+    return copy.deepcopy(out_dict)
+
+
 
 
 
