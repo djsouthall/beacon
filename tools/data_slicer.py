@@ -166,7 +166,7 @@ class dataSlicerSingleRun():
     peak_to_sidelobe_n_bins_v : int
         The number of bins to use when plotting the peak to sidelobe param for vpol.
     '''
-    known_param_keys = [    'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v',\
+    known_param_keys = [    'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7', 'snr_h_over_v',\
                             'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
                             'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',\
                             'mean_max_corr_h', 'max_max_corr_h','mean_max_corr_v', 'max_max_corr_v','similarity_count_h','similarity_count_v','similarity_fraction_h','similarity_fraction_v',\
@@ -949,18 +949,31 @@ class dataSlicerSingleRun():
                             else:
                                 p2p = file['p2p'][...][eventids]
                             param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) 
+                        elif 'snr_ch' in param_key and param_key.replace('snr_ch','').isdigit():
+                            channel = int(param_key.replace('snr_ch',''))
+                            if len_eventids < 500:
+                                std = file['std'][eventids]
+                            else:
+                                std = file['std'][...][eventids]
+                            param_1 = std[:,channel]
+                            if len_eventids < 500:
+                                p2p = file['p2p'][eventids]
+                            else:
+                                p2p = file['p2p'][...][eventids]
+                            param_2 = p2p[:,channel]
+                            param = numpy.divide(param_2, param_1)
                         elif param_key == 'snr_h':
                             if len_eventids < 500:
                                 std = file['std'][eventids]
                             else:
                                 std = file['std'][...][eventids]
-                            param_1 = numpy.mean(std[:,self.included_hpol_antennas],axis=1) 
+                            param_1 = std[:,self.included_hpol_antennas]
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param_2 = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) 
-                            param = numpy.divide(param_2, param_1)
+                            param_2 = p2p[:,self.included_hpol_antennas]
+                            param = numpy.mean(numpy.divide(param_2, param_1),axis=1)
                         elif param_key == 'min_snr_h':
                             if len_eventids < 500:
                                 std = file['std'][eventids]
@@ -990,13 +1003,13 @@ class dataSlicerSingleRun():
                                 std = file['std'][eventids]
                             else:
                                 std = file['std'][...][eventids]
-                            param_1 = numpy.mean(std[:,self.included_vpol_antennas],axis=1) 
+                            param_1 = std[:,self.included_vpol_antennas]
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param_2 = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) 
-                            param = numpy.divide(param_2, param_1)
+                            param_2 = p2p[:,self.included_vpol_antennas]
+                            param = numpy.mean(numpy.divide(param_2, param_1),axis=1)
                         elif param_key == 'min_snr_v':
                             if len_eventids < 500:
                                 std = file['std'][eventids]
@@ -1021,6 +1034,19 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_vpol_antennas]
                             param = numpy.max(numpy.divide(param_2, param_1),axis=1) - numpy.min(numpy.divide(param_2, param_1),axis=1)
+                        elif param_key == 'snr_h_over_v':
+                            if len_eventids < 500:
+                                std = file['std'][eventids]
+                            else:
+                                std = file['std'][...][eventids]
+                            if len_eventids < 500:
+                                p2p = file['p2p'][eventids]
+                            else:
+                                p2p = file['p2p'][...][eventids]
+                            param = numpy.mean( numpy.divide(   
+                                                    numpy.divide(p2p[:,self.included_hpol_antennas],std[:,self.included_hpol_antennas]),
+                                                    numpy.divide(p2p[:,self.included_vpol_antennas],std[:,self.included_vpol_antennas])
+                                                ),axis=1)
                         elif 'time_delay_' in param_key and 'map' not in param_key:
                             split_param_key = param_key.split('_')
                             dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
@@ -2857,9 +2883,10 @@ class dataSlicerSingleRun():
                     #Append snr to the lists below only if max value isn't present.
                     if verbose:
                         print('\tPreparing to get counts for %s'%param_key)
+
                     if self.max_snr_val is None:
-                        std_requiring_params = ['std_h','std_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v'] #List all params that might require max snr to be calculated if hard limit not given.
-                        p2p_requiring_params = ['p2p_h','p2p_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v'] #List all params that might require max p2p to be calculated if hard limit not given.
+                        std_requiring_params = ['std_h','std_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7'] #List all params that might require max snr to be calculated if hard limit not given.
+                        p2p_requiring_params = ['p2p_h','p2p_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7'] #List all params that might require max p2p to be calculated if hard limit not given.
                     else:
                         std_requiring_params = ['std_h','std_v'] #List all params that might require max snr to be calculated if hard limit not given.
                         p2p_requiring_params = ['p2p_h','p2p_v'] #List all params that might require max p2p to be calculated if hard limit not given.
@@ -2936,8 +2963,17 @@ class dataSlicerSingleRun():
                     x_n_bins = self.p2p_n_bins_v
                     x_max_val = self.max_p2p_val
                     x_min_val = 0
+                elif 'snr_ch' in param_key and param_key.replace('snr_ch','').isdigit():
+                    channel = int(param_key.replace('snr_ch',''))
+                    label = 'Ch%i SNR (hpol)\n P2P/STD'%channel
+                    if channel%2 == 0:
+                        x_n_bins = self.snr_n_bins_h
+                    else:
+                        x_n_bins = self.snr_n_bins_v
+                    x_max_val = self.max_snr_val
+                    x_min_val = 0                    
                 elif param_key == 'snr_h':
-                    label = 'SNR (hpol)\n max(P2P)/min(STD)'
+                    label = 'Mean SNR (hpol)\n mean(P2P/STD)'
                     x_n_bins = self.snr_n_bins_h
                     x_max_val = self.max_snr_val
                     x_min_val = 0
@@ -2952,7 +2988,7 @@ class dataSlicerSingleRun():
                     x_max_val = self.max_snr_val
                     x_min_val = 0
                 elif param_key == 'snr_v':
-                    label = 'SNR (vpol)\n max(P2P)/min(STD)'
+                    label = 'Mean SNR (vpol)\n mean(P2P/STD)'
                     x_n_bins = self.snr_n_bins_v
                     x_max_val = self.max_snr_val
                     x_min_val = 0
@@ -3337,7 +3373,11 @@ class dataSlicerSingleRun():
                     x_n_bins = 360
                     x_max_val = 90
                     x_min_val = -90
-
+                elif param_key == 'snr_h_over_v':
+                    label = 'Mean SNR Ratio\n mean(H SNR / V SNR)'
+                    x_n_bins = self.snr_n_bins_h
+                    x_max_val = 15 #Just a guess of a reasonable but safe upper limit
+                    x_min_val = 0
             if calculate_bins_from_min_max:
                 current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges
 
