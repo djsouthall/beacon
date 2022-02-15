@@ -184,21 +184,21 @@ class dataSlicerSingleRun():
 
     #'coincidence_method_1_h','coincidence_method_1_v','coincidence_method_2_h','coincidence_method_2_v'
 
-    def __init__(self,  reader, impulsivity_dset_key, time_delays_dset_key, map_dset_key, skip_common_setup=False, analysis_data_dir=None, \
-                        curve_choice=0, trigger_types=[1,2,3],included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
+    def __init__(self,  reader, impulsivity_dset_key, time_delays_dset_key, map_dset_key, skip_common_setup=False, analysis_data_dir=None, verbose_setup=True,\
+                        curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],include_test_roi=False,\
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,\
                         impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                         time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-200,max_time_delays_val=200,\
                         max_corr_n_bins=200,\
-                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=None,\
+                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,\
                         p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=128,\
-                        n_phi=181, range_phi_deg=(-180,180), n_theta=361, range_theta_deg=(0,180),\
+                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,\
+                        n_phi=3600, range_phi_deg=(-180,180), n_theta=480, range_theta_deg=(0,120),\
                         max_possible_map_value_n_bins_h=100, max_possible_map_value_n_bins_v=100, max_possible_map_value_n_bins_all=100,\
                         max_map_value_n_bins_h=100, max_map_value_n_bins_v=100, max_map_value_n_bins_all=100,\
                         max_peak_to_sidelobe_val=5,peak_to_sidelobe_n_bins_h=100,peak_to_sidelobe_n_bins_v=100,peak_to_sidelobe_n_bins_all=100):
         try:
-            self.updateReader(reader,analysis_data_dir=analysis_data_dir)
+            self.updateReader(reader,analysis_data_dir=analysis_data_dir, verbose=verbose_setup)
             self.math_keywords = ['SLICERSUBTRACT', 'SLICERADD', 'SLICERDIVIDE', 'SLICERMULTIPLY', 'SLICERMAX', 'SLICERMIN', 'SLICERMEAN'] #Meta words that will relate 2 known variables and produce a plot with their arithmatic combination. 
 
             self.range_phi_deg = numpy.asarray(range_phi_deg)
@@ -304,8 +304,8 @@ class dataSlicerSingleRun():
                 else:
                     self.map_deploy_index = None #Will use default
 
-                self.checkForRateDatasets() #Will append to known param key based on which repeated rate signal datasets are available
-                self.checkForComplementaryBothMapDatasets() #Will append to known param key and prepare for if hilbert used or not.
+                # self.checkForRateDatasets(verbose=verbose_setup) #Will append to known param key based on which repeated rate signal datasets are available
+                self.checkForComplementaryBothMapDatasets(verbose=verbose_setup) #Will append to known param key and prepare for if hilbert used or not.
                 
 
                 self.trigger_types = trigger_types
@@ -403,6 +403,8 @@ class dataSlicerSingleRun():
 
     def checkForRateDatasets(self, verbose=True):
         '''
+        This is dataset is not being calculated for all runs and maybe cause problems.
+
         This will look for the datasets corresponding to analyze_event_rate_frequency.py and add them to known_param_keys.
 
         If the gaussian fit of the randomized data (as generated in analyze_event_rate_frequency.py) is available then
@@ -656,15 +658,16 @@ class dataSlicerSingleRun():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def updateReader(self, reader, analysis_data_dir=None):
+    def updateReader(self, reader, analysis_data_dir=None, verbose=True):
         '''
         This will let the user update the reader file if they are looping over multiple runs.
         '''
         try:
             self.reader = reader
-            self.analysis_filename = createFile(reader,analysis_data_dir=analysis_data_dir) #Creates an analysis file if one does not exist.  Returns filename to load file.
+            self.analysis_filename = createFile(reader,analysis_data_dir=analysis_data_dir, verbose=verbose) #Creates an analysis file if one does not exist.  Returns filename to load file.
             try:
-                print(reader.status())
+                if verbose:
+                    print(reader.status())
             except Exception as e:
                 print('Status Tree not present.  Returning Error.')
                 print('\nError in %s'%inspect.stack()[0][3])
@@ -960,7 +963,7 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param_2 = p2p[:,channel]
+                            param_2 = p2p[:,channel]/2.0
                             param = numpy.divide(param_2, param_1)
                         elif param_key == 'snr_h':
                             if len_eventids < 500:
@@ -972,7 +975,7 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param_2 = p2p[:,self.included_hpol_antennas]
+                            param_2 = p2p[:,self.included_hpol_antennas]/2.0
                             param = numpy.mean(numpy.divide(param_2, param_1),axis=1)
                         elif param_key == 'min_snr_h':
                             if len_eventids < 500:
@@ -984,7 +987,7 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param_2 = p2p[:,self.included_hpol_antennas]
+                            param_2 = p2p[:,self.included_hpol_antennas]/2.0
                             param = numpy.min(numpy.divide(param_2, param_1),axis=1)
                         elif param_key == 'snr_gap_h':
                             if len_eventids < 500:
@@ -996,7 +999,7 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param_2 = p2p[:,self.included_hpol_antennas]
+                            param_2 = p2p[:,self.included_hpol_antennas]/2.0
                             param = numpy.max(numpy.divide(param_2, param_1),axis=1) - numpy.min(numpy.divide(param_2, param_1),axis=1)
                         elif param_key == 'snr_v':
                             if len_eventids < 500:
@@ -1008,7 +1011,7 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param_2 = p2p[:,self.included_vpol_antennas]
+                            param_2 = p2p[:,self.included_vpol_antennas]/2.0
                             param = numpy.mean(numpy.divide(param_2, param_1),axis=1)
                         elif param_key == 'min_snr_v':
                             if len_eventids < 500:
@@ -1020,7 +1023,7 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param_2 = p2p[:,self.included_vpol_antennas]
+                            param_2 = p2p[:,self.included_vpol_antennas]/2.0
                             param = numpy.min(numpy.divide(param_2, param_1),axis=1)
                         elif param_key == 'snr_gap_v':
                             if len_eventids < 500:
@@ -1032,7 +1035,7 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
-                            param_2 = p2p[:,self.included_vpol_antennas]
+                            param_2 = p2p[:,self.included_vpol_antennas]/2.0
                             param = numpy.max(numpy.divide(param_2, param_1),axis=1) - numpy.min(numpy.divide(param_2, param_1),axis=1)
                         elif param_key == 'snr_h_over_v':
                             if len_eventids < 500:
@@ -1043,6 +1046,7 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
+                            # Divide by 2 factor not needed, would divide out from ratio
                             param = numpy.mean( numpy.divide(   
                                                     numpy.divide(p2p[:,self.included_hpol_antennas],std[:,self.included_hpol_antennas]),
                                                     numpy.divide(p2p[:,self.included_vpol_antennas],std[:,self.included_vpol_antennas])
@@ -2965,7 +2969,7 @@ class dataSlicerSingleRun():
                     x_min_val = 0
                 elif 'snr_ch' in param_key and param_key.replace('snr_ch','').isdigit():
                     channel = int(param_key.replace('snr_ch',''))
-                    label = 'Ch%i SNR (hpol)\n P2P/STD'%channel
+                    label = 'Ch%i SNR (hpol)\n 0.5*P2P/STD'%channel
                     if channel%2 == 0:
                         x_n_bins = self.snr_n_bins_h
                     else:
@@ -2973,32 +2977,32 @@ class dataSlicerSingleRun():
                     x_max_val = self.max_snr_val
                     x_min_val = 0                    
                 elif param_key == 'snr_h':
-                    label = 'Mean SNR (hpol)\n mean(P2P/STD)'
+                    label = 'Mean SNR (hpol)\n mean(0.5*P2P/STD)'
                     x_n_bins = self.snr_n_bins_h
                     x_max_val = self.max_snr_val
                     x_min_val = 0
                 elif param_key == 'min_snr_h':
-                    label = 'Min SNR (hpol)\n min(P2P/STD)'
+                    label = 'Min SNR (hpol)\n min(0.5*P2P/STD)'
                     x_n_bins = self.snr_n_bins_h
                     x_max_val = self.max_snr_val
                     x_min_val = 0
                 elif param_key == 'snr_gap_h':
-                    label = 'Max - Min SNR (hpol)'
+                    label = 'Max - Min SNR (hpol)\nSNR = 0.5*P2P/STD'
                     x_n_bins = self.snr_n_bins_h
                     x_max_val = self.max_snr_val
                     x_min_val = 0
                 elif param_key == 'snr_v':
-                    label = 'Mean SNR (vpol)\n mean(P2P/STD)'
+                    label = 'Mean SNR (vpol)\n mean(0.5*P2P/STD)'
                     x_n_bins = self.snr_n_bins_v
                     x_max_val = self.max_snr_val
                     x_min_val = 0
                 elif param_key == 'min_snr_v':
-                    label = 'Min SNR (vpol)\n min(P2P/STD)'
+                    label = 'Min SNR (vpol)\n min(0.5*P2P/STD)'
                     x_n_bins = self.snr_n_bins_v
                     x_max_val = self.max_snr_val
                     x_min_val = 0
                 elif param_key == 'snr_gap_v':
-                    label = 'Max - Min SNR (vpol)'
+                    label = 'Max - Min SNR (vpol)\nSNR = 0.5*P2P/STD'
                     x_n_bins = self.snr_n_bins_v
                     x_max_val = self.max_snr_val
                     x_min_val = 0
@@ -3974,7 +3978,9 @@ class dataSlicer():
     include_test_roi :
         This will include test regions of interest that are more for testing the class itself. 
     '''
-    def __init__(self,  runs, impulsivity_dset_key, time_delays_dset_key, map_dset_key, remove_incomplete_runs=True, **kwargs):
+    def __init__(self,  runs, impulsivity_dset_key, time_delays_dset_key, map_dset_key, remove_incomplete_runs=True, 
+                        n_phi=3600, range_phi_deg=(-180,180), n_theta=480, range_theta_deg=(0,120),
+                        **kwargs):
         try:
             self.conference_mode = False #Enable to apply any temporary adjustments such as fontsizes or title labels. 
             self.roi = {}
@@ -3985,14 +3991,14 @@ class dataSlicer():
 
             try:
                 #Angular ranges are handled such that their bin centers are the same as the values sampled by the corrolator class given the same min, max, and n.  
-                dataSlicerSingleRun.n_phi = kwargs['n_phi']
-                dataSlicerSingleRun.range_phi_deg = numpy.asarray(kwargs['range_phi_deg'])
+                dataSlicerSingleRun.n_phi = n_phi
+                dataSlicerSingleRun.range_phi_deg = numpy.asarray(range_phi_deg)
                 dphi = (max(dataSlicerSingleRun.range_phi_deg) - min(dataSlicerSingleRun.range_phi_deg)) / (dataSlicerSingleRun.n_phi - 1)
                 dataSlicerSingleRun.phi_edges = numpy.arange(min(dataSlicerSingleRun.range_phi_deg),max(dataSlicerSingleRun.range_phi_deg) + 2*dphi, dphi) - dphi/2.0
                 dataSlicerSingleRun.phi_centers = 0.5*(dataSlicerSingleRun.phi_edges[1:]+dataSlicerSingleRun.phi_edges[:-1])
 
-                dataSlicerSingleRun.n_theta = kwargs['n_theta']
-                dataSlicerSingleRun.range_theta_deg = numpy.asarray(kwargs['range_theta_deg'])
+                dataSlicerSingleRun.n_theta = n_theta
+                dataSlicerSingleRun.range_theta_deg = numpy.asarray(range_theta_deg)
                 dtheta = (max(dataSlicerSingleRun.range_theta_deg) - min(dataSlicerSingleRun.range_theta_deg)) / (dataSlicerSingleRun.n_theta - 1)
                 dataSlicerSingleRun.theta_edges = numpy.arange(min(dataSlicerSingleRun.range_theta_deg),max(dataSlicerSingleRun.range_theta_deg) + 2*dtheta, dtheta) - dtheta/2.0
                 dataSlicerSingleRun.theta_centers = 0.5*(dataSlicerSingleRun.theta_edges[1:]+dataSlicerSingleRun.theta_edges[:-1])
@@ -4005,7 +4011,9 @@ class dataSlicer():
                 skip_common_setup=False
                 print(e)
 
-            for run in numpy.sort(runs).astype(int):
+            for run_index, run in enumerate(numpy.sort(runs).astype(int)):
+                sys.stdout.write('Run %i/%i\r'%(run_index+1,len(runs)))
+                sys.stdout.flush()
                 try:
                     reader = Reader(raw_datapath,run)
                     if reader.failed_setup == False:
@@ -4491,6 +4499,7 @@ class dataSlicer():
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
+            import pdb; pdb.set_trace()
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
@@ -4597,42 +4606,68 @@ class dataSlicer():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def plot1dHist(self, main_param_key, eventids_dict, title=None, lognorm=True, return_counts=False):
+    def plot1dHist(self, main_param_key, eventids_dict, cumulative=None, pdf=False, title=None, lognorm=True, return_counts=False, ax=None, **kwargs):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
         (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
         up as a contour on the plot.  
+
+        Cumulative can either be None, 'left', or 'right', where 'right' implies that each bin represents how many
+        events lie in it or to the right. 
         '''
         try:
+            if eventids_dict is None:
+                eventids_dict = self.getEventidsFromTriggerType(trigger_types=self.trigger_types)
             #Should make eventids a self.eventids so I don't need to call this every time.
-            counts = self.get1dHistCounts(main_param_key,eventids_dict,set_bins=True) #set_bins should only be called on first call, not on contours.
-            _fig, _ax = plt.subplots()
-
-            if title is None:
-                if numpy.all(numpy.diff(list(eventids_dict.keys()))) == 1:
-                    title = '%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types))
-                else:
-                    title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key,str(list(eventids_dict.keys())),str(self.trigger_types))
-            plt.title(title)
+            raw_counts = self.get1dHistCounts(main_param_key,eventids_dict,set_bins=True) #set_bins should only be called on first call, not on contours.
 
             bin_centers = (self.current_bin_edges_x[:-1] + self.current_bin_edges_x[1:]) / 2
             bin_width = self.current_bin_edges_x[1] - self.current_bin_edges_x[0]
 
-            plt.bar(bin_centers, counts, width=bin_width)
+            if cumulative is not None:
+                if cumulative == 'left':
+                    ylabel = '%sCounts <= Bin'%(['', 'Normalized '][int(pdf)])
+                    counts = numpy.cumsum(raw_counts)
+                elif cumulative == 'right':
+                    ylabel = '%sCounts >= Bin'%(['', 'Normalized '][int(pdf)])
+                    counts = numpy.cumsum(raw_counts[::-1])[::-1]
+                else:
+                    ylabel = '%sCounts'%(['', 'Normalized '][int(pdf)])
+                    counts = raw_counts
+            else:
+                ylabel = '%sCounts'%(['', 'Normalized '][int(pdf)])
+                counts = raw_counts
+
+            if pdf == True:
+                counts = counts/(sum(raw_counts)*bin_width)
+
+            if ax is None:
+                fig, ax = plt.subplots()
+                if title is None:
+                    if numpy.all(numpy.diff(list(eventids_dict.keys()))) == 1:
+                        title = '%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types))
+                    else:
+                        title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key,str(list(eventids_dict.keys())),str(self.trigger_types))
+                plt.title(title)
+            else:
+                fig = ax.get_figure()
+
+            
+            plt.bar(bin_centers, counts, width=bin_width, **kwargs)
 
             if lognorm == True:
-                _ax.set_yscale('log')
+                ax.set_yscale('log')
             plt.xlabel(self.current_label_x)
-            plt.ylabel(self.current_label_y)
+            plt.ylabel(ylabel)
             plt.grid(which='both', axis='both')
-            _ax.minorticks_on()
-            _ax.grid(b=True, which='major', color='k', linestyle='-')
-            _ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            ax.minorticks_on()
+            ax.grid(b=True, which='major', color='k', linestyle='-')
+            ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
             if return_counts:
-                return _fig, _ax, counts
+                return fig, ax, counts
             else:
-                return _fig, _ax
+                return fig, ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
