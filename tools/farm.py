@@ -90,25 +90,26 @@ if __name__ == "__main__":
 
         # Add 1 to batch_number to get next set of runs, starting at 0, submits 400 jobs, and a total allowed is 500,
         # so don't submit unless < 100 jobs in queue.
-        batch_number = 5 
+        batch_number = 6
 
         # batch_number = 0 executed on 2/ 4/2022 , 5974 - 6073
         # batch_number = 1 executed on 2/ 6/2022 , 6074 - 6173
         # batch_number = 2 executed on 2/ 8/2022 , 6174 - 6273
         # batch_number = 3 executed on 2/ 9/2022 , 6274 - 6373
         # batch_number = 4 executed on 2/11/2022 , 6374 - 6473
-        # batch_number = 5 not yet executed      , 6474 - 6573
-        # batch_number = 6 not yet executed      , 6574 - 6640
+        # batch_number = 5 executed on 2/13/2022 , 6474 - 6573
+        # batch_number = 6 executed on 2/14/2022 , 6574 - 6640
 
 
         batch_length = 100
         max_run_to_include = 6640
         runs = 5974 + batch_number*batch_length + numpy.arange(batch_length)
         runs = runs[runs <= max_run_to_include]
+        # runs = numpy.array([6520,5775])
         done_runs = numpy.array([])
         analysis_part = 4
 
-        bad_node_numbers = [15]
+        bad_node_numbers = [15,227]
         if len(runs) == 0:
             print('You dont need to submit any more jobs, you have done it all.')
             import pdb; pdb.set_trace()
@@ -122,7 +123,7 @@ if __name__ == "__main__":
             bad_node_string = ''
             bad_node_list = []
         else:
-            bad_node_string = "--exclude=midway2-%s"%str(['{:04d}'.format(node) for node in bad_node_numbers]).replace("'","")
+            bad_node_string = "--exclude=midway2-%s"%str(['{:04d}'.format(node) for node in bad_node_numbers]).replace("'","").replace(' ','')
             bad_node_list = ["midway2-{:04d}".format(node) for node in bad_node_numbers]
 
 

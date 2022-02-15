@@ -49,14 +49,14 @@ if __name__ == "__main__":
     ###------------###
     ### Parameters ###
     ###------------###
-    debug = True #Disables actually sending commands to bash
+    debug = False #Disables actually sending commands to bash
 
     username = 'dsouthall'
     partition = 'broadwl'
     deploy_index = '/home/dsouthall/Projects/Beacon/beacon/config/september_2021_minimized_calibration.json'
 
-    bad_node_numbers = [15]
-    bad_node_string = "--exclude=midway2-%s"%str(['{:04d}'.format(node) for node in bad_node_numbers]).replace("'","")
+    bad_node_numbers = [15,227]
+    bad_node_string = "--exclude=midway2-%s"%str(['{:04d}'.format(node) for node in bad_node_numbers]).replace("'","").replace(' ','')
 
     bad_node_list = ["midway2-{:04d}".format(node) for node in bad_node_numbers]
 
@@ -72,6 +72,11 @@ if __name__ == "__main__":
     flagged_runs = numpy.unique(out_array['run'][numpy.isin(out_array['node_reason'], bad_node_list)])
 
     print('Number of flagged runs = ', len(flagged_runs))
+    print(flagged_runs)
+    print('Continue?')
+    import pdb; pdb.set_trace()
+    print('Are you sure?')
+    import pdb; pdb.set_trace()
 
     # Execute each script, but assuming the they are dependant on order.
 
