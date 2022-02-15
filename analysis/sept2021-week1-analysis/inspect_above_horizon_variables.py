@@ -67,11 +67,20 @@ if __name__ == '__main__':
     map_length = 16384
     map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
 
-    _runs = numpy.arange(5733,5974)
+    batch_number_0 = numpy.arange(5733,5974) # September data
+    batch_number_1 = numpy.arange(5974,6073)
+    batch_number_2 = numpy.arange(6074,6173)
+    batch_number_3 = numpy.arange(6174,6273)
+    batch_number_4 = numpy.arange(6274,6373)
+    batch_number_5 = numpy.arange(6374,6473)
+    batch_number_6 = numpy.arange(6474,6573)
+    batch_number_7 = numpy.arange(6574,6673)
+
+    _runs = batch_number_1
     bad_runs = numpy.array([])
 
     plot_flipbook = False
-    if plot_flipbook == True:
+    if plot_flipbook == False:
         flipbook_path = '/home/dsouthall/scratch-midway2/event_flipbook_1643154940'#'/home/dsouthall/scratch-midway2/event_flipbook_1642725413'
         sorted_dict = flipbookToDict(flipbook_path)
         good_dict = sorted_dict['very-good']['eventids_dict']
@@ -232,7 +241,7 @@ if __name__ == '__main__':
                     ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=reduced_eventid_dict, include_roi=False)
 
 
-                # ds.eventInspector(above_horizon_eventids_dict)
+                ds.eventInspector(above_horizon_eventids_dict)
             if return_successive_cut_counts:
                 roi_key = 'above horizon'
                 for key in list(successive_cut_counts.keys()):

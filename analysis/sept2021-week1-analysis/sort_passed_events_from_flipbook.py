@@ -58,14 +58,13 @@ def enu2Spherical(enu):
     # import pdb; pdb.set_trace()
     return numpy.vstack((r,phi,theta)).T
 
+cmap = 'cool'#'coolwarm'
+impulsivity_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+time_delays_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_16384-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
+
 if __name__ == '__main__':
     plt.close('all')
-    cmap = 'cool'#'coolwarm'
-    impulsivity_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
-    time_delays_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
-    map_length = 16384
-    map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
-
     # _runs = numpy.arange(5733,5974)#[0:100]
     # bad_runs = numpy.array([5775])
     #_runs = numpy.arange(5733,5800)
@@ -81,7 +80,6 @@ if __name__ == '__main__':
     bad_array   = concatenateFlipbookToArray(stage1_eye_sorted_sorted_dict['bad'])
 
 
-    runs = list(stage1_eye_sorted_eventids_dict.keys())
 
     stage2_eye_sorted_dict = flipbookToDict('/home/dsouthall/Projects/Beacon/beacon/analysis/sept2021-week1-analysis/airplane_event_flipbook_1643947072')
     stage2_eye_sorted_array = concatenateFlipbookToArray(stage2_eye_sorted_dict)
@@ -94,34 +92,8 @@ if __name__ == '__main__':
     good_dict = concatenateFlipbookToDict(stage2_eye_sorted_dict['no-obvious-airplane'])
 
 
-    force_fit_order = 3 #None to use varying order
-    save_figures = False
-    if save_figures == True:
-        outpath = './airplane_event_flipbook_%i'%time.time() 
-        os.mkdir(outpath)
-    use_old_code = False
-    use_new_code = True
-
-    print("Preparing dataSlicer")
-
-    map_resolution_theta = 0.25 #degrees
-    min_theta   = 0
-    max_theta   = 120
-    n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
-
-    map_resolution_phi = 0.1 #degrees
-    min_phi     = -180
-    max_phi     = 180
-    n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
-
-    # import pdb; pdb.set_trace()
-
-    ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
-                    cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
-                    std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-                    snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
-                    n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), remove_incomplete_runs=True)
-
+    runs = list(stage1_eye_sorted_eventids_dict.keys())
+    ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath, verbose_setup=False)
     ds.prepareCorrelator()
 
     trigger_time = ds.getDataArrayFromParam('calibrated_trigtime', trigger_types=None, eventids_dict=good_dict)
