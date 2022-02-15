@@ -309,7 +309,7 @@ def getEventTimes(reader,plot=False,smooth_window=101):
 
 
 
-def createFile(reader,redo_defaults=False, check_defaults=False,analysis_data_dir=None):
+def createFile(reader, verbose=True, redo_defaults=False, check_defaults=False, analysis_data_dir=None):
     '''
     This will make an hdf5 file for the run specified by the reader.
     If the file already exists then this will check if the file has
@@ -492,7 +492,8 @@ def createFile(reader,redo_defaults=False, check_defaults=False,analysis_data_di
                             return e
 
                 else:
-                    print('%s already exists, a check of contents was NOT performed.'%filename )
+                    if verbose:
+                        print('%s already exists, a check of contents was NOT performed.'%filename )
             else:
                 print('Creating %s.'%filename )
                 with h5py.File(filename, 'w') as file:

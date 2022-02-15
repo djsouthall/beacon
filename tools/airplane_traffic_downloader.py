@@ -160,8 +160,12 @@ if __name__ == '__main__':
             print('Attempting to make airspace box folder %s'%storage_location)
             os.mkdir(storage_location)
 
-        start_date = datetime(2021, 8, 31)
-        stop_date = datetime(2021, 10, 2)
+        # start_date = datetime(2021, 8, 31)
+        # stop_date = datetime(2021, 10, 2)
+    
+        start_date = datetime(2021, 10, 2)
+        stop_date = datetime(2021, 12, 31)
+
         delta = stop_date - start_date
 
         for i in range(delta.days + 1):
