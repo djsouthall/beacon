@@ -44,7 +44,7 @@ matplotlib.rcParams['figure.figsize'] = [10, 11]
 matplotlib.rcParams.update({'font.size': 16})
 
 if __name__=="__main__":
-    debug = True
+    debug = False
 
     if len(sys.argv) == 2:
         run = int(sys.argv[1])
@@ -110,21 +110,43 @@ if __name__=="__main__":
             if sine_subtract:
                 tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-
             if debug == True:
+                # Test the calculations without accessing the hdf5 file.
                 plt.figure()
-
                 tdc.setEntry(1000)
                 for channel in range(8):
+                    # Process raw waveforms
+                    plt.subplot(2,1,1)
+                    wf = tdc.reader.raw_wf(int(channel))
+                    plt.plot(reader.t(),wf)
+                    raw_min = numpy.min(wf)
+                    print('raw_min = ', raw_min)
+                    raw_max = numpy.max(wf)
+                    print('raw_max = ', raw_max)
+                    raw_p2p = raw_max - raw_min
+                    print('raw_p2p = ', raw_p2p)
+                    raw_std = numpy.std(wf)
+                    print('raw_std = ', raw_std)
+
+                    # Process filtered waveforms
+                    plt.subplot(2,1,2)
                     wf = tdc.wf(channel, apply_filter=True, hilbert=False, tukey=None, sine_subtract=True, return_sine_subtract_info=False, ss_first=True, attempt_raw_reader=False)
                     plt.plot(tdc.t(), wf)
+                    filtered_min = numpy.min(wf)
+                    print('filtered_min = ', filtered_min)
+                    filtered_max = numpy.max(wf)
+                    print('filtered_max = ', filtered_max)
+                    filtered_p2p = filtered_max - filtered_min
+                    print('filtered_p2p = ', filtered_p2p)
+                    filtered_std = numpy.std(wf)
+                    print('filtered_std = ', filtered_std)
 
             else:
                 with h5py.File(filename, 'a') as file:
                     eventids = file['eventids'][...]
                     dsets = list(file.keys()) #Existing datasets
 
-                    for key in ['filtered_min', 'filtered_max', 'filtered_p2p', 'filtered_std']:
+                    for key in ['filtered_min', 'filtered_max', 'filtered_p2p', 'filtered_std', 'raw_min', 'raw_max', 'raw_p2p', 'raw_std']:
                         if not numpy.isin(key,dsets):
                             file.create_dataset(key, (file.attrs['N'],8), dtype=numpy.float64, compression='gzip', compression_opts=9, shuffle=True)
                         else:
@@ -137,26 +159,38 @@ if __name__=="__main__":
                         file[key].attrs['sine_subtract_percent'] = sine_subtract_percent
                         file[key].attrs['sine_subtract'] = sine_subtract
 
-                    channels = numpy.arange(8)
-                    for eventid in eventids: 
+                    channels = numpy.arange(8).astype(int)
+                    for eventid in eventids:
+                        if eventid > 100:
+                            continue
                         if eventid%500 == 0:
                             sys.stdout.write('(%i/%i)\r'%(eventid,len(eventids)))
                             sys.stdout.flush()
                         try:
                             tdc.setEntry(eventid)
                             for channel in channels:
-                                wf = tdc.wf(channel, apply_filter=True, hilbert=False, tukey=None, sine_subtract=True, return_sine_subtract_info=False, ss_first=True, attempt_raw_reader=False)
-                                
-                                file['filtered_min'][eventid,channel] = numpy.min(wf)
-                                file['filtered_max'][eventid,channel] = numpy.max(wf)
-                                file['filtered_p2p'][eventid,channel] = max_values[channel] - min_values[channel]
-                                file['filtered_std'][eventid,channel] = numpy.std(wf)
+                                # Calculate properties of raw waveforms
+                                raw_wf = tdc.reader.raw_wf(int(channel)) #Function only exists on sine subtract version of reader
+                                min_val = numpy.min(raw_wf)
+                                max_val = numpy.max(raw_wf)
+                                file['raw_min'][eventid,channel] = min_val
+                                file['raw_max'][eventid,channel] = max_val
+                                file['raw_p2p'][eventid,channel] = max_val - min_val
+                                file['raw_std'][eventid,channel] = numpy.std(raw_wf)                                
 
-                    except Exception as e:
-                        print(e)
-                        exc_type, exc_obj, exc_tb = sys.exc_info()
-                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                        print(exc_type, fname, exc_tb.tb_lineno)
+                                # Calculate properties of filtered waveforms
+                                wf = tdc.wf(channel, apply_filter=True, hilbert=False, tukey=None, sine_subtract=True, return_sine_subtract_info=False, ss_first=True, attempt_raw_reader=False)
+                                min_val = numpy.min(wf)
+                                max_val = numpy.max(wf)
+                                file['filtered_min'][eventid,channel] = min_val
+                                file['filtered_max'][eventid,channel] = max_val
+                                file['filtered_p2p'][eventid,channel] = max_val - min_val
+                                file['filtered_std'][eventid,channel] = numpy.std(wf)
+                        except Exception as e:
+                            print(e)
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            print(exc_type, fname, exc_tb.tb_lineno)
                 file.close()
         else:
             print('filename is None, indicating empty tree.  Skipping run %i'%run)

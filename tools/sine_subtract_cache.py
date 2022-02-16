@@ -120,7 +120,7 @@ class sineSubtractedReader(Reader):
         '''
         Calls the super wf function without performing sine subtraction.
         '''
-        return super().wf(channel)
+        return super().wf(int(channel))
 
     def wf(self, channel):
         '''
