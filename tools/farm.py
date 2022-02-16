@@ -103,8 +103,11 @@ if __name__ == "__main__":
 
         batch_length = 100
         max_run_to_include = 6640
-        runs = 5974 + batch_number*batch_length + numpy.arange(batch_length)
-        runs = runs[runs <= max_run_to_include]
+        if False:
+            runs = 5974 + batch_number*batch_length + numpy.arange(batch_length)
+            runs = runs[runs <= max_run_to_include]
+        else:
+            runs = numpy.array([6537,6538,6539])
         # runs = numpy.array([6520,5775])
         done_runs = numpy.array([])
         analysis_part = 4

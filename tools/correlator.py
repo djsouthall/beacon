@@ -4745,18 +4745,21 @@ if __name__=="__main__":
                 if sine_subtract:
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
-                for mode in ['hpol']:
-                    mean_corr_values, fig, ax, max_possible_map_value = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0.0,90.0], center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=True, return_max_possible_map_value=True, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True)
-                    #mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,90.0], center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
-                    fig.set_size_inches(16, 9)
-                    plt.sca(ax)
-                    plt.tight_layout()
-                    all_figs.append(fig)
-                    all_axs.append(ax)
-                    if False:
-                        cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[0,1,2,3,4,5])
-                        # for baseline in [0,1,2,3,4,5]:
-                        #     cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[baseline])
+                for apply_filter in [True, False]:
+                    cor.apply_filter = apply_filter
+                    cor.apply_sine_subtract = apply_filter
+                    for mode in ['hpol']:
+                        mean_corr_values, fig, ax, max_possible_map_value = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0.0,90.0], center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=True, return_max_possible_map_value=True, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True)
+                        #mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,90.0], center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
+                        fig.set_size_inches(16, 9)
+                        plt.sca(ax)
+                        plt.tight_layout()
+                        all_figs.append(fig)
+                        all_axs.append(ax)
+                        if False:
+                            cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[0,1,2,3,4,5])
+                            # for baseline in [0,1,2,3,4,5]:
+                            #     cor.plotPointingResolution(mode, snr=5, bw=50e6, plot_map=True, mollweide=False,center_dir='E', window_title=None, include_baselines=[baseline])
         else:
             cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=plot_filter,apply_phase_response=apply_phase_response, deploy_index=deploy_index, map_source_distance_m=map_source_distance_m)
             
