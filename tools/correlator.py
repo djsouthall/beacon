@@ -1424,7 +1424,7 @@ class Correlator:
                 if pol in ['hpol', 'vpol']:
                     self.popout_fig = plt.figure()
                     self.popout_ax = self.popout_fig.gca()
-                    plt.suptitle('ENU %s\nAzimuth = %0.3f, Zenith = %0.3f'%(event_ax.get_title().replace('-',' ').title(), event.xdata,event.ydata))
+                    plt.suptitle('ENU %s\nAzimuth = %0.3f, Elevation = %0.3f'%(event_ax.get_title().replace('-',' ').title(), event.xdata,event.ydata))
                     if all_alignments == False:
                         #Align signals to antenna 0
 

@@ -66,6 +66,10 @@ special_conditions['r5755e112418'] = {
                                     'append_notches':[[62,63.5],[67,69]]
                                     }
 
+special_conditions['r5966e45159'] = {
+                                    'append_notches':[[33,38]]
+                                    }
+
 
 if __name__ == '__main__':
     # plt.close('all')
@@ -73,34 +77,19 @@ if __name__ == '__main__':
         run = int(sys.argv[1])
         eventid = int(sys.argv[2])
         if len(sys.argv) == 4:
-            apply_additional_nothes = bool(sys.argv[3])
+            apply_additional_notches = bool(sys.argv[3])
         else:
-            apply_additional_nothes = False
+            apply_additional_notches = False
 
         cmap = 'cool'#'coolwarm'
         impulsivity_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
         time_delays_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
-        map_length = 16384
-        map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
+        map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_16384-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'
 
-        map_resolution_theta = 0.25 #degrees
-        min_theta   = 0
-        max_theta   = 120#180
-        n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
-
-        map_resolution_phi = 0.1 #degrees
-        min_phi     = -180#-180
-        max_phi     = 180#180
-        n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
-
-        ds = dataSlicer([run], impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
-                        cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
-                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
-                        n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), remove_incomplete_runs=True)
+        ds = dataSlicer([run], impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath)
 
         # Custom testing values
-        if apply_additional_nothes:
+        if apply_additional_notches:
             event_key = 'r%ie%i'%(run,eventid)
             if event_key in list(special_conditions.keys()):
                 if 'append_notches' in list(special_conditions[event_key].keys()):
@@ -151,7 +140,11 @@ if __name__ == '__main__':
                 all_min_angular_distances = {}
                 for index, icao24 in enumerate(numpy.unique(df['icao24'])):
                     color = plt.rcParams['axes.prop_cycle'].by_key()['color'][index%len(plt.rcParams['axes.prop_cycle'].by_key()['color'])]
-                    traj = df.query('icao24 == "%s" and distance < %f'%(icao24, plot_distance_cut_limit*1000))
+                    try:
+                        traj = df.query('icao24 == "%s" and distance < %f'%(icao24, plot_distance_cut_limit*1000))
+                    except Exception as e:
+                        print(e)
+                        continue
                     if force_fit_order is not None:
                         order = force_fit_order
                     else:
@@ -217,9 +210,9 @@ if __name__ == '__main__':
                             marker='o',c='k',
                             label='At Trig Time = %0.2f\nr,phi,el = %0.2f km, %0.2f deg, %0.2f deg'%(event_time, rpt_at_event_time[0]/1000.0, rpt_at_event_time[1], 90.0 - rpt_at_event_time[2]))
 
-                    ax.legend(loc='lower center', fontsize = 16)
-                    for t in ax.get_legend().get_texts():
-                        print(t)
+                    # ax.legend(loc='lower center', fontsize = 16)
+                    # for t in ax.get_legend().get_texts():
+                    #     print(t)
 
 
             except Exception as e:

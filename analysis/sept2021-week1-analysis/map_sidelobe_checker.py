@@ -5,6 +5,7 @@ This will make a map, then look at the waveforms aligned at the N top sidelobes.
 
 import sys
 import os
+import subprocess
 import inspect
 import h5py
 import copy
@@ -84,21 +85,31 @@ if __name__ == '__main__':
     flipbook_path = '/home/dsouthall/Projects/Beacon/beacon/analysis/sept2021-week1-analysis/airplane_event_flipbook_1643947072'#'/home/dsouthall/scratch-midway2/event_flipbook_1643154940'#'/home/dsouthall/scratch-midway2/event_flipbook_1642725413'
     sorted_dict = flipbookToDict(flipbook_path)
     
-    if False:
+    if len(sys.argv) >= 3:
+        runs = [int(sys.argv[1])]
+        eventids = [int(sys.argv[2])]
+        good_dict = {}
+        good_dict[runs[0]] = eventids
+        single_event = True
+    elif False:
         good_dict = sorted_dict['no-obvious-airplane']['eventids_dict']
         # maybe_dict = sorted_dict['maybe']['eventids_dict']
         # bad_dict = sorted_dict['bad']['eventids_dict']
         runs = list(good_dict.keys())
+        single_event = False
     elif True:
         # r5927e105291
         good_dict = {5927:[105291]}
         runs = numpy.array([list(good_dict.keys())[0]])
+        single_event = True
     elif False:
         good_dict = {5805:[11079]}
         runs = numpy.array([list(good_dict.keys())[0]])
+        single_event = True
     else:
         good_dict = {5903:[86227]}
         runs = numpy.array([5903])
+        single_event = True
 
     print("Preparing dataSlicer")
 
@@ -199,13 +210,13 @@ if __name__ == '__main__':
 
                     linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = ds.cor.mapMax(map_values, max_method=0, verbose=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, pol=pol, return_peak_to_sidelobe=False, theta_cut=~peak_masked_map_values.mask)
                     
-                    print('Blob %i'%blob_label)
+                    print('Blob %i'%blob_index)
                     theta_best  = ds.cor.mesh_zenith_deg.flat[linear_max_index]
                     print('theta_best = %0.2f deg'%theta_best)
                     phi_best    = ds.cor.mesh_azimuth_deg.flat[linear_max_index]
                     print('phi_best = %0.2f deg'%phi_best)
 
-                    ax.scatter(phi_best,90.0 - theta_best,label='Blob %i, Blob Index = %i'%(blob_label,blob_index))
+                    ax.scatter(phi_best,90.0 - theta_best,label='Blob Index = %i'%(blob_index))
                     ax.legend(loc='lower left',fontsize=10)
 
                     if pol is not None:
@@ -287,7 +298,7 @@ if __name__ == '__main__':
                         blob_thetas.append(theta_best)
                         blob_phis.append(phi_best)
 
-                        plt.suptitle('Blob %i, El = %0.2f, Az = %0.2f\nBlob Value = %.2f'%(blob_label, 90.0 - theta_best, phi_best, blob_value))
+                        plt.suptitle('Blob %i, El = %0.2f, Az = %0.2f\nBlob Value = %.2f'%(blob_index, 90.0 - theta_best, phi_best, blob_value))
                         print('blob_value = %0.2f'%blob_value)
 
                         cut_i = numpy.logical_and(ds.cor.times_resampled >= xmin , ds.cor.times_resampled < xmax)
@@ -343,7 +354,7 @@ if __name__ == '__main__':
 
                     else:
                         plt.figure()
-                        plt.subtitle('Blob %i, El = %0.2f, Az = %0.2f'%(blob_label, 90.0-theta_best, phi_best))
+                        plt.subtitle('Blob %i, El = %0.2f, Az = %0.2f'%(blob_index, 90.0-theta_best, phi_best))
                         plt.subplot(2,1,1)
                         
                         plt.plot(ds.cor.times_resampled, waveforms[0],label='Ch%i'%channels[0],c=plt.rcParams['axes.prop_cycle'].by_key()['color'][channels[0]])
@@ -377,4 +388,8 @@ if __name__ == '__main__':
                 print('Blob Values')
                 for i, bv in enumerate(blob_values):
                     print('blob: ', i, '\tbv: ', bv, '\tphi: ', blob_phis[i],'\tel: ', 90.0 - blob_thetas[i])
-                import pdb; pdb.set_trace()
+
+                if single_event:
+                    subprocess.call([os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'tools','event_info.py'), str(run), str(eventid), 'True'])
+                else:
+                    import pdb; pdb.set_trace()
