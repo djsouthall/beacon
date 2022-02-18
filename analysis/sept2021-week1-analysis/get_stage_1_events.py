@@ -48,9 +48,10 @@ raw_datapath = os.environ['BEACON_DATA']
 processed_datapath = os.environ['BEACON_PROCESSED_DATA']
 print('SETTING processed_datapath TO: ', processed_datapath)
 
-def saveprint(string, outfile):
-    print(string) #Print once to command line
-    print(string, file=open(outfile,'a')) #Print once to file
+def saveprint(*args, outfile=None):
+    print(*args) #Print once to command line
+    if outfile is not None:
+        print(*args, file=open(outfile,'a')) #Print once to file
 
 def savefig(fig, path, name, savefig_size_inches=(24,12.5), savefig_size_dpi=300):
     '''
@@ -79,16 +80,14 @@ if __name__ == '__main__':
     run_batches['batch_7'] = numpy.arange(6574,6673)
 
     ########
-    batch_key = 'batch_test'#'batch_1'
+    batch_key = 'batch_1'
     ########
 
 
     out_path = os.path.join( os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'sept2021-week1-analysis', '%s_%i'%(batch_key, time.time())))
     output_text_file = os.path.join(out_path, 'output_%s.txt'%batch_key)
 
-
     os.mkdir(out_path)
-
 
     # This is a list of runs that were cancelled or ran out of time for whatever reason.  They should eventually be good 
     # to work with, but in the mean time they are to be ignored so they are not accessed by calculations happen.
@@ -100,8 +99,12 @@ if __name__ == '__main__':
     runs = run_batches[batch_key]
     runs = runs[numpy.logical_and(~numpy.isin(runs,flawed_runs),~numpy.isin(runs,ignored_runs))]
 
-    saveprint("Preparing dataSlicer", output_text_file)
+    saveprint("Preparing dataSlicer", outfile=output_text_file)
     ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath, verbose_setup=False)
+    saveprint('ds.data_slicers[0].constant_avg_rms_adu', outfile=output_text_file)
+    saveprint(ds.data_slicers[0].constant_avg_rms_adu, outfile=output_text_file)
+
+
 
     #This one cuts out ALL events
     ds.addROI('above horizon only',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90]})
@@ -129,6 +132,10 @@ if __name__ == '__main__':
 
     remove_from_above_horizon_eventids_dict = {} #This will contain events from all clusters that are flagged and need to be removed.
     exclude_below_horizon_clusters = ( [[44.5,50], [-6,0]] , [[-11,-8], [-7,-3]] , [[-3,-1], [-12,0]] , [[24.5,28], [-7.75,-1]] , [[30.75,30], [-6,-1]] , [[6,8.5], [-12,-4]] )
+
+    saveprint('exclude_below_horizon_clusters', outfile=output_text_file)
+    saveprint(str(exclude_below_horizon_clusters), outfile=output_text_file)
+
     for remove_box_az, remove_el in exclude_below_horizon_clusters:
         cluster_cut_dict = {}#copy.deepcopy(ds.roi['above horizon'])
         cluster_cut_dict['phi_best_all_belowhorizon'] = remove_box_az
@@ -142,12 +149,19 @@ if __name__ == '__main__':
             ds.getCutsFromROI('below horizon cluster',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
             )
 
-        # Add these events to the "to be removed" dict.
+        # Add these events to the "to be removed" dict. returnUniqueEvents is similar to appending
         remove_from_above_horizon_eventids_dict = ds.returnUniqueEvents(
             copy.deepcopy(remove_from_above_horizon_eventids_dict),
             copy.deepcopy(single_cluster_eventids_dict)
             )
+
+    #Make remove_from_above_horizon_eventids_dict only events that will be removed
+    remove_from_above_horizon_eventids_dict = ds.returnCommonEvents(
+        copy.deepcopy(above_horizon_eventids_dict),
+        copy.deepcopy(remove_from_above_horizon_eventids_dict)
+        )
     
+    #Actually remove those events
     above_horizon_eventids_dict = ds.returnEventsAWithoutB(
         copy.deepcopy(above_horizon_eventids_dict),
         copy.deepcopy(remove_from_above_horizon_eventids_dict)
@@ -161,11 +175,13 @@ if __name__ == '__main__':
     # ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=None, include_roi=False)
     fig_all_event_map_h, ax_all_event_map_h = ds.plotROI2dHist('phi_best_h','elevation_best_h', cmap=cmap, eventids_dict=None, include_roi=False)
     savefig(fig_all_event_map_h, out_path, 'map_h_all_events')
+
     fig_all_event_map_v, ax_all_event_map_v = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=None, include_roi=False)
     savefig(fig_all_event_map_v, out_path, 'map_v_all_events')
 
     fig_direction_box_map_h, ax_direction_box_map_h = ds.plotROI2dHist('phi_best_h','elevation_best_h', cmap=cmap, eventids_dict=above_horizon_only_eventids_dict, include_roi=False)
     savefig(fig_direction_box_map_h, out_path, 'map_h_direction_box_events')
+
     fig_direction_box_map_v, ax_direction_box_map_v = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=above_horizon_only_eventids_dict, include_roi=False)
     savefig(fig_direction_box_map_v, out_path, 'map_v_direction_box_events')
 
@@ -199,32 +215,31 @@ if __name__ == '__main__':
     savefig(fig_box_cut, out_path, 'map_choice_excluded_by_belowhorizon_boxes')
     
     if len(above_horizon_eventids_array) > 0 or False:
-        plot_params = [['snr_h', 'snr_v'], ['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'],['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value']]
+        plot_params = [['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'], ['csnr_h', 'csnr_v'], ['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'], ['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value']]
         
-        saveprint('Generating plots:', output_text_file)
+        saveprint('Generating plots:', outfile=output_text_file)
 
         for key_x, key_y in plot_params:
-            saveprint('Generating %s plot'%(key_x + ' vs ' + key_y), output_text_file)
+            saveprint('Generating %s plot'%(key_x + ' vs ' + key_y), outfile=output_text_file)
             fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=above_horizon_eventids_dict, include_roi=False)
             savefig(fig, out_path, '%s_vs_%s_stage_1'%(key_x, key_y))
 
-        ds.eventInspector(above_horizon_eventids_dict)
 
     if return_successive_cut_counts:
         roi_key = 'above horizon'
         for key in list(successive_cut_counts.keys()):
             if key == 'initial':
-                saveprint('Initial Event Count is %i'%(successive_cut_counts[key]), output_text_file)
+                saveprint('Initial Event Count is %i'%(successive_cut_counts[key]), outfile=output_text_file)
             else:
-                saveprint('%0.3f%% events then cut by %s with bounds %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key, str(ds.roi[roi_key][key])), output_text_file)
-                saveprint('%0.3f%% of initial events would be cut by %s with bounds %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key, str(ds.roi[roi_key][key])), output_text_file)
-                saveprint('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]), output_text_file)
+                saveprint('%0.3f%% events then cut by %s with bounds %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key, str(ds.roi[roi_key][key])), outfile=output_text_file)
+                saveprint('%0.3f%% of initial events would be cut by %s with bounds %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key, str(ds.roi[roi_key][key])), outfile=output_text_file)
+                saveprint('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]), outfile=output_text_file)
             previous_count = successive_cut_counts[key]
 
-        saveprint('', output_text_file)
-        saveprint('%0.3f%% events then cut by targeted below horizon box cuts'%(100*(previous_count-len(above_horizon_eventids_array))/previous_count), output_text_file)
-        saveprint('Double checking above math, %i events cut by targeted below horizon box cuts'%(len(remove_from_above_horizon_array)), output_text_file)
-        saveprint('Final number of events remaining is %i'%len(above_horizon_eventids_array), output_text_file)
+        saveprint('', outfile=output_text_file)
+        saveprint('%0.3f%% events then cut by targeted below horizon box cuts'%(100*(previous_count-len(above_horizon_eventids_array))/previous_count), outfile=output_text_file)
+        saveprint('Double checking above math, %i events cut by targeted below horizon box cuts'%(len(remove_from_above_horizon_array)), outfile=output_text_file)
+        saveprint('Final number of events remaining is %i'%len(above_horizon_eventids_array), outfile=output_text_file)
 
     impulsivity_h = ds.getDataArrayFromParam('impulsivity_h', trigger_types=None, eventids_dict=above_horizon_eventids_dict)
     impulsivity_v = ds.getDataArrayFromParam('impulsivity_v', trigger_types=None, eventids_dict=above_horizon_eventids_dict)
@@ -237,7 +252,7 @@ if __name__ == '__main__':
     if os.path.exists(outfile_name):
         outfile_name.replace('.npy','_%i.npy'%time.time())
 
-    saveprint('Saving above_horizon_eventids_dict as %s'%outfile_name, output_text_file)
+    saveprint('Saving above_horizon_eventids_dict as %s'%outfile_name, outfile=output_text_file)
     numpy.save(outfile_name, above_horizon_eventids_dict, allow_pickle=True)
 
 
@@ -257,11 +272,23 @@ if __name__ == '__main__':
     if os.path.exists(outfile_name):
         outfile_name.replace('.npy','_%i.npy'%time.time())
 
-    saveprint('Saving above_horizon_eventids_dict as %s'%outfile_name, output_text_file)
+    saveprint('Saving above_horizon_eventids_dict as %s'%outfile_name, outfile=output_text_file)
     numpy.save(outfile_name, above_horizon_description, allow_pickle=True)
 
     excel_filename = os.path.join(out_path, 'event_info_%s.xlsx'%batch_key)
-    saveprint('Generateing excel file %s'%excel_filename, output_text_file)
+    saveprint('Generateing excel file %s'%excel_filename, outfile=output_text_file)
     writeEventDictionaryToExcel(above_horizon_eventids_dict, excel_filename, 'above_horizon_eventids_dict', ds=ds, include_airplanes=False)
     writeEventDictionaryToExcel(remove_from_above_horizon_eventids_dict, excel_filename, 'excluded_by_belowhorizon_boxes', ds=ds, include_airplanes=False)
+
+    
+    master_excel_filename = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'sept2021-week1-analysis', 'event_info_all_batches.xlsx')
+    writeEventDictionaryToExcel(above_horizon_eventids_dict, master_excel_filename, batch_key + '_above_horizon_eventids_dict', ds=ds, include_airplanes=False)
+    writeEventDictionaryToExcel(remove_from_above_horizon_eventids_dict, master_excel_filename, batch_key + '_excluded_by_belowhorizon_boxes', ds=ds, include_airplanes=False)
+
+    saveprint('Generating event inspector and saving event plots.', outfile=output_text_file)
+    ds.eventInspector(above_horizon_eventids_dict, savedir=out_path)
+    ds.inspector_tm.trigger_tool('Save Book')
+    #Add in further sorting of events and automated map generation for each event. 
+
+    saveprint('EOF', outfile=output_text_file)
 

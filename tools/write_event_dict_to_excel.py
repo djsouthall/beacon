@@ -69,6 +69,8 @@ def writeEventDictionaryToDataFrame(initial_eventids_dict, ds=None, include_airp
                     'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe',
                     'impulsivity_hSLICERADDimpulsivity_v',
                     'cr_template_search_hSLICERMAXcr_template_search_v',
+                    'csnr_h',
+                    'csnr_v',
                     'snr_h',
                     'snr_v',
                     'hpol_peak_to_sidelobe',
@@ -77,15 +79,17 @@ def writeEventDictionaryToDataFrame(initial_eventids_dict, ds=None, include_airp
                     'cr_template_search_v',
                     'impulsivity_h',
                     'impulsivity_v',
-                    'std_h',
-                    'std_v',
                     'p2p_h',
                     'p2p_v',
+                    'std_h',
+                    'std_v',
+                    'csnr_h',
+                    'csnr_v',
                     'hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value',
                     'vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'
                     ]
 
-        if numpy.all([numpy.issubdtype(k, numpy.integer) for k in initial_eventids_dict.keys()]):
+        if numpy.all([numpy.issubdtype(k, numpy.integer) for k in initial_eventids_dict.keys()]) or numpy.all(numpy.array(list(initial_eventids_dict.keys()))%1 == 0):
             print('Assuming passed "initial_eventids_dict" as eventids_dict format')
             eventids_dict = copy.deepcopy(initial_eventids_dict)
             eventids_array = concatenateEventDictToArray(initial_eventids_dict)

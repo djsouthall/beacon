@@ -166,7 +166,9 @@ class dataSlicerSingleRun():
     peak_to_sidelobe_n_bins_v : int
         The number of bins to use when plotting the peak to sidelobe param for vpol.
     '''
-    known_param_keys = [    'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7', 'snr_h_over_v',\
+    known_param_keys = [    'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v',\
+                            'snr_h', 'snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7', 'snr_h_over_v',\
+                            'csnr_h', 'csnr_v','min_csnr_h','min_csnr_v','csnr_gap_h','csnr_gap_v','csnr_ch0', 'csnr_ch1', 'csnr_ch2', 'csnr_ch3', 'csnr_ch4', 'csnr_ch5', 'csnr_ch6', 'csnr_ch7', 'csnr_h_over_v',\
                             'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
                             'time_delay_0subtract1_v','time_delay_0subtract2_v','time_delay_0subtract3_v','time_delay_1subtract2_v','time_delay_1subtract3_v','time_delay_2subtract3_v',\
                             'mean_max_corr_h', 'max_max_corr_h','mean_max_corr_v', 'max_max_corr_v','similarity_count_h','similarity_count_v','similarity_fraction_h','similarity_fraction_v',\
@@ -196,8 +198,20 @@ class dataSlicerSingleRun():
                         n_phi=3600, range_phi_deg=(-180,180), n_theta=480, range_theta_deg=(0,120),\
                         max_possible_map_value_n_bins_h=100, max_possible_map_value_n_bins_v=100, max_possible_map_value_n_bins_all=100,\
                         max_map_value_n_bins_h=100, max_map_value_n_bins_v=100, max_map_value_n_bins_all=100,\
-                        max_peak_to_sidelobe_val=5,peak_to_sidelobe_n_bins_h=100,peak_to_sidelobe_n_bins_v=100,peak_to_sidelobe_n_bins_all=100):
+                        max_peak_to_sidelobe_val=5,peak_to_sidelobe_n_bins_h=200,peak_to_sidelobe_n_bins_v=200,peak_to_sidelobe_n_bins_all=200):
         try:
+            #Calculated by Andrew Zeolla and used in simulations for standardized SNR calculations.
+            self.constant_avg_rms_adu = {
+                0 : 1.401,
+                1 : 0.853,
+                2 : 1.524,
+                3 : 1.136,
+                4 : 1.495,
+                5 : 0.975,
+                6 : 1.573,
+                7 : 1.264
+                }
+
             self.updateReader(reader,analysis_data_dir=analysis_data_dir, verbose=verbose_setup)
             self.math_keywords = ['SLICERSUBTRACT', 'SLICERADD', 'SLICERDIVIDE', 'SLICERMULTIPLY', 'SLICERMAX', 'SLICERMIN', 'SLICERMEAN'] #Meta words that will relate 2 known variables and produce a plot with their arithmatic combination. 
 
@@ -952,104 +966,132 @@ class dataSlicerSingleRun():
                             else:
                                 p2p = file['p2p'][...][eventids]
                             param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) 
-                        elif 'snr_ch' in param_key and param_key.replace('snr_ch','').isdigit():
-                            channel = int(param_key.replace('snr_ch',''))
-                            if len_eventids < 500:
-                                std = file['std'][eventids]
+                        elif 'snr_ch' in param_key and param_key.replace('csnr_ch','').replace('snr_ch','').isdigit():
+                            if 'csnr_ch' in param_key:
+                                channel = int(param_key.replace('csnr_ch',''))
+                                param_1 = self.constant_avg_rms_adu[channel]
                             else:
-                                std = file['std'][...][eventids]
-                            param_1 = std[:,channel]
+                                channel = int(param_key.replace('snr_ch',''))
+                                if len_eventids < 500:
+                                    std = file['std'][eventids]
+                                else:
+                                    std = file['std'][...][eventids]
+                                param_1 = std[:,channel]
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,channel]/2.0
                             param = numpy.divide(param_2, param_1)
-                        elif param_key == 'snr_h':
-                            if len_eventids < 500:
-                                std = file['std'][eventids]
-                            else:
-                                std = file['std'][...][eventids]
-                            param_1 = std[:,self.included_hpol_antennas]
+                        elif param_key == 'snr_h' or param_key == 'csnr_h':
+                            if param_key == 'snr_h':
+                                if len_eventids < 500:
+                                    std = file['std'][eventids]
+                                else:
+                                    std = file['std'][...][eventids]
+                                param_1 = std[:,self.included_hpol_antennas]
+                            elif param_key == 'csnr_h':
+                                param_1 = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_hpol_antennas])
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_hpol_antennas]/2.0
                             param = numpy.mean(numpy.divide(param_2, param_1),axis=1)
-                        elif param_key == 'min_snr_h':
-                            if len_eventids < 500:
-                                std = file['std'][eventids]
-                            else:
-                                std = file['std'][...][eventids]
-                            param_1 = std[:,self.included_hpol_antennas]
+                        elif param_key == 'min_snr_h' or param_key == 'min_csnr_h':
+                            if param_key == 'min_snr_h':
+                                if len_eventids < 500:
+                                    std = file['std'][eventids]
+                                else:
+                                    std = file['std'][...][eventids]
+                                param_1 = std[:,self.included_hpol_antennas]
+                            elif param_key == 'min_csnr_h':
+                                param_1 = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_hpol_antennas])
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_hpol_antennas]/2.0
                             param = numpy.min(numpy.divide(param_2, param_1),axis=1)
-                        elif param_key == 'snr_gap_h':
-                            if len_eventids < 500:
-                                std = file['std'][eventids]
-                            else:
-                                std = file['std'][...][eventids]
-                            param_1 = std[:,self.included_hpol_antennas]
+                        elif param_key == 'snr_gap_h' or param_key == 'csnr_gap_h':
+                            if param_key == 'snr_gap_h':
+                                if len_eventids < 500:
+                                    std = file['std'][eventids]
+                                else:
+                                    std = file['std'][...][eventids]
+                                param_1 = std[:,self.included_hpol_antennas]
+                            elif param_key == 'csnr_gap_h':
+                                param_1 = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_hpol_antennas])
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_hpol_antennas]/2.0
                             param = numpy.max(numpy.divide(param_2, param_1),axis=1) - numpy.min(numpy.divide(param_2, param_1),axis=1)
-                        elif param_key == 'snr_v':
-                            if len_eventids < 500:
-                                std = file['std'][eventids]
-                            else:
-                                std = file['std'][...][eventids]
-                            param_1 = std[:,self.included_vpol_antennas]
+                        elif param_key == 'snr_v' or param_key == 'csnr_v':
+                            if param_key == 'snr_v':
+                                if len_eventids < 500:
+                                    std = file['std'][eventids]
+                                else:
+                                    std = file['std'][...][eventids]
+                                param_1 = std[:,self.included_vpol_antennas]
+                            elif param_key == 'csnr_v':
+                                param_1 = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_vpol_antennas])
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_vpol_antennas]/2.0
                             param = numpy.mean(numpy.divide(param_2, param_1),axis=1)
-                        elif param_key == 'min_snr_v':
-                            if len_eventids < 500:
-                                std = file['std'][eventids]
-                            else:
-                                std = file['std'][...][eventids]
-                            param_1 = std[:,self.included_vpol_antennas]
+                        elif param_key == 'min_snr_v' or param_key == 'min_csnr_v':
+                            if param_key == 'min_snr_v':
+                                if len_eventids < 500:
+                                    std = file['std'][eventids]
+                                else:
+                                    std = file['std'][...][eventids]
+                                param_1 = std[:,self.included_vpol_antennas]
+                            elif param_key == 'min_csnr_v':
+                                param_1 = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_vpol_antennas])
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_vpol_antennas]/2.0
                             param = numpy.min(numpy.divide(param_2, param_1),axis=1)
-                        elif param_key == 'snr_gap_v':
-                            if len_eventids < 500:
-                                std = file['std'][eventids]
-                            else:
-                                std = file['std'][...][eventids]
-                            param_1 = std[:,self.included_vpol_antennas]
+                        elif param_key == 'snr_gap_v' or param_key == 'csnr_gap_v':
+                            if param_key == 'snr_gap_v':
+                                if len_eventids < 500:
+                                    std = file['std'][eventids]
+                                else:
+                                    std = file['std'][...][eventids]
+                                param_1 = std[:,self.included_vpol_antennas]
+                            elif param_key == 'csnr_gap_v':
+                                param_1 = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_vpol_antennas])
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_vpol_antennas]/2.0
                             param = numpy.max(numpy.divide(param_2, param_1),axis=1) - numpy.min(numpy.divide(param_2, param_1),axis=1)
-                        elif param_key == 'snr_h_over_v':
-                            if len_eventids < 500:
-                                std = file['std'][eventids]
-                            else:
-                                std = file['std'][...][eventids]
+                        elif param_key == 'snr_h_over_v' or param_key == 'csnr_h_over_v':
+                            if param_key == 'snr_h_over_v':
+                                if len_eventids < 500:
+                                    std = file['std'][eventids]
+                                else:
+                                    std = file['std'][...][eventids]
+                                std_h = std[:,self.included_hpol_antennas]
+                                std_v = std[:,self.included_vpol_antennas]
+                            elif param_key == 'csnr_h_over_v':
+                                std_h = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_hpol_antennas])
+                                std_v = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_vpol_antennas])
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
                             # Divide by 2 factor not needed, would divide out from ratio
-                            param = numpy.mean( numpy.divide(   
-                                                    numpy.divide(p2p[:,self.included_hpol_antennas],std[:,self.included_hpol_antennas]),
-                                                    numpy.divide(p2p[:,self.included_vpol_antennas],std[:,self.included_vpol_antennas])
+                            param = numpy.mean( numpy.divide(
+                                                    numpy.divide(p2p[:,self.included_hpol_antennas],std_h),
+                                                    numpy.divide(p2p[:,self.included_vpol_antennas],std_v)
                                                 ),axis=1)
                         elif 'time_delay_' in param_key and 'map' not in param_key:
                             split_param_key = param_key.split('_')
@@ -2890,7 +2932,7 @@ class dataSlicerSingleRun():
 
                     if self.max_snr_val is None:
                         std_requiring_params = ['std_h','std_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7'] #List all params that might require max snr to be calculated if hard limit not given.
-                        p2p_requiring_params = ['p2p_h','p2p_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7'] #List all params that might require max p2p to be calculated if hard limit not given.
+                        p2p_requiring_params = ['p2p_h','p2p_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7','csnr_h','csnr_v','min_csnr_h','min_csnr_v','csnr_gap_h','csnr_gap_v','csnr_ch0', 'csnr_ch1', 'csnr_ch2', 'csnr_ch3', 'csnr_ch4', 'csnr_ch5', 'csnr_ch6', 'csnr_ch7'] #List all params that might require max p2p to be calculated if hard limit not given.
                     else:
                         std_requiring_params = ['std_h','std_v'] #List all params that might require max snr to be calculated if hard limit not given.
                         p2p_requiring_params = ['p2p_h','p2p_v'] #List all params that might require max p2p to be calculated if hard limit not given.
@@ -2967,42 +3009,63 @@ class dataSlicerSingleRun():
                     x_n_bins = self.p2p_n_bins_v
                     x_max_val = self.max_p2p_val
                     x_min_val = 0
-                elif 'snr_ch' in param_key and param_key.replace('snr_ch','').isdigit():
-                    channel = int(param_key.replace('snr_ch',''))
-                    label = 'Ch%i SNR (hpol)\n 0.5*P2P/STD'%channel
+                elif 'snr_ch' in param_key and param_key.replace('csnr_ch','').replace('snr_ch','').isdigit():
+                    channel = int(param_key.replace('csnr_ch','').replace('snr_ch',''))
+                    if 'csnr' in param_key:
+                        label = 'Ch%i SNR (hpol)\n 0.5*P2P/STD'%channel
+                    else:
+                        label = 'Ch%i SNR (hpol)\n 0.5*P2P/(Const RMS)'%channel
                     if channel%2 == 0:
                         x_n_bins = self.snr_n_bins_h
                     else:
                         x_n_bins = self.snr_n_bins_v
                     x_max_val = self.max_snr_val
                     x_min_val = 0                    
-                elif param_key == 'snr_h':
-                    label = 'Mean SNR (hpol)\n mean(0.5*P2P/STD)'
+                elif param_key.replace('csnr','snr') == 'snr_h':
+                    if 'csnr' in param_key:
+                        label = 'Mean SNR (hpol)\n mean(0.5*P2P/(Const RMS))'
+                    else:
+                        label = 'Mean SNR (hpol)\n mean(0.5*P2P/STD)'
                     x_n_bins = self.snr_n_bins_h
                     x_max_val = self.max_snr_val
                     x_min_val = 0
-                elif param_key == 'min_snr_h':
-                    label = 'Min SNR (hpol)\n min(0.5*P2P/STD)'
+                elif param_key.replace('csnr','snr') == 'min_snr_h':
+                    if 'csnr' in param_key:
+                        label = 'Min SNR (hpol)\n min(0.5*P2P/(Const RMS))'
+                    else:
+                        label = 'Min SNR (hpol)\n min(0.5*P2P/STD)'
                     x_n_bins = self.snr_n_bins_h
                     x_max_val = self.max_snr_val
                     x_min_val = 0
-                elif param_key == 'snr_gap_h':
-                    label = 'Max - Min SNR (hpol)\nSNR = 0.5*P2P/STD'
+                elif param_key.replace('csnr','snr') == 'snr_gap_h':
+                    if 'csnr' in param_key:
+                        label = 'Max - Min SNR (hpol)\nSNR = 0.5*P2P/(Const RMS)D'
+                    else:
+                        label = 'Max - Min SNR (hpol)\nSNR = 0.5*P2P/STD'
                     x_n_bins = self.snr_n_bins_h
                     x_max_val = self.max_snr_val
                     x_min_val = 0
-                elif param_key == 'snr_v':
-                    label = 'Mean SNR (vpol)\n mean(0.5*P2P/STD)'
+                elif param_key.replace('csnr','snr') == 'snr_v':
+                    if 'csnr' in param_key:
+                        label = 'Mean SNR (vpol)\n mean(0.5*P2P/(Const RMS))'
+                    else:
+                        label = 'Mean SNR (vpol)\n mean(0.5*P2P/STD)'
                     x_n_bins = self.snr_n_bins_v
                     x_max_val = self.max_snr_val
                     x_min_val = 0
-                elif param_key == 'min_snr_v':
-                    label = 'Min SNR (vpol)\n min(0.5*P2P/STD)'
+                elif param_key.replace('csnr','snr') == 'min_snr_v':
+                    if 'csnr' in param_key:
+                        label = 'Min SNR (vpol)\n min(0.5*P2P/(Const RMS))'
+                    else:
+                        label = 'Min SNR (vpol)\n min(0.5*P2P/STD)'
                     x_n_bins = self.snr_n_bins_v
                     x_max_val = self.max_snr_val
                     x_min_val = 0
-                elif param_key == 'snr_gap_v':
-                    label = 'Max - Min SNR (vpol)\nSNR = 0.5*P2P/STD'
+                elif param_key.replace('csnr','snr') == 'snr_gap_v':
+                    if 'csnr' in param_key:
+                        label = 'Max - Min SNR (vpol)\nSNR = 0.5*P2P/(Const RMS)D'
+                    else:
+                        label = 'Max - Min SNR (vpol)\nSNR = 0.5*P2P/STD'
                     x_n_bins = self.snr_n_bins_v
                     x_max_val = self.max_snr_val
                     x_min_val = 0
@@ -3378,7 +3441,10 @@ class dataSlicerSingleRun():
                     x_max_val = 90
                     x_min_val = -90
                 elif param_key == 'snr_h_over_v':
-                    label = 'Mean SNR Ratio\n mean(H SNR / V SNR)'
+                    if 'csnr' in param_key:
+                        label = 'Mean cSNR Ratio\n mean(H cSNR / V cSNR)'
+                    else:
+                        label = 'Mean SNR Ratio\n mean(H SNR / V SNR)'
                     x_n_bins = self.snr_n_bins_h
                     x_max_val = 15 #Just a guess of a reasonable but safe upper limit
                     x_min_val = 0
@@ -5114,7 +5180,7 @@ class dataSlicer():
             del self.inspector_mpl
 
 
-    def eventInspector(self, eventids_dict, mollweide=False, show_all=False, include_time_delays=False, append_notches=None, include_baselines=numpy.array([0,1,2,3,4,5])):
+    def eventInspector(self, eventids_dict, mollweide=False, show_all=False, include_time_delays=False, append_notches=None, include_baselines=numpy.array([0,1,2,3,4,5]), savedir='./'):
         '''
         This is meant to provide a tool to quickly flick through events from multiple runs.  It will create a one panel
         view of the events info as best as I can manage, and provide easy support for choosing which event you want to
@@ -5124,6 +5190,7 @@ class dataSlicer():
         not worth the effort.  
         '''
         try:
+            self.inspector_savedir = savedir
             self.inspector_include_baselines=include_baselines
             self.include_time_delays = include_time_delays
             self.show_all = show_all
@@ -5254,6 +5321,8 @@ class dataSlicer():
             self.table_params['std_v'] = 'SDev V'
             self.table_params['p2p_h'] = 'P2P H'
             self.table_params['p2p_v'] = 'P2P V'
+            self.table_params['csnr_h'] = 'cSNR H'
+            self.table_params['csnr_v'] = 'cSNR V'
             self.table_params['similarity_count_h'] = 'H Simlr'
             self.table_params['similarity_count_v'] = 'V Simlr'
 
@@ -5387,7 +5456,7 @@ class dataSlicer():
                     '''
                     What actually happens when the button is pressed.
                     '''
-                    outpath = './event_flipbook_%i'%time.time() 
+                    outpath = os.path.join(self.outer.inspector_savedir, 'event_flipbook_%i'%time.time()) 
                     os.mkdir(outpath)
 
                     self.outer.inspector_mpl['fig1'].set_size_inches(25, 12.5)
@@ -5445,18 +5514,18 @@ class dataSlicer():
                         self.outer.inspector_mpl['fig1_map_all'].set_ylim(-30,90)
                     self.outer.inspector_mpl['fig1'].canvas.draw()
 
-            tm = self.inspector_mpl['fig1'].canvas.manager.toolmanager
+            self.inspector_tm = self.inspector_mpl['fig1'].canvas.manager.toolmanager
             #import pdb; pdb.set_trace()
-            tm.add_tool('Save Book', SaveBook, self)
-            self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Save Book'), 'toolgroup')
-            tm.add_tool('Previous', PreviousEventIterator, self)
-            self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Previous'), 'toolgroup')
-            tm.add_tool('Next', NextEventIterator, self)
-            self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Next'), 'toolgroup')
-            tm.add_tool('Update Map', UpdateMapWindow, self)
-            self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Update Map'), 'toolgroup')
-            # tm.add_tool('Quit', ToolQuit)
-            # self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(tm.get_tool('Quit'), 'toolgroup')
+            self.inspector_tm.add_tool('Save Book', SaveBook, self)
+            self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(self.inspector_tm.get_tool('Save Book'), 'toolgroup')
+            self.inspector_tm.add_tool('Previous', PreviousEventIterator, self)
+            self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(self.inspector_tm.get_tool('Previous'), 'toolgroup')
+            self.inspector_tm.add_tool('Next', NextEventIterator, self)
+            self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(self.inspector_tm.get_tool('Next'), 'toolgroup')
+            self.inspector_tm.add_tool('Update Map', UpdateMapWindow, self)
+            self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(self.inspector_tm.get_tool('Update Map'), 'toolgroup')
+            # self.inspector_tm.add_tool('Quit', ToolQuit)
+            # self.inspector_mpl['fig1'].canvas.manager.toolbar.add_tool(self.inspector_tm.get_tool('Quit'), 'toolgroup')
             return
 
         except Exception as e:
