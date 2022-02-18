@@ -10,11 +10,13 @@ import inspect
 import h5py
 import copy
 from pprint import pprint
+import pyperclip as pc
 
 import numpy
 import scipy
 import scipy.signal
 import time
+
 
 
 #from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
@@ -142,8 +144,6 @@ if __name__ == '__main__':
 
     n_peaks = 10
 
-    pol = 'hpol'
-
     for run in runs:
         run_index = numpy.where(numpy.isin(ds.runs, run))[0][0]
         if ds.cor.reader.run != run:
@@ -158,14 +158,14 @@ if __name__ == '__main__':
 
             ds.cor.reader.setEntry(eventid)
 
-            map_values, fig, ax = ds.cor.map(eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=False, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=False, override_to_time_window=(None,None))
+            map_values, fig, ax = ds.cor.map(eventid, 'hpol', include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=False, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=False, override_to_time_window=(None,None))
             ax.set_xlim(-90,90)
             ax.set_ylim(-40,90)
             
             # linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = ds.cor.mapMax(map_values, max_method=0, verbose=False, zenith_cut_ENU=[0,80], zenith_cut_array_plane=[0,90], pol='hpol', return_peak_to_sidelobe=False, theta_cut=None)
 
             if theta_cut is None:
-                theta_cut = ds.cor.generateThetaCutMask(pol, shape=numpy.shape(map_values),zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
+                theta_cut = ds.cor.generateThetaCutMask('hpol', shape=numpy.shape(map_values),zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane)
 
             masked_map_values = numpy.ma.array(map_values,mask=~theta_cut) #This way the values not in the range are not included in calculations but the dimensions of the map stay the same.#masked_map_values = numpy.ma.array(map_values.copy(),mask=~theta_cut) #This way the values not in the range are not included in calculations but the dimensions of the map stay the same.
 
@@ -179,7 +179,7 @@ if __name__ == '__main__':
 
             linear_max_index = masked_map_values.argmax()
 
-            threshold = masked_map_values.max()*0.5
+            threshold = masked_map_values.max()*0.65
 
             blob_labels, num_blobs = scipy.ndimage.label(masked_map_values >= threshold)
             blob_labels = numpy.ma.masked_array(blob_labels,mask=~theta_cut)
@@ -208,7 +208,7 @@ if __name__ == '__main__':
                 for blob_index, blob_label in enumerate(selected_blobs):
                     peak_masked_map_values = numpy.ma.array(map_values,mask=numpy.logical_or(~theta_cut , blob_labels != blob_label)) #Select values in current peak.
 
-                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = ds.cor.mapMax(map_values, max_method=0, verbose=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, pol=pol, return_peak_to_sidelobe=False, theta_cut=~peak_masked_map_values.mask)
+                    linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = ds.cor.mapMax(map_values, max_method=0, verbose=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, pol='hpol', return_peak_to_sidelobe=False, theta_cut=~peak_masked_map_values.mask)
                     
                     print('Blob %i'%blob_index)
                     theta_best  = ds.cor.mesh_zenith_deg.flat[linear_max_index]
@@ -219,19 +219,35 @@ if __name__ == '__main__':
                     ax.scatter(phi_best,90.0 - theta_best,label='Blob Index = %i'%(blob_index))
                     ax.legend(loc='lower left',fontsize=10)
 
-                    if pol is not None:
-                        if pol == 'vpol':
-                            channels = numpy.array([1,3,5,7])
-                            waveforms = ds.cor.wf(eventid, channels, div_std=False, hilbert=False, apply_filter=ds.cor.apply_filter, tukey=ds.cor.apply_tukey, sine_subtract=ds.cor.apply_sine_subtract)
+                    fig, all_ax = plt.subplots(6,2)
+                    fig.canvas.set_window_title('r%ie%i-peak%s'%(run, eventid, blob_index))
 
-                            t_best_0subtract1 = ds.cor.t_vpol_0subtract1.flat[linear_max_index]
-                            t_best_0subtract2 = ds.cor.t_vpol_0subtract2.flat[linear_max_index]
-                            t_best_0subtract3 = ds.cor.t_vpol_0subtract3.flat[linear_max_index]
-                            t_best_1subtract2 = ds.cor.t_vpol_1subtract2.flat[linear_max_index]
-                            t_best_1subtract3 = ds.cor.t_vpol_1subtract3.flat[linear_max_index]
-                            t_best_2subtract3 = ds.cor.t_vpol_2subtract3.flat[linear_max_index]
+                    for pol in ['vpol', 'hpol']:
+                        if pol is not None:
+                            if pol == 'vpol':
+                                channels = numpy.array([1,3,5,7])
+                                waveforms = ds.cor.wf(eventid, channels, div_std=False, hilbert=False, apply_filter=ds.cor.apply_filter, tukey=ds.cor.apply_tukey, sine_subtract=ds.cor.apply_sine_subtract)
+
+                                t_best_0subtract1 = ds.cor.t_vpol_0subtract1.flat[linear_max_index]
+                                t_best_0subtract2 = ds.cor.t_vpol_0subtract2.flat[linear_max_index]
+                                t_best_0subtract3 = ds.cor.t_vpol_0subtract3.flat[linear_max_index]
+                                t_best_1subtract2 = ds.cor.t_vpol_1subtract2.flat[linear_max_index]
+                                t_best_1subtract3 = ds.cor.t_vpol_1subtract3.flat[linear_max_index]
+                                t_best_2subtract3 = ds.cor.t_vpol_2subtract3.flat[linear_max_index]
+                            else:
+                                #Default to hpol times.
+                                channels = numpy.array([0,2,4,6])
+                                waveforms = ds.cor.wf(eventid, channels, div_std=False, hilbert=False, apply_filter=ds.cor.apply_filter, tukey=ds.cor.apply_tukey, sine_subtract=ds.cor.apply_sine_subtract)
+
+                                t_best_0subtract1 = ds.cor.t_hpol_0subtract1.flat[linear_max_index]
+                                t_best_0subtract2 = ds.cor.t_hpol_0subtract2.flat[linear_max_index]
+                                t_best_0subtract3 = ds.cor.t_hpol_0subtract3.flat[linear_max_index]
+                                t_best_1subtract2 = ds.cor.t_hpol_1subtract2.flat[linear_max_index]
+                                t_best_1subtract3 = ds.cor.t_hpol_1subtract3.flat[linear_max_index]
+                                t_best_2subtract3 = ds.cor.t_hpol_2subtract3.flat[linear_max_index]
+
+
                         else:
-                            #Default to hpol times.
                             channels = numpy.array([0,2,4,6])
                             waveforms = ds.cor.wf(eventid, channels, div_std=False, hilbert=False, apply_filter=ds.cor.apply_filter, tukey=ds.cor.apply_tukey, sine_subtract=ds.cor.apply_sine_subtract)
 
@@ -242,30 +258,14 @@ if __name__ == '__main__':
                             t_best_1subtract3 = ds.cor.t_hpol_1subtract3.flat[linear_max_index]
                             t_best_2subtract3 = ds.cor.t_hpol_2subtract3.flat[linear_max_index]
 
+                        time_delay_dict = {}
+                        time_delay_dict['t_best_0subtract1'] = t_best_0subtract1
+                        time_delay_dict['t_best_0subtract2'] = t_best_0subtract2
+                        time_delay_dict['t_best_0subtract3'] = t_best_0subtract3
+                        time_delay_dict['t_best_1subtract2'] = t_best_1subtract2
+                        time_delay_dict['t_best_1subtract3'] = t_best_1subtract3
+                        time_delay_dict['t_best_2subtract3'] = t_best_2subtract3
 
-                    else:
-                        channels = numpy.array([0,2,4,6])
-                        waveforms = ds.cor.wf(eventid, channels, div_std=False, hilbert=False, apply_filter=ds.cor.apply_filter, tukey=ds.cor.apply_tukey, sine_subtract=ds.cor.apply_sine_subtract)
-
-                        t_best_0subtract1 = ds.cor.t_hpol_0subtract1.flat[linear_max_index]
-                        t_best_0subtract2 = ds.cor.t_hpol_0subtract2.flat[linear_max_index]
-                        t_best_0subtract3 = ds.cor.t_hpol_0subtract3.flat[linear_max_index]
-                        t_best_1subtract2 = ds.cor.t_hpol_1subtract2.flat[linear_max_index]
-                        t_best_1subtract3 = ds.cor.t_hpol_1subtract3.flat[linear_max_index]
-                        t_best_2subtract3 = ds.cor.t_hpol_2subtract3.flat[linear_max_index]
-
-                    time_delay_dict = {}
-                    time_delay_dict['t_best_0subtract1'] = t_best_0subtract1
-                    time_delay_dict['t_best_0subtract2'] = t_best_0subtract2
-                    time_delay_dict['t_best_0subtract3'] = t_best_0subtract3
-                    time_delay_dict['t_best_1subtract2'] = t_best_1subtract2
-                    time_delay_dict['t_best_1subtract3'] = t_best_1subtract3
-                    time_delay_dict['t_best_2subtract3'] = t_best_2subtract3
-
-
-                    if True:
-                        fig = plt.figure()
-                        fig.canvas.set_window_title('r%ie%i-%s-peak%s'%(run, eventid, pol, blob_index))
                         time_delays = [t_best_0subtract1,t_best_0subtract2,t_best_0subtract3,t_best_1subtract2,t_best_1subtract3,t_best_2subtract3]
 
                         blob_value = 0
@@ -274,18 +274,20 @@ if __name__ == '__main__':
 
                             w_i = waveforms[i]/max(waveforms[i])
                             w_j = waveforms[j]/max(waveforms[j])
-                            
-                            plt.subplot(6,1,pair_index + 1)
+
+                            plt.sca(all_ax[pair_index,int(pol == 'vpol')])
+
                             plt.plot(ds.cor.times_resampled,w_i,label='Ch%i'%channels[i],c=plt.rcParams['axes.prop_cycle'].by_key()['color'][i])
                             plt.plot(ds.cor.times_resampled + time_delays[pair_index], w_j,label='Ch%i, shifted %0.2f ns'%(channels[j], time_delays[pair_index]),c=plt.rcParams['axes.prop_cycle'].by_key()['color'][j])
 
                             plt.minorticks_on()
                             plt.grid(b=True, which='major', color='k', linestyle='-')
                             plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                            plt.ylabel('Normalized adu\n%i shifted to %i\n%0.2f ns'%(j,i,time_delays[pair_index]))
+                            #plt.ylabel('Normalized adu\n%i shifted to %i\n%0.2f ns'%(j,i,time_delays[pair_index]))
+                            plt.ylabel('%i shifted to %i\n%0.2f ns'%(j,i,time_delays[pair_index]))
                             # plt.legend()
-                            xmin = 200
-                            xmax = 1000
+                            xmin = 100
+                            xmax = 900
                             plt.xlim(xmin,xmax)
                             if pair_index == 5:
                                 plt.xlabel('Time (ns)')
@@ -317,6 +319,7 @@ if __name__ == '__main__':
                                     cut_j = numpy.arange(sum(cut_i)) + numpy.where(numpy.logical_and(ds.cor.times_resampled + t_best_isubtractj >= xmin , ds.cor.times_resampled + t_best_isubtractj < xmax))[0].min()
 
                                 summed_waveforms[i][cut_i] += waveforms[j][cut_j]/4
+
                         map_wf = numpy.zeros_like(summed_waveforms)
                         for i in range(4):
                             map_wf[i] = summed_waveforms[i]/numpy.std(summed_waveforms[i])
@@ -349,39 +352,6 @@ if __name__ == '__main__':
                             focused_map_max[blob_index]['theta'] = theta_best
                             focused_map_max[blob_index]['phi'] = phi_best
 
-                    
-
-
-                    else:
-                        plt.figure()
-                        plt.subtitle('Blob %i, El = %0.2f, Az = %0.2f'%(blob_index, 90.0-theta_best, phi_best))
-                        plt.subplot(2,1,1)
-                        
-                        plt.plot(ds.cor.times_resampled, waveforms[0],label='Ch%i'%channels[0],c=plt.rcParams['axes.prop_cycle'].by_key()['color'][channels[0]])
-                        plt.plot(ds.cor.times_resampled, waveforms[1],label='Ch%i'%(channels[1]),c=plt.rcParams['axes.prop_cycle'].by_key()['color'][channels[1]])
-                        plt.plot(ds.cor.times_resampled, waveforms[2],label='Ch%i'%(channels[2]),c=plt.rcParams['axes.prop_cycle'].by_key()['color'][channels[2]])
-                        plt.plot(ds.cor.times_resampled, waveforms[3],label='Ch%i'%(channels[3]),c=plt.rcParams['axes.prop_cycle'].by_key()['color'][channels[3]])
-
-                        plt.ylabel('adu')
-                        plt.xlabel('Time (ns)')
-                        plt.minorticks_on()
-                        plt.grid(b=True, which='major', color='k', linestyle='-')
-                        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                        plt.legend()
-
-                        plt.subplot(2,1,2)
-                        
-                        plt.plot(ds.cor.times_resampled, waveforms[0]/max(waveforms[0]),label='Ch%i'%channels[0],c=plt.rcParams['axes.prop_cycle'].by_key()['color'][channels[0]])
-                        plt.plot(ds.cor.times_resampled + t_best_0subtract1, waveforms[1]/max(waveforms[1]),label='Ch%i, shifted %0.2f ns'%(channels[1], t_best_0subtract1),c=plt.rcParams['axes.prop_cycle'].by_key()['color'][channels[1]])
-                        plt.plot(ds.cor.times_resampled + t_best_0subtract2, waveforms[2]/max(waveforms[2]),label='Ch%i, shifted %0.2f ns'%(channels[2], t_best_0subtract2),c=plt.rcParams['axes.prop_cycle'].by_key()['color'][channels[2]])
-                        plt.plot(ds.cor.times_resampled + t_best_0subtract3, waveforms[3]/max(waveforms[3]),label='Ch%i, shifted %0.2f ns'%(channels[3], t_best_0subtract3),c=plt.rcParams['axes.prop_cycle'].by_key()['color'][channels[3]])
-
-                        plt.ylabel('Normalized adu')
-                        plt.xlabel('Time (ns)')
-                        plt.minorticks_on()
-                        plt.grid(b=True, which='major', color='k', linestyle='-')
-                        plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                        plt.legend()
                 if plot_focused_map == True:
                     pprint(focused_map_max)
 
@@ -389,7 +359,11 @@ if __name__ == '__main__':
                 for i, bv in enumerate(blob_values):
                     print('blob: ', i, '\tbv: ', bv, '\tphi: ', blob_phis[i],'\tel: ', 90.0 - blob_thetas[i])
 
-                if single_event:
-                    subprocess.call([os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'tools','event_info.py'), str(run), str(eventid), 'True'])
-                else:
-                    import pdb; pdb.set_trace()
+    if single_event:
+        #Ready the potential next command if inspecting the event.
+        pc.copy(r'%run ' + os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'tools','event_info.py') + ' ' + str(run) + ' ' + str(eventid) + ' ' + 'True')
+
+    # if single_event:
+    #     subprocess.run([os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'tools','event_info.py'), str(run), str(eventid), 'True'])
+    # else:
+    #     import pdb; pdb.set_trace()

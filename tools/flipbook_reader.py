@@ -50,7 +50,25 @@ def flipbookToDict(path, ignore_runs=[]):
     del out_dict['events']
     return copy.deepcopy(out_dict)
 
-def concatenateFlipbookToArray(flipbook, ignore_runs=[]):
+def concatenateEventDictToArray(eventids_dict, ignore_runs=[]):
+    '''
+    This replicates behaviour of concatenateFlipbookToArray for dictionaries that are already in the eventids_dict
+    format. of {run:[eventids],run:[eventids]}.
+    '''
+    event_dtype = numpy.dtype([('run','i'),('eventid','i'), ('key', '<U16')])
+    out_array = numpy.array([],dtype=event_dtype)
+    for run, eventids in eventids_dict.items():
+        if run in ignore_runs:
+            continue
+        _out_array = numpy.zeros(len(eventids),dtype=event_dtype)
+        _out_array['run'] = run
+        _out_array['eventid'] = eventids
+        _out_array['key'] = 'unsorted'
+        out_array = numpy.append(out_array,_out_array)
+    return numpy.sort(numpy.unique(out_array),order=('run','eventid'))
+
+
+def concatenateFlipbookToArray(flipbook, ignore_runs=[], parent_key=''):
     '''
     takes an existing event flipbook and takes the event arrays from each dub directory and puts them into a single 
     array.
@@ -65,7 +83,7 @@ def concatenateFlipbookToArray(flipbook, ignore_runs=[]):
                     out_array = numpy.append(out_array, flipbook['events'])
             else:
                 if type(flipbook[key]) is dict:
-                    _out_array = concatenateFlipbookToArray(flipbook[key], ignore_runs=ignore_runs)
+                    _out_array = concatenateFlipbookToArray(flipbook[key], ignore_runs=ignore_runs, parent_key=key)
                     if _out_array is not None:
                         if 'key' not in _out_array.dtype.names:
                             _out_array = numpy.lib.recfunctions.rec_append_fields(_out_array, 'key', numpy.array([key]*len(_out_array), dtype='<U16')) #hopefully adds the key of the deepest folder this event exists in. 
@@ -74,9 +92,17 @@ def concatenateFlipbookToArray(flipbook, ignore_runs=[]):
                             out_array = _out_array
                         else:
                             try:
-                                out_array = numpy.append(out_array, _out_array)
+                                if len(out_array) == 0:
+                                    out_array = _out_array
+                                else:
+                                    if out_array.dtype != _out_array.dtype:
+                                        out_array = numpy.lib.recfunctions.rec_append_fields(out_array, 'key', numpy.array([parent_key]*len(out_array), dtype='<U16')) #hopefully adds the key of the deepest folder this event exists in. 
+                                    out_array = numpy.append(out_array, _out_array)
                             except Exception as e:
                                 print(e)
+                                exc_type, exc_obj, exc_tb = sys.exc_info()
+                                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                print(exc_type, fname, exc_tb.tb_lineno)
                                 import pdb; pdb.set_trace()
         if out_array is not None:
             out_array = numpy.sort(numpy.unique(out_array),order=('run','eventid'))
@@ -111,7 +137,11 @@ def concatenateFlipbookToDict(flipbook, ignore_runs=[]):
     '''
     Does what concatenateFlipbookToArray does but to a eventids_dict.
     '''
-    sorted_array = concatenateFlipbookToArray(flipbook, ignore_runs=ignore_runs)
+    if numpy.all([numpy.issubdtype(k, numpy.integer) for k in flipbook.keys()]):
+        print('Assuming passed "flipbook" as eventids_dict instead of flipbook')
+        sorted_array = concatenateEventDictToArray(flipbook, ignore_runs=ignore_runs)
+    else:
+        sorted_array = concatenateFlipbookToArray(flipbook, ignore_runs=ignore_runs)
     out_dict = {}
     for run in numpy.unique(sorted_array['run']):
         out_dict[run] = numpy.unique(sorted_array[sorted_array['run'] == run]['eventid'])

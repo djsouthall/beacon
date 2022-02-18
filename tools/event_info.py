@@ -71,6 +71,18 @@ special_conditions['r5966e45159'] = {
                                     }
 
 
+special_conditions['r5896e46823'] = {
+                                    'append_notches':[[33,38]]
+                                    }
+
+special_conditions['r5889e70102'] = {
+                                    'append_notches':[[33,38]]
+                                    }
+special_conditions['r5853e114664'] = {
+                                    'append_notches':[[62.5,70]]
+                                    }
+
+
 if __name__ == '__main__':
     # plt.close('all')
     if len(sys.argv) >= 3:
@@ -200,6 +212,12 @@ if __name__ == '__main__':
                         ax = ds.inspector_mpl[ax_key]
                         ax.scatter(traj['azimuth'], 90.0 - traj['zenith'], c=color)
 
+                print('minimum_approach = ',minimum_approach)
+                print('minimum_approach_t = ',minimum_approach_t)
+                print('minimum_approach_rpt = ',minimum_approach_rpt)
+                print('minimum_approach_airplane = ',minimum_approach_airplane)
+                print('minimum_rpt_at_event_time = ',minimum_rpt_at_event_time)
+
                 for ax_key in ax_keys:
                     if minimum_approach_rpt is not None:
                         ax.scatter(minimum_approach_rpt[1], 90.0 - minimum_approach_rpt[2],
@@ -217,3 +235,5 @@ if __name__ == '__main__':
 
             except Exception as e:
                 print(e)
+
+        # import pdb; pdb.set_trace()

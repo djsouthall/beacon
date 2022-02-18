@@ -190,7 +190,7 @@ class dataSlicerSingleRun():
                         impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                         time_delays_n_bins_h=500,time_delays_n_bins_v=500,min_time_delays_val=-200,max_time_delays_val=200,\
                         max_corr_n_bins=200,\
-                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,\
+                        std_n_bins_h=200,std_n_bins_v=200,max_std_val=25,\
                         p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,\
                         n_phi=3600, range_phi_deg=(-180,180), n_theta=480, range_theta_deg=(0,120),\

@@ -221,6 +221,8 @@ class Correlator:
             self.generateTimeIndices() #Must be called again if map_source_distance_m is reset or some other timing info is changed.
             self.calculateArrayNormalVector()
 
+            self.popout_fig_list = []
+
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -1287,14 +1289,15 @@ class Correlator:
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def interactivePlotter(self, event, eventid=None, pol=None, hilbert=None, mollweide = False, center_dir='E', all_alignments=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, time_window_mask=None):
+    def interactivePlotter(self, event, eventid=None, pol=None, hilbert=None, mollweide = False, center_dir='E', all_alignments=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, time_window_mask=None, close_popout=False):
         '''
         This hopefully will make a plot when called by a double click in the map.
         '''
         if event.dblclick == True:
             try:
                 try:
-                    plt.close(self.popout_fig)
+                    if close_popout == True:
+                        plt.close(self.popout_fig)
                 except:
                     pass #Just maintaining only one popout at a time.
                 event_ax = event.inaxes
@@ -1727,6 +1730,8 @@ class Correlator:
                                     plt.xlim(xmin,xmax)
                                     if pair_index == 5:
                                         plt.xlabel('Time (ns)')
+
+                self.popout_fig_list.append(self.popout_fig)
 
             except Exception as e:
                 print('\nError in %s'%inspect.stack()[0][3])
