@@ -107,12 +107,12 @@ if __name__ == "__main__":
             runs = 5974 + batch_number*batch_length + numpy.arange(batch_length)
             runs = runs[runs <= max_run_to_include]
         else:
-            runs = numpy.array([6537,6538,6539])
+            runs = numpy.array([6126,6277,6285]) #numpy.array([6537,6538,6539])
         # runs = numpy.array([6520,5775])
         done_runs = numpy.array([])
         analysis_part = 4
 
-        bad_node_numbers = [15,227]
+        bad_node_numbers = [2,14,15,227]
         if len(runs) == 0:
             print('You dont need to submit any more jobs, you have done it all.')
             import pdb; pdb.set_trace()

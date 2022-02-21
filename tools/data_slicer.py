@@ -166,7 +166,7 @@ class dataSlicerSingleRun():
     peak_to_sidelobe_n_bins_v : int
         The number of bins to use when plotting the peak to sidelobe param for vpol.
     '''
-    known_param_keys = [    'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v',\
+    known_param_keys = [    'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h','min_std_h', 'std_v', 'min_std_v', 'p2p_h', 'p2p_v',\
                             'snr_h', 'snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7', 'snr_h_over_v',\
                             'csnr_h', 'csnr_v','min_csnr_h','min_csnr_v','csnr_gap_h','csnr_gap_v','csnr_ch0', 'csnr_ch1', 'csnr_ch2', 'csnr_ch3', 'csnr_ch4', 'csnr_ch5', 'csnr_ch6', 'csnr_ch7', 'csnr_h_over_v',\
                             'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
@@ -175,7 +175,7 @@ class dataSlicerSingleRun():
                             'max_corr_0subtract1_h','max_corr_0subtract2_h','max_corr_0subtract3_h','max_corr_1subtract2_h','max_corr_1subtract3_h','max_corr_2subtract3_h',\
                             'max_corr_0subtract1_v','max_corr_0subtract2_v','max_corr_0subtract3_v','max_corr_1subtract2_v','max_corr_1subtract3_v','max_corr_2subtract3_v',\
                             'cw_present','cw_freq_Mhz','cw_linear_magnitude','cw_dbish','theta_best_h','theta_best_v','elevation_best_h','elevation_best_v','elevation_best_all','elevation_best_choice','phi_best_h','phi_best_v','phi_best_all','phi_best_choice',\
-                            'calibrated_trigtime','triggered_beams','beam_power','hpol_peak_to_sidelobe','vpol_peak_to_sidelobe','all_peak_to_sidelobe','hpol_max_possible_map_value','vpol_max_possible_map_value','all_max_possible_map_value','hpol_max_map_value','vpol_max_map_value','all_max_map_value',\
+                            'calibrated_trigtime','triggered_beams','beam_power','hpol_peak_to_sidelobe','vpol_peak_to_sidelobe','all_peak_to_sidelobe','hpol_max_possible_map_value','vpol_max_possible_map_value','all_max_possible_map_value','hpol_max_map_value','vpol_max_map_value','all_max_map_value','hpol_normalized_map_value','vpol_normalized_map_value','all_normalized_map_value',\
                             'map_max_time_delay_0subtract1_h','map_max_time_delay_0subtract2_h','map_max_time_delay_0subtract3_h',\
                             'map_max_time_delay_1subtract2_h','map_max_time_delay_1subtract3_h','map_max_time_delay_2subtract3_h',\
                             'map_max_time_delay_0subtract1_v','map_max_time_delay_0subtract2_v','map_max_time_delay_0subtract3_v',\
@@ -541,7 +541,7 @@ class dataSlicerSingleRun():
                     self.hilbert_map = True #Since both datasets exist, both maps are enabled.                    
                     self.normal_map = True #Since both datasets exist, both maps are enabled.
 
-                    added_keys = ['hilbert_theta_best_h','hilbert_theta_best_v','hilbert_theta_best_all','hilbert_elevation_best_h','hilbert_elevation_best_v','hilbert_elevation_best_all','hilbert_phi_best_h','hilbert_phi_best_v','hilbert_phi_best_all','hilbert_hpol_peak_to_sidelobe','hilbert_vpol_peak_to_sidelobe','hilbert_all_peak_to_sidelobe','hilbert_hpol_max_possible_map_value','hilbert_vpol_max_possible_map_value','hilbert_all_max_possible_map_value','hilbert_hpol_max_map_value','hilbert_vpol_max_map_value','hilbert_all_max_map_value','hilbert_map_max_time_delay_0subtract1_h','hilbert_map_max_time_delay_0subtract2_h','hilbert_map_max_time_delay_0subtract3_h','hilbert_map_max_time_delay_1subtract2_h','hilbert_map_max_time_delay_1subtract3_h','hilbert_map_max_time_delay_2subtract3_h','hilbert_map_max_time_delay_0subtract1_v','hilbert_map_max_time_delay_0subtract2_v','hilbert_map_max_time_delay_0subtract3_v','hilbert_map_max_time_delay_1subtract2_v','hilbert_map_max_time_delay_1subtract3_v','hilbert_map_max_time_delay_2subtract3_v','hilbert_map_max_time_delay_0subtract1_all','hilbert_map_max_time_delay_0subtract2_all','hilbert_map_max_time_delay_0subtract3_all','hilbert_map_max_time_delay_1subtract2_all','hilbert_map_max_time_delay_1subtract3_all','hilbert_map_max_time_delay_2subtract3_all']
+                    added_keys = ['hilbert_theta_best_h','hilbert_theta_best_v','hilbert_theta_best_all','hilbert_elevation_best_h','hilbert_elevation_best_v','hilbert_elevation_best_all','hilbert_phi_best_h','hilbert_phi_best_v','hilbert_phi_best_all','hilbert_hpol_peak_to_sidelobe','hilbert_vpol_peak_to_sidelobe','hilbert_all_peak_to_sidelobe','hilbert_hpol_max_possible_map_value','hilbert_vpol_max_possible_map_value','hilbert_all_max_possible_map_value','hilbert_hpol_max_map_value','hilbert_vpol_max_map_value','hilbert_all_max_map_value','hilbert_hpol_normalized_map_value','hilbert_vpol_normalized_map_value','hilbert_all_normalized_map_value','hilbert_map_max_time_delay_0subtract1_h','hilbert_map_max_time_delay_0subtract2_h','hilbert_map_max_time_delay_0subtract3_h','hilbert_map_max_time_delay_1subtract2_h','hilbert_map_max_time_delay_1subtract3_h','hilbert_map_max_time_delay_2subtract3_h','hilbert_map_max_time_delay_0subtract1_v','hilbert_map_max_time_delay_0subtract2_v','hilbert_map_max_time_delay_0subtract3_v','hilbert_map_max_time_delay_1subtract2_v','hilbert_map_max_time_delay_1subtract3_v','hilbert_map_max_time_delay_2subtract3_v','hilbert_map_max_time_delay_0subtract1_all','hilbert_map_max_time_delay_0subtract2_all','hilbert_map_max_time_delay_0subtract3_all','hilbert_map_max_time_delay_1subtract2_all','hilbert_map_max_time_delay_1subtract3_all','hilbert_map_max_time_delay_2subtract3_all']
 
                     for k in added_keys:
                         self.known_param_keys.append(k)
@@ -560,7 +560,7 @@ class dataSlicerSingleRun():
                     if _map_dset_key in map_direction_keys:
                         self.allsky_normal_map = True
                         self.map_dset_key_normal_allsky = copy.copy(_map_dset_key)
-                        added_keys = ['theta_best_h_allsky','theta_best_v_allsky','theta_best_all_allsky','elevation_best_h_allsky','elevation_best_v_allsky','elevation_best_all_allsky','phi_best_h_allsky','phi_best_v_allsky','phi_best_all_allsky','hpol_peak_to_sidelobe_allsky','vpol_peak_to_sidelobe_allsky','all_peak_to_sidelobe_allsky','hpol_max_possible_map_value_allsky','vpol_max_possible_map_value_allsky','all_max_possible_map_value_allsky','hpol_max_map_value_allsky','vpol_max_map_value_allsky','all_max_map_value_allsky','map_max_time_delay_0subtract1_h_allsky','map_max_time_delay_0subtract2_h_allsky','map_max_time_delay_0subtract3_h_allsky','map_max_time_delay_1subtract2_h_allsky','map_max_time_delay_1subtract3_h_allsky','map_max_time_delay_2subtract3_h_allsky','map_max_time_delay_0subtract1_v_allsky','map_max_time_delay_0subtract2_v_allsky','map_max_time_delay_0subtract3_v_allsky','map_max_time_delay_1subtract2_v_allsky','map_max_time_delay_1subtract3_v_allsky','map_max_time_delay_2subtract3_v_allsky','map_max_time_delay_0subtract1_all_allsky','map_max_time_delay_0subtract2_all_allsky','map_max_time_delay_0subtract3_all_allsky','map_max_time_delay_1subtract2_all_allsky','map_max_time_delay_1subtract3_all_allsky','map_max_time_delay_2subtract3_all_allsky']
+                        added_keys = ['theta_best_h_allsky','theta_best_v_allsky','theta_best_all_allsky','elevation_best_h_allsky','elevation_best_v_allsky','elevation_best_all_allsky','phi_best_h_allsky','phi_best_v_allsky','phi_best_all_allsky','hpol_peak_to_sidelobe_allsky','vpol_peak_to_sidelobe_allsky','all_peak_to_sidelobe_allsky','hpol_max_possible_map_value_allsky','vpol_max_possible_map_value_allsky','all_max_possible_map_value_allsky','hpol_max_map_value_allsky','vpol_max_map_value_allsky','all_max_map_value_allsky','hpol_normalized_map_value_allsky','vpol_normalized_map_value_allsky','all_normalized_map_value_allsky','map_max_time_delay_0subtract1_h_allsky','map_max_time_delay_0subtract2_h_allsky','map_max_time_delay_0subtract3_h_allsky','map_max_time_delay_1subtract2_h_allsky','map_max_time_delay_1subtract3_h_allsky','map_max_time_delay_2subtract3_h_allsky','map_max_time_delay_0subtract1_v_allsky','map_max_time_delay_0subtract2_v_allsky','map_max_time_delay_0subtract3_v_allsky','map_max_time_delay_1subtract2_v_allsky','map_max_time_delay_1subtract3_v_allsky','map_max_time_delay_2subtract3_v_allsky','map_max_time_delay_0subtract1_all_allsky','map_max_time_delay_0subtract2_all_allsky','map_max_time_delay_0subtract3_all_allsky','map_max_time_delay_1subtract2_all_allsky','map_max_time_delay_1subtract3_all_allsky','map_max_time_delay_2subtract3_all_allsky']
                         for k in added_keys:
                             self.known_param_keys.append(k)
                     
@@ -569,7 +569,7 @@ class dataSlicerSingleRun():
                     if _map_dset_key in map_direction_keys:
                         self.abovehorizon_normal_map = True
                         self.map_dset_key_normal_abovehorizon = copy.copy(_map_dset_key)
-                        added_keys = ['theta_best_h_abovehorizon','theta_best_v_abovehorizon','theta_best_all_abovehorizon','elevation_best_h_abovehorizon','elevation_best_v_abovehorizon','elevation_best_all_abovehorizon','phi_best_h_abovehorizon','phi_best_v_abovehorizon','phi_best_all_abovehorizon','hpol_peak_to_sidelobe_abovehorizon','vpol_peak_to_sidelobe_abovehorizon','all_peak_to_sidelobe_abovehorizon','hpol_max_possible_map_value_abovehorizon','vpol_max_possible_map_value_abovehorizon','all_max_possible_map_value_abovehorizon','hpol_max_map_value_abovehorizon','vpol_max_map_value_abovehorizon','all_max_map_value_abovehorizon','map_max_time_delay_0subtract1_h_abovehorizon','map_max_time_delay_0subtract2_h_abovehorizon','map_max_time_delay_0subtract3_h_abovehorizon','map_max_time_delay_1subtract2_h_abovehorizon','map_max_time_delay_1subtract3_h_abovehorizon','map_max_time_delay_2subtract3_h_abovehorizon','map_max_time_delay_0subtract1_v_abovehorizon','map_max_time_delay_0subtract2_v_abovehorizon','map_max_time_delay_0subtract3_v_abovehorizon','map_max_time_delay_1subtract2_v_abovehorizon','map_max_time_delay_1subtract3_v_abovehorizon','map_max_time_delay_2subtract3_v_abovehorizon','map_max_time_delay_0subtract1_all_abovehorizon','map_max_time_delay_0subtract2_all_abovehorizon','map_max_time_delay_0subtract3_all_abovehorizon','map_max_time_delay_1subtract2_all_abovehorizon','map_max_time_delay_1subtract3_all_abovehorizon','map_max_time_delay_2subtract3_all_abovehorizon']
+                        added_keys = ['theta_best_h_abovehorizon','theta_best_v_abovehorizon','theta_best_all_abovehorizon','elevation_best_h_abovehorizon','elevation_best_v_abovehorizon','elevation_best_all_abovehorizon','phi_best_h_abovehorizon','phi_best_v_abovehorizon','phi_best_all_abovehorizon','hpol_peak_to_sidelobe_abovehorizon','vpol_peak_to_sidelobe_abovehorizon','all_peak_to_sidelobe_abovehorizon','hpol_max_possible_map_value_abovehorizon','vpol_max_possible_map_value_abovehorizon','all_max_possible_map_value_abovehorizon','hpol_max_map_value_abovehorizon','vpol_max_map_value_abovehorizon','all_max_map_value_abovehorizon','hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon','all_normalized_map_value_abovehorizon','map_max_time_delay_0subtract1_h_abovehorizon','map_max_time_delay_0subtract2_h_abovehorizon','map_max_time_delay_0subtract3_h_abovehorizon','map_max_time_delay_1subtract2_h_abovehorizon','map_max_time_delay_1subtract3_h_abovehorizon','map_max_time_delay_2subtract3_h_abovehorizon','map_max_time_delay_0subtract1_v_abovehorizon','map_max_time_delay_0subtract2_v_abovehorizon','map_max_time_delay_0subtract3_v_abovehorizon','map_max_time_delay_1subtract2_v_abovehorizon','map_max_time_delay_1subtract3_v_abovehorizon','map_max_time_delay_2subtract3_v_abovehorizon','map_max_time_delay_0subtract1_all_abovehorizon','map_max_time_delay_0subtract2_all_abovehorizon','map_max_time_delay_0subtract3_all_abovehorizon','map_max_time_delay_1subtract2_all_abovehorizon','map_max_time_delay_1subtract3_all_abovehorizon','map_max_time_delay_2subtract3_all_abovehorizon']
                         for k in added_keys:
                             self.known_param_keys.append(k)
                     
@@ -578,7 +578,7 @@ class dataSlicerSingleRun():
                     if _map_dset_key in map_direction_keys:
                         self.belowhorizon_normal_map = True
                         self.map_dset_key_normal_belowhorizon = copy.copy(_map_dset_key)
-                        added_keys = ['theta_best_h_belowhorizon','theta_best_v_belowhorizon','theta_best_all_belowhorizon','elevation_best_h_belowhorizon','elevation_best_v_belowhorizon','elevation_best_all_belowhorizon','phi_best_h_belowhorizon','phi_best_v_belowhorizon','phi_best_all_belowhorizon','hpol_peak_to_sidelobe_belowhorizon','vpol_peak_to_sidelobe_belowhorizon','all_peak_to_sidelobe_belowhorizon','hpol_max_possible_map_value_belowhorizon','vpol_max_possible_map_value_belowhorizon','all_max_possible_map_value_belowhorizon','hpol_max_map_value_belowhorizon','vpol_max_map_value_belowhorizon','all_max_map_value_belowhorizon','map_max_time_delay_0subtract1_h_belowhorizon','map_max_time_delay_0subtract2_h_belowhorizon','map_max_time_delay_0subtract3_h_belowhorizon','map_max_time_delay_1subtract2_h_belowhorizon','map_max_time_delay_1subtract3_h_belowhorizon','map_max_time_delay_2subtract3_h_belowhorizon','map_max_time_delay_0subtract1_v_belowhorizon','map_max_time_delay_0subtract2_v_belowhorizon','map_max_time_delay_0subtract3_v_belowhorizon','map_max_time_delay_1subtract2_v_belowhorizon','map_max_time_delay_1subtract3_v_belowhorizon','map_max_time_delay_2subtract3_v_belowhorizon','map_max_time_delay_0subtract1_all_belowhorizon','map_max_time_delay_0subtract2_all_belowhorizon','map_max_time_delay_0subtract3_all_belowhorizon','map_max_time_delay_1subtract2_all_belowhorizon','map_max_time_delay_1subtract3_all_belowhorizon','map_max_time_delay_2subtract3_all_belowhorizon']
+                        added_keys = ['theta_best_h_belowhorizon','theta_best_v_belowhorizon','theta_best_all_belowhorizon','elevation_best_h_belowhorizon','elevation_best_v_belowhorizon','elevation_best_all_belowhorizon','phi_best_h_belowhorizon','phi_best_v_belowhorizon','phi_best_all_belowhorizon','hpol_peak_to_sidelobe_belowhorizon','vpol_peak_to_sidelobe_belowhorizon','all_peak_to_sidelobe_belowhorizon','hpol_max_possible_map_value_belowhorizon','vpol_max_possible_map_value_belowhorizon','all_max_possible_map_value_belowhorizon','hpol_max_map_value_belowhorizon','vpol_max_map_value_belowhorizon','all_max_map_value_belowhorizon','hpol_normalized_map_value_belowhorizon','vpol_normalized_map_value_belowhorizon','all_normalized_map_value_belowhorizon','map_max_time_delay_0subtract1_h_belowhorizon','map_max_time_delay_0subtract2_h_belowhorizon','map_max_time_delay_0subtract3_h_belowhorizon','map_max_time_delay_1subtract2_h_belowhorizon','map_max_time_delay_1subtract3_h_belowhorizon','map_max_time_delay_2subtract3_h_belowhorizon','map_max_time_delay_0subtract1_v_belowhorizon','map_max_time_delay_0subtract2_v_belowhorizon','map_max_time_delay_0subtract3_v_belowhorizon','map_max_time_delay_1subtract2_v_belowhorizon','map_max_time_delay_1subtract3_v_belowhorizon','map_max_time_delay_2subtract3_v_belowhorizon','map_max_time_delay_0subtract1_all_belowhorizon','map_max_time_delay_0subtract2_all_belowhorizon','map_max_time_delay_0subtract3_all_belowhorizon','map_max_time_delay_1subtract2_all_belowhorizon','map_max_time_delay_1subtract3_all_belowhorizon','map_max_time_delay_2subtract3_all_belowhorizon']
                         for k in added_keys:
                             self.known_param_keys.append(k)
 
@@ -597,7 +597,7 @@ class dataSlicerSingleRun():
                         self.allsky_hilbert_map = True
                         self.map_dset_key_hilbert_allsky = copy.copy(_map_dset_key)
 
-                        added_keys = ['hilbert_theta_best_h_allsky','hilbert_theta_best_v_allsky','hilbert_theta_best_all_allsky','hilbert_elevation_best_h_allsky','hilbert_elevation_best_v_allsky','hilbert_elevation_best_all_allsky','hilbert_phi_best_h_allsky','hilbert_phi_best_v_allsky','hilbert_phi_best_all_allsky','hilbert_hpol_peak_to_sidelobe_allsky','hilbert_vpol_peak_to_sidelobe_allsky','hilbert_all_peak_to_sidelobe_allsky','hilbert_hpol_max_possible_map_value_allsky','hilbert_vpol_max_possible_map_value_allsky','hilbert_all_max_possible_map_value_allsky','hilbert_hpol_max_map_value_allsky','hilbert_vpol_max_map_value_allsky','hilbert_all_max_map_value_allsky','hilbert_map_max_time_delay_0subtract1_h_allsky','hilbert_map_max_time_delay_0subtract2_h_allsky','hilbert_map_max_time_delay_0subtract3_h_allsky','hilbert_map_max_time_delay_1subtract2_h_allsky','hilbert_map_max_time_delay_1subtract3_h_allsky','hilbert_map_max_time_delay_2subtract3_h_allsky','hilbert_map_max_time_delay_0subtract1_v_allsky','hilbert_map_max_time_delay_0subtract2_v_allsky','hilbert_map_max_time_delay_0subtract3_v_allsky','hilbert_map_max_time_delay_1subtract2_v_allsky','hilbert_map_max_time_delay_1subtract3_v_allsky','hilbert_map_max_time_delay_2subtract3_v_allsky','hilbert_map_max_time_delay_0subtract1_all_allsky','hilbert_map_max_time_delay_0subtract2_all_allsky','hilbert_map_max_time_delay_0subtract3_all_allsky','hilbert_map_max_time_delay_1subtract2_all_allsky','hilbert_map_max_time_delay_1subtract3_all_allsky','hilbert_map_max_time_delay_2subtract3_all_allsky']
+                        added_keys = ['hilbert_theta_best_h_allsky','hilbert_theta_best_v_allsky','hilbert_theta_best_all_allsky','hilbert_elevation_best_h_allsky','hilbert_elevation_best_v_allsky','hilbert_elevation_best_all_allsky','hilbert_phi_best_h_allsky','hilbert_phi_best_v_allsky','hilbert_phi_best_all_allsky','hilbert_hpol_peak_to_sidelobe_allsky','hilbert_vpol_peak_to_sidelobe_allsky','hilbert_all_peak_to_sidelobe_allsky','hilbert_hpol_max_possible_map_value_allsky','hilbert_vpol_max_possible_map_value_allsky','hilbert_all_max_possible_map_value_allsky','hilbert_hpol_max_map_value_allsky','hilbert_vpol_max_map_value_allsky','hilbert_all_max_map_value_allsky','hilbert_hpol_normalized_map_value_allsky','hilbert_vpol_normalized_map_value_allsky','hilbert_all_normalized_map_value_allsky','hilbert_map_max_time_delay_0subtract1_h_allsky','hilbert_map_max_time_delay_0subtract2_h_allsky','hilbert_map_max_time_delay_0subtract3_h_allsky','hilbert_map_max_time_delay_1subtract2_h_allsky','hilbert_map_max_time_delay_1subtract3_h_allsky','hilbert_map_max_time_delay_2subtract3_h_allsky','hilbert_map_max_time_delay_0subtract1_v_allsky','hilbert_map_max_time_delay_0subtract2_v_allsky','hilbert_map_max_time_delay_0subtract3_v_allsky','hilbert_map_max_time_delay_1subtract2_v_allsky','hilbert_map_max_time_delay_1subtract3_v_allsky','hilbert_map_max_time_delay_2subtract3_v_allsky','hilbert_map_max_time_delay_0subtract1_all_allsky','hilbert_map_max_time_delay_0subtract2_all_allsky','hilbert_map_max_time_delay_0subtract3_all_allsky','hilbert_map_max_time_delay_1subtract2_all_allsky','hilbert_map_max_time_delay_1subtract3_all_allsky','hilbert_map_max_time_delay_2subtract3_all_allsky']
                         for k in added_keys:
                             self.known_param_keys.append(k)
                     
@@ -606,7 +606,7 @@ class dataSlicerSingleRun():
                     if _map_dset_key in map_direction_keys:
                         self.abovehorizon_hilbert_map = True
                         self.map_dset_key_hilbert_abovehorizon = copy.copy(_map_dset_key)
-                        added_keys = ['hilbert_theta_best_h_abovehorizon','hilbert_theta_best_v_abovehorizon','hilbert_theta_best_all_abovehorizon','hilbert_elevation_best_h_abovehorizon','hilbert_elevation_best_v_abovehorizon','hilbert_elevation_best_all_abovehorizon','hilbert_phi_best_h_abovehorizon','hilbert_phi_best_v_abovehorizon','hilbert_phi_best_all_abovehorizon','hilbert_hpol_peak_to_sidelobe_abovehorizon','hilbert_vpol_peak_to_sidelobe_abovehorizon','hilbert_all_peak_to_sidelobe_abovehorizon','hilbert_hpol_max_possible_map_value_abovehorizon','hilbert_vpol_max_possible_map_value_abovehorizon','hilbert_all_max_possible_map_value_abovehorizon','hilbert_hpol_max_map_value_abovehorizon','hilbert_vpol_max_map_value_abovehorizon','hilbert_all_max_map_value_abovehorizon','hilbert_map_max_time_delay_0subtract1_h_abovehorizon','hilbert_map_max_time_delay_0subtract2_h_abovehorizon','hilbert_map_max_time_delay_0subtract3_h_abovehorizon','hilbert_map_max_time_delay_1subtract2_h_abovehorizon','hilbert_map_max_time_delay_1subtract3_h_abovehorizon','hilbert_map_max_time_delay_2subtract3_h_abovehorizon','hilbert_map_max_time_delay_0subtract1_v_abovehorizon','hilbert_map_max_time_delay_0subtract2_v_abovehorizon','hilbert_map_max_time_delay_0subtract3_v_abovehorizon','hilbert_map_max_time_delay_1subtract2_v_abovehorizon','hilbert_map_max_time_delay_1subtract3_v_abovehorizon','hilbert_map_max_time_delay_2subtract3_v_abovehorizon','hilbert_map_max_time_delay_0subtract1_all_abovehorizon','hilbert_map_max_time_delay_0subtract2_all_abovehorizon','hilbert_map_max_time_delay_0subtract3_all_abovehorizon','hilbert_map_max_time_delay_1subtract2_all_abovehorizon','hilbert_map_max_time_delay_1subtract3_all_abovehorizon','hilbert_map_max_time_delay_2subtract3_all_abovehorizon']
+                        added_keys = ['hilbert_theta_best_h_abovehorizon','hilbert_theta_best_v_abovehorizon','hilbert_theta_best_all_abovehorizon','hilbert_elevation_best_h_abovehorizon','hilbert_elevation_best_v_abovehorizon','hilbert_elevation_best_all_abovehorizon','hilbert_phi_best_h_abovehorizon','hilbert_phi_best_v_abovehorizon','hilbert_phi_best_all_abovehorizon','hilbert_hpol_peak_to_sidelobe_abovehorizon','hilbert_vpol_peak_to_sidelobe_abovehorizon','hilbert_all_peak_to_sidelobe_abovehorizon','hilbert_hpol_max_possible_map_value_abovehorizon','hilbert_vpol_max_possible_map_value_abovehorizon','hilbert_all_max_possible_map_value_abovehorizon','hilbert_hpol_max_map_value_abovehorizon','hilbert_vpol_max_map_value_abovehorizon','hilbert_all_max_map_value_abovehorizon''hilbert_hpol_normalized_map_value_abovehorizon','hilbert_vpol_normalized_map_value_abovehorizon','hilbert_all_normalized_map_value_abovehorizon','hilbert_map_max_time_delay_0subtract1_h_abovehorizon','hilbert_map_max_time_delay_0subtract2_h_abovehorizon','hilbert_map_max_time_delay_0subtract3_h_abovehorizon','hilbert_map_max_time_delay_1subtract2_h_abovehorizon','hilbert_map_max_time_delay_1subtract3_h_abovehorizon','hilbert_map_max_time_delay_2subtract3_h_abovehorizon','hilbert_map_max_time_delay_0subtract1_v_abovehorizon','hilbert_map_max_time_delay_0subtract2_v_abovehorizon','hilbert_map_max_time_delay_0subtract3_v_abovehorizon','hilbert_map_max_time_delay_1subtract2_v_abovehorizon','hilbert_map_max_time_delay_1subtract3_v_abovehorizon','hilbert_map_max_time_delay_2subtract3_v_abovehorizon','hilbert_map_max_time_delay_0subtract1_all_abovehorizon','hilbert_map_max_time_delay_0subtract2_all_abovehorizon','hilbert_map_max_time_delay_0subtract3_all_abovehorizon','hilbert_map_max_time_delay_1subtract2_all_abovehorizon','hilbert_map_max_time_delay_1subtract3_all_abovehorizon','hilbert_map_max_time_delay_2subtract3_all_abovehorizon']
                         for k in added_keys:
                             self.known_param_keys.append(k)
                     
@@ -615,7 +615,7 @@ class dataSlicerSingleRun():
                     if _map_dset_key in map_direction_keys:
                         self.belowhorizon_hilbert_map = True
                         self.map_dset_key_hilbert_below = copy.copy(_map_dset_key)
-                        added_keys = ['hilbert_theta_best_h_belowhorizon','hilbert_theta_best_v_belowhorizon','hilbert_theta_best_all_belowhorizon','hilbert_elevation_best_h_belowhorizon','hilbert_elevation_best_v_belowhorizon','hilbert_elevation_best_all_belowhorizon','hilbert_phi_best_h_belowhorizon','hilbert_phi_best_v_belowhorizon','hilbert_phi_best_all_belowhorizon','hilbert_hpol_peak_to_sidelobe_belowhorizon','hilbert_vpol_peak_to_sidelobe_belowhorizon','hilbert_all_peak_to_sidelobe_belowhorizon','hilbert_hpol_max_possible_map_value_belowhorizon','hilbert_vpol_max_possible_map_value_belowhorizon','hilbert_all_max_possible_map_value_belowhorizon','hilbert_hpol_max_map_value_belowhorizon','hilbert_vpol_max_map_value_belowhorizon','hilbert_all_max_map_value_belowhorizon','hilbert_map_max_time_delay_0subtract1_h_belowhorizon','hilbert_map_max_time_delay_0subtract2_h_belowhorizon','hilbert_map_max_time_delay_0subtract3_h_belowhorizon','hilbert_map_max_time_delay_1subtract2_h_belowhorizon','hilbert_map_max_time_delay_1subtract3_h_belowhorizon','hilbert_map_max_time_delay_2subtract3_h_belowhorizon','hilbert_map_max_time_delay_0subtract1_v_belowhorizon','hilbert_map_max_time_delay_0subtract2_v_belowhorizon','hilbert_map_max_time_delay_0subtract3_v_belowhorizon','hilbert_map_max_time_delay_1subtract2_v_belowhorizon','hilbert_map_max_time_delay_1subtract3_v_belowhorizon','hilbert_map_max_time_delay_2subtract3_v_belowhorizon','hilbert_map_max_time_delay_0subtract1_all_belowhorizon','hilbert_map_max_time_delay_0subtract2_all_belowhorizon','hilbert_map_max_time_delay_0subtract3_all_belowhorizon','hilbert_map_max_time_delay_1subtract2_all_belowhorizon','hilbert_map_max_time_delay_1subtract3_all_belowhorizon','hilbert_map_max_time_delay_2subtract3_all_belowhorizon']
+                        added_keys = ['hilbert_theta_best_h_belowhorizon','hilbert_theta_best_v_belowhorizon','hilbert_theta_best_all_belowhorizon','hilbert_elevation_best_h_belowhorizon','hilbert_elevation_best_v_belowhorizon','hilbert_elevation_best_all_belowhorizon','hilbert_phi_best_h_belowhorizon','hilbert_phi_best_v_belowhorizon','hilbert_phi_best_all_belowhorizon','hilbert_hpol_peak_to_sidelobe_belowhorizon','hilbert_vpol_peak_to_sidelobe_belowhorizon','hilbert_all_peak_to_sidelobe_belowhorizon','hilbert_hpol_max_possible_map_value_belowhorizon','hilbert_vpol_max_possible_map_value_belowhorizon','hilbert_all_max_possible_map_value_belowhorizon','hilbert_hpol_max_map_value_belowhorizon','hilbert_vpol_max_map_value_belowhorizon','hilbert_all_max_map_value_belowhorizon','hilbert_hpol_normalized_map_value_belowhorizon','hilbert_vpol_normalized_map_value_belowhorizon','hilbert_all_normalized_map_value_belowhorizon','hilbert_map_max_time_delay_0subtract1_h_belowhorizon','hilbert_map_max_time_delay_0subtract2_h_belowhorizon','hilbert_map_max_time_delay_0subtract3_h_belowhorizon','hilbert_map_max_time_delay_1subtract2_h_belowhorizon','hilbert_map_max_time_delay_1subtract3_h_belowhorizon','hilbert_map_max_time_delay_2subtract3_h_belowhorizon','hilbert_map_max_time_delay_0subtract1_v_belowhorizon','hilbert_map_max_time_delay_0subtract2_v_belowhorizon','hilbert_map_max_time_delay_0subtract3_v_belowhorizon','hilbert_map_max_time_delay_1subtract2_v_belowhorizon','hilbert_map_max_time_delay_1subtract3_v_belowhorizon','hilbert_map_max_time_delay_2subtract3_v_belowhorizon','hilbert_map_max_time_delay_0subtract1_all_belowhorizon','hilbert_map_max_time_delay_0subtract2_all_belowhorizon','hilbert_map_max_time_delay_0subtract3_all_belowhorizon','hilbert_map_max_time_delay_1subtract2_all_belowhorizon','hilbert_map_max_time_delay_1subtract3_all_belowhorizon','hilbert_map_max_time_delay_2subtract3_all_belowhorizon']
                         for k in added_keys:
                             self.known_param_keys.append(k)
 
@@ -948,12 +948,24 @@ class dataSlicerSingleRun():
                             else:
                                 std = file['std'][...][eventids]
                             param = numpy.mean(std[:,self.included_hpol_antennas],axis=1) 
+                        elif param_key == 'min_std_h':
+                            if len_eventids < 500:
+                                std = file['std'][eventids]
+                            else:
+                                std = file['std'][...][eventids]
+                            param = numpy.min(std[:,self.included_hpol_antennas],axis=1) 
                         elif param_key == 'std_v':
                             if len_eventids < 500:
                                 std = file['std'][eventids]
                             else:
                                 std = file['std'][...][eventids]
                             param = numpy.mean(std[:,self.included_vpol_antennas],axis=1) 
+                        elif param_key == 'min_std_v':
+                            if len_eventids < 500:
+                                std = file['std'][eventids]
+                            else:
+                                std = file['std'][...][eventids]
+                            param = numpy.min(std[:,self.included_vpol_antennas],axis=1) 
                         elif param_key == 'p2p_h': 
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
@@ -1799,6 +1811,74 @@ class dataSlicerSingleRun():
                                 param = file['map_properties'][self.map_dset_key_hilbert]['hpol_max_map_value'][...][eventids]
 
 
+                        elif 'hilbert' not in param_key and 'hpol_normalized_map_value_allsky' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_allsky]['hpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' not in param_key and 'hpol_normalized_map_value_abovehorizon' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_abovehorizon]['hpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' not in param_key and 'hpol_normalized_map_value_belowhorizon' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_belowhorizon]['hpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' in param_key and 'hpol_normalized_map_value_allsky' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_allsky]['hpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' in param_key and 'hpol_normalized_map_value_abovehorizon' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['hpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' in param_key and 'hpol_normalized_map_value_belowhorizon' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['hpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' not in param_key and 'hpol_normalized_map_value' in param_key:
+                            #Must be last in it's category so more specific scope calls are hit first in elif case
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key]['hpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key]['hpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key]['hpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' in param_key and 'hpol_normalized_map_value' in param_key:
+                            #Must be last in it's category so more specific scope calls are hit first in elif case
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert]['hpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert]['hpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert]['hpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert]['hpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+
+
 
                         elif 'hilbert' not in param_key and 'vpol_max_possible_map_value_allsky' in param_key:
                             if len_eventids < 500:
@@ -1888,6 +1968,78 @@ class dataSlicerSingleRun():
 
 
 
+                        elif 'hilbert' not in param_key and 'vpol_normalized_map_value_allsky' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_allsky]['vpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' not in param_key and 'vpol_normalized_map_value_abovehorizon' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_abovehorizon]['vpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' not in param_key and 'vpol_normalized_map_value_belowhorizon' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_belowhorizon]['vpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' in param_key and 'vpol_normalized_map_value_allsky' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_allsky]['vpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' in param_key and 'vpol_normalized_map_value_abovehorizon' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['vpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' in param_key and 'vpol_normalized_map_value_belowhorizon' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['vpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' not in param_key and 'vpol_normalized_map_value' in param_key:
+                            #Must be last in it's category so more specific scope calls are hit first in elif case
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key]['vpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key]['vpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key]['vpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' in param_key and 'vpol_normalized_map_value' in param_key:
+                            #Must be last in it's category so more specific scope calls are hit first in elif case
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert]['vpol_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert]['vpol_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert]['vpol_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert]['vpol_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+
+
+
+
+
+
                         elif 'hilbert' not in param_key and 'all_max_possible_map_value_allsky' in param_key:
                             if len_eventids < 500:
                                 param = file['map_properties'][self.map_dset_key_normal_allsky]['all_max_possible_map_value'][eventids]
@@ -1973,6 +2125,76 @@ class dataSlicerSingleRun():
                                 param = file['map_properties'][self.map_dset_key_hilbert]['all_max_map_value'][eventids]
                             else:
                                 param = file['map_properties'][self.map_dset_key_hilbert]['all_max_map_value'][...][eventids]
+
+
+
+
+                        elif 'hilbert' not in param_key and 'all_normalized_map_value_allsky' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_normal_allsky]['all_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_allsky]['all_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_normal_allsky]['all_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_allsky]['all_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' not in param_key and 'all_normalized_map_value_abovehorizon' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_normal_abovehorizon]['all_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_abovehorizon]['all_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_normal_abovehorizon]['all_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_abovehorizon]['all_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' not in param_key and 'all_normalized_map_value_belowhorizon' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_normal_belowhorizon]['all_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_belowhorizon]['all_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_normal_belowhorizon]['all_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_normal_belowhorizon]['all_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' in param_key and 'all_normalized_map_value_allsky' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_allsky]['all_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_allsky]['all_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_allsky]['all_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_allsky]['all_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' in param_key and 'all_normalized_map_value_abovehorizon' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['all_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['all_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['all_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_abovehorizon]['all_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' in param_key and 'all_normalized_map_value_belowhorizon' in param_key:
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['all_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['all_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['all_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert_belowhorizon]['all_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' not in param_key and 'all_normalized_map_value' in param_key:
+                            #Must be last in it's category so more specific scope calls are hit first in elif case
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key]['all_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key]['all_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key]['all_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key]['all_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
+                        elif 'hilbert' in param_key and 'all_normalized_map_value' in param_key:
+                            #Must be last in it's category so more specific scope calls are hit first in elif case
+                            if len_eventids < 500:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert]['all_max_map_value'][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert]['all_max_possible_map_value'][eventids]
+                            else:
+                                param1 = file['map_properties'][self.map_dset_key_hilbert]['all_max_map_value'][...][eventids]
+                                param2 = file['map_properties'][self.map_dset_key_hilbert]['all_max_possible_map_value'][...][eventids]
+                            param = numpy.divide(param1, param2)
 
 
 
@@ -2931,10 +3153,10 @@ class dataSlicerSingleRun():
                         print('\tPreparing to get counts for %s'%param_key)
 
                     if self.max_snr_val is None:
-                        std_requiring_params = ['std_h','std_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7'] #List all params that might require max snr to be calculated if hard limit not given.
+                        std_requiring_params = ['std_h','std_v','min_std_h','min_std_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7'] #List all params that might require max snr to be calculated if hard limit not given.
                         p2p_requiring_params = ['p2p_h','p2p_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7','csnr_h','csnr_v','min_csnr_h','min_csnr_v','csnr_gap_h','csnr_gap_v','csnr_ch0', 'csnr_ch1', 'csnr_ch2', 'csnr_ch3', 'csnr_ch4', 'csnr_ch5', 'csnr_ch6', 'csnr_ch7'] #List all params that might require max p2p to be calculated if hard limit not given.
                     else:
-                        std_requiring_params = ['std_h','std_v'] #List all params that might require max snr to be calculated if hard limit not given.
+                        std_requiring_params = ['std_h','std_v','min_std_h','min_std_v'] #List all params that might require max snr to be calculated if hard limit not given.
                         p2p_requiring_params = ['p2p_h','p2p_v'] #List all params that might require max p2p to be calculated if hard limit not given.
 
                     if numpy.isin(param_key,std_requiring_params):
@@ -2994,8 +3216,18 @@ class dataSlicerSingleRun():
                     x_n_bins = self.std_n_bins_h
                     x_max_val = self.max_std_val
                     x_min_val = 0
+                elif param_key == 'min_std_h':
+                    label = 'Min Time Domain STD (hpol)'
+                    x_n_bins = self.std_n_bins_h
+                    x_max_val = self.max_std_val
+                    x_min_val = 0
                 elif param_key == 'std_v':
                     label = 'Mean Time Domain STD (vpol)'
+                    x_n_bins = self.std_n_bins_v
+                    x_max_val = self.max_std_val
+                    x_min_val = 0
+                elif param_key == 'min_std_v':
+                    label = 'Min Time Domain STD (vpol)'
                     x_n_bins = self.std_n_bins_v
                     x_max_val = self.max_std_val
                     x_min_val = 0
@@ -3403,6 +3635,7 @@ class dataSlicerSingleRun():
                         label = pol + scope + 'Maximum Map Value Per Event'
                         x_max_val = self.max_max_map_value_val
 
+
                     x_min_val = 0.0
                     if 'hpol' in param_key:
                         x_n_bins = self.max_map_value_n_bins_h
@@ -3410,6 +3643,27 @@ class dataSlicerSingleRun():
                         x_n_bins = self.max_map_value_n_bins_v
                     elif 'all_' in param_key:
                         x_n_bins = self.max_map_value_n_bins_all
+
+                elif 'normalized_map_value' in param_key:
+                    pol = 'HPol '*('hpol' in param_key) + 'VPol '*('vpol' in param_key)
+                    scope = 'Above Horizon '*('abovehorizon' in param_key) + 'Below Horizon '*('belowhorizon' in param_key) + 'All Sky '*('allsky' in param_key) 
+                    if 'hilbert_' in param_key:
+                        label = pol + scope + 'Maximum Map Value (Hilbert Envelope Applied)\nNormalized by Maximum Possible Map Value Per Event'
+                        x_max_val = 10.0 #Set high because I don't know if hilbert will maximum out differently
+                    else:
+                        label = pol + scope + 'Maximum Map Value\nNormalized by Maximum Possible Map Value Per Event'
+                        x_max_val = self.max_max_map_value_val
+
+
+                    x_min_val = 0.0
+                    if 'hpol' in param_key:
+                        x_n_bins = self.max_map_value_n_bins_h
+                    elif 'vpol' in param_key:
+                        x_n_bins = self.max_map_value_n_bins_v
+                    elif 'all_' in param_key:
+                        x_n_bins = self.max_map_value_n_bins_all
+
+
                 elif 'similarity_' in param_key:
                     param = self.getDataFromParam(eventids, param_key)
                     label = '%spol Time Delay Similarity %s'%(param_key.split('_')[-1].title(), param_key.split('_')[1].title())
