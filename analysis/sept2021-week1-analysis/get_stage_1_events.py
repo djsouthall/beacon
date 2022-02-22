@@ -80,7 +80,7 @@ if __name__ == '__main__':
     run_batches['batch_7'] = numpy.arange(6574,6673)
 
     ########
-    batch_key = 'batch_1'
+    batch_key = 'batch_2'
     ########
 
 
@@ -91,7 +91,7 @@ if __name__ == '__main__':
 
     # This is a list of runs that were cancelled or ran out of time for whatever reason.  They should eventually be good 
     # to work with, but in the mean time they are to be ignored so they are not accessed by calculations happen.
-    flawed_runs = numpy.array([])#numpy.array([5775,5981,5993,6033,6090,6520,6537,6538,6539]) 
+    flawed_runs = numpy.array([6126,6277,6285])#numpy.array([5775,5981,5993,6033,6090,6520,6537,6538,6539]) 
 
     # These are runs that were processed correctly, but I choosing to ignore due to abnormal run behaviour.
     ignored_runs = numpy.array([])#numpy.array([6062,6063,6064]) 

@@ -26,7 +26,7 @@ from beacon.tools.fftmath import FFTPrepper
 from beacon.tools.correlator import Correlator
 from beacon.tools.data_slicer import dataSlicer
 from beacon.tools.line_of_sight import circleSource
-from beacon.tools.flipbook_reader import flipbookToDict, concatenateFlipbookToArray
+from beacon.tools.flipbook_reader import flipbookToDict, concatenateFlipbookToArray, concatenateFlipbookToDict
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -73,6 +73,7 @@ if __name__ == '__main__':
 
     flipbook_path = '/home/dsouthall/scratch-midway2/event_flipbook_1643154940'
     sorted_dict = flipbookToDict(flipbook_path)
+
     sorted_array = concatenateFlipbookToArray(sorted_dict)
     flipbook_path = '/home/dsouthall/Projects/Beacon/beacon/analysis/sept2021-week1-analysis/airplane_event_flipbook_1643947072'
     sorted_dict2 = flipbookToDict(flipbook_path)
@@ -109,64 +110,105 @@ if __name__ == '__main__':
     runs = runs[~numpy.isin(runs,bad_runs)]
     runs = runs[numpy.isin(runs,numpy.unique(sorted_array['run']))]
 
+    # runs = runs[0:10] #for testing
 
     print("Preparing dataSlicer")
 
     ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath)
-    
-    cut_roi = {'hpol_normalized_map_value_abovehorizon':[0.75,10],'vpol_normalized_map_value_abovehorizon':[0.55,10], 'cr_template_search_h':[0.5,10], 'cr_template_search_v':[0.3,10]}
 
-    plot_params = [['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon']]
-    #plot_params = [['min_csnr_h','min_csnr_v'],['csnr_h','csnr_v'], ['snr_h', 'snr_v'], ['min_std_h','min_std_v'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], ['hpol_peak_to_sidelobe','cr_template_search_h'],['vpol_peak_to_sidelobe','cr_template_search_v']]
 
-    for apply_cuts in [False, True]:
+    def aboveLineCutFunc(xy):
+        '''
+        Returns the signed distance above a line defined by the given x and y intercepts.
+        '''
+        #x/xint + y/yint = 1
+        #x/xint + y/yint - 1 = 0
+        #Line = a*x + b*y + c = 0
+        #distance = abs(a*x_i + b*y_i + c)/sqrt(a**2 + b**2) #Distance of x_i, y_i from line
+        y_int = 1.5
+        x_int = 1.25
+        a = 1.0/x_int
+        b = 1.0/y_int
+        sign = numpy.sign(xy[1] - numpy.multiply(y_int, 1 - numpy.divide(xy[0], x_int))) #positive if above line
+        distance = numpy.multiply( sign , numpy.divide(numpy.abs( a*xy[0] + b*xy[1] - 1 ), numpy.sqrt(a**2 + b**2)) )
+        return distance
 
-        for key_x, key_y in plot_params:
-            print('Generating %s plot'%(key_x + ' vs ' + key_y))
+    ds.addParameterFunction('above_normalized_map_max_line', ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], aboveLineCutFunc, 'Distance From\nNormalized Map Cut Line', -1.5, 1.5, 100)
+    # ds.addParameterFunction('test_add_impulsivity', ['impulsivity_h','impulsivity_v'], lambda xy : xy[0] + xy[1], 'Summed Impulsivity', 0, 2, 100)
+
+    if False:
+        ds.addROI('interest',{'cr_template_search_h':[0.8,0.94],'cr_template_search_v':[0.42,0.52]})
+        roi_eventid_dict = ds.getCutsFromROI('interest',eventids_dict=concatenateFlipbookToDict(sorted_dict),load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
+        ds.eventInspector(roi_eventid_dict)
+        ds.eventInspector({5911:[73399]})
+    if True:
+        try:
+            #cut_roi = {'hpol_normalized_map_value_abovehorizon':[0.75,10],'vpol_normalized_map_value_abovehorizon':[0.55,10], 'cr_template_search_h':[0.5,10], 'cr_template_search_v':[0.3,10]}
+            cut_roi = {'above_normalized_map_max_line':[0,10]}
+
+            plot_params = [['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon']]
+
+
+            #plot_params = [['min_csnr_h','min_csnr_v'],['csnr_h','csnr_v'], ['snr_h', 'snr_v'], ['min_std_h','min_std_v'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], ['hpol_peak_to_sidelobe','cr_template_search_h'],['vpol_peak_to_sidelobe','cr_template_search_v']]
+            for apply_cuts in [False, True]:
+
+                for key_x, key_y in plot_params:
+                    print('Generating %s plot'%(key_x + ' vs ' + key_y))
+                    
+                    ds.setCurrentPlotBins(key_x, key_y, None)
+                    fig, ax = plt.subplots()
+                    ax.set_xlim(min(ds.current_bin_edges_x), max(ds.current_bin_edges_x))
+                    ax.set_xlabel(ds.current_label_x)
+                    ax.set_ylim(min(ds.current_bin_edges_y), max(ds.current_bin_edges_y))
+                    ax.set_ylabel(ds.current_label_y)
+
+                    plt.grid(which='both', axis='both')
+                    ax.minorticks_on()
+                    ax.grid(b=True, which='major', color='k', linestyle='-')
+                    ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+
+                    kept_events = 0
+
+                    for key in numpy.unique(simplified_sorted_array['key']):
+                        events = simplified_sorted_array[simplified_sorted_array['key'] == key]
+                        eventids_dict = {}
+
+
+                        _kept_events = 0
+                        for run in numpy.unique(events['run']):
+                            if run in runs:
+                                keep_cut = numpy.ones(len(events[events['run'] == run]), dtype=bool)
+                                if apply_cuts:
+                                    for cut_key, cut_range in cut_roi.items():
+                                        param = ds.getDataArrayFromParam(cut_key, eventids_dict={run:events[events['run'] == run]['eventid']})    
+                                        keep_cut = numpy.logical_and(keep_cut, numpy.logical_and(param >= min(cut_range), param <= max(cut_range)))                    
+
+                                kept_events += numpy.sum(keep_cut)
+                                _kept_events += numpy.sum(keep_cut)
+                                eventids_dict[run] = events[events['run'] == run]['eventid'][keep_cut]
+
+                        print('Events in category %s passing cuts is: %i/%i'%(key, _kept_events, len(events)))
+
+                        x = ds.getDataArrayFromParam(key_x, eventids_dict=eventids_dict)
+                        y = ds.getDataArrayFromParam(key_y, eventids_dict=eventids_dict)
+                        plt.scatter(x,y, label=key, alpha=0.7)
+                    plt.legend(loc = 'best')
+
+                    print('Events passing cuts is: %i/%i = %0.2f%%'%(kept_events, len(simplified_sorted_array), 100*kept_events/len(simplified_sorted_array)))
+
+
+            for event in simplified_sorted_array[simplified_sorted_array['key'] == 'good']:
+                if event['run'] in runs:
+                    t = ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict={event['run']:[event['eventid']]})[0]
+                    print(event, ' calibrated trigtime: ', t)
+
+
+
+        except Exception as e:
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
             
-            ds.setCurrentPlotBins(key_x, key_y, None)
-            fig, ax = plt.subplots()
-            ax.set_xlim(min(ds.current_bin_edges_x), max(ds.current_bin_edges_x))
-            ax.set_xlabel(ds.current_label_x)
-            ax.set_ylim(min(ds.current_bin_edges_y), max(ds.current_bin_edges_y))
-            ax.set_ylabel(ds.current_label_y)
-
-            plt.grid(which='both', axis='both')
-            ax.minorticks_on()
-            ax.grid(b=True, which='major', color='k', linestyle='-')
-            ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-
-
-            kept_events = 0
-
-            for key in numpy.unique(simplified_sorted_array['key']):
-                events = simplified_sorted_array[simplified_sorted_array['key'] == key]
-                eventids_dict = {}
-
-
-                _kept_events = 0
-                for run in numpy.unique(events['run']):
-                    keep_cut = numpy.ones(len(events[events['run'] == run]), dtype=bool)
-                    if apply_cuts:
-                        for cut_key, cut_range in cut_roi.items():
-                            param = ds.getDataArrayFromParam(cut_key, eventids_dict={run:events[events['run'] == run]['eventid']})    
-                            keep_cut = numpy.logical_and(keep_cut, numpy.logical_and(param >= min(cut_range), param <= max(cut_range)))                    
-
-                    kept_events += numpy.sum(keep_cut)
-                    _kept_events += numpy.sum(keep_cut)
-                    eventids_dict[run] = events[events['run'] == run]['eventid'][keep_cut]
-
-                print('Events in category %s passing cuts is: %i/%i'%(key, _kept_events, len(events)))
-
-                x = ds.getDataArrayFromParam(key_x, eventids_dict=eventids_dict)
-                y = ds.getDataArrayFromParam(key_y, eventids_dict=eventids_dict)
-                plt.scatter(x,y, label=key, alpha=0.7)
-            plt.legend(loc = 'best')
-
-
-    for event in simplified_sorted_array[simplified_sorted_array['key'] == 'good']:
-        t = ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict={event['run']:[event['eventid']]})[0]
-        print(event, ' calibrated trigtime: ', t)
-        
-
-        

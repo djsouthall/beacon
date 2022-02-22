@@ -137,7 +137,9 @@ def concatenateFlipbookToDict(flipbook, ignore_runs=[]):
     '''
     Does what concatenateFlipbookToArray does but to a eventids_dict.
     '''
-    if numpy.all([numpy.issubdtype(k, numpy.integer) for k in flipbook.keys()]):
+    if str in [type(k) for k in flipbook.keys()]:
+        sorted_array = concatenateFlipbookToArray(flipbook, ignore_runs=ignore_runs)
+    elif numpy.all([numpy.issubdtype(k, numpy.integer) for k in flipbook.keys()]):
         print('Assuming passed "flipbook" as eventids_dict instead of flipbook')
         sorted_array = concatenateEventDictToArray(flipbook, ignore_runs=ignore_runs)
     else:
