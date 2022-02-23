@@ -253,7 +253,7 @@ class dataSlicerSingleRun():
             self.updateReader(reader,analysis_data_dir=analysis_data_dir, verbose=verbose_setup)
             self.math_keywords = ['SLICERSUBTRACT', 'SLICERADD', 'SLICERDIVIDE', 'SLICERMULTIPLY', 'SLICERMAX', 'SLICERMIN', 'SLICERMEAN'] #Meta words that will relate 2 known variables and produce a plot with their arithmatic combination. 
             self.parameter_functions = {} # A dictionary of ParameterFunction objects that can be used to load data formatted by arbitrary functions.   Use addParameterFunction to add to this.
-
+            self.addDefaultParameterFunctions()
 
             self.range_phi_deg = numpy.asarray(range_phi_deg)
             self.range_theta_deg = numpy.asarray(range_theta_deg)
@@ -849,12 +849,53 @@ class dataSlicerSingleRun():
                 getDataFromParam(self, eventids, param_key[-1]))
         '''
         self.parameter_functions[name] = ParameterFunction(self, name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins)
+        self.known_param_keys.append(name)
         
     def addSampleParameterFunction(self):
         '''
         Gives an example ParameterFunction.
         '''
-        ds.addParameterFunction('sample_summed_impulsivity', ['impulsivity_h','impulsivity_v'], lambda xy : xy[0] + xy[1], 'Summed Impulsivity', -1, 2, 100)
+        self.addParameterFunction('sample_summed_impulsivity', ['impulsivity_h','impulsivity_v'], lambda xy : xy[0] + xy[1], 'Summed Impulsivity', -1, 2, 100)
+
+    def addDefaultParameterFunctions(self):
+        '''
+        Will define parameter functions that are known to be commonly used.
+        '''
+        
+        def aboveLineMapCutFunc(xy):
+            '''
+            Returns the signed distance above a line defined by the given x and y intercepts.
+            '''
+            #x/xint + y/yint = 1
+            #x/xint + y/yint - 1 = 0
+            #Line = a*x + b*y + c = 0
+            #distance = abs(a*x_i + b*y_i + c)/sqrt(a**2 + b**2) #Distance of x_i, y_i from line
+            y_int = 1.5
+            x_int = 1.25
+            a = 1.0/x_int
+            b = 1.0/y_int
+            sign = numpy.sign(xy[1] - numpy.multiply(y_int, 1 - numpy.divide(xy[0], x_int))) #positive if above line
+            distance = numpy.multiply( sign , numpy.divide(numpy.abs( a*xy[0] + b*xy[1] - 1 ), numpy.sqrt(a**2 + b**2)) )
+            return distance
+        self.addParameterFunction('above_normalized_map_max_line', ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], aboveLineMapCutFunc, 'Distance From\nNormalized Map Cut Line', -1.5, 1.5, 100)
+
+        def aboveLineP2PSTDCutFunc(xy):
+            '''
+            Returns the signed distance above a line defined by the given x and y intercepts.
+            '''
+            #x/xint + y/yint = 1
+            #x/xint + y/yint - 1 = 0
+            #Line = a*x + b*y + c = 0
+            #distance = abs(a*x_i + b*y_i + c)/sqrt(a**2 + b**2) #Distance of x_i, y_i from line
+            y_int = 11
+            x_int = 6
+            a = 1.0/x_int
+            b = 1.0/y_int
+            sign = numpy.sign(xy[1] - numpy.multiply(y_int, 1 - numpy.divide(xy[0], x_int))) #positive if above line
+            distance = numpy.multiply( sign , numpy.divide(numpy.abs( a*xy[0] + b*xy[1] - 1 ), numpy.sqrt(a**2 + b**2)) )
+            return distance
+
+        self.addParameterFunction('above_snr_line', ['snr_h','snr_v'], aboveLineP2PSTDCutFunc, 'Distance From\nNormalized Map Cut Line', 0, 40, 200)
 
     def getEventidsFromTriggerType(self, trigger_types=None):
         '''
@@ -3246,7 +3287,7 @@ class dataSlicerSingleRun():
                     #Append the max beam power or max beam not present and precalculated if not present
                     if numpy.isin(param_key,['triggered_beams','beam_power']):
                         if numpy.logical_or(self.max_beam_power is None, self.max_beam_number is None):
-                            triggered_beams, beam_power, unused_eventids = self.reader.returnTriggerInfo()
+                            triggered_beams, beam_power = self.reader.returnTriggerInfo()
                             self.max_beam_power = numpy.max(beam_power)
                             self.max_beam_number = numpy.max(triggered_beams)
                         
@@ -5675,20 +5716,23 @@ class dataSlicer():
             self.table_params['p2p_v'] = 'P2P V'
             self.table_params['csnr_h'] = 'cSNR H'
             self.table_params['csnr_v'] = 'cSNR V'
+            self.table_params['snr_h'] = 'SNR H'
+            self.table_params['snr_v'] = 'SNR V'
             self.table_params['similarity_count_h'] = 'H Simlr'
             self.table_params['similarity_count_v'] = 'V Simlr'
 
+            self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
+            self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
 
-
-            self.table_params['hpol_peak_to_sidelobe_allskySLICERMULTIPLYhpol_max_map_value_allsky'] = 'AS - H'
-            self.table_params['vpol_peak_to_sidelobe_allskySLICERMULTIPLYvpol_max_map_value_allsky'] = 'AS - V'
-            self.table_params['all_peak_to_sidelobe_allskySLICERMULTIPLYall_max_map_value_allsky'] = 'AS - All'
-            self.table_params['hpol_peak_to_sidelobe_belowhorizonSLICERMULTIPLYhpol_max_map_value_belowhorizon'] = 'BH - H'
-            self.table_params['vpol_peak_to_sidelobe_belowhorizonSLICERMULTIPLYvpol_max_map_value_belowhorizon'] = 'BH - V'
-            self.table_params['all_peak_to_sidelobe_belowhorizonSLICERMULTIPLYall_max_map_value_belowhorizon'] = 'BH - All'
-            self.table_params['hpol_peak_to_sidelobe_abovehorizonSLICERMULTIPLYhpol_max_map_value_abovehorizon'] = 'AH - H'
-            self.table_params['vpol_peak_to_sidelobe_abovehorizonSLICERMULTIPLYvpol_max_map_value_abovehorizon'] = 'AH - V'
-            self.table_params['all_peak_to_sidelobe_abovehorizonSLICERMULTIPLYall_max_map_value_abovehorizon'] = 'AH - All'
+            # self.table_params['hpol_peak_to_sidelobe_allskySLICERMULTIPLYhpol_max_map_value_allsky'] = 'AS - H'
+            # self.table_params['vpol_peak_to_sidelobe_allskySLICERMULTIPLYvpol_max_map_value_allsky'] = 'AS - V'
+            # self.table_params['all_peak_to_sidelobe_allskySLICERMULTIPLYall_max_map_value_allsky'] = 'AS - All'
+            # self.table_params['hpol_peak_to_sidelobe_belowhorizonSLICERMULTIPLYhpol_max_map_value_belowhorizon'] = 'BH - H'
+            # self.table_params['vpol_peak_to_sidelobe_belowhorizonSLICERMULTIPLYvpol_max_map_value_belowhorizon'] = 'BH - V'
+            # self.table_params['all_peak_to_sidelobe_belowhorizonSLICERMULTIPLYall_max_map_value_belowhorizon'] = 'BH - All'
+            # self.table_params['hpol_peak_to_sidelobe_abovehorizonSLICERMULTIPLYhpol_max_map_value_abovehorizon'] = 'AH - H'
+            # self.table_params['vpol_peak_to_sidelobe_abovehorizonSLICERMULTIPLYvpol_max_map_value_abovehorizon'] = 'AH - V'
+            # self.table_params['all_peak_to_sidelobe_abovehorizonSLICERMULTIPLYall_max_map_value_abovehorizon'] = 'AH - All'
             
 
             # self.table_params['hpol_peak_to_sidelobe_allsky'] = 'AS P2S H'

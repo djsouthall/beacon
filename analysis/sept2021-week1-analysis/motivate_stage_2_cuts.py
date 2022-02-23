@@ -116,26 +116,6 @@ if __name__ == '__main__':
 
     ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath)
 
-
-    def aboveLineCutFunc(xy):
-        '''
-        Returns the signed distance above a line defined by the given x and y intercepts.
-        '''
-        #x/xint + y/yint = 1
-        #x/xint + y/yint - 1 = 0
-        #Line = a*x + b*y + c = 0
-        #distance = abs(a*x_i + b*y_i + c)/sqrt(a**2 + b**2) #Distance of x_i, y_i from line
-        y_int = 1.5
-        x_int = 1.25
-        a = 1.0/x_int
-        b = 1.0/y_int
-        sign = numpy.sign(xy[1] - numpy.multiply(y_int, 1 - numpy.divide(xy[0], x_int))) #positive if above line
-        distance = numpy.multiply( sign , numpy.divide(numpy.abs( a*xy[0] + b*xy[1] - 1 ), numpy.sqrt(a**2 + b**2)) )
-        return distance
-
-    ds.addParameterFunction('above_normalized_map_max_line', ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], aboveLineCutFunc, 'Distance From\nNormalized Map Cut Line', -1.5, 1.5, 100)
-    # ds.addParameterFunction('test_add_impulsivity', ['impulsivity_h','impulsivity_v'], lambda xy : xy[0] + xy[1], 'Summed Impulsivity', 0, 2, 100)
-
     if False:
         ds.addROI('interest',{'cr_template_search_h':[0.8,0.94],'cr_template_search_v':[0.42,0.52]})
         roi_eventid_dict = ds.getCutsFromROI('interest',eventids_dict=concatenateFlipbookToDict(sorted_dict),load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
@@ -144,13 +124,12 @@ if __name__ == '__main__':
     if True:
         try:
             #cut_roi = {'hpol_normalized_map_value_abovehorizon':[0.75,10],'vpol_normalized_map_value_abovehorizon':[0.55,10], 'cr_template_search_h':[0.5,10], 'cr_template_search_v':[0.3,10]}
-            cut_roi = {'above_normalized_map_max_line':[0,10]}
+            cut_roi = {'above_normalized_map_max_line':[0,10], 'above_snr_line':[0,10000]}
 
-            plot_params = [['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon']]
+            plot_params = [['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], ['snr_h', 'snr_v']]
 
-
-            #plot_params = [['min_csnr_h','min_csnr_v'],['csnr_h','csnr_v'], ['snr_h', 'snr_v'], ['min_std_h','min_std_v'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], ['hpol_peak_to_sidelobe','cr_template_search_h'],['vpol_peak_to_sidelobe','cr_template_search_v']]
-            for apply_cuts in [False, True]:
+            #plot_params = [['min_csnr_h','min_csnr_v'], ['csnr_h','csnr_v'], ['snr_h', 'snr_v'], ['min_std_h','min_std_v'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], ['hpol_peak_to_sidelobe','cr_template_search_h'],['vpol_peak_to_sidelobe','cr_template_search_v']]
+            for apply_cuts in [False,True]:
 
                 for key_x, key_y in plot_params:
                     print('Generating %s plot'%(key_x + ' vs ' + key_y))
@@ -169,6 +148,7 @@ if __name__ == '__main__':
 
 
                     kept_events = 0
+                    removed_events = numpy.array([],dtype=simplified_sorted_array.dtype)
 
                     for key in numpy.unique(simplified_sorted_array['key']):
                         events = simplified_sorted_array[simplified_sorted_array['key'] == key]
@@ -187,6 +167,7 @@ if __name__ == '__main__':
                                 kept_events += numpy.sum(keep_cut)
                                 _kept_events += numpy.sum(keep_cut)
                                 eventids_dict[run] = events[events['run'] == run]['eventid'][keep_cut]
+                                removed_events = numpy.append(removed_events,events[events['run'] == run][~keep_cut])
 
                         print('Events in category %s passing cuts is: %i/%i'%(key, _kept_events, len(events)))
 
@@ -197,6 +178,16 @@ if __name__ == '__main__':
 
                     print('Events passing cuts is: %i/%i = %0.2f%%'%(kept_events, len(simplified_sorted_array), 100*kept_events/len(simplified_sorted_array)))
 
+                if apply_cuts == True:
+                    #Inspect any events being cut that maybe shouldn't be
+                    interesting_events = removed_events[removed_events['key'] != 'bad']
+                    interesting_dict = {}
+                    for run in numpy.unique(interesting_events['run']):
+                        interesting_dict[run] = interesting_events[interesting_events['run'] == run]['eventid']
+
+                    ds.eventInspector(interesting_dict)
+
+
 
             for event in simplified_sorted_array[simplified_sorted_array['key'] == 'good']:
                 if event['run'] in runs:
@@ -204,11 +195,24 @@ if __name__ == '__main__':
                     print(event, ' calibrated trigtime: ', t)
 
 
+            # if False:
+            #     for key in numpy.unique(simplified_sorted_array['key']):
+            #         events = simplified_sorted_array[simplified_sorted_array['key'] == key]
+            #         eventids_dict = {}
+            #         for run in numpy.unique(events['run']):
+            #             if run in runs:
+            #                 eventids_dict[run] = events[events['run'] == run]['eventid'][keep_cut]
+
+
+            #         ds.addROI(key,{'cr_template_search_h':[0.8,0.94],'cr_template_search_v':[0.42,0.52]})
+            #         roi_eventid_dict = ds.getCutsFromROI(key,eventids_dict=eventids_dict,load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
+            #         ds.eventInspector(roi_eventid_dict)
+
 
         except Exception as e:
+
             print(e)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-            
