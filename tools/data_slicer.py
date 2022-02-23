@@ -64,7 +64,7 @@ class ParameterFunction():
     Func must be formatted to accept a single tuple with N elements where N is len(param_key).  The order of param_keys 
     must match the expected order of elements. 
     '''
-    def __init__(self, ds, name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins):
+    def __init__(self, ds, name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins, description=''):
         self._name = name
         self._ds = ds
         self._param_keys = param_keys
@@ -72,6 +72,7 @@ class ParameterFunction():
         self._min_bin_val = min_bin_val
         self._max_bin_val = max_bin_val
         self._n_bins = n_bins
+        self._description = description
 
         #To be accessible from outside
         self.label = plot_label
@@ -839,7 +840,7 @@ class dataSlicerSingleRun():
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def addParameterFunction(self, name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins):
+    def addParameterFunction(self, name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins, description=''):
         '''
         This will define a new parameter titled by label, which can be used in cuts.  The value of the parameter
         associated with this label is given by:
@@ -848,14 +849,14 @@ class dataSlicerSingleRun():
                 ...
                 getDataFromParam(self, eventids, param_key[-1]))
         '''
-        self.parameter_functions[name] = ParameterFunction(self, name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins)
+        self.parameter_functions[name] = ParameterFunction(self, name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins, description=description)
         self.known_param_keys.append(name)
         
     def addSampleParameterFunction(self):
         '''
         Gives an example ParameterFunction.
         '''
-        self.addParameterFunction('sample_summed_impulsivity', ['impulsivity_h','impulsivity_v'], lambda xy : xy[0] + xy[1], 'Summed Impulsivity', -1, 2, 100)
+        self.addParameterFunction('sample_summed_impulsivity', ['impulsivity_h','impulsivity_v'], lambda xy : xy[0] + xy[1], 'Summed Impulsivity', -1, 2, 100, description='A sample combined variable which is the sum of both impulsivities')
 
     def addDefaultParameterFunctions(self):
         '''
@@ -877,7 +878,14 @@ class dataSlicerSingleRun():
             sign = numpy.sign(xy[1] - numpy.multiply(y_int, 1 - numpy.divide(xy[0], x_int))) #positive if above line
             distance = numpy.multiply( sign , numpy.divide(numpy.abs( a*xy[0] + b*xy[1] - 1 ), numpy.sqrt(a**2 + b**2)) )
             return distance
-        self.addParameterFunction('above_normalized_map_max_line', ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], aboveLineMapCutFunc, 'Distance From\nNormalized Map Cut Line', -1.5, 1.5, 100)
+
+        self.addParameterFunction(
+            'above_normalized_map_max_line', 
+            ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], 
+            aboveLineMapCutFunc, 
+            'Distance From\nNormalized Map Cut Line', 
+            -1.5, 1.5, 100,
+            description='Distance above and away from a line connecting normalized map max values of 1.5 in Vpol and 1.25 in Hpol.')
 
         def aboveLineP2PSTDCutFunc(xy):
             '''
@@ -895,7 +903,13 @@ class dataSlicerSingleRun():
             distance = numpy.multiply( sign , numpy.divide(numpy.abs( a*xy[0] + b*xy[1] - 1 ), numpy.sqrt(a**2 + b**2)) )
             return distance
 
-        self.addParameterFunction('above_snr_line', ['snr_h','snr_v'], aboveLineP2PSTDCutFunc, 'Distance From\nNormalized Map Cut Line', 0, 40, 200)
+        self.addParameterFunction(
+            'above_snr_line', 
+            ['snr_h','snr_v'], 
+            aboveLineP2PSTDCutFunc, 
+            'Distance From\nNormalized Map Cut Line', 
+            0, 40, 200,
+            description='Distance above and away from a line connecting P2P/(2*STD) values of 11 in Vpol and 6 in Hpol.')
 
     def getEventidsFromTriggerType(self, trigger_types=None):
         '''
@@ -4719,7 +4733,7 @@ class dataSlicer():
                 print('Run %i'%run)
             self.data_slicers[run_index].addROI(roi_key, roi_dict)
 
-    def addParameterFunction(self, name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins, verbose=False):
+    def addParameterFunction(self, name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins, description='', verbose=False):
         '''
         This will define a new parameter titled by label, which can be used in cuts.  The value of the parameter
         associated with this label is given by:
@@ -4733,7 +4747,7 @@ class dataSlicer():
         for run_index, run in enumerate(self.runs):
             if verbose:
                 print('Run %i'%run)
-            self.data_slicers[run_index].addParameterFunction(name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins)
+            self.data_slicers[run_index].addParameterFunction(name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins, description=description)
 
     def getEventidsFromTriggerType(self, trigger_types=None, verbose=False):
         eventids_dict = {}
@@ -5573,7 +5587,7 @@ class dataSlicer():
             del self.inspector_mpl
 
 
-    def eventInspector(self, eventids_dict, mollweide=False, show_all=False, include_time_delays=False, append_notches=None, include_baselines=numpy.array([0,1,2,3,4,5]), savedir='./'):
+    def eventInspector(self, eventids_dict, mollweide=False, show_all=False, include_time_delays=False, append_notches=None, include_baselines=numpy.array([0,1,2,3,4,5]), savedir='./', savename_prepend=''):
         '''
         This is meant to provide a tool to quickly flick through events from multiple runs.  It will create a one panel
         view of the events info as best as I can manage, and provide easy support for choosing which event you want to
@@ -5587,6 +5601,7 @@ class dataSlicer():
             self.inspector_include_baselines=include_baselines
             self.include_time_delays = include_time_delays
             self.show_all = show_all
+            self.savename_prepend = savename_prepend
 
             self.mpl_colors = [u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf']
 
@@ -5852,7 +5867,7 @@ class dataSlicer():
                     '''
                     What actually happens when the button is pressed.
                     '''
-                    outpath = os.path.join(self.outer.inspector_savedir, 'event_flipbook_%i'%time.time()) 
+                    outpath = os.path.join(self.outer.inspector_savedir, self.outer.savename_prepend + 'event_flipbook_%i'%time.time()) 
                     os.mkdir(outpath)
 
                     self.outer.inspector_mpl['fig1'].set_size_inches(25, 12.5)
