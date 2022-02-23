@@ -64,29 +64,29 @@ def writeEventDictionaryToDataFrame(initial_eventids_dict, ds=None, include_airp
         data_keys = [
                     'phi_best_choice',
                     'elevation_best_choice',
+                    'cr_template_search_h',
+                    'cr_template_search_v',
+                    'cr_template_search_hSLICERMAXcr_template_search_v',
+                    'hpol_peak_to_sidelobe',
+                    'vpol_peak_to_sidelobe',
+                    'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe',
+                    'hpol_normalized_map_value',
+                    'vpol_normalized_map_value',
+                    'above_normalized_map_max_line',
+                    'above_snr_line',
+                    'impulsivity_h',
+                    'impulsivity_v',
+                    'impulsivity_hSLICERADDimpulsivity_v',
                     'similarity_count_h',
                     'similarity_count_v',
-                    'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe',
-                    'impulsivity_hSLICERADDimpulsivity_v',
-                    'cr_template_search_hSLICERMAXcr_template_search_v',
                     'csnr_h',
                     'csnr_v',
                     'snr_h',
                     'snr_v',
-                    'hpol_peak_to_sidelobe',
-                    'vpol_peak_to_sidelobe',
-                    'cr_template_search_h',
-                    'cr_template_search_v',
-                    'impulsivity_h',
-                    'impulsivity_v',
                     'p2p_h',
                     'p2p_v',
                     'std_h',
-                    'std_v',
-                    'csnr_h',
-                    'csnr_v',
-                    'hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value',
-                    'vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'
+                    'std_v'
                     ]
 
         if numpy.all([numpy.issubdtype(k, numpy.integer) for k in initial_eventids_dict.keys()]) or numpy.all(numpy.array(list(initial_eventids_dict.keys()))%1 == 0):
@@ -140,6 +140,8 @@ def writeEventDictionaryToDataFrame(initial_eventids_dict, ds=None, include_airp
             data[key] = d
 
         if include_airplanes == True:
+            print('Calculating airplane information')
+            ds.prepareCorrelator()
             time_window_s = 5*60
             plot_distance_cut_limit = 500
             min_approach_cut_km = 1e6
@@ -160,7 +162,9 @@ def writeEventDictionaryToDataFrame(initial_eventids_dict, ds=None, include_airp
             all_minimum_approach_theta = numpy.zeros(len(eventids_array), dtype=float)
             all_minimum_approach_airplane = numpy.zeros(len(eventids_array), dtype='<U6')
 
-            for run in runs:
+            for loop_index, run in enumerate(runs):
+                sys.stdout.write('Run %i/%i\r'%(loop_index+1,len(runs)))
+                sys.stdout.flush()
                 run_index = numpy.where(numpy.isin(ds.runs, run))[0][0]
                 if ds.cor.reader.run != run:
                     ds.cor.setReader(ds.data_slicers[run_index].reader, verbose=False)

@@ -53,12 +53,24 @@ def saveprint(*args, outfile=None):
     if outfile is not None:
         print(*args, file=open(outfile,'a')) #Print once to file
 
-def savefig(fig, path, name, savefig_size_inches=(24,12.5), savefig_size_dpi=300):
+def savefig(fig, path, name, savefig_size_inches=(24,12.5), savefig_size_dpi=300, print_outfile=None):
     '''
     quick wrapper for saving figures.
     '''
-    fig.set_size_inches(savefig_size_inches[0],savefig_size_inches[1])
-    fig.savefig(os.path.join(path,'%s.png'%(name.replace('.png',''))), dpi=savefig_size_dpi, bbox_inches='tight')
+    try:
+        fig.set_size_inches(savefig_size_inches[0],savefig_size_inches[1])
+        fig.savefig(os.path.join(path,'%s.png'%(name.replace('.png',''))), dpi=savefig_size_dpi, bbox_inches='tight')
+    except Exception as e:
+        if print_outfile is not None:
+            saveprint('Failed to save ', os.path.join(path,'%s.png'%(name.replace('.png',''))), outfile=print_outfile)
+        else:
+            print('Failed to save ', os.path.join(path,'%s.png'%(name.replace('.png',''))))
+        print('\nError in %s'%inspect.stack()[0][3])
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+
 
 if __name__ == '__main__':
     plt.close('all')
@@ -80,7 +92,7 @@ if __name__ == '__main__':
     run_batches['batch_7'] = numpy.arange(6574,6673)
 
     ########
-    batch_key = 'batch_2'
+    batch_key = 'batch_1'
     ########
 
 
@@ -154,10 +166,7 @@ if __name__ == '__main__':
 
         # Cut on just direction box for cluster cut, rather than full box cut so less calculations performed.
         # Then get the evetns from that which are also in stage_1_eventids_dict
-        single_cluster_eventids_dict = ds.returnCommonEvents(
-            stage_1_eventids_dict, 
-            ds.getCutsFromROI('below horizon cluster',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
-            )
+        single_cluster_eventids_dict = ds.getCutsFromROI('below horizon cluster', eventids_dict=copy.deepcopy(stage_1_eventids_dict), load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
 
         # Add these events to the "to be removed" dict. returnUniqueEvents is similar to appending
         remove_from_stage_1_eventids_dict = ds.returnUniqueEvents(
@@ -178,108 +187,125 @@ if __name__ == '__main__':
         )
 
     # At this point the stage 1 cuts are finalized
-    stage_1_eventids_array = ds.organizeEventDict(stage_1_eventids_dict)
-    remove_from_above_horizon_array = ds.organizeEventDict(remove_from_stage_1_eventids_dict)
+    stage_1_eventids_array = ds.organizeEventDict(copy.deepcopy(stage_1_eventids_dict))
+    remove_from_above_horizon_array = ds.organizeEventDict(copy.deepcopy(remove_from_stage_1_eventids_dict))
 
     # Get stage 2 cuts
     if return_successive_cut_counts and return_total_cut_counts:
-        stage_2_eventids_dict, stage_2_successive_cut_counts, stage_2_total_cut_counts = ds.getCutsFromROI('stage 2 cuts',eventids_dict=stage_1_eventids_dict, load=False,save=False,verbose=False, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
+        stage_2_eventids_dict, stage_2_successive_cut_counts, stage_2_total_cut_counts = ds.getCutsFromROI('stage 2 cuts',eventids_dict=copy.deepcopy(stage_1_eventids_dict), load=False,save=False,verbose=False, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
     elif return_successive_cut_counts:
-        stage_2_eventids_dict, stage_2_successive_cut_counts = ds.getCutsFromROI('stage 2 cuts',eventids_dict=stage_1_eventids_dict, load=False,save=False,verbose=False, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
+        stage_2_eventids_dict, stage_2_successive_cut_counts = ds.getCutsFromROI('stage 2 cuts',eventids_dict=copy.deepcopy(stage_1_eventids_dict), load=False,save=False,verbose=False, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
     else:
-        stage_2_eventids_dict = ds.getCutsFromROI('stage 2 cuts',eventids_dict=stage_1_eventids_dict, load=False,save=False,verbose=False, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
+        stage_2_eventids_dict = ds.getCutsFromROI('stage 2 cuts',eventids_dict=copy.deepcopy(stage_1_eventids_dict), load=False,save=False,verbose=False, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
 
     # stage_2_eventids_dict is events that pass both cuts
     # partial_pass_stage_2_eventids_dict is events that pass only the map cut, but not both.  
-    partial_pass_stage_2_eventids_dict = ds.getCutsFromROI('stage 2 partial cuts map',eventids_dict=stage_1_eventids_dict, load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
+    partial_pass_stage_2_eventids_dict = ds.getCutsFromROI('stage 2 partial cuts map',eventids_dict=copy.deepcopy(stage_1_eventids_dict), load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
     partial_pass_stage_2_eventids_dict = ds.returnEventsAWithoutB(copy.deepcopy(partial_pass_stage_2_eventids_dict), stage_2_eventids_dict) #Only want events that pass just the one cut
     
     # partial_fail_stage_2_eventids_dict is events that pass only the SNR cut, but not both.
-    partial_fail_stage_2_eventids_dict = ds.getCutsFromROI('stage 2 partial cuts snr',eventids_dict=stage_1_eventids_dict, load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
-    partial_fail_stage_2_eventids_dict = ds.returnEventsAWithoutB(copy.deepcopy(partial_fail_stage_2_eventids_dict), stage_2_eventids_dict) #Only want events that pass just the one cut
+    partial_fail_stage_2_eventids_dict = ds.getCutsFromROI('stage 2 partial cuts snr',eventids_dict=copy.deepcopy(stage_1_eventids_dict), load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)
+    partial_fail_stage_2_eventids_dict = ds.returnEventsAWithoutB(copy.deepcopy(partial_fail_stage_2_eventids_dict), copy.deepcopy(stage_2_eventids_dict)) #Only want events that pass just the one cut
 
-    failed_stage_2_eventids_dict = ds.returnEventsAWithoutB(stage_1_eventids_dict, stage_2_eventids_dict) #Stage 1 passing minus passed events
-    failed_stage_2_eventids_dict = ds.returnEventsAWithoutB(copy.deepcopy(failed_stage_2_eventids_dict), partial_pass_stage_2_eventids_dict) #Stage 1 passing minus passed events AND partial passed events
+    failed_stage_2_eventids_dict = ds.returnEventsAWithoutB(copy.deepcopy(stage_1_eventids_dict), copy.deepcopy(stage_2_eventids_dict)) #Stage 1 passing minus passed events
+    failed_stage_2_eventids_dict = ds.returnEventsAWithoutB(copy.deepcopy(failed_stage_2_eventids_dict), copy.deepcopy(partial_pass_stage_2_eventids_dict)) #Stage 1 passing minus passed events AND partial passed events
 
+    stage_2_eventids_array = ds.organizeEventDict(stage_2_eventids_dict)
 
+    if True:
 
+        # ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=None, include_roi=False)
+        fig_all_event_map_h, ax_all_event_map_h = ds.plotROI2dHist('phi_best_h','elevation_best_h', cmap=cmap, eventids_dict=None, include_roi=False)
+        savefig(fig_all_event_map_h, out_path, 'map_h_all_events')
 
-    # ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=None, include_roi=False)
-    fig_all_event_map_h, ax_all_event_map_h = ds.plotROI2dHist('phi_best_h','elevation_best_h', cmap=cmap, eventids_dict=None, include_roi=False)
-    savefig(fig_all_event_map_h, out_path, 'map_h_all_events')
+        fig_all_event_map_v, ax_all_event_map_v = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=None, include_roi=False)
+        savefig(fig_all_event_map_v, out_path, 'map_v_all_events')
 
-    fig_all_event_map_v, ax_all_event_map_v = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=None, include_roi=False)
-    savefig(fig_all_event_map_v, out_path, 'map_v_all_events')
+        fig_direction_box_map_h, ax_direction_box_map_h = ds.plotROI2dHist('phi_best_h','elevation_best_h', cmap=cmap, eventids_dict=copy.deepcopy(above_horizon_only_eventids_dict), include_roi=False)
+        savefig(fig_direction_box_map_h, out_path, 'map_h_direction_box_events')
 
-    fig_direction_box_map_h, ax_direction_box_map_h = ds.plotROI2dHist('phi_best_h','elevation_best_h', cmap=cmap, eventids_dict=above_horizon_only_eventids_dict, include_roi=False)
-    savefig(fig_direction_box_map_h, out_path, 'map_h_direction_box_events')
+        fig_direction_box_map_v, ax_direction_box_map_v = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=copy.deepcopy(above_horizon_only_eventids_dict), include_roi=False)
+        savefig(fig_direction_box_map_v, out_path, 'map_v_direction_box_events')
 
-    fig_direction_box_map_v, ax_direction_box_map_v = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=above_horizon_only_eventids_dict, include_roi=False)
-    savefig(fig_direction_box_map_v, out_path, 'map_v_direction_box_events')
+        #Plot event directions
+        fig_all_events, ax_all_events = ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=None, include_roi=False)
+        if fig_all_events._suptitle is not None:
+            fig_all_events.suptitle('all_events\n'.replace('_',' ').title()+fig_all_events._suptitle.get_text())
+        else:
+            fig_all_events.suptitle('all_events\n'.replace('_',' ').title())
+        savefig(fig_all_events, out_path, 'map_choice_all_events')    
 
-    #Plot event directions
-    fig_all_events, ax_all_events = ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=None, include_roi=False)
-    if fig_all_events._suptitle is not None:
-        fig_all_events.suptitle('all_events\n'.replace('_',' ').title()+fig_all_events._suptitle.get_text())
-    else:
-        fig_all_events.suptitle('all_events\n'.replace('_',' ').title())
-    savefig(fig_all_events, out_path, 'map_choice_all_events')    
+        fig_direction_box, ax_direction_box = ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=copy.deepcopy(above_horizon_only_eventids_dict), include_roi=False)
+        if fig_direction_box._suptitle is not None:
+            fig_direction_box.suptitle('direction_box\n'.replace('_',' ').title()+fig_direction_box._suptitle.get_text())
+        else:
+            fig_direction_box.suptitle('direction_box\n'.replace('_',' ').title())
+        savefig(fig_direction_box, out_path, 'map_choice_only_direction_box')
 
-    fig_direction_box, ax_direction_box = ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=above_horizon_only_eventids_dict, include_roi=False)
-    if fig_direction_box._suptitle is not None:
-        fig_direction_box.suptitle('direction_box\n'.replace('_',' ').title()+fig_direction_box._suptitle.get_text())
-    else:
-        fig_direction_box.suptitle('direction_box\n'.replace('_',' ').title())
-    savefig(fig_direction_box, out_path, 'map_choice_only_direction_box')
+        fig_stage_1, ax_stage_1 = ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=copy.deepcopy(stage_1_eventids_dict), include_roi=False)
+        if fig_stage_1._suptitle is not None:
+            fig_stage_1.suptitle('stage_1\n'.replace('_',' ').title()+fig_stage_1._suptitle.get_text())
+        else:
+            fig_stage_1.suptitle('stage_1\n'.replace('_',' ').title())
+        savefig(fig_stage_1, out_path, 'map_choice_stage_1')
 
-    fig_stage_1, ax_stage_1 = ds.plotROI2dHist('phi_best_choice','elevation_best_choice', cmap=cmap, eventids_dict=stage_1_eventids_dict, include_roi=False)
-    if fig_stage_1._suptitle is not None:
-        fig_stage_1.suptitle('stage_1\n'.replace('_',' ').title()+fig_stage_1._suptitle.get_text())
-    else:
-        fig_stage_1.suptitle('stage_1\n'.replace('_',' ').title())
-    savefig(fig_stage_1, out_path, 'map_choice_stage_1')
-
-    fig_box_cut, ax_box_cut = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=remove_from_stage_1_eventids_dict, include_roi=False)
-    if fig_box_cut._suptitle is not None:
-        fig_box_cut.suptitle('box_cut\n'.replace('_',' ').title()+fig_box_cut._suptitle.get_text())
-    else:
-        fig_box_cut.suptitle('box_cut\n'.replace('_',' ').title())
-    savefig(fig_box_cut, out_path, 'map_choice_excluded_by_belowhorizon_boxes')
-
-
-    # Stage 2 plots
-    fig_stage_2_pass_cut, ax_stage_2_pass_cut = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=stage_2_eventids_dict, include_roi=False)
-    if fig_stage_2_pass_cut._suptitle is not None:
-        fig_stage_2_pass_cut.suptitle('stage_2_pass\n'.replace('_',' ').title()+fig_stage_2_pass_cut._suptitle.get_text())
-    else:
-        fig_stage_2_pass_cut.suptitle('stage_2_pass\n'.replace('_',' ').title())
-    savefig(fig_stage_2_pass_cut, out_path, 'map_choice_pass_stage_2')
-
-    fig_stage_2_partial_pass_cut, ax_stage_2_partial_pass_cut = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=partial_pass_stage_2_eventids_dict, include_roi=False)
-    if fig_stage_2_partial_pass_cut._suptitle is not None:
-        fig_stage_2_partial_pass_cut.suptitle('stage_2_partial_pass\n'.replace('_',' ').title()+fig_stage_2_partial_pass_cut._suptitle.get_text())
-    else:
-        fig_stage_2_partial_pass_cut.suptitle('stage_2_partial_pass\n'.replace('_',' ').title())
-    savefig(fig_stage_2_partial_pass_cut, out_path, 'map_choice_partial_pass_stage_2')
-
-    fig_stage_2_failed_cut, ax_stage_2_failed_cut = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=failed_stage_2_eventids_dict, include_roi=False)
-    if fig_stage_2_failed_cut._suptitle is not None:
-        fig_stage_2_failed_cut.suptitle('stage_2_failed\n'.replace('_',' ').title()+fig_stage_2_failed_cut._suptitle.get_text())
-    else:
-        fig_stage_2_failed_cut.suptitle('stage_2_failed\n'.replace('_',' ').title())
-    savefig(fig_stage_2_failed_cut, out_path, 'map_choice_fail_stage_2')
+        fig_box_cut, ax_box_cut = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=copy.deepcopy(remove_from_stage_1_eventids_dict), include_roi=False)
+        if fig_box_cut._suptitle is not None:
+            fig_box_cut.suptitle('box_cut\n'.replace('_',' ').title()+fig_box_cut._suptitle.get_text())
+        else:
+            fig_box_cut.suptitle('box_cut\n'.replace('_',' ').title())
+        savefig(fig_box_cut, out_path, 'map_choice_excluded_by_belowhorizon_boxes')
 
 
-    
-    if len(stage_1_eventids_array) > 0 or False:
-        plot_params = [['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'], ['csnr_h', 'csnr_v'], ['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'], ['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value']]
+        # Stage 2 plots
+        fig_stage_2_pass_cut, ax_stage_2_pass_cut = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=copy.deepcopy(stage_2_eventids_dict), include_roi=False)
+        if fig_stage_2_pass_cut._suptitle is not None:
+            fig_stage_2_pass_cut.suptitle('stage_2_pass\n'.replace('_',' ').title()+fig_stage_2_pass_cut._suptitle.get_text())
+        else:
+            fig_stage_2_pass_cut.suptitle('stage_2_pass\n'.replace('_',' ').title())
+        savefig(fig_stage_2_pass_cut, out_path, 'map_choice_pass_stage_2')
+
+        fig_stage_2_partial_pass_cut, ax_stage_2_partial_pass_cut = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=copy.deepcopy(partial_pass_stage_2_eventids_dict), include_roi=False)
+        if fig_stage_2_partial_pass_cut._suptitle is not None:
+            fig_stage_2_partial_pass_cut.suptitle('stage_2_partial_pass\n'.replace('_',' ').title()+fig_stage_2_partial_pass_cut._suptitle.get_text())
+        else:
+            fig_stage_2_partial_pass_cut.suptitle('stage_2_partial_pass\n'.replace('_',' ').title())
+        savefig(fig_stage_2_partial_pass_cut, out_path, 'map_choice_partial_pass_stage_2')
+
+        fig_stage_2_failed_cut, ax_stage_2_failed_cut = ds.plotROI2dHist('phi_best_v','elevation_best_v', cmap=cmap, eventids_dict=copy.deepcopy(failed_stage_2_eventids_dict), include_roi=False)
+        if fig_stage_2_failed_cut._suptitle is not None:
+            fig_stage_2_failed_cut.suptitle('stage_2_failed\n'.replace('_',' ').title()+fig_stage_2_failed_cut._suptitle.get_text())
+        else:
+            fig_stage_2_failed_cut.suptitle('stage_2_failed\n'.replace('_',' ').title())
+        savefig(fig_stage_2_failed_cut, out_path, 'map_choice_fail_stage_2')
+
+
         
-        saveprint('Generating plots:', outfile=output_text_file)
+        if len(stage_1_eventids_array) > 0 or False:
+            plot_params = [['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'], ['csnr_h', 'csnr_v'], ['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'], ['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon']]
+            
+            saveprint('Generating plots:', outfile=output_text_file)
 
-        for key_x, key_y in plot_params:
-            saveprint('Generating %s plot'%(key_x + ' vs ' + key_y), outfile=output_text_file)
-            fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=stage_1_eventids_dict, include_roi=False)
-            savefig(fig, out_path, '%s_vs_%s_stage_1'%(key_x, key_y))
+            for key_x, key_y in plot_params:
+                saveprint('Generating stage 1 %s plot'%(key_x + ' vs ' + key_y), outfile=output_text_file)
+                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=copy.deepcopy(stage_1_eventids_dict), include_roi=False)
+                savefig(fig, out_path, '%s_vs_%s_stage_1'%(key_x, key_y))
+                plt.close(fig)
+
+                saveprint('Generating stage 2 pass %s plot'%(key_x + ' vs ' + key_y), outfile=output_text_file)
+                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=copy.deepcopy(stage_2_eventids_dict), include_roi=False)
+                savefig(fig, out_path, '%s_vs_%s_stage_2_pass'%(key_x, key_y))
+                plt.close(fig)
+
+                saveprint('Generating stage 2 partial pass %s plot'%(key_x + ' vs ' + key_y), outfile=output_text_file)
+                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=copy.deepcopy(partial_pass_stage_2_eventids_dict), include_roi=False)
+                savefig(fig, out_path, '%s_vs_%s_stage_2_partial_pass'%(key_x, key_y))
+                plt.close(fig)
+
+                saveprint('Generating stage 2 fail %s plot'%(key_x + ' vs ' + key_y), outfile=output_text_file)
+                fig, ax = ds.plotROI2dHist(key_x, key_y, cmap=cmap, eventids_dict=copy.deepcopy(failed_stage_2_eventids_dict), include_roi=False)
+                savefig(fig, out_path, '%s_vs_%s_stage_2_fail'%(key_x, key_y))
+                plt.close(fig)
 
 
     if return_successive_cut_counts:
@@ -400,22 +426,22 @@ if __name__ == '__main__':
     numpy.save(outfile_name, above_horizon_description, allow_pickle=True)
 
 
+    if True:
+        excel_filename = os.path.join(out_path, 'event_info_%s.xlsx'%batch_key)
+        saveprint('Generating excel file %s'%excel_filename, outfile=output_text_file)
+        writeEventDictionaryToExcel(stage_2_eventids_dict, excel_filename, 'stage_2_pass', ds=ds, include_airplanes=False)
+        writeEventDictionaryToExcel(partial_pass_stage_2_eventids_dict, excel_filename, 'stage_2_partial', ds=ds, include_airplanes=False)
+        writeEventDictionaryToExcel(failed_stage_2_eventids_dict, excel_filename, 'stage_2_fail', ds=ds, include_airplanes=False)
+        writeEventDictionaryToExcel(stage_1_eventids_dict, excel_filename, 'stage_1_eventids_dict', ds=ds, include_airplanes=False)
+        writeEventDictionaryToExcel(remove_from_stage_1_eventids_dict, excel_filename, 'excluded_by_belowhorizon_boxes', ds=ds, include_airplanes=False)
 
-    excel_filename = os.path.join(out_path, 'event_info_%s.xlsx'%batch_key)
-    saveprint('Generateing excel file %s'%excel_filename, outfile=output_text_file)
-    writeEventDictionaryToExcel(stage_2_eventids_dict, excel_filename, 'stage_2_pass', ds=ds, include_airplanes=True)
-    writeEventDictionaryToExcel(partial_pass_stage_2_eventids_dict, excel_filename, 'stage_2_partial', ds=ds, include_airplanes=True)
-    writeEventDictionaryToExcel(failed_stage_2_eventids_dict, excel_filename, 'stage_2_fail', ds=ds, include_airplanes=False)
-    writeEventDictionaryToExcel(stage_1_eventids_dict, excel_filename, 'stage_1_eventids_dict', ds=ds, include_airplanes=False)
-    writeEventDictionaryToExcel(remove_from_stage_1_eventids_dict, excel_filename, 'excluded_by_belowhorizon_boxes', ds=ds, include_airplanes=False)
-
-    
-    master_excel_filename = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'sept2021-week1-analysis', 'event_info_all_batches.xlsx')
-    writeEventDictionaryToExcel(stage_2_eventids_dict, master_excel_filename, batch_key + '_stage_2_pass', ds=ds, include_airplanes=True)
-    writeEventDictionaryToExcel(partial_pass_stage_2_eventids_dict, master_excel_filename, batch_key + '_stage_2_partial', ds=ds, include_airplanes=True)
-    writeEventDictionaryToExcel(failed_stage_2_eventids_dict, master_excel_filename, batch_key + '_stage 2 fail', ds=ds, include_airplanes=False)
-    writeEventDictionaryToExcel(stage_1_eventids_dict, master_excel_filename, batch_key + '_stage_1_eventids_dict', ds=ds, include_airplanes=False)
-    writeEventDictionaryToExcel(remove_from_stage_1_eventids_dict, master_excel_filename, batch_key + '_excluded_by_belowhorizon_boxes', ds=ds, include_airplanes=False)
+        
+        master_excel_filename = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'sept2021-week1-analysis', 'event_info_all_batches.xlsx')
+        writeEventDictionaryToExcel(stage_2_eventids_dict, master_excel_filename, batch_key + '_stage_2_pass', ds=ds, include_airplanes=False)
+        writeEventDictionaryToExcel(partial_pass_stage_2_eventids_dict, master_excel_filename, batch_key + '_stage_2_partial', ds=ds, include_airplanes=False)
+        writeEventDictionaryToExcel(failed_stage_2_eventids_dict, master_excel_filename, batch_key + '_stage 2 fail', ds=ds, include_airplanes=False)
+        writeEventDictionaryToExcel(stage_1_eventids_dict, master_excel_filename, batch_key + '_stage_1_eventids_dict', ds=ds, include_airplanes=False)
+        writeEventDictionaryToExcel(remove_from_stage_1_eventids_dict, master_excel_filename, batch_key + '_excluded_by_belowhorizon_boxes', ds=ds, include_airplanes=False)
 
 
     # saveprint('Generating event inspector and saving event plots.', outfile=output_text_file)
@@ -423,20 +449,21 @@ if __name__ == '__main__':
     # ds.inspector_tm.trigger_tool('Save Book')
     # ds.delInspector()
 
-    saveprint('Generating event inspector and saving event plots.', outfile=output_text_file)
-    ds.eventInspector(stage_2_eventids_dict, savedir=out_path, savename_prepend='stage_2_pass_')
-    ds.inspector_tm.trigger_tool('Save Book')
-    ds.delInspector()
+    if True:
+        saveprint('Generating event inspector and saving event plots.', outfile=output_text_file)
+        ds.eventInspector(stage_2_eventids_dict, savedir=out_path, savename_prepend='stage_2_pass_')
+        ds.inspector_tm.trigger_tool('Save Book')
+        ds.delInspector()
 
-    saveprint('Generating event inspector and saving event plots.', outfile=output_text_file)
-    ds.eventInspector(partial_pass_stage_2_eventids_dict, savedir=out_path, savename_prepend='stage_2_partial_pass_')
-    ds.inspector_tm.trigger_tool('Save Book')
-    ds.delInspector()
+        saveprint('Generating event inspector and saving event plots.', outfile=output_text_file)
+        ds.eventInspector(partial_pass_stage_2_eventids_dict, savedir=out_path, savename_prepend='stage_2_partial_pass_')
+        ds.inspector_tm.trigger_tool('Save Book')
+        ds.delInspector()
 
-    saveprint('Generating event inspector and saving event plots.', outfile=output_text_file)
-    ds.eventInspector(failed_stage_2_eventids_dict, savedir=out_path, savename_prepend='stage_2_fail_')
-    ds.inspector_tm.trigger_tool('Save Book')
-    ds.delInspector()
+        saveprint('Generating event inspector and saving event plots.', outfile=output_text_file)
+        ds.eventInspector(failed_stage_2_eventids_dict, savedir=out_path, savename_prepend='stage_2_fail_')
+        ds.inspector_tm.trigger_tool('Save Book')
+        ds.delInspector()
 
     #Add in further sorting of events and automated map generation for each event. 
 

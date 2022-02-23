@@ -233,7 +233,7 @@ class dataSlicerSingleRun():
                         max_corr_n_bins=200,\
                         std_n_bins_h=200,std_n_bins_v=200,max_std_val=25,\
                         p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
-                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,\
+                        snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=50,\
                         n_phi=3600, range_phi_deg=(-180,180), n_theta=480, range_theta_deg=(0,120),\
                         max_possible_map_value_n_bins_h=100, max_possible_map_value_n_bins_v=100, max_possible_map_value_n_bins_all=100,\
                         max_map_value_n_bins_h=100, max_map_value_n_bins_v=100, max_map_value_n_bins_all=100,\
@@ -3984,13 +3984,13 @@ class dataSlicerSingleRun():
             _ax.grid(b=True, which='major', color='k', linestyle='-')
             _ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-
-            try:
-                cbar = _fig.colorbar(_im)
-                cbar.set_label('Counts')
-            except Exception as e:
-                print('Error in colorbar, often caused by no events.')
-                print(e)
+            if sum(counts) > 0:
+                try:
+                    cbar = _fig.colorbar(_im)
+                    cbar.set_label('Counts')
+                except Exception as e:
+                    print('Error in colorbar, often caused by no events.')
+                    print(e)
 
             if return_counts:
                 return _fig, _ax, counts
@@ -5060,13 +5060,13 @@ class dataSlicer():
                     plt.ylabel(self.current_label_y.replace('vpol','VPol'), fontsize=24)
                     plt.xlim(20,128)
                 _fig.canvas.set_window_title(self.current_label_x)
-
-            try:
-                cbar = _fig.colorbar(_im)
-                cbar.set_label('Counts')
-            except Exception as e:
-                print('Error in colorbar, often caused by no events.')
-                print(e)
+                if sum(counts) > 0:
+                    try:
+                        cbar = _fig.colorbar(_im)
+                        cbar.set_label('Counts')
+                    except Exception as e:
+                        print('Error in colorbar, often caused by no events.')
+                        print(e)
 
             if return_counts:
                 return _fig, _ax, counts
@@ -5871,6 +5871,7 @@ class dataSlicer():
                     os.mkdir(outpath)
 
                     self.outer.inspector_mpl['fig1'].set_size_inches(25, 12.5)
+                    plt.tight_layout()
                     print()
                     for i in range(len(self.outer.inspector_eventids_list)):
                         sys.stdout.write('Saving Figure %i/%i\r'%(i+1,len(self.outer.inspector_eventids_list)))
@@ -5880,7 +5881,7 @@ class dataSlicer():
                         run = self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['run']
                         eventid = self.outer.inspector_eventids_list[self.outer.inspector_eventids_index]['eventid']
                         self.outer.updateEventInspect(run_index,eventid)
-                        self.outer.inspector_mpl['fig1'].savefig(os.path.join(outpath, 'r%ie%i.png'%(run,eventid)), dpi=300, bbox_inches='tight')
+                        self.outer.inspector_mpl['fig1'].savefig(os.path.join(outpath, 'r%ie%i.png'%(run,eventid)), dpi=300)#, bbox_inches='tight', can't do this bbox every event, it results n subsequently squished plots.
 
             class UpdateMapWindow(ToolBase):
                 description = 'This will generate a map using the currently cropped and visible portion of the waveforms.'
