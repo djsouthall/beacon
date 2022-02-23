@@ -205,7 +205,7 @@ class dataSlicerSingleRun():
     peak_to_sidelobe_n_bins_v : int
         The number of bins to use when plotting the peak to sidelobe param for vpol.
     '''
-    known_param_keys = [    'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h','min_std_h', 'std_v', 'min_std_v', 'p2p_h', 'p2p_v',\
+    known_param_keys = [    'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h','min_std_h', 'std_v', 'min_std_v', 'p2p_h', 'p2p_v','p2p_gap_h','p2p_gap_v',\
                             'snr_h', 'snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7', 'snr_h_over_v',\
                             'csnr_h', 'csnr_v','min_csnr_h','min_csnr_v','csnr_gap_h','csnr_gap_v','csnr_ch0', 'csnr_ch1', 'csnr_ch2', 'csnr_ch3', 'csnr_ch4', 'csnr_ch5', 'csnr_ch6', 'csnr_ch7', 'csnr_h_over_v',\
                             'time_delay_0subtract1_h','time_delay_0subtract2_h','time_delay_0subtract3_h','time_delay_1subtract2_h','time_delay_1subtract3_h','time_delay_2subtract3_h',\
@@ -512,6 +512,7 @@ class dataSlicerSingleRun():
                 print('Event rate datasets in file and available for slicing:')
                 for param_key in added_param_keys: 
                     print('\t' + param_key)
+            self.known_param_keys = list(set(self.known_param_keys)) #Removes duplicates
 
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -674,6 +675,8 @@ class dataSlicerSingleRun():
 
 
                 file.close()
+            self.known_param_keys = list(set(self.known_param_keys)) #Removes duplicates
+
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print('Run: ',self.reader.run)
@@ -851,6 +854,7 @@ class dataSlicerSingleRun():
         '''
         self.parameter_functions[name] = ParameterFunction(self, name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins, description=description)
         self.known_param_keys.append(name)
+        self.known_param_keys = list(set(self.known_param_keys)) #Removes duplicates
         
     def addSampleParameterFunction(self):
         '''
@@ -1088,6 +1092,20 @@ class dataSlicerSingleRun():
                             else:
                                 p2p = file['p2p'][...][eventids]
                             param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) 
+
+                        elif param_key == 'p2p_gap_h':
+                            if len_eventids < 500:
+                                p2p = file['p2p'][eventids]
+                            else:
+                                p2p = file['p2p'][...][eventids]
+                            param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) - numpy.min(p2p[:,self.included_hpol_antennas],axis=1)
+                        elif param_key == 'p2p_gap_v':
+                            if len_eventids < 500:
+                                p2p = file['p2p'][eventids]
+                            else:
+                                p2p = file['p2p'][...][eventids]
+                            param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) - numpy.min(p2p[:,self.included_vpol_antennas],axis=1)
+
                         elif param_key == 'p2p_v': 
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
@@ -3276,10 +3294,10 @@ class dataSlicerSingleRun():
 
                     if self.max_snr_val is None:
                         std_requiring_params = ['std_h','std_v','min_std_h','min_std_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7'] #List all params that might require max snr to be calculated if hard limit not given.
-                        p2p_requiring_params = ['p2p_h','p2p_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7','csnr_h','csnr_v','min_csnr_h','min_csnr_v','csnr_gap_h','csnr_gap_v','csnr_ch0', 'csnr_ch1', 'csnr_ch2', 'csnr_ch3', 'csnr_ch4', 'csnr_ch5', 'csnr_ch6', 'csnr_ch7'] #List all params that might require max p2p to be calculated if hard limit not given.
+                        p2p_requiring_params = ['p2p_h','p2p_v','p2p_gap_h','p2p_gap_v','snr_h','snr_v','min_snr_h','min_snr_v','snr_gap_h','snr_gap_v','snr_ch0', 'snr_ch1', 'snr_ch2', 'snr_ch3', 'snr_ch4', 'snr_ch5', 'snr_ch6', 'snr_ch7','csnr_h','csnr_v','min_csnr_h','min_csnr_v','csnr_gap_h','csnr_gap_v','csnr_ch0', 'csnr_ch1', 'csnr_ch2', 'csnr_ch3', 'csnr_ch4', 'csnr_ch5', 'csnr_ch6', 'csnr_ch7'] #List all params that might require max p2p to be calculated if hard limit not given.
                     else:
                         std_requiring_params = ['std_h','std_v','min_std_h','min_std_v'] #List all params that might require max snr to be calculated if hard limit not given.
-                        p2p_requiring_params = ['p2p_h','p2p_v'] #List all params that might require max p2p to be calculated if hard limit not given.
+                        p2p_requiring_params = ['p2p_h','p2p_v','p2p_gap_h','p2p_gap_v'] #List all params that might require max p2p to be calculated if hard limit not given.
 
                     if numpy.isin(param_key,std_requiring_params):
                         if self.max_std_val is None:
@@ -3360,6 +3378,16 @@ class dataSlicerSingleRun():
                     x_min_val = 0
                 elif param_key == 'p2p_v': 
                     label = 'Mean P2P (vpol)'
+                    x_n_bins = self.p2p_n_bins_v
+                    x_max_val = self.max_p2p_val
+                    x_min_val = 0
+                elif param_key == 'p2p_gap_h': 
+                    label = 'Max - Min P2P (hpol)'
+                    x_n_bins = self.p2p_n_bins_h
+                    x_max_val = self.max_p2p_val
+                    x_min_val = 0
+                elif param_key == 'p2p_gap_v': 
+                    label = 'Max - Min P2P (vpol)'
                     x_n_bins = self.p2p_n_bins_v
                     x_max_val = self.max_p2p_val
                     x_min_val = 0

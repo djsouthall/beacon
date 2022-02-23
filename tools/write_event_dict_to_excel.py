@@ -79,6 +79,8 @@ def writeEventDictionaryToDataFrame(initial_eventids_dict, ds=None, include_airp
                     'impulsivity_hSLICERADDimpulsivity_v',
                     'similarity_count_h',
                     'similarity_count_v',
+                    'p2p_gap_h',
+                    'p2p_gap_v',
                     'csnr_h',
                     'csnr_v',
                     'snr_h',

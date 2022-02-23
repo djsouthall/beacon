@@ -119,9 +119,9 @@ if __name__ == '__main__':
     #This one cuts out ALL events
     ds.addROI('above horizon only',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90]})
     ds.addROI('stage 1 cuts',{'elevation_best_choice':[10,90],'phi_best_choice':[-90,90],'similarity_count_h':[-0.1,10],'similarity_count_v':[-0.1,10],'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':[1.2,10000],'impulsivity_hSLICERADDimpulsivity_v':[0.3,100],'cr_template_search_hSLICERMAXcr_template_search_v':[0.4,100]})
-    ds.addROI('stage 2 cuts',{'above_normalized_map_max_line':[0,10], 'above_snr_line':[0,10000]}) # Plus all cuts from stage 1
-    ds.addROI('stage 2 partial cuts map',{'above_normalized_map_max_line':[0,10]}) # Events that pass only the map max cut
-    ds.addROI('stage 2 partial cuts snr',{'above_normalized_map_max_line':[0,10]}) # Events that pass only the snr cut
+    ds.addROI('stage 2 cuts',{'p2p_gap_h':[-1, 95], 'above_normalized_map_max_line':[0,10], 'above_snr_line':[0,10000]}) # Plus all cuts from stage 1
+    ds.addROI('stage 2 partial cuts map',{'p2p_gap_h':[-1, 95], 'above_normalized_map_max_line':[0,10]}) # Events that pass only the map max cut
+    ds.addROI('stage 2 partial cuts snr',{'p2p_gap_h':[-1, 95], 'above_snr_line':[0,10000]}) # Events that pass only the snr cut
 
     saveprint('ROI Dictionary definitions:', outfile=output_text_file)
     for key in list(ds.data_slicers[0].roi.keys()):

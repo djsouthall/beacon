@@ -124,10 +124,10 @@ if __name__ == '__main__':
     if True:
         try:
             #cut_roi = {'hpol_normalized_map_value_abovehorizon':[0.75,10],'vpol_normalized_map_value_abovehorizon':[0.55,10], 'cr_template_search_h':[0.5,10], 'cr_template_search_v':[0.3,10]}
-            cut_roi = {'above_normalized_map_max_line':[0,10], 'above_snr_line':[0,10000]}
+            cut_roi = {'above_normalized_map_max_line':[0,10], 'above_snr_line':[0,10000], 'p2p_gap_h':[-1, 95]}
 
-            plot_params = [['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], ['snr_h', 'snr_v']]
-
+            #plot_params = [['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], ['snr_h', 'snr_v']]
+            plot_params = [['p2p_gap_h','p2p_gap_v']]
             #plot_params = [['min_csnr_h','min_csnr_v'], ['csnr_h','csnr_v'], ['snr_h', 'snr_v'], ['min_std_h','min_std_v'],['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['cr_template_search_h', 'cr_template_search_v'], ['impulsivity_h','impulsivity_v'], ['hpol_normalized_map_value_abovehorizon','vpol_normalized_map_value_abovehorizon'], ['hpol_peak_to_sidelobe','cr_template_search_h'],['vpol_peak_to_sidelobe','cr_template_search_v']]
             for apply_cuts in [False,True]:
 
