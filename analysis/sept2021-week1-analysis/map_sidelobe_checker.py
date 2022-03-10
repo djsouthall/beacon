@@ -59,6 +59,17 @@ print('SETTING processed_datapath TO: ', processed_datapath)
 'map_max_time_delay_1subtract2_v','map_max_time_delay_1subtract3_v','map_max_time_delay_2subtract3_v'
 '''
 
+
+def maximizeAllFigures():
+    '''
+    Maximizes all matplotlib plots.
+    '''
+    for i in plt.get_fignums():
+        plt.figure(i)
+        fm = plt.get_current_fig_manager()
+        fm.resize(*fm.window.maxsize())
+
+
 def enu2Spherical(enu):
     '''
     2d array like ((e_0, n_0, u_0), (e_1, n_1, u_1), ... , (e_i, n_i, u_i))
@@ -87,7 +98,19 @@ if __name__ == '__main__':
     flipbook_path = '/home/dsouthall/Projects/Beacon/beacon/analysis/sept2021-week1-analysis/airplane_event_flipbook_1643947072'#'/home/dsouthall/scratch-midway2/event_flipbook_1643154940'#'/home/dsouthall/scratch-midway2/event_flipbook_1642725413'
     sorted_dict = flipbookToDict(flipbook_path)
     
-    if len(sys.argv) >= 3:
+    args = copy.copy(sys.argv)
+
+
+
+    if len(sys.argv) == 2:
+        if 'r' in sys.argv[1] and 'e' in sys.argv[1]:
+            runs = [int(sys.argv[1].replace('r','').split('e')[0])]
+            eventids = [int(sys.argv[1].replace('r','').split('e')[1])]
+            good_dict = {}
+            good_dict[runs[0]] = eventids
+            single_event = True
+
+    elif len(sys.argv) >= 3:
         runs = [int(sys.argv[1])]
         eventids = [int(sys.argv[2])]
         good_dict = {}
@@ -179,7 +202,7 @@ if __name__ == '__main__':
 
             linear_max_index = masked_map_values.argmax()
 
-            threshold = masked_map_values.max()*0.65
+            threshold = masked_map_values.max()*0.5
 
             blob_labels, num_blobs = scipy.ndimage.label(masked_map_values >= threshold)
             blob_labels = numpy.ma.masked_array(blob_labels,mask=~theta_cut)
@@ -286,7 +309,7 @@ if __name__ == '__main__':
                             #plt.ylabel('Normalized adu\n%i shifted to %i\n%0.2f ns'%(j,i,time_delays[pair_index]))
                             plt.ylabel('%i shifted to %i\n%0.2f ns'%(j,i,time_delays[pair_index]))
                             # plt.legend()
-                            xmin = 100
+                            xmin = 0
                             xmax = 900
                             plt.xlim(xmin,xmax)
                             if pair_index == 5:
@@ -363,6 +386,7 @@ if __name__ == '__main__':
         #Ready the potential next command if inspecting the event.
         pc.copy(r'%run ' + os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'tools','event_info.py') + ' ' + str(run) + ' ' + str(eventid) + ' ' + 'True')
 
+    maximizeAllFigures()
     # if single_event:
     #     subprocess.run([os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'tools','event_info.py'), str(run), str(eventid), 'True'])
     # else:

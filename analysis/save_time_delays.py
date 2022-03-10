@@ -33,8 +33,6 @@ plt.ion()
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-
-
 font = {'weight' : 'bold',
         'size'   : 16}
 
@@ -164,7 +162,7 @@ if __name__=="__main__":
         run = int(run)
 
         reader = Reader(datapath,run)
-        filename = createFile(reader) #Creates an analysis file if one does not exist.  Returns filename to load file.
+        filename = createFile(reader, check_defaults=True) #Creates an analysis file if one does not exist.  Returns filename to load file.
         if filename is not None:
             with h5py.File(filename, 'a') as file:
                 eventids = file['eventids'][...]

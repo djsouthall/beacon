@@ -92,7 +92,7 @@ if __name__ == "__main__":
         # so don't submit unless < 100 jobs in queue.
         batch_number = 6
 
-        # batch_number = 0 executed on 2/ 4/2022 , 5974 - 6073
+        # batch_number = 0 executed on 2/ 4/2022 , 5974 - 6073 (LOOK AT NOTE BELOW ABOUT CHANGED BATCH NUMBERS)
         # batch_number = 1 executed on 2/ 6/2022 , 6074 - 6173
         # batch_number = 2 executed on 2/ 8/2022 , 6174 - 6273
         # batch_number = 3 executed on 2/ 9/2022 , 6274 - 6373
@@ -100,17 +100,28 @@ if __name__ == "__main__":
         # batch_number = 5 executed on 2/13/2022 , 6474 - 6573
         # batch_number = 6 executed on 2/14/2022 , 6574 - 6640
 
+        # THE BATCH NUMBER IS LATER REDEFINED SO 0 IS ALL SEPTEMBER RUNS AND THEY MATCH THE RUNS LISTED BELOW:
+        # run_batches['batch_0'] = numpy.arange(5733,5974) # September data
+        # run_batches['batch_1'] = numpy.arange(5974,6073)
+        # run_batches['batch_2'] = numpy.arange(6074,6173)
+        # run_batches['batch_3'] = numpy.arange(6174,6273)
+        # run_batches['batch_4'] = numpy.arange(6274,6373)
+        # run_batches['batch_5'] = numpy.arange(6374,6473)
+        # run_batches['batch_6'] = numpy.arange(6474,6573)
+        # run_batches['batch_7'] = numpy.arange(6574,6641)
+
 
         batch_length = 100
         max_run_to_include = 6640
         if False:
-            runs = 5974 + batch_number*batch_length + numpy.arange(batch_length)
+            runs = 5974 + (batch_number)*batch_length + numpy.arange(batch_length)
             runs = runs[runs <= max_run_to_include]
         else:
-            runs = numpy.array([6126,6277,6285]) #numpy.array([6537,6538,6539])
+            #6524 never ran with 'all' and thus 'best' was never calculated.  Unsure why. 
+            runs = numpy.array([6524])#numpy.array([6126,6277,6285]) #numpy.array([6537,6538,6539])
         # runs = numpy.array([6520,5775])
         done_runs = numpy.array([])
-        analysis_part = 4
+        analysis_part = 4.5
 
         bad_node_numbers = [2,14,15,227]
         if len(runs) == 0:
@@ -440,6 +451,20 @@ if __name__ == "__main__":
             all_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
 
             print('Run %i jobs submitted --> \nSine Subtraction jid:%i\nNon-Map Analysis jid:%i\tBoth jid:%i\tAll jid:%i'%(run,first_jobid,second_jobid,both_jobid,all_jobid))
+
+        elif analysis_part == 4.5:
+            # Only executs the last step of 4
+            third   = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'all_analysis_part2.sh')
+
+            #All job must be done second, because "best map" selection is call when all is, so hv must already be done.
+            #Prepare All Job
+            batch = 'sbatch --partition=%s %s --job-name=%s --time=36:00:00 '%(partition, bad_node_string, jobname+'all')
+            command = '%s %i %s %s'%(third, run, deploy_index, 'all')
+            command_queue = batch + command
+
+            #Submit All job
+            print(command_queue)
+            all_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
 
         elif analysis_part == 5:
             script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'tools', 'sine_subtract_cache.py')

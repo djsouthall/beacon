@@ -42,6 +42,14 @@ raw_datapath = os.environ['BEACON_DATA']
 processed_datapath = os.environ['BEACON_PROCESSED_DATA']
 print('SETTING processed_datapath TO: ', processed_datapath)
 
+def maximizeAllFigures():
+    '''
+    Maximizes all matplotlib plots.
+    '''
+    for i in plt.get_fignums():
+        plt.figure(i)
+        fm = plt.get_current_fig_manager()
+        fm.resize(*fm.window.maxsize())
 
 '''
 'impulsivity_h','impulsivity_v', 'cr_template_search_h', 'cr_template_search_v', 'std_h', 'std_v', 'p2p_h', 'p2p_v', 'snr_h', 'snr_v',\
@@ -81,17 +89,50 @@ special_conditions['r5889e70102'] = {
 special_conditions['r5853e114664'] = {
                                     'append_notches':[[62.5,70]]
                                     }
+special_conditions['r5978e120178'] = {
+                                    'append_notches':[[33,38]]
+                                    }
+special_conditions['r5984e85580'] = {
+                                    'append_notches':[[33,38]]
+                                    }
+special_conditions['r6019e31292'] = {
+                                    'append_notches':[[60,66]]
+                                    }
+special_conditions['r6235e54175'] = {
+                                    'append_notches':[[43,47]]
+                                    }
 
+special_conditions['r6243e68912'] = {
+                                    'append_notches':[[43,47]]
+                                    }
+
+special_conditions['r6262e93320'] = {
+                                    'append_notches':[[48,54]]
+                                    }
+
+special_conditions['r6263e33446'] = {
+                                    'append_notches':[[48,54]]
+                                    }
+special_conditions['r6580e36332'] = {
+                                    'append_notches':[[48,54]]
+                                    }
+
+ignore_airplanes = []#['a73278']
 
 if __name__ == '__main__':
-    # plt.close('all')
-    if len(sys.argv) >= 3:
-        run = int(sys.argv[1])
-        eventid = int(sys.argv[2])
-        if len(sys.argv) == 4:
-            apply_additional_notches = bool(sys.argv[3])
+    args = copy.copy(sys.argv)
+    if len(sys.argv) == 2:
+        if 'r' in sys.argv[1] and 'e' in sys.argv[1]:
+            args = [sys.argv[0], int(sys.argv[1].replace('r','').split('e')[0]), int(sys.argv[1].replace('r','').split('e')[1])]
+
+    if len(args) >= 3:
+        run = int(args[1])
+        eventid = int(args[2])
+        if len(args) == 4:
+            apply_additional_notches = bool(args[3])
         else:
-            apply_additional_notches = False
+            plt.close('all')
+            apply_additional_notches = True
 
         cmap = 'cool'#'coolwarm'
         impulsivity_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
@@ -99,7 +140,7 @@ if __name__ == '__main__':
         map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_16384-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'
 
         ds = dataSlicer([run], impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath)
-
+        ds.conference_mode = False
         # Custom testing values
         if apply_additional_notches:
             event_key = 'r%ie%i'%(run,eventid)
@@ -111,7 +152,7 @@ if __name__ == '__main__':
 
 
         # ds.eventInspector({run:[eventid]}, show_all=True, include_time_delays=True,append_notches=append_notches)
-        ds.eventInspector({run:[eventid]}, show_all=True, include_time_delays=False,append_notches=append_notches,include_baselines=include_baselines)
+        ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=True,append_notches=append_notches,include_baselines=include_baselines)
         # ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=True,append_notches=append_notches)
         # ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=False,append_notches=append_notches)
         print('https://users.rcc.uchicago.edu/~cozzyd/monutau/#event&run=%i&entry=%i'%(run,eventid))
@@ -150,7 +191,10 @@ if __name__ == '__main__':
                 rpt_at_event_time = None
                 minimum_rpt_at_event_time = None
                 all_min_angular_distances = {}
+                print(numpy.unique(df['icao24']))
                 for index, icao24 in enumerate(numpy.unique(df['icao24'])):
+                    if icao24 in ignore_airplanes:
+                        continue
                     color = plt.rcParams['axes.prop_cycle'].by_key()['color'][index%len(plt.rcParams['axes.prop_cycle'].by_key()['color'])]
                     try:
                         traj = df.query('icao24 == "%s" and distance < %f'%(icao24, plot_distance_cut_limit*1000))
@@ -212,6 +256,9 @@ if __name__ == '__main__':
                         ax = ds.inspector_mpl[ax_key]
                         ax.scatter(traj['azimuth'], 90.0 - traj['zenith'], c=color)
 
+
+                [print(icao24, ' ang = ', all_min_angular_distances[icao24]['angular distance'], ' dt = ', all_min_angular_distances[icao24]['trigtime - t']) for icao24 in list(all_min_angular_distances.keys())]
+
                 print('minimum_approach = ',minimum_approach)
                 print('minimum_approach_t = ',minimum_approach_t)
                 print('minimum_approach_rpt = ',minimum_approach_rpt)
@@ -232,7 +279,7 @@ if __name__ == '__main__':
                     # for t in ax.get_legend().get_texts():
                     #     print(t)
 
-
+                maximizeAllFigures()
             except Exception as e:
                 print(e)
 

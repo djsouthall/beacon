@@ -23,7 +23,7 @@ import scipy.signal
 
 #from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
-from beacon.tools.data_handler import createFile
+from beacon.tools.data_handler import createFile #createFile(reader, verbose=True, redo_defaults=False, check_defaults=False, analysis_data_dir=None)
 from beacon.tools.fftmath import TemplateCompareTool
 from beacon.tools.fftmath import FFTPrepper
 from beacon.tools.correlator import Correlator
@@ -66,6 +66,7 @@ def savefig(fig, path, name, savefig_size_inches=(24,12.5), savefig_size_dpi=300
         else:
             print('Failed to save ', os.path.join(path,'%s.png'%(name.replace('.png',''))))
         print('\nError in %s'%inspect.stack()[0][3])
+        print(name)
         print(e)
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -82,21 +83,24 @@ if __name__ == '__main__':
     run_batches = {}
 
     run_batches['batch_test'] = numpy.arange(5733,5740)
-    run_batches['batch_0'] = numpy.arange(5733,5974) # September data
+    run_batches['batch_0'] = numpy.arange(5733,5974) # September data, should setup to auto add info to the "notes" section based off of existing sorting, and run this one those events for consistency
     run_batches['batch_1'] = numpy.arange(5974,6073)
     run_batches['batch_2'] = numpy.arange(6074,6173)
     run_batches['batch_3'] = numpy.arange(6174,6273)
     run_batches['batch_4'] = numpy.arange(6274,6373)
     run_batches['batch_5'] = numpy.arange(6374,6473)
     run_batches['batch_6'] = numpy.arange(6474,6573)
-    run_batches['batch_7'] = numpy.arange(6574,6673)
+    run_batches['batch_7'] = numpy.arange(6574,6641)
 
     ########
-    batch_key = 'batch_1'
+    batch_key = 'batch_0'
+    # run_batches['test_batch_3'] = numpy.array([6199])
+    # batch_key = 'test_batch_3'
     ########
 
+    # out_path = os.path.join( os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'sept2021-week1-analysis', '%s_%i'%(batch_key, time.time())))
+    out_path = os.path.join( os.path.join('/project2/avieregg/dsouthall/beacon/cr_search', '%s_%i'%(batch_key, time.time())))
 
-    out_path = os.path.join( os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'sept2021-week1-analysis', '%s_%i'%(batch_key, time.time())))
     output_text_file = os.path.join(out_path, 'output_%s.txt'%batch_key)
 
     os.mkdir(out_path)
@@ -450,6 +454,8 @@ if __name__ == '__main__':
     # ds.delInspector()
 
     if True:
+        plt.close('all')
+
         saveprint('Generating event inspector and saving event plots.', outfile=output_text_file)
         ds.eventInspector(stage_2_eventids_dict, savedir=out_path, savename_prepend='stage_2_pass_')
         ds.inspector_tm.trigger_tool('Save Book')

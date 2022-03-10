@@ -5605,8 +5605,7 @@ class dataSlicer():
             print(exc_type, fname, exc_tb.tb_lineno)
 
     def delInspector(self):
-        for ds in self.data_slicers:
-            ds.delCorrelator()
+        self.delCorrelator()
         if hasattr(self,'table_params'):
             del self.table_params
         if hasattr(self,'inspector_mpl'):
