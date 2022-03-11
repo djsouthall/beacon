@@ -310,17 +310,17 @@ def writeEventDictionaryToDataFrame(initial_eventids_dict, ds=None, include_airp
         print(exc_type, fname, exc_tb.tb_lineno)
         import pdb; pdb.set_trace()
 
-def writeDataFrameToExcel(df, filename, sheetname):
+def writeDataFrameToExcel(df, filename, sheetname, format_string="%0.10f"):
     if os.path.exists(filename):
         # File exists, attempt to append to it.
         print('File exists, attempt to append to it.')
         with pd.ExcelWriter(filename, engine="openpyxl", mode='a', if_sheet_exists='new') as writer:
-            df.to_excel(writer,sheet_name=sheetname,float_format="%0.2f", index=False)
+            df.to_excel(writer,sheet_name=sheetname,float_format=format_string, index=False)
     else:
         # File does not exist, attempt to create to it.
         print('File does not exist, attempt to create to it.')
         with pd.ExcelWriter(filename, engine="openpyxl", mode='w') as writer:
-            df.to_excel(writer,sheet_name=sheetname,float_format="%0.2f", index=False)
+            df.to_excel(writer,sheet_name=sheetname,float_format=format_string, index=False)
 
 
 def writeEventDictionaryToExcel(initial_eventids_dict, filename, sheetname, ds=None, include_airplanes=True):
