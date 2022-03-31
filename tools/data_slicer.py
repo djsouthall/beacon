@@ -221,7 +221,19 @@ class dataSlicerSingleRun():
                             'map_max_time_delay_1subtract2_v','map_max_time_delay_1subtract3_v','map_max_time_delay_2subtract3_v',\
                             'map_max_time_delay_0subtract1_all','map_max_time_delay_0subtract2_all','map_max_time_delay_0subtract3_all',\
                             'map_max_time_delay_1subtract2_all','map_max_time_delay_1subtract3_all','map_max_time_delay_2subtract3_all',\
-                            'sun_az','sun_el']
+                            'sun_az','sun_el', 'filtered_std',\
+                            'filtered_std_h', 'filtered_min_h', 'filtered_max_h', 'filtered_p2p_h', 'filtered_t_max_h', 'filtered_std_v', 'filtered_min_v', 'filtered_max_v', 'filtered_p2p_v', 'filtered_t_max_v',\
+                            'filtered_p2p_gap_h', 'filtered_p2p_gap_v', 'filtered_snr_gap_h', 'filtered_snr_gap_v', 'filtered_snr_h_over_v','filtered_csnr_h_over_v', \
+                            'filtered_std_ch0', 'filtered_min_ch0', 'filtered_max_ch0', 'filtered_p2p_ch0', 'filtered_snr_ch0', 'filtered_csnr_ch0', 'filtered_t_max_ch0',\
+                            'filtered_std_ch1', 'filtered_min_ch1', 'filtered_max_ch1', 'filtered_p2p_ch1', 'filtered_snr_ch1', 'filtered_csnr_ch1', 'filtered_t_max_ch1',\
+                            'filtered_std_ch2', 'filtered_min_ch2', 'filtered_max_ch2', 'filtered_p2p_ch2', 'filtered_snr_ch2', 'filtered_csnr_ch2', 'filtered_t_max_ch2',\
+                            'filtered_std_ch3', 'filtered_min_ch3', 'filtered_max_ch3', 'filtered_p2p_ch3', 'filtered_snr_ch3', 'filtered_csnr_ch3', 'filtered_t_max_ch3',\
+                            'filtered_std_ch4', 'filtered_min_ch4', 'filtered_max_ch4', 'filtered_p2p_ch4', 'filtered_snr_ch4', 'filtered_csnr_ch4', 'filtered_t_max_ch4',\
+                            'filtered_std_ch5', 'filtered_min_ch5', 'filtered_max_ch5', 'filtered_p2p_ch5', 'filtered_snr_ch5', 'filtered_csnr_ch5', 'filtered_t_max_ch5',\
+                            'filtered_std_ch6', 'filtered_min_ch6', 'filtered_max_ch6', 'filtered_p2p_ch6', 'filtered_snr_ch6', 'filtered_csnr_ch6', 'filtered_t_max_ch6',\
+                            'filtered_std_ch7', 'filtered_min_ch7', 'filtered_max_ch7', 'filtered_p2p_ch7', 'filtered_snr_ch7', 'filtered_csnr_ch7', 'filtered_t_max_ch7']
+
+
 
     #'coincidence_method_1_h','coincidence_method_1_v','coincidence_method_2_h','coincidence_method_2_v'
 
@@ -1062,11 +1074,56 @@ class dataSlicerSingleRun():
                             else:
                                 output_correlation_values = file['cr_template_search'][this_dset][...][eventids]
                             param = numpy.max(output_correlation_values[:,self.included_vpol_antennas],axis=1) #vpol_correlation values
+
+                        elif param_key == 'filtered_max_h':
+                            if len_eventids < 500:
+                                val = file['processed_properties'][self.time_delays_dset_key]['max'][eventids]
+                            else:
+                                val = file['processed_properties'][self.time_delays_dset_key]['max'][...][eventids]
+                            param = numpy.mean(val[:,self.included_hpol_antennas],axis=1)
+                        elif param_key == 'filtered_min_h':
+                            if len_eventids < 500:
+                                val = file['processed_properties'][self.time_delays_dset_key]['min'][eventids]
+                            else:
+                                val = file['processed_properties'][self.time_delays_dset_key]['min'][...][eventids]
+                            param = numpy.mean(val[:,self.included_hpol_antennas],axis=1)
+                        elif param_key == 'filtered_t_max_h':
+                            if len_eventids < 500:
+                                val = file['processed_properties'][self.time_delays_dset_key]['t_max'][eventids]
+                            else:
+                                val = file['processed_properties'][self.time_delays_dset_key]['t_max'][...][eventids]
+                            param = numpy.mean(val[:,self.included_hpol_antennas],axis=1)
+
+                        elif param_key == 'filtered_max_v':
+                            if len_eventids < 500:
+                                val = file['processed_properties'][self.time_delays_dset_key]['max'][eventids]
+                            else:
+                                val = file['processed_properties'][self.time_delays_dset_key]['max'][...][eventids]
+                            param = numpy.mean(val[:,self.included_vpol_antennas],axis=1)
+                        elif param_key == 'filtered_min_v':
+                            if len_eventids < 500:
+                                val = file['processed_properties'][self.time_delays_dset_key]['min'][eventids]
+                            else:
+                                val = file['processed_properties'][self.time_delays_dset_key]['min'][...][eventids]
+                            param = numpy.mean(val[:,self.included_vpol_antennas],axis=1)
+                        elif param_key == 'filtered_t_max_v':
+                            if len_eventids < 500:
+                                val = file['processed_properties'][self.time_delays_dset_key]['t_max'][eventids]
+                            else:
+                                val = file['processed_properties'][self.time_delays_dset_key]['t_max'][...][eventids]
+                            param = numpy.mean(val[:,self.included_vpol_antennas],axis=1)
+
                         elif param_key == 'std_h':
                             if len_eventids < 500:
                                 std = file['std'][eventids]
                             else:
                                 std = file['std'][...][eventids]
+                            param = numpy.mean(std[:,self.included_hpol_antennas],axis=1) 
+                        elif param_key == 'filtered_std_h':
+                            if len_eventids < 500:
+                                std = file['processed_properties'][self.time_delays_dset_key]['std'][eventids]
+                            else:
+                                std = file['processed_properties'][self.time_delays_dset_key]['std'][...][eventids]
                             param = numpy.mean(std[:,self.included_hpol_antennas],axis=1) 
                         elif param_key == 'min_std_h':
                             if len_eventids < 500:
@@ -1079,6 +1136,12 @@ class dataSlicerSingleRun():
                                 std = file['std'][eventids]
                             else:
                                 std = file['std'][...][eventids]
+                            param = numpy.mean(std[:,self.included_vpol_antennas],axis=1)
+                        elif param_key == 'filtered_std_v':
+                            if len_eventids < 500:
+                                std = file['processed_properties'][self.time_delays_dset_key]['std'][eventids]
+                            else:
+                                std = file['processed_properties'][self.time_delays_dset_key]['std'][...][eventids]
                             param = numpy.mean(std[:,self.included_vpol_antennas],axis=1) 
                         elif param_key == 'min_std_v':
                             if len_eventids < 500:
@@ -1091,6 +1154,13 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
+                            param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1)
+
+                        elif param_key == 'filtered_p2p_h':
+                            if len_eventids < 500:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][eventids]
+                            else:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][...][eventids]
                             param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) 
 
                         elif param_key == 'p2p_gap_h':
@@ -1106,13 +1176,35 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][...][eventids]
                             param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) - numpy.min(p2p[:,self.included_vpol_antennas],axis=1)
 
+                        elif param_key == 'filtered_p2p_gap_h':
+                            if len_eventids < 500:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][eventids]
+                            else:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][...][eventids]
+                            param = numpy.max(p2p[:,self.included_hpol_antennas],axis=1) - numpy.min(p2p[:,self.included_hpol_antennas],axis=1)
+                        elif param_key == 'filtered_p2p_gap_v':
+                            if len_eventids < 500:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][eventids]
+                            else:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][...][eventids]
+                            param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) - numpy.min(p2p[:,self.included_vpol_antennas],axis=1)
+
                         elif param_key == 'p2p_v': 
                             if len_eventids < 500:
                                 p2p = file['p2p'][eventids]
                             else:
                                 p2p = file['p2p'][...][eventids]
                             param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) 
+
+                        elif param_key == 'filtered_p2p_v':
+                            if len_eventids < 500:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][eventids]
+                            else:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][...][eventids]
+                            param = numpy.max(p2p[:,self.included_vpol_antennas],axis=1) 
+
                         elif 'snr_ch' in param_key and param_key.replace('csnr_ch','').replace('snr_ch','').isdigit():
+                            #Use unfiltered p2p
                             if 'csnr_ch' in param_key:
                                 channel = int(param_key.replace('csnr_ch',''))
                                 param_1 = self.constant_avg_rms_adu[channel]
@@ -1129,6 +1221,27 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,channel]/2.0
                             param = numpy.divide(param_2, param_1)
+
+                        elif 'snr_ch' in param_key and param_key.replace('filtered_','').replace('csnr_ch','').replace('snr_ch','').isdigit():
+                            #Use filtered p2p
+                            if 'csnr_ch' in param_key:
+                                channel = int(param_key.replace('filtered_csnr_ch',''))
+                                param_1 = self.constant_avg_rms_adu[channel]
+                            else:
+                                channel = int(param_key.replace('filtered_snr_ch',''))
+                                if len_eventids < 500:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][eventids]
+                                else:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][...][eventids]
+                                param_1 = std[:,channel]
+                            if len_eventids < 500:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][eventids]
+                            else:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][...][eventids]
+                            param_2 = p2p[:,channel]/2.0
+                            param = numpy.divide(param_2, param_1)
+
+
                         elif param_key == 'snr_h' or param_key == 'csnr_h':
                             if param_key == 'snr_h':
                                 if len_eventids < 500:
@@ -1144,6 +1257,24 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_hpol_antennas]/2.0
                             param = numpy.mean(numpy.divide(param_2, param_1),axis=1)
+
+                        elif param_key == 'filtered_snr_h' or param_key == 'filtered_csnr_h':
+                            if param_key == 'filtered_snr_h':
+                                if len_eventids < 500:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][eventids]
+                                else:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][...][eventids]
+                                param_1 = std[:,self.included_hpol_antennas]
+                            elif param_key == 'filtered_csnr_h':
+                                param_1 = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_hpol_antennas])
+                            if len_eventids < 500:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][eventids]
+                            else:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][...][eventids]
+                            param_2 = p2p[:,self.included_hpol_antennas]/2.0
+                            param = numpy.mean(numpy.divide(param_2, param_1),axis=1)
+
+
                         elif param_key == 'min_snr_h' or param_key == 'min_csnr_h':
                             if param_key == 'min_snr_h':
                                 if len_eventids < 500:
@@ -1159,6 +1290,23 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_hpol_antennas]/2.0
                             param = numpy.min(numpy.divide(param_2, param_1),axis=1)
+
+                        elif param_key == 'filtered_min_snr_h' or param_key == 'filtered_min_csnr_h':
+                            if param_key == 'filtered_min_snr_h':
+                                if len_eventids < 500:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][eventids]
+                                else:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][...][eventids]
+                                param_1 = std[:,self.included_hpol_antennas]
+                            elif param_key == 'filtered_min_csnr_h':
+                                param_1 = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_hpol_antennas])
+                            if len_eventids < 500:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][eventids]
+                            else:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][...][eventids]
+                            param_2 = p2p[:,self.included_hpol_antennas]/2.0
+                            param = numpy.min(numpy.divide(param_2, param_1),axis=1)
+
                         elif param_key == 'snr_gap_h' or param_key == 'csnr_gap_h':
                             if param_key == 'snr_gap_h':
                                 if len_eventids < 500:
@@ -1174,6 +1322,23 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_hpol_antennas]/2.0
                             param = numpy.max(numpy.divide(param_2, param_1),axis=1) - numpy.min(numpy.divide(param_2, param_1),axis=1)
+
+                        elif param_key == 'filtered_snr_gap_h' or param_key == 'filtered_csnr_gap_h':
+                            if param_key == 'filtered_snr_gap_h':
+                                if len_eventids < 500:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][eventids]
+                                else:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][...][eventids]
+                                param_1 = std[:,self.included_hpol_antennas]
+                            elif param_key == 'filtered_csnr_gap_h':
+                                param_1 = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_hpol_antennas])
+                            if len_eventids < 500:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][eventids]
+                            else:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][...][eventids]
+                            param_2 = p2p[:,self.included_hpol_antennas]/2.0
+                            param = numpy.max(numpy.divide(param_2, param_1),axis=1) - numpy.min(numpy.divide(param_2, param_1),axis=1)
+
                         elif param_key == 'snr_v' or param_key == 'csnr_v':
                             if param_key == 'snr_v':
                                 if len_eventids < 500:
@@ -1189,6 +1354,23 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_vpol_antennas]/2.0
                             param = numpy.mean(numpy.divide(param_2, param_1),axis=1)
+
+                        elif param_key == 'filtered_snr_v' or param_key == 'filtered_csnr_v':
+                            if param_key == 'filtered_snr_v':
+                                if len_eventids < 500:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][eventids]
+                                else:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][...][eventids]
+                                param_1 = std[:,self.included_vpol_antennas]
+                            elif param_key == 'filtered_csnr_v':
+                                param_1 = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_vpol_antennas])
+                            if len_eventids < 500:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][eventids]
+                            else:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][...][eventids]
+                            param_2 = p2p[:,self.included_vpol_antennas]/2.0
+                            param = numpy.mean(numpy.divide(param_2, param_1),axis=1)
+
                         elif param_key == 'min_snr_v' or param_key == 'min_csnr_v':
                             if param_key == 'min_snr_v':
                                 if len_eventids < 500:
@@ -1204,6 +1386,24 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_vpol_antennas]/2.0
                             param = numpy.min(numpy.divide(param_2, param_1),axis=1)
+
+                        elif param_key == 'filtered_min_snr_v' or param_key == 'filtered_min_csnr_v':
+                            if param_key == 'filtered_min_snr_v':
+                                if len_eventids < 500:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][eventids]
+                                else:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][...][eventids]
+                                param_1 = std[:,self.included_vpol_antennas]
+                            elif param_key == 'filtered_min_csnr_v':
+                                param_1 = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_vpol_antennas])
+                            if len_eventids < 500:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][eventids]
+                            else:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][...][eventids]
+                            param_2 = p2p[:,self.included_vpol_antennas]/2.0
+                            param = numpy.min(numpy.divide(param_2, param_1),axis=1)
+
+
                         elif param_key == 'snr_gap_v' or param_key == 'csnr_gap_v':
                             if param_key == 'snr_gap_v':
                                 if len_eventids < 500:
@@ -1219,6 +1419,23 @@ class dataSlicerSingleRun():
                                 p2p = file['p2p'][...][eventids]
                             param_2 = p2p[:,self.included_vpol_antennas]/2.0
                             param = numpy.max(numpy.divide(param_2, param_1),axis=1) - numpy.min(numpy.divide(param_2, param_1),axis=1)
+
+                        elif param_key == 'filtered_snr_gap_v' or param_key == 'filtered_csnr_gap_v':
+                            if param_key == 'filtered_snr_gap_v':
+                                if len_eventids < 500:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][eventids]
+                                else:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][...][eventids]
+                                param_1 = std[:,self.included_vpol_antennas]
+                            elif param_key == 'filtered_csnr_gap_v':
+                                param_1 = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_vpol_antennas])
+                            if len_eventids < 500:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][eventids]
+                            else:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][...][eventids]
+                            param_2 = p2p[:,self.included_vpol_antennas]/2.0
+                            param = numpy.max(numpy.divide(param_2, param_1),axis=1) - numpy.min(numpy.divide(param_2, param_1),axis=1)
+
                         elif param_key == 'snr_h_over_v' or param_key == 'csnr_h_over_v':
                             if param_key == 'snr_h_over_v':
                                 if len_eventids < 500:
@@ -1239,6 +1456,28 @@ class dataSlicerSingleRun():
                                                     numpy.divide(p2p[:,self.included_hpol_antennas],std_h),
                                                     numpy.divide(p2p[:,self.included_vpol_antennas],std_v)
                                                 ),axis=1)
+
+                        elif param_key == 'filtered_snr_h_over_v' or param_key == 'filtered_csnr_h_over_v':
+                            if param_key == 'filtered_snr_h_over_v':
+                                if len_eventids < 500:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][eventids]
+                                else:
+                                    std = file['processed_properties'][self.time_delays_dset_key]['std'][...][eventids]
+                                std_h = std[:,self.included_hpol_antennas]
+                                std_v = std[:,self.included_vpol_antennas]
+                            elif param_key == 'filtered_csnr_h_over_v':
+                                std_h = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_hpol_antennas])
+                                std_v = numpy.array([self.constant_avg_rms_adu[channel] for channel in self.included_vpol_antennas])
+                            if len_eventids < 500:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][eventids]
+                            else:
+                                p2p = file['processed_properties'][self.time_delays_dset_key]['p2p'][...][eventids]
+                            # Divide by 2 factor not needed, would divide out from ratio
+                            param = numpy.mean( numpy.divide(
+                                                    numpy.divide(p2p[:,self.included_hpol_antennas],std_h),
+                                                    numpy.divide(p2p[:,self.included_vpol_antennas],std_v)
+                                                ),axis=1)
+
                         elif 'time_delay_' in param_key and 'map' not in param_key:
                             split_param_key = param_key.split('_')
                             dset = '%spol_t_%ssubtract%s'%(split_param_key[3],split_param_key[2].split('subtract')[0],split_param_key[2].split('subtract')[1]) #Rewriting internal key name to time delay formatting.
@@ -3299,14 +3538,14 @@ class dataSlicerSingleRun():
                         std_requiring_params = ['std_h','std_v','min_std_h','min_std_v'] #List all params that might require max snr to be calculated if hard limit not given.
                         p2p_requiring_params = ['p2p_h','p2p_v','p2p_gap_h','p2p_gap_v'] #List all params that might require max p2p to be calculated if hard limit not given.
 
-                    if numpy.isin(param_key,std_requiring_params):
+                    if numpy.isin(param_key.replace('filtered_'),std_requiring_params):
                         if self.max_std_val is None:
                             with h5py.File(self.analysis_filename, 'r') as file:
                                 print('Calculating max_std')
                                 self.max_std_val = numpy.max(file['std'][...][eventids,:]) #Should only have to be done once on first call. 
                                 self.min_std_val = numpy.min(file['std'][...][eventids,:])
                                 file.close()
-                    if numpy.isin(param_key,p2p_requiring_params):
+                    if numpy.isin(param_key.replace('filtered_'),p2p_requiring_params):
                         if self.max_p2p_val is None:
                             with h5py.File(self.analysis_filename, 'r') as file:
                                 print('Calculating max_p2p')
@@ -3330,6 +3569,12 @@ class dataSlicerSingleRun():
                     return
                 
 
+
+                if 'filtered_' in param_key:
+                    filtered = True
+                    param_key = param_key.replace('filtered_','')
+                else:
+                    filtered = False
 
                 if param_key == 'impulsivity_h':
                     label = 'Impulsivity (hpol)'
@@ -3852,6 +4097,11 @@ class dataSlicerSingleRun():
                     x_n_bins = self.snr_n_bins_h
                     x_max_val = 15 #Just a guess of a reasonable but safe upper limit
                     x_min_val = 0
+
+
+                if fitlered == True:
+                    label = label + '\nUsing Filtered Waveforms'
+
             if calculate_bins_from_min_max:
                 current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges
 
@@ -5537,16 +5787,31 @@ class dataSlicer():
 
 
             #Plot Maps
-            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_h, circle_az=self.az_h, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
-            self.inspector_mpl['fig1_map_h'].set_xlim(-90,90)
-            self.inspector_mpl['fig1_map_h'].set_ylim(-30,90)
-            m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.cor.map(eventid, 'vpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_v, circle_az=self.az_v, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
-            self.inspector_mpl['fig1_map_v'].set_xlim(-90,90)
-            self.inspector_mpl['fig1_map_v'].set_ylim(-30,90)
-            if self.show_all:
-                m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_all'] = self.cor.map(eventid, 'all', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_all, circle_az=self.az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
-                self.inspector_mpl['fig1_map_all'].set_xlim(-90,90)
-                self.inspector_mpl['fig1_map_all'].set_ylim(-30,90)
+            if self.conference_mode == True:
+                m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+                self.inspector_mpl['fig1_map_h'].set_xlim(-90,90)
+                self.inspector_mpl['fig1_map_h'].set_ylim(-30,90)
+                m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.cor.map(eventid, 'vpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+                self.inspector_mpl['fig1_map_v'].set_xlim(-90,90)
+                self.inspector_mpl['fig1_map_v'].set_ylim(-30,90)
+                if self.show_all:
+                    m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_all'] = self.cor.map(eventid, 'all', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+                    self.inspector_mpl['fig1_map_all'].set_xlim(-90,90)
+                    self.inspector_mpl['fig1_map_all'].set_ylim(-30,90)
+
+            else:
+                m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_h, circle_az=self.az_h, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+                self.inspector_mpl['fig1_map_h'].set_xlim(-90,90)
+                self.inspector_mpl['fig1_map_h'].set_ylim(-30,90)
+                m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.cor.map(eventid, 'vpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_v, circle_az=self.az_v, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+                self.inspector_mpl['fig1_map_v'].set_xlim(-90,90)
+                self.inspector_mpl['fig1_map_v'].set_ylim(-30,90)
+                if self.show_all:
+                    m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_all'] = self.cor.map(eventid, 'all', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_all, circle_az=self.az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False)
+                    self.inspector_mpl['fig1_map_all'].set_xlim(-90,90)
+                    self.inspector_mpl['fig1_map_all'].set_ylim(-30,90)
+
+
             #Plot Spectra
             sine_subtract = True
             for apply_filter, ax in [[False, self.inspector_mpl['fig1_spec_raw']], [True, self.inspector_mpl['fig1_spec_filt']]]:
@@ -5638,6 +5903,7 @@ class dataSlicer():
             self.prepareCorrelator()
             if append_notches is not None:
                 self.cor.prep.redefineNotches(append_notches,append=True,plot_filters=False,verbose=True)
+            self.cor.conference_mode = self.conference_mode
             
             fig1 = plt.figure(constrained_layout=True)
             gs = fig1.add_gridspec(4,5, width_ratios=[1,1,1,1,0.75])
@@ -5742,80 +6008,64 @@ class dataSlicer():
             #[['phi_best_h','elevation_best_h'],['hpol_max_map_value_abovehorizon','vpol_max_map_value_abovehorizon'], ['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'], ['hpol_max_map_value','vpol_max_map_value'], ['hpol_peak_to_sidelobe_abovehorizon', 'vpol_peak_to_sidelobe_abovehorizon'],['hpol_peak_to_sidelobe_belowhorizon','hpol_peak_to_sidelobe_abovehorizon'], ['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'], ['hpol_max_possible_map_value','vpol_max_possible_map_value']]
             self.table_params = OrderedDict()
             #Format is param_key : 'Name In Table'
-            self.table_params['run'] = 'Run'
-            self.table_params['eventid'] = 'Event id'
-            self.table_params['phi_best_choice'] = 'Az (BEST)'
-            self.table_params['elevation_best_choice'] = 'El (BEST)'
-            self.table_params['hpol_max_map_value_allsky'] = 'Map Max H'
-            self.table_params['vpol_max_map_value_allsky'] = 'Map Max V'
-            self.table_params['impulsivity_h'] = 'Imp H'
-            self.table_params['impulsivity_v'] = 'Imp V'
-            self.table_params['cr_template_search_h'] = 'CR XC H'
-            self.table_params['cr_template_search_v'] = 'CR XC V'
-            self.table_params['std_h'] = 'SDev H'
-            self.table_params['std_v'] = 'SDev V'
-            self.table_params['p2p_h'] = 'P2P H'
-            self.table_params['p2p_v'] = 'P2P V'
-            self.table_params['csnr_h'] = 'cSNR H'
-            self.table_params['csnr_v'] = 'cSNR V'
-            self.table_params['snr_h'] = 'SNR H'
-            self.table_params['snr_v'] = 'SNR V'
-            self.table_params['similarity_count_h'] = 'H Simlr'
-            self.table_params['similarity_count_v'] = 'V Simlr'
+            if self.conference_mode == True:
+                self.table_params['run'] = 'Run'
+                self.table_params['eventid'] = 'Event id'
+                self.table_params['phi_best_choice'] = 'Az (BEST)'
+                self.table_params['elevation_best_choice'] = 'El (BEST)'
+                self.table_params['hpol_max_map_value_allsky'] = 'Map Max H'
+                self.table_params['vpol_max_map_value_allsky'] = 'Map Max V'
+                self.table_params['impulsivity_h'] = 'Imp H'
+                self.table_params['impulsivity_v'] = 'Imp V'
+                self.table_params['cr_template_search_h'] = 'CR XC H'
+                self.table_params['cr_template_search_v'] = 'CR XC V'
+            else:
+                self.table_params['run'] = 'Run'
+                self.table_params['eventid'] = 'Event id'
+                self.table_params['phi_best_choice'] = 'Az (BEST)'
+                self.table_params['elevation_best_choice'] = 'El (BEST)'
+                self.table_params['hpol_max_map_value_allsky'] = 'Map Max H'
+                self.table_params['vpol_max_map_value_allsky'] = 'Map Max V'
+                self.table_params['impulsivity_h'] = 'Imp H'
+                self.table_params['impulsivity_v'] = 'Imp V'
+                self.table_params['cr_template_search_h'] = 'CR XC H'
+                self.table_params['cr_template_search_v'] = 'CR XC V'
+                self.table_params['std_h'] = 'SDev H'
+                self.table_params['std_v'] = 'SDev V'
+                self.table_params['p2p_h'] = 'P2P H'
+                self.table_params['p2p_v'] = 'P2P V'
+                self.table_params['csnr_h'] = 'cSNR H'
+                self.table_params['csnr_v'] = 'cSNR V'
+                self.table_params['snr_h'] = 'SNR H'
+                self.table_params['snr_v'] = 'SNR V'
+                self.table_params['similarity_count_h'] = 'H Simlr'
+                self.table_params['similarity_count_v'] = 'V Simlr'
 
-            self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
-            self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
+                self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
+                self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
 
-            # self.table_params['hpol_peak_to_sidelobe_allskySLICERMULTIPLYhpol_max_map_value_allsky'] = 'AS - H'
-            # self.table_params['vpol_peak_to_sidelobe_allskySLICERMULTIPLYvpol_max_map_value_allsky'] = 'AS - V'
-            # self.table_params['all_peak_to_sidelobe_allskySLICERMULTIPLYall_max_map_value_allsky'] = 'AS - All'
-            # self.table_params['hpol_peak_to_sidelobe_belowhorizonSLICERMULTIPLYhpol_max_map_value_belowhorizon'] = 'BH - H'
-            # self.table_params['vpol_peak_to_sidelobe_belowhorizonSLICERMULTIPLYvpol_max_map_value_belowhorizon'] = 'BH - V'
-            # self.table_params['all_peak_to_sidelobe_belowhorizonSLICERMULTIPLYall_max_map_value_belowhorizon'] = 'BH - All'
-            # self.table_params['hpol_peak_to_sidelobe_abovehorizonSLICERMULTIPLYhpol_max_map_value_abovehorizon'] = 'AH - H'
-            # self.table_params['vpol_peak_to_sidelobe_abovehorizonSLICERMULTIPLYvpol_max_map_value_abovehorizon'] = 'AH - V'
-            # self.table_params['all_peak_to_sidelobe_abovehorizonSLICERMULTIPLYall_max_map_value_abovehorizon'] = 'AH - All'
-            
+                self.table_params['phi_best_h_allsky'] = 'Az H'
+                self.table_params['elevation_best_h_allsky'] = 'El H'
+                self.table_params['phi_best_v_allsky'] = 'Az V'
+                self.table_params['elevation_best_v_allsky'] = 'El V'
+                self.table_params['phi_best_all_allsky'] = 'Az All'
+                self.table_params['elevation_best_all_allsky'] = 'El All'
 
-            # self.table_params['hpol_peak_to_sidelobe_allsky'] = 'AS P2S H'
-            # self.table_params['vpol_peak_to_sidelobe_allsky'] = 'AS P2S V'
-            # self.table_params['all_peak_to_sidelobe_allsky'] = 'AS P2S All'
-            # self.table_params['hpol_peak_to_sidelobe_belowhorizon'] = 'BH P2S H'
-            # self.table_params['vpol_peak_to_sidelobe_belowhorizon'] = 'BH P2S V'
-            # self.table_params['all_peak_to_sidelobe_belowhorizon'] = 'BH P2S All'
-            # self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
-            # self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
-            # self.table_params['all_peak_to_sidelobe_abovehorizon'] = 'AH P2S All'
-            
-
-            self.table_params['phi_best_h_allsky'] = 'Az H'
-            self.table_params['elevation_best_h_allsky'] = 'El H'
-            self.table_params['phi_best_v_allsky'] = 'Az V'
-            self.table_params['elevation_best_v_allsky'] = 'El V'
-            self.table_params['phi_best_all_allsky'] = 'Az All'
-            self.table_params['elevation_best_all_allsky'] = 'El All'
-
-            self.table_params['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value'] = 'H AH Peak/Opt'
-            self.table_params['vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'] = 'V AH Peak/Opt'
+                self.table_params['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value'] = 'H AH Peak/Opt'
+                self.table_params['vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'] = 'V AH Peak/Opt'
 
 
-            self.table_params['mean_max_corr_h'] = 'Mean Corr H'
-            self.table_params['mean_max_corr_v'] = 'Mean Corr V'
+                self.table_params['mean_max_corr_h'] = 'Mean Corr H'
+                self.table_params['mean_max_corr_v'] = 'Mean Corr V'
 
-            
-            self.table_params['elevation_best_choice'] = '[10,90]'
-            self.table_params['phi_best_choice'] = '[-90,90]'
-            self.table_params['similarity_count_h'] = '[-0.1,10]'
-            self.table_params['similarity_count_v'] = '[-0.1,10]'
-            self.table_params['hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe'] = '[1.2,10000]'
-            self.table_params['impulsivity_hSLICERADDimpulsivity_v'] = '[0.3,100]'
-            self.table_params['cr_template_search_hSLICERMAXcr_template_search_v'] = '[0.4,100]'
-
-
-            # self.table_params['coincidence_method_1_h'] = 'coin m1H'
-            # self.table_params['coincidence_method_1_v'] = 'coin m1V'
-            # self.table_params['coincidence_method_2_h'] = 'coin m2H'
-            # self.table_params['coincidence_method_2_v'] = 'coin m2V'
+                
+                self.table_params['elevation_best_choice'] = '[10,90]'
+                self.table_params['phi_best_choice'] = '[-90,90]'
+                self.table_params['similarity_count_h'] = '[-0.1,10]'
+                self.table_params['similarity_count_v'] = '[-0.1,10]'
+                self.table_params['hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe'] = '[1.2,10000]'
+                self.table_params['impulsivity_hSLICERADDimpulsivity_v'] = '[0.3,100]'
+                self.table_params['cr_template_search_hSLICERMAXcr_template_search_v'] = '[0.4,100]'
 
 
             #Sample eventid, would normally be selected from and changeable

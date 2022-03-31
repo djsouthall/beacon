@@ -84,7 +84,7 @@ if __name__ == "__main__":
         runs = numpy.arange(5733,5974,dtype=int)
         done_runs = numpy.array([])
         analysis_part = 5 # Sine subtraction
-    elif True:
+    elif False:
         # This will run sine subtraction, the analysis, then maps.  Makes 4 jobs per run, so limit to less than 125 runs
         # at a time.
 
@@ -113,13 +113,10 @@ if __name__ == "__main__":
 
         batch_length = 100
         max_run_to_include = 6640
-        if False:
-            runs = 5974 + (batch_number)*batch_length + numpy.arange(batch_length)
-            runs = runs[runs <= max_run_to_include]
-        else:
-            #6524 never ran with 'all' and thus 'best' was never calculated.  Unsure why. 
-            runs = numpy.array([6524])#numpy.array([6126,6277,6285]) #numpy.array([6537,6538,6539])
-        # runs = numpy.array([6520,5775])
+
+        runs = 5974 + (batch_number)*batch_length + numpy.arange(batch_length)
+        runs = runs[runs <= max_run_to_include]
+
         done_runs = numpy.array([])
         analysis_part = 4.5
 
@@ -139,6 +136,65 @@ if __name__ == "__main__":
         else:
             bad_node_string = "--exclude=midway2-%s"%str(['{:04d}'.format(node) for node in bad_node_numbers]).replace("'","").replace(' ','')
             bad_node_list = ["midway2-{:04d}".format(node) for node in bad_node_numbers]
+    elif True:
+        # This will rerun some of the early on analysis steps that calculat P2P, which were previously accidentally done
+        # after sine subtraction, when they were intended to be done before sine subtraction.  Likely I want BOTH raw
+        # and processed values for these parameters.
+        batch_number = 7
+        #1 running
+        #2 running
+        #3 running
+        #4 running
+        #5
+        #6
+        #7
+
+        # batch_number = 0 executed on 2/ 4/2022 , 5974 - 6073 (LOOK AT NOTE BELOW ABOUT CHANGED BATCH NUMBERS)
+        # batch_number = 1 executed on 2/ 6/2022 , 6074 - 6173
+        # batch_number = 2 executed on 2/ 8/2022 , 6174 - 6273
+        # batch_number = 3 executed on 2/ 9/2022 , 6274 - 6373
+        # batch_number = 4 executed on 2/11/2022 , 6374 - 6473
+        # batch_number = 5 executed on 2/13/2022 , 6474 - 6573
+        # batch_number = 6 executed on 2/14/2022 , 6574 - 6640
+
+        # THE BATCH NUMBER IS LATER REDEFINED SO 0 IS ALL SEPTEMBER RUNS AND THEY MATCH THE RUNS LISTED BELOW:
+        # run_batches['batch_0'] = numpy.arange(5733,5974) # September data
+        # run_batches['batch_1'] = numpy.arange(5974,6073)
+        # run_batches['batch_2'] = numpy.arange(6074,6173)
+        # run_batches['batch_3'] = numpy.arange(6174,6273)
+        # run_batches['batch_4'] = numpy.arange(6274,6373)
+        # run_batches['batch_5'] = numpy.arange(6374,6473)
+        # run_batches['batch_6'] = numpy.arange(6474,6573)
+        # run_batches['batch_7'] = numpy.arange(6574,6641)
+
+
+        batch_length = 100
+        max_run_to_include = 6640
+        runs = 5974 + (batch_number)*batch_length + numpy.arange(batch_length)
+        runs = runs[runs <= max_run_to_include]
+
+        # runs = numpy.array([6520,5775])
+        done_runs = numpy.array([])
+        analysis_part = 6
+
+        bad_node_numbers = [2,14,15,227]
+
+        if len(runs) == 0:
+            print('You dont need to submit any more jobs, you have done it all.')
+            import pdb; pdb.set_trace()
+        else:
+            print('Submitting Jobs for Runs:')
+            pprint(runs)
+            print('Is this okay?  Press c to proceed, crtl-d to exit.')
+            import pdb; pdb.set_trace()
+
+        if len(bad_node_numbers) == 0:
+            bad_node_string = ''
+            bad_node_list = []
+        else:
+            bad_node_string = "--exclude=midway2-%s"%str(['{:04d}'.format(node) for node in bad_node_numbers]).replace("'","").replace(' ','')
+            bad_node_list = ["midway2-{:04d}".format(node) for node in bad_node_numbers]
+
 
 
     else:
@@ -473,6 +529,25 @@ if __name__ == "__main__":
             command_queue = batch + command
             print(command_queue)    
             os.system(command_queue) # Submit to queue
+
+
+        elif analysis_part == 6:
+            script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'tools', 'data_handler.py')
+            batch = 'sbatch --partition=%s %s --job-name=%s --time=12:00:00 '%(partition, bad_node_string, jobname + 'ss')
+            command = script + ' %i'%(run) + ' redo'
+            command_queue = batch + command
+
+            print(command_queue)
+            first_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
+
+        elif analysis_part == 7:
+            script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'save_processed_signal_properties.py')
+            batch = 'sbatch --partition=%s %s --job-name=%s --time=12:00:00 '%(partition, bad_node_string, jobname + 'ss')
+            command = script + ' %i'%(run) + ' redo'
+            command_queue = batch + command
+
+            print(command_queue)
+            first_jobid = int(subprocess.check_output(command_queue.split(' ')).decode("utf-8").replace('Submitted batch job ','').replace('\n',''))
 
         else:
             script = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'analyze_event_rate_frequency.py')

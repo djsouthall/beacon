@@ -12,6 +12,10 @@ echo 'Executing analysis scripts for Run' $1  || exit
 echo 'Attempting to prepare time delays by executing save_time_delays.py align_method = 0' || exit
 python3 ${BEACON_ANALYSIS_DIR}analysis/save_time_delays.py $1 0 || exit
 
+echo 'Attempting to save signal properties for processed waveforms by executing save_processed_signal_properties.py' || exit
+python3 ${BEACON_ANALYSIS_DIR}analysis/save_processed_signal_properties.py $1 || exit
+
+
 # echo 'Attempting to identify cw by executing flag_cw.py' || exit
 # python3 ${BEACON_ANALYSIS_DIR}analysis/flag_cw.py $1 || exit
 
