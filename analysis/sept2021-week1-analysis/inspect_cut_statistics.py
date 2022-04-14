@@ -115,6 +115,18 @@ if __name__ == '__main__':
     ds.addROI('above horizon',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90]})
     ds.addROI('above horizon sim',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10]})
     ds.addROI('above horizon full',{'elevation_best_h':[10,90],'phi_best_h':[-90,90],'elevation_best_v':[10,90],'phi_best_v':[-90,90],'similarity_count_h':[0,10],'similarity_count_v':[0,10],'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100]})
+    ds.addROI('above horizon full with stage 2',{   'elevation_best_h':[10,90],
+                                                    'phi_best_h':[-90,90],
+                                                    'elevation_best_v':[10,90],
+                                                    'phi_best_v':[-90,90],
+                                                    'similarity_count_h':[0,10],
+                                                    'similarity_count_v':[0,10],
+                                                    'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,10],
+                                                    'impulsivity_hSLICERADDimpulsivity_v':[0.4,100],
+                                                    'cr_template_search_hSLICERADDcr_template_search_v':[0.8,100],
+                                                    'p2p_gap_h':[-1, 95],
+                                                    'above_normalized_map_max_line':[0,10000],
+                                                    'above_snr_line':[0,10000]})
 
 
     above_horizon_eventids_dict = ds.getCutsFromROI('above horizon',load=False,save=False,verbose=False, return_successive_cut_counts=False, return_total_cut_counts=False)

@@ -222,8 +222,9 @@ class dataSlicerSingleRun():
                             'map_max_time_delay_0subtract1_all','map_max_time_delay_0subtract2_all','map_max_time_delay_0subtract3_all',\
                             'map_max_time_delay_1subtract2_all','map_max_time_delay_1subtract3_all','map_max_time_delay_2subtract3_all',\
                             'sun_az','sun_el', 'filtered_std',\
-                            'filtered_std_h', 'filtered_min_h', 'filtered_max_h', 'filtered_p2p_h', 'filtered_t_max_h', 'filtered_std_v', 'filtered_min_v', 'filtered_max_v', 'filtered_p2p_v', 'filtered_t_max_v',\
+                            'filtered_std_h', 'filtered_min_h', 'filtered_max_h', 'filtered_p2p_h', 'filtered_t_max_h', 't_max_h', 'filtered_std_v', 'filtered_min_v', 'filtered_max_v', 'filtered_p2p_v', 'filtered_t_max_v', 't_max_v',\
                             'filtered_p2p_gap_h', 'filtered_p2p_gap_v', 'filtered_snr_gap_h', 'filtered_snr_gap_v', 'filtered_snr_h_over_v','filtered_csnr_h_over_v', \
+                            'filtered_snr_h', 'filtered_snr_v', 'filtered_csnr_h', 'filtered_csnr_v',
                             'filtered_std_ch0', 'filtered_min_ch0', 'filtered_max_ch0', 'filtered_p2p_ch0', 'filtered_snr_ch0', 'filtered_csnr_ch0', 'filtered_t_max_ch0',\
                             'filtered_std_ch1', 'filtered_min_ch1', 'filtered_max_ch1', 'filtered_p2p_ch1', 'filtered_snr_ch1', 'filtered_csnr_ch1', 'filtered_t_max_ch1',\
                             'filtered_std_ch2', 'filtered_min_ch2', 'filtered_max_ch2', 'filtered_p2p_ch2', 'filtered_snr_ch2', 'filtered_csnr_ch2', 'filtered_t_max_ch2',\
@@ -924,7 +925,7 @@ class dataSlicerSingleRun():
             ['snr_h','snr_v'], 
             aboveLineP2PSTDCutFunc, 
             'Distance From\nNormalized Map Cut Line', 
-            0, 40, 200,
+            -40, 40, 200,
             description='Distance above and away from a line connecting P2P/(2*STD) values of 11 in Vpol and 6 in Hpol.')
 
     def getEventidsFromTriggerType(self, trigger_types=None):
@@ -3538,14 +3539,14 @@ class dataSlicerSingleRun():
                         std_requiring_params = ['std_h','std_v','min_std_h','min_std_v'] #List all params that might require max snr to be calculated if hard limit not given.
                         p2p_requiring_params = ['p2p_h','p2p_v','p2p_gap_h','p2p_gap_v'] #List all params that might require max p2p to be calculated if hard limit not given.
 
-                    if numpy.isin(param_key.replace('filtered_'),std_requiring_params):
+                    if numpy.isin(param_key.replace('filtered_',''),std_requiring_params):
                         if self.max_std_val is None:
                             with h5py.File(self.analysis_filename, 'r') as file:
                                 print('Calculating max_std')
                                 self.max_std_val = numpy.max(file['std'][...][eventids,:]) #Should only have to be done once on first call. 
                                 self.min_std_val = numpy.min(file['std'][...][eventids,:])
                                 file.close()
-                    if numpy.isin(param_key.replace('filtered_'),p2p_requiring_params):
+                    if numpy.isin(param_key.replace('filtered_',''),p2p_requiring_params):
                         if self.max_p2p_val is None:
                             with h5py.File(self.analysis_filename, 'r') as file:
                                 print('Calculating max_p2p')
@@ -3564,7 +3565,7 @@ class dataSlicerSingleRun():
                         
                 else:
                     print('WARNING!!!')
-                    print('Given key [%s] is not listed in known_param_keys:\n%s'%(param_key,str(self.known_param_keys)))
+                    print('Given key [%s] is not listed in known_param_keys:\n%s'%(param_key,str(numpy.sort(self.known_param_keys))))
                     import pdb; pdb.set_trace()
                     return
                 
@@ -3581,6 +3582,11 @@ class dataSlicerSingleRun():
                     x_n_bins = self.impulsivity_n_bins_h
                     x_max_val = 1
                     x_min_val = -0.25
+                elif 't_max' in param_key:
+                    label = param_key
+                    x_n_bins = 513
+                    x_max_val = 0
+                    x_min_val = 2048
                 elif param_key == 'impulsivity_v':
                     label = 'Impulsivity (vpol)'
                     x_n_bins = self.impulsivity_n_bins_v
@@ -4062,9 +4068,11 @@ class dataSlicerSingleRun():
                 elif 'similarity_' in param_key:
                     param = self.getDataFromParam(eventids, param_key)
                     label = '%spol Time Delay Similarity %s'%(param_key.split('_')[-1].title(), param_key.split('_')[1].title())
-                    x_n_bins = 1000
-                    x_max_val = max(param)
+                    x_max_val = min(max(param), 100)
                     x_min_val = min(param)
+                    current_bin_edges = numpy.arange(x_min_val, x_max_val + 2, 2)
+                    calculate_bins_from_min_max = False
+
                 elif 'event_rate_ts_' in param_key:
                     rate_string, time_window_string = param_key.replace('event_rate_ts_','').split('_')
                     label = 'Test Statistic for Expected Event Rate\nof%s Using %s Window'%(rate_string, time_window_string)
@@ -4099,8 +4107,11 @@ class dataSlicerSingleRun():
                     x_min_val = 0
 
 
-                if fitlered == True:
+                if filtered == True:
                     label = label + '\nUsing Filtered Waveforms'
+                    if calculate_bins_from_min_max:
+                        x_max_val = int(x_max_val*3)
+                        x_n_bins = int(x_n_bins*3)
 
             if calculate_bins_from_min_max:
                 current_bin_edges = numpy.linspace(x_min_val,x_max_val,x_n_bins + 1) #These are bin edges
@@ -4262,7 +4273,7 @@ class dataSlicerSingleRun():
             _ax.grid(b=True, which='major', color='k', linestyle='-')
             _ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-            if sum(counts) > 0:
+            if numpy.sum(counts) > 0:
                 try:
                     cbar = _fig.colorbar(_im)
                     cbar.set_label('Counts')
@@ -4573,7 +4584,7 @@ class dataSlicerSingleRun():
                     freqs, spec_dbish, spec = self.tct.rfftWrapper(times, averaged_waveform)
                     fft_ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel)#Dividing by 2 to match monutau.  Idk why I have to do this though normally this function has worked well...
                 plt.xlim(10,110)
-                plt.ylim(-20,30)
+                plt.ylim(-20,90)
 
 
             #Plot averaged Waveform per channel
@@ -5267,7 +5278,7 @@ class dataSlicer():
             _fig, _ax = plt.subplots()
 
             if title is None:
-                if numpy.all(numpy.diff(list(eventids_dict.keys()))) == 1:
+                if numpy.all(numpy.diff(list(eventids_dict.keys())) == 1):
                     title = '%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types))
                 else:
                     title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types))
@@ -5275,9 +5286,9 @@ class dataSlicer():
                     title += ', masked_bins = %i'%masked_bins
             plt.title(title)
             if lognorm == True:
-                _im = _ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+                _im = _ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts, norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
             else:
-                _im = _ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts,cmap=cmap)#cmap=plt.cm.coolwarm
+                _im = _ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts, cmap=cmap)#cmap=plt.cm.coolwarm
             if 'theta_best_' in main_param_key_y:
                 _ax.invert_yaxis()
             if True:
@@ -5287,19 +5298,20 @@ class dataSlicer():
                     #Make cor to plot the array plane.
                             
                     cor = Correlator(self.data_slicers[0].reader,  upsample=2**10, n_phi=720, n_theta=720, waveform_index_range=(None,None),crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, plot_filter=False,apply_phase_response=False, tukey=False, sine_subtract=False, deploy_index=self.data_slicers[0].map_deploy_index) #only for array plane
-                    if numpy.logical_and(main_param_key_x.split('_')[-1] == 'h', main_param_key_y.split('_')[-1] == 'h'):
+                    simplified_param_key_x = main_param_key_x.replace('_allsky','').replace('_abovehorizon','').replace('_belowhorizon','')
+                    simplified_param_key_y = main_param_key_y.replace('_allsky','').replace('_abovehorizon','').replace('_belowhorizon','')
+                    if numpy.logical_and(simplified_param_key_x.split('_')[-1] == 'h', simplified_param_key_y.split('_')[-1] == 'h'):
                         plane_xy = cor.getPlaneZenithCurves(cor.n_hpol.copy(), 'hpol', 90.0, azimuth_offset_deg=0.0)
-                    elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'v', main_param_key_y.split('_')[-1] == 'v'):
+                    elif numpy.logical_and(simplified_param_key_x.split('_')[-1] == 'v', simplified_param_key_y.split('_')[-1] == 'v'):
                         plane_xy = cor.getPlaneZenithCurves(cor.n_vpol.copy(), 'vpol', 90.0, azimuth_offset_deg=0.0)
-                    elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'all', main_param_key_y.split('_')[-1] == 'all'):
+                    elif numpy.logical_and(simplified_param_key_x.split('_')[-1] == 'all', simplified_param_key_y.split('_')[-1] == 'all'):
                         plane_xy = cor.getPlaneZenithCurves(cor.n_all.copy(), 'all', 90.0, azimuth_offset_deg=0.0)
-                    elif numpy.logical_and(main_param_key_x.split('_')[-1] == 'choice', main_param_key_y.split('_')[-1] == 'choice'):
+                    elif numpy.logical_and(simplified_param_key_x.split('_')[-1] == 'choice', simplified_param_key_y.split('_')[-1] == 'choice'):
                         plane_xy = cor.getPlaneZenithCurves(cor.n_all.copy(), 'all', 90.0, azimuth_offset_deg=0.0)
                     else:
-                        import pdb; pdb.set_trace()
                         plane_xy = None
                     if plane_xy is not None:
-                        if 'elevation_best_' in main_param_key_y:
+                        if 'elevation_best_' in simplified_param_key_y:
                             plane_xy[1] = 90.0 - plane_xy[1]
                         plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=1,color='k')
                         plt.xlim([-180,180])
@@ -5310,7 +5322,7 @@ class dataSlicer():
                         y1 = plane_xy[1]
                         y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
                         _ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
-                        plt.ylim(min(y1) - 5, 30)
+                        plt.ylim(min(y1) - 5, 90)
                         plt.xlim(-90,90)
 
             plt.xlabel(self.current_label_x)
@@ -5338,7 +5350,7 @@ class dataSlicer():
                     plt.ylabel(self.current_label_y.replace('vpol','VPol'), fontsize=24)
                     plt.xlim(20,128)
                 _fig.canvas.set_window_title(self.current_label_x)
-                if sum(counts) > 0:
+                if numpy.sum(counts) > 0:
                     try:
                         cbar = _fig.colorbar(_im)
                         cbar.set_label('Counts')
@@ -5395,7 +5407,7 @@ class dataSlicer():
             if ax is None:
                 fig, ax = plt.subplots()
                 if title is None:
-                    if numpy.all(numpy.diff(list(eventids_dict.keys()))) == 1:
+                    if numpy.all(numpy.diff(list(eventids_dict.keys())) == 1):
                         title = '%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types))
                     else:
                         title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key,str(list(eventids_dict.keys())),str(self.trigger_types))
@@ -5509,17 +5521,21 @@ class dataSlicer():
         If eventids is given then then those events will be used to create the plot, and the trigger type cut will be ignored.
         '''
         try:
+            if type(eventids_dict) is not dict:
+                eventids_dict = None
             if eventids_dict is None:
                 eventids_dict = {}
                 for run_index, run in enumerate(self.runs):
                     eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
                 #The given eventids don't necessarily match the default cut, and thus shouldn't be labeled as such in the title.
-                if numpy.all(numpy.diff(list(eventids_dict.keys()))) == 1:
+                if numpy.all(numpy.diff(list(eventids_dict.keys())) == 1):
                     title = '%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types))
                 else:
                     title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())),str(self.trigger_types))
+
             else:
-                if numpy.all(numpy.diff(list(eventids_dict.keys()))) == 1:
+                
+                if numpy.all(numpy.diff(list(eventids_dict.keys())) == 1):
                     title = '%s, Runs = %i-%i'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1])
                 else:
                     title = '%s, Runs = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())))
@@ -6019,6 +6035,9 @@ class dataSlicer():
                 self.table_params['impulsivity_v'] = 'Imp V'
                 self.table_params['cr_template_search_h'] = 'CR XC H'
                 self.table_params['cr_template_search_v'] = 'CR XC V'
+                self.table_params['p2p_h'] = 'P2P H'
+                self.table_params['p2p_v'] = 'P2P V'
+
             else:
                 self.table_params['run'] = 'Run'
                 self.table_params['eventid'] = 'Event id'
@@ -6283,10 +6302,19 @@ if __name__ == '__main__':
                             n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta))
 
             print('Generating plots:')
-            for key_x, key_y in [['impulsivity_h','impulsivity_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['p2p_h', 'p2p_v']]:#[['p2p_h','p2p_v'],['impulsivity_h','impulsivity_v'],['p2p_h','impulsivity_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h']]:#ds.known_param_keys:
+            # for key_x, key_y in [['impulsivity_h','impulsivity_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['p2p_h', 'p2p_v']]:#[['p2p_h','p2p_v'],['impulsivity_h','impulsivity_v'],['p2p_h','impulsivity_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h']]:#ds.known_param_keys:
+            for key_x, key_y in [['filtered_t_max_h', 'filtered_t_max_v'], ['filtered_snr_h', 'filtered_snr_v'], ['filtered_csnr_h', 'filtered_csnr_v']]:#[['p2p_h','p2p_v'],['impulsivity_h','impulsivity_v'],['p2p_h','impulsivity_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h']]:#ds.known_param_keys:
                 print('Generating %s plot'%(key_x + ' vs ' + key_y))
                 print('Testing plot for calculating %s and %s'%(key_x,key_y))
                 ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True)
+            ds.addROI('high p2p',{'filtered_p2p_h':[300, 600]})
+
+            
+            fig1, ax1 = ds.plotROI2dHist('p2p_h', 'p2p_v', cmap='coolwarm', include_roi=True)
+            fig2, ax2 = ds.plotROI2dHist('filtered_p2p_h', 'filtered_p2p_v', cmap='coolwarm', include_roi=True)
+            ax1.get_shared_x_axes().join(ax1, ax2)
+            ax1.get_shared_y_axes().join(ax1, ax2)
+            
     elif False:
         for runs in [[1644],[1645],[1644,1645]]:
             impulsivity_dset_key = 'LPf_100.0-LPo_8-HPf_None-HPo_None-Phase_1-Hilb_0-corlen_65536-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'

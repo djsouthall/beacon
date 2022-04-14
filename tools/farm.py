@@ -136,11 +136,11 @@ if __name__ == "__main__":
         else:
             bad_node_string = "--exclude=midway2-%s"%str(['{:04d}'.format(node) for node in bad_node_numbers]).replace("'","").replace(' ','')
             bad_node_list = ["midway2-{:04d}".format(node) for node in bad_node_numbers]
-    elif True:
+    elif False:
         # This will rerun some of the early on analysis steps that calculat P2P, which were previously accidentally done
         # after sine subtraction, when they were intended to be done before sine subtraction.  Likely I want BOTH raw
         # and processed values for these parameters.
-        batch_number = 7
+        batch_number = 0
         #1 running
         #2 running
         #3 running
@@ -176,6 +176,39 @@ if __name__ == "__main__":
         # runs = numpy.array([6520,5775])
         done_runs = numpy.array([])
         analysis_part = 6
+
+        bad_node_numbers = [2,14,15,227]
+
+        if len(runs) == 0:
+            print('You dont need to submit any more jobs, you have done it all.')
+            import pdb; pdb.set_trace()
+        else:
+            print('Submitting Jobs for Runs:')
+            pprint(runs)
+            print('Is this okay?  Press c to proceed, crtl-d to exit.')
+            import pdb; pdb.set_trace()
+
+        if len(bad_node_numbers) == 0:
+            bad_node_string = ''
+            bad_node_list = []
+        else:
+            bad_node_string = "--exclude=midway2-%s"%str(['{:04d}'.format(node) for node in bad_node_numbers]).replace("'","").replace(' ','')
+            bad_node_list = ["midway2-{:04d}".format(node) for node in bad_node_numbers]
+
+    elif True:
+        # This will rerun some of the early on analysis steps that calculat P2P, which were previously accidentally done
+        # after sine subtraction, when they were intended to be done before sine subtraction.  Likely I want BOTH raw
+        # and processed values for these parameters.
+        batch_number = 0 
+
+        batch_length = 400
+        max_run_to_include = 6640
+        runs = 6565 + (batch_number)*batch_length + numpy.arange(batch_length)
+        runs = runs[runs <= max_run_to_include]
+
+        # runs = numpy.array([6520,5775])
+        done_runs = numpy.array([])
+        analysis_part = 7
 
         bad_node_numbers = [2,14,15,227]
 

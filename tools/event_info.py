@@ -140,7 +140,8 @@ if __name__ == '__main__':
         map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_16384-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'
 
         ds = dataSlicer([run], impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath)
-        ds.conference_mode = False
+        ds.conference_mode = True
+        
         # Custom testing values
         if apply_additional_notches:
             event_key = 'r%ie%i'%(run,eventid)
@@ -152,11 +153,27 @@ if __name__ == '__main__':
 
 
         # ds.eventInspector({run:[eventid]}, show_all=True, include_time_delays=True,append_notches=append_notches)
-        ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=True,append_notches=append_notches,include_baselines=include_baselines)
+
+
+
+        ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=not ds.conference_mode,append_notches=append_notches,include_baselines=include_baselines)
         # ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=True,append_notches=append_notches)
         # ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=False,append_notches=append_notches)
         print('https://users.rcc.uchicago.edu/~cozzyd/monutau/#event&run=%i&entry=%i'%(run,eventid))
 
+
+        suspected_airplanes = {}#{6027:[21206,21515,21718,21812,21822,21905,21989,21993,22000,22008,22098,22176,22191,22208,22220,22323,22504,22507,22509,22565,22566,22652,22655,22731,22742,22749,22845,22847,22903,22917,22932,23364,23419,23429,23440,23462,23471,23477,23514,23519,23527,23557,23558,23593,23621,23627,23636,23643,23653,23659,23677,23678,23687,23920,28991,29275,29365,29459,29475,29595,29935,29939,29945,29948,30344,44049,51866,51871,51970,51986,51989,52086,52090,52099,52106,52199,52861,52957,52973,52974,53074,53175]}
+        if run in list(suspected_airplanes.keys()):
+            if eventid in suspected_airplanes[run]:
+                total_mean_corr_values, fig_averaged, ax_averaged = ds.cor.averagedMap(suspected_airplanes[run], 'hpol', plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={})
+                try_animated = False
+                if try_animated:
+                    animatedMap(suspected_airplanes[run], 'hpol', '', include_baselines=[0,1,2,3,4,5], plane_zenith=None, plane_az=None, map_source_distance_m=None, radius=1.0, hilbert=False, max_method=None,center_dir='E',save=False,dpi=300,fps=3)
+                    ax_animated = ds.cor.axs[-1]
+            else:
+                ax_averaged = None
+        else:
+            ax_averaged = None
         pprint(ds.inspector_mpl['current_table'])
 
         if pandas.__version__ == '1.4.0' and True:
@@ -252,13 +269,27 @@ if __name__ == '__main__':
                             ax.plot(rpe[:,1], rpe[:,2], linestyle = '--', c=color, alpha=0.2)
                             ax.scatter(rpt_at_event_time[1], 90.0 - rpt_at_event_time[2],marker='|',c=color)
 
+                            if ax_averaged is not None:
+                                ax_averaged.plot(rpe[:,1], rpe[:,2], linestyle = '--', c=color, alpha=0.2)
+                                ax_averaged.scatter(rpt_at_event_time[1], 90.0 - rpt_at_event_time[2],marker='|',c=color)
+                                if try_animated:
+                                    ax_animated.plot(rpe[:,1], rpe[:,2], linestyle = '--', c=color, alpha=0.2)
+                                    ax_animated.scatter(rpt_at_event_time[1], 90.0 - rpt_at_event_time[2],marker='|',c=color)
+
+
+
                     for ax_key in ax_keys:
                         ax = ds.inspector_mpl[ax_key]
                         ax.scatter(traj['azimuth'], 90.0 - traj['zenith'], c=color)
 
+                        if ax_averaged is not None:
+                            ax_averaged.scatter(traj['azimuth'], 90.0 - traj['zenith'], c=color)
+                            if try_animated:
+                                ax_animated.scatter(traj['azimuth'], 90.0 - traj['zenith'], c=color)
 
                 [print(icao24, ' ang = ', all_min_angular_distances[icao24]['angular distance'], ' dt = ', all_min_angular_distances[icao24]['trigtime - t']) for icao24 in list(all_min_angular_distances.keys())]
 
+                print('Relative to\nphi = %0.2f, eleveation = %0.2f'%(best_phi, best_elevation))
                 print('minimum_approach = ',minimum_approach)
                 print('minimum_approach_t = ',minimum_approach_t)
                 print('minimum_approach_rpt = ',minimum_approach_rpt)
@@ -270,10 +301,27 @@ if __name__ == '__main__':
                         ax.scatter(minimum_approach_rpt[1], 90.0 - minimum_approach_rpt[2],
                             marker='*',c='k',
                             label='Minimum Angular Approach\nr,phi,el = %0.2f km, %0.2f deg, %0.2f deg\nat triggertime - t = %0.2f\nicao24 = %s'%(minimum_approach_rpt[0]/1000.0, minimum_approach_rpt[1], 90.0 - minimum_approach_rpt[2], event_time - minimum_approach_t, minimum_approach_airplane))
+                        if ax_averaged is not None:
+                            ax_averaged.scatter(minimum_approach_rpt[1], 90.0 - minimum_approach_rpt[2],
+                                                marker='*',c='k',
+                                                label='Minimum Angular Approach\nr,phi,el = %0.2f km, %0.2f deg, %0.2f deg\nat triggertime - t = %0.2f\nicao24 = %s'%(minimum_approach_rpt[0]/1000.0, minimum_approach_rpt[1], 90.0 - minimum_approach_rpt[2], event_time - minimum_approach_t, minimum_approach_airplane))
+                            if try_animated:
+                                ax_animated.scatter(minimum_approach_rpt[1], 90.0 - minimum_approach_rpt[2],
+                                                    marker='*',c='k',
+                                                    label='Minimum Angular Approach\nr,phi,el = %0.2f km, %0.2f deg, %0.2f deg\nat triggertime - t = %0.2f\nicao24 = %s'%(minimum_approach_rpt[0]/1000.0, minimum_approach_rpt[1], 90.0 - minimum_approach_rpt[2], event_time - minimum_approach_t, minimum_approach_airplane))
+
                     if minimum_rpt_at_event_time is not None and rpt_at_event_time is not None:
                         ax.scatter(minimum_rpt_at_event_time[1], 90.0 - minimum_rpt_at_event_time[2],
                             marker='o',c='k',
                             label='At Trig Time = %0.2f\nr,phi,el = %0.2f km, %0.2f deg, %0.2f deg'%(event_time, rpt_at_event_time[0]/1000.0, rpt_at_event_time[1], 90.0 - rpt_at_event_time[2]))
+                        if ax_averaged is not None:
+                            ax_averaged.scatter(minimum_rpt_at_event_time[1], 90.0 - minimum_rpt_at_event_time[2],
+                                                marker='o',c='k',
+                                                label='At Trig Time = %0.2f\nr,phi,el = %0.2f km, %0.2f deg, %0.2f deg'%(event_time, rpt_at_event_time[0]/1000.0, rpt_at_event_time[1], 90.0 - rpt_at_event_time[2]))
+                            if try_animated:
+                                ax_animated.scatter(minimum_rpt_at_event_time[1], 90.0 - minimum_rpt_at_event_time[2],
+                                                    marker='o',c='k',
+                                                    label='At Trig Time = %0.2f\nr,phi,el = %0.2f km, %0.2f deg, %0.2f deg'%(event_time, rpt_at_event_time[0]/1000.0, rpt_at_event_time[1], 90.0 - rpt_at_event_time[2]))
 
                     # ax.legend(loc='lower center', fontsize = 16)
                     # for t in ax.get_legend().get_texts():

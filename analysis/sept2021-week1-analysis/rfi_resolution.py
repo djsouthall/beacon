@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib import cm, ticker
 from matplotlib.patches import Rectangle
+import time
 
 
 import warnings
@@ -219,11 +220,11 @@ if __name__ == '__main__':
     min_phi     = -180
     max_phi     = 180
     n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
-    run_modes = ['pulsers']#['rfi', 'pulsers']
+    run_modes = ['rfi', 'pulsers']#['pulsers']#['rfi', 'pulsers']
     for mode in run_modes:
         print('Generating %s plots:'%mode)
         if mode == 'rfi':
-            runs = numpy.arange(5733,5736)
+            runs = numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5736)
             roi_dict = {}
             roi_dict['ROI 0'] = {'phi_best_h':[-9,-7.0],      'elevation_best_h':[-7.2,1.8],  'phi_best_v':[-9,-7.0],'elevation_best_v':[-7.2,1.8],'std_h':[1,10], 'std_v':[1,5]}
             roi_dict['ROI 1'] = {'phi_best_h':[-7.5,-3.7] ,   'elevation_best_h':[-6.3,-3.7], 'p2p_v':[0,40],'impulsivity_v':[0,0.35]}
@@ -233,7 +234,8 @@ if __name__ == '__main__':
             roi_dict['ROI 5'] = {'phi_best_h':[22.35,23.6] ,  'elevation_best_h':[-5,-0.5],   'p2p_v':[0,40]}
             roi_dict['ROI 6'] = {'phi_best_h':[40.75,42] ,    'elevation_best_h':[-5,-0.5],   'std_v':[2.5,8],'std_h':[4,9.5], 'cr_template_search_v':[0.775,1.0],'vpol_peak_to_sidelobe':[2.05,3.5]}
             trigger_types = [2]
-            pols = ['hpol']
+            # pols = ['hpol']
+            pols = ['hpol','choice']
             map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'
         else:
             origin = info.loadAntennaZeroLocation()
@@ -284,6 +286,8 @@ if __name__ == '__main__':
         for key, item in roi_dict.items():
             ds.addROI(key, item)
 
+        ds.conference_mode = True
+
         if False:
             plot_list = [['mean_max_corr_h','mean_max_corr_v'], ['hpol_peak_to_sidelobe','vpol_peak_to_sidelobe'],['hpol_peak_to_sidelobe','elevation_best_h'],['impulsivity_h','impulsivity_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['p2p_h', 'p2p_v'],['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v']]
             for key_x, key_y in plot_list:
@@ -293,7 +297,8 @@ if __name__ == '__main__':
                 #ds.plotROI2dHist('snr_h', 'snr_v', cmap='coolwarm', include_roi=True)
         else:
             #ds.addROI('ROI 1',{'elevation_best_h':[-7.2,1.8],'phi_best_h':[-9,-7.0],'elevation_best_v':[-7.2,1.8],'phi_best_v':[-9,-7.0],'std_h':[1,10], 'std_v':[1,5]})
-            save_fig_dir = '/home/dsouthall/Projects/Beacon/beacon/analysis/sept2021-week1-analysis/resolution_plots/%s'%mode #Set to None for interactive mode
+            save_fig_dir = '/home/dsouthall/Projects/Beacon/beacon/analysis/sept2021-week1-analysis/resolution_plots/%s_%i'%(mode, time.time()) #Set to None for interactive mode
+            os.mkdir(save_fig_dir)
             fullsize_fig_dims = (20,10)
             halfsize_fig_dims = (10,10)
 
@@ -316,6 +321,8 @@ if __name__ == '__main__':
             for pol in pols:
                 if pol == 'hpol':
                     plot_list = [['phi_best_h','elevation_best_h']]#,['phi_best_v','elevation_best_v']
+                elif pol == 'choice':
+                    plot_list = [['phi_best_choice','elevation_best_choice']]
                 else:
                     plot_list = [['phi_best_v','elevation_best_v']]
 

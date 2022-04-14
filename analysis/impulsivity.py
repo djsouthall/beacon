@@ -65,7 +65,7 @@ if __name__=="__main__":
     final_corr_length = 2**17
     align_method = 0
     max_method = 0
-    impulsivity_window = 400
+    impulsivity_window = 400 #ns
 
     notch_tv = True
     misc_notches = True

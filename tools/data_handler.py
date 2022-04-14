@@ -15,7 +15,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 from pprint import pprint
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.  This shoild be the raw one and not the sine subtracted one. 
 import numpy
 import h5py
 import matplotlib.pyplot as plt
@@ -343,7 +343,7 @@ def createFile(reader, verbose=True, redo_defaults=False, check_defaults=False, 
             header_keys_to_copy = []
             h = interpret.getHeaderDict(reader)
 
-            initial_expected_datasets = numpy.array(['eventids','trigger_type','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','calibrated_trigtime','inband_peak_freq_MHz','p2p','std']) #expand as more things are added.  This should only include datasets that this function will add.
+            initial_expected_datasets = numpy.array(['eventids','trigger_type','raw_approx_trigger_time','raw_approx_trigger_time_nsecs','trig_time','calibrated_trigtime','p2p','std'])#,'inband_peak_freq_MHz' #expand as more things are added.  This should only include datasets that this function will add.
             initial_expected_attrs    = numpy.array(['N','run'])
 
             #outdated_datasets_to_remove should include things that were once in each file but should no longer be.  They might be useful if a dataset
@@ -355,7 +355,7 @@ def createFile(reader, verbose=True, redo_defaults=False, check_defaults=False, 
 
             if os.path.exists(filename):
 
-                if check_defaults == True:
+                if check_defaults == True or redo_defaults == True:
                     print('%s already exists, checking if setup is up to date.'%filename )
                     with h5py.File(filename, 'a') as file:
                         try:

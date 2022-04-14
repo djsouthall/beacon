@@ -466,7 +466,7 @@ class FFTPrepper:
         if self.ss_reader_mode == True:
             print('Attempt to addSineSubtract ignored due to sineSubtractedReader being detected and usable.')
         else:
-            sine_subtract = FFTtools.SineSubtract(max_failed_iterations, min_power_ratio,plot)
+            sine_subtract = FFTtools.SineSubtract(max_failed_iterations, min_power_ratio, plot)
             if plot == True:
                 print('Showing plots from SineSubtract enabled')
                 self.plot_ss.append(True)
@@ -478,8 +478,72 @@ class FFTPrepper:
                 sine_subtract.setFreqLimits(min_freq, max_freq)
             self.sine_subtracts.append(sine_subtract)
 
+    def applyFilterToGivenWF(self, wf, channel, apply_filter=False, hilbert=False, tukey=None, sine_subtract=False, return_sine_subtract_info=False, ss_first=True):
+        '''
+        Will treat the given raw wf in the same way as self.wf but works for any passed waveform of the same format as a
+        raw waveform loaded via self.reader.wf(int(channel)).
+        '''
+        try:
+            if len(wf) != len(self.reader.t()):
+                print('Warning!!! wf given to applyFilterToGivenWF is not of the correct length.')
+                return 0
+            if self.ss_reader_mode == True and numpy.logical_and(sine_subtract, return_sine_subtract_info == False):
+                temp_wf = numpy.copy(wf)[self.start_waveform_index:self.end_waveform_index+1]
+            else:
+                if ss_first == True:
+                    temp_wf = numpy.copy(wf)
+                else:
+                    temp_wf = numpy.copy(wf)[self.start_waveform_index:self.end_waveform_index+1]
 
-    def wf(self, channel, apply_filter=False, hilbert=False, tukey=None, sine_subtract=False, return_sine_subtract_info=False, ss_first=True, attempt_raw_reader=False):
+                temp_wf -= numpy.mean(temp_wf)
+                temp_wf = temp_wf.astype(numpy.double)
+                ss_freqs = []
+                n_fits = []
+                if numpy.logical_and(sine_subtract, len(self.sine_subtracts) > 0):
+                    for ss_index, ss in enumerate(self.sine_subtracts):
+                        #_temp_wf is the output array for the subtractCW function, and must be predefined.  
+                        _temp_wf = numpy.zeros(len(temp_wf),dtype=numpy.double)#numpy.zeros_like(temp_wf)
+                        #Do the sine subtraction
+                        ss.subtractCW(len(temp_wf),temp_wf.data,self.dt_ns_original,_temp_wf)#*1e-9,_temp_wf)#self.dt_ns_original
+
+                        #Check how many solutions were found
+                        n_fit = ss.getNSines()
+                        n_fits.append(n_fit)
+                        #Save all frequencies in array
+                        ss_freqs.append(numpy.frombuffer(ss.getFreqs(),dtype=numpy.float64,count=n_fit))
+                        if self.plot_ss[ss_index] == True:
+                            plt.figure()
+                            plt.semilogy(numpy.array(ss.storedSpectra(0).GetX()), ss.storedSpectra(0).GetY())
+                        if n_fit > 0:
+                            temp_wf = _temp_wf
+
+                if ss_first == True:
+                    temp_wf = temp_wf[self.start_waveform_index:self.end_waveform_index+1] #indexed AFTER sine subtract because sine subtract benefits from seeing the whole wf. 
+
+            if tukey is None:
+                tukey = self.tukey_default
+            if tukey == True:
+                temp_wf = numpy.multiply( temp_wf , self.tukey  )
+            if apply_filter == True:
+                wf = numpy.fft.irfft(numpy.multiply(self.filter_original[channel],numpy.fft.rfft(temp_wf)),n=self.buffer_length) #Might need additional normalization
+            else:
+                wf = temp_wf
+
+            if hilbert == True:
+                wf = numpy.abs(scipy.signal.hilbert(wf))
+
+            if numpy.logical_and(sine_subtract, return_sine_subtract_info):
+                return wf, ss_freqs, n_fits
+            else:
+                return wf
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
+    def wf(self, channel, apply_filter=False, hilbert=False, tukey=None, sine_subtract=False, return_sine_subtract_info=False, ss_first=True):
         '''
         This loads a wf but only the section that is selected by the start and end indices specified.
 
@@ -489,10 +553,6 @@ class FFTPrepper:
 
         If ss_first is True then the waveform index range will only be applied AFTER sine subtraction is applied to
         help the filtering. 
-
-        If attempt_raw_reader == True AND self.ss_reader_mode is true (and thus the raw_wf callable is presnt), this 
-        will use the raw_wf method instead.  This avoids using stored sine subtraction and can be helpful for
-        comparison.  Only works if sine_subtract and 
         '''
         try:
             if self.ss_reader_mode == True and numpy.logical_and(sine_subtract, return_sine_subtract_info == False):
@@ -2033,6 +2093,9 @@ class TimeDelayCalculator(FFTPrepper):
             hilbert_summed_hpol_waveforms = numpy.abs(scipy.signal.hilbert(summed_hpol_waveforms))
             sorted_hilbert_summed_hpol_waveforms = hilbert_summed_hpol_waveforms[numpy.argsort(abs(numpy.arange(len(hilbert_summed_hpol_waveforms)) - numpy.argmax(hilbert_summed_hpol_waveforms)))]
             
+            #This cut seems sus but is fine.  The cut is being applied to an array which has already been sorted such
+            #that the elements closest to the peak value are organized to the beginning of the array, thus by
+            #simply cutting on the first X elements is actually cutting outward from the peak. 
             impulsivity_window_cut = times < impulsivity_window
             unscaled_hpol_impulsivity = numpy.cumsum(sorted_hilbert_summed_hpol_waveforms[impulsivity_window_cut])/sum(sorted_hilbert_summed_hpol_waveforms[impulsivity_window_cut])
             impulsivity_hpol = 2*numpy.mean(unscaled_hpol_impulsivity) - 1

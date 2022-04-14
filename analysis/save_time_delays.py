@@ -8,6 +8,7 @@ import h5py
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 #from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
+from examples.beacon_data_reader import Reader as RawReader #Without sine subtraction
 
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret as interpret #Must be imported before matplotlib or else plots don't load.
@@ -162,7 +163,9 @@ if __name__=="__main__":
         run = int(run)
 
         reader = Reader(datapath,run)
-        filename = createFile(reader, check_defaults=True) #Creates an analysis file if one does not exist.  Returns filename to load file.
+        raw_reader = RawReader(datapath,run)
+        filename = createFile(raw_reader, check_defaults=True) #Creates an analysis file if one does not exist.  Returns filename to load file.
+        filename = createFile(reader, check_defaults=False) 
         if filename is not None:
             with h5py.File(filename, 'a') as file:
                 eventids = file['eventids'][...]

@@ -62,6 +62,7 @@ def enu2Spherical(enu):
 def writeEventDictionaryToDataFrame(initial_eventids_dict, ds=None, include_airplanes=True):
     try:
         data_keys = [
+                    'calibrated_trigtime',
                     'phi_best_choice',
                     'elevation_best_choice',
                     'cr_template_search_h',
