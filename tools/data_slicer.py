@@ -13,6 +13,7 @@ import inspect
 import h5py
 import copy
 from collections import OrderedDict
+import csv
 
 import numpy
 import scipy
@@ -263,8 +264,8 @@ class dataSlicerSingleRun():
                 6 : 1.573,
                 7 : 1.264
                 }
-
-            self.updateReader(reader,analysis_data_dir=analysis_data_dir, verbose=verbose_setup)
+            self.analysis_data_dir = analysis_data_dir
+            self.updateReader(reader, analysis_data_dir=analysis_data_dir, verbose=verbose_setup)
             self.math_keywords = ['SLICERSUBTRACT', 'SLICERADD', 'SLICERDIVIDE', 'SLICERMULTIPLY', 'SLICERMAX', 'SLICERMIN', 'SLICERMEAN'] #Meta words that will relate 2 known variables and produce a plot with their arithmatic combination. 
             self.parameter_functions = {} # A dictionary of ParameterFunction objects that can be used to load data formatted by arbitrary functions.   Use addParameterFunction to add to this.
             self.addDefaultParameterFunctions()
@@ -735,7 +736,7 @@ class dataSlicerSingleRun():
         '''
         try:
             self.reader = reader
-            self.analysis_filename = createFile(reader,analysis_data_dir=analysis_data_dir, verbose=verbose) #Creates an analysis file if one does not exist.  Returns filename to load file.
+            self.analysis_filename = createFile(reader, analysis_data_dir=analysis_data_dir, verbose=verbose) #Creates an analysis file if one does not exist.  Returns filename to load file.
             try:
                 if verbose:
                     print(reader.status())
@@ -924,7 +925,7 @@ class dataSlicerSingleRun():
             'above_snr_line', 
             ['snr_h','snr_v'], 
             aboveLineP2PSTDCutFunc, 
-            'Distance From\nNormalized Map Cut Line', 
+            'Distance From\nNormalized P2P/(2*STD) Line', 
             -40, 40, 200,
             description='Distance above and away from a line connecting P2P/(2*STD) values of 11 in Vpol and 6 in Hpol.')
 
@@ -3219,7 +3220,7 @@ class dataSlicerSingleRun():
                 total_cut_counts = OrderedDict()
 
             if load == True:
-                print('WARNING LOAD CUT IS DEPRECATED')
+                #print('WARNING LOAD CUT IS DEPRECATED')
                 with h5py.File(self.analysis_filename, 'r') as file:
                     dsets = list(file.keys()) #Existing datasets
                     if not numpy.isin('ROI',dsets):
@@ -4264,7 +4265,7 @@ class dataSlicerSingleRun():
                         plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=1,color='k')
                         plt.xlim([numpy.min(self.range_phi_deg),numpy.max(self.range_phi_deg)])
                         #plt.xlim([-180,180])
-            
+
             plt.xlabel(self.current_label_x)
             plt.ylabel(self.current_label_y)
 
@@ -4708,17 +4709,25 @@ class dataSlicer():
         automatically calculated (though likely too high).
     include_test_roi :
         This will include test regions of interest that are more for testing the class itself. 
+    low_ram_mode : bool
+        Default is false, will load into ram a data slicer for each run.  If True, it will call ds.updateReader for each
+        run as needed for all functions calls that use individual data slicers.  This should be slower, but doesn't
+        require as much ram.
     '''
-    def __init__(self,  runs, impulsivity_dset_key, time_delays_dset_key, map_dset_key, remove_incomplete_runs=True, 
+    def __init__(self,  runs, impulsivity_dset_key, time_delays_dset_key, map_dset_key, 
+                        remove_incomplete_runs=True, low_ram_mode=False,
                         n_phi=3600, range_phi_deg=(-180,180), n_theta=480, range_theta_deg=(0,120),
                         **kwargs):
         try:
+            self.impulsivity_dset_key = impulsivity_dset_key
+            self.time_delays_dset_key = time_delays_dset_key
+            self.map_dset_key = map_dset_key
             self.conference_mode = False #Enable to apply any temporary adjustments such as fontsizes or title labels. 
             self.roi = {}
             self.data_slicers = []
             self.runs = []#numpy.sort(runs).astype(int)
             self.cor = None
-
+            self.low_ram_mode = low_ram_mode
 
             try:
                 #Angular ranges are handled such that their bin centers are the same as the values sampled by the corrolator class given the same min, max, and n.  
@@ -4742,25 +4751,41 @@ class dataSlicer():
                 skip_common_setup=False
                 print(e)
 
-            for run_index, run in enumerate(numpy.sort(runs).astype(int)):
-                sys.stdout.write('Run %i/%i\r'%(run_index+1,len(runs)))
-                sys.stdout.flush()
-                try:
-                    reader = Reader(raw_datapath,run)
-                    if reader.failed_setup == False:
-                        ds = dataSlicerSingleRun(reader,impulsivity_dset_key, time_delays_dset_key, map_dset_key, skip_common_setup=skip_common_setup, **kwargs)
-                        can_open = ds.openSuccess()
-                        if can_open == True:
-                            #If above fails then it won't be appended to either runs or data slicers.
-                            self.data_slicers.append(ds)
-                            self.runs.append(run)
-                except Exception as e:
-                    print('Error loading dataSlicer for run %i, excluding.  Error:'%run)
-                    print(e)
-
+            if self.low_ram_mode == False:
+                for run_index, run in enumerate(numpy.sort(runs).astype(int)):
+                    sys.stdout.write('Run %i/%i\r'%(run_index+1,len(runs)))
+                    sys.stdout.flush()
+                    try:
+                        reader = Reader(raw_datapath,run)
+                        if reader.failed_setup == False:
+                            ds = dataSlicerSingleRun(reader, impulsivity_dset_key, time_delays_dset_key, map_dset_key, skip_common_setup=skip_common_setup, **kwargs)
+                            can_open = ds.openSuccess()
+                            if can_open == True:
+                                #If above fails then it won't be appended to either runs or data slicers.
+                                self.data_slicers.append(ds)
+                                self.runs.append(run)
+                    except Exception as e:
+                        print('Error loading dataSlicer for run %i, excluding.  Error:'%run)
+                        print(e)
+            else:
+                for run_index, run in enumerate(numpy.sort(runs).astype(int)):
+                    self.runs.append(run)
+                    if run_index > 0:
+                        continue
+                    try:
+                        reader = Reader(raw_datapath,run)
+                        if reader.failed_setup == False:
+                            ds = dataSlicerSingleRun(reader,impulsivity_dset_key, time_delays_dset_key, map_dset_key, skip_common_setup=skip_common_setup, **kwargs)
+                            can_open = ds.openSuccess()
+                            if can_open == True:
+                                #If above fails then it won't be appended to either runs or data slicers.
+                                self.data_slicers.append(ds)
+                    except Exception as e:
+                        print('Error loading dataSlicer for run %i, excluding.  Error:'%run)
+                        print(e)
             self.data_slicers = numpy.array(self.data_slicers)
             self.runs = numpy.asarray(self.runs)
-            cut = numpy.array([ds.dsets_present*ds.openSuccess() for ds in self.data_slicers])
+            #cut = numpy.array([ds.dsets_present*ds.openSuccess() for ds in self.data_slicers])
 
             self.range_phi_deg = self.data_slicers[0].range_phi_deg
             self.range_theta_deg = self.data_slicers[0].range_theta_deg
@@ -4771,7 +4796,7 @@ class dataSlicer():
             else:
                 self.trigger_types = [1,2,3] #just a place holder, not runs loaded. 
 
-            if remove_incomplete_runs:
+            if remove_incomplete_runs and self.low_ram_mode == False:
                 self.removeIncompleteDataSlicers()
 
             if len(self.runs) == 0:
@@ -4803,36 +4828,76 @@ class dataSlicer():
         '''
         if self.cor is None:
             #Using the values that are commonly used in rf_bg_search.py
-            crit_freq_low_pass_MHz = 85
-            low_pass_filter_order = 6
+            if False:
+                #Sets values such that they match typical values used in map generation
+                crit_freq_low_pass_MHz = 85
+                low_pass_filter_order = 6
 
-            crit_freq_high_pass_MHz = 25
-            high_pass_filter_order = 8
+                crit_freq_high_pass_MHz = 25
+                high_pass_filter_order = 8
 
-            sine_subtract = True
-            sine_subtract_min_freq_GHz = 0.00
-            sine_subtract_max_freq_GHz = 0.25
-            sine_subtract_percent = 0.03
+                #Theoretically should not matter, uses cache
+                sine_subtract = True
+                sine_subtract_min_freq_GHz = 0.00
+                sine_subtract_max_freq_GHz = 0.25
+                sine_subtract_percent = 0.03
 
-            apply_phase_response = True
+                apply_phase_response = True
 
-            map_resolution_theta = 0.25 #degrees
-            min_theta   = min(self.range_theta_deg)#0
-            max_theta   = max(self.range_theta_deg)#120
-            n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
+                map_resolution_theta = 0.25 #degrees
+                min_theta   = min(self.range_theta_deg)#0
+                max_theta   = max(self.range_theta_deg)#120
+                n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
 
-            map_resolution_phi = 0.1 #degrees
-            min_phi     = min(self.range_phi_deg)#-90#-180
-            max_phi     = max(self.range_phi_deg)#90#180
-            n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
+                map_resolution_phi = 0.1 #degrees
+                min_phi     = min(self.range_phi_deg)#-90#-180
+                max_phi     = max(self.range_phi_deg)#90#180
+                n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
 
-            upsample = 2**14 #Just upsample in this case, Reduced to 2**14 when the waveform length was reduced, to maintain same time precision with faster execution.
-            max_method = 0
+                upsample = 2**14 #Just upsample in this case, Reduced to 2**14 when the waveform length was reduced, to maintain same time precision with faster execution.
+                max_method = 0
+
+                notch_tv = True
+                misc_notches = True
+            else:
+                #Sets values such that they match typical waveform analysis numbers (I am sorry, these shouldn't be different but are)
+                crit_freq_low_pass_MHz = 80
+                low_pass_filter_order = 14
+
+                crit_freq_high_pass_MHz = 20
+                high_pass_filter_order = 4
+
+                #Theoretically should not matter, uses cache
+                sine_subtract = True
+                sine_subtract_min_freq_GHz = 0.00
+                sine_subtract_max_freq_GHz = 0.25
+                sine_subtract_percent = 0.03
+
+                apply_phase_response = True
+
+                map_resolution_theta = 0.25 #degrees
+                min_theta   = min(self.range_theta_deg)#0
+                max_theta   = max(self.range_theta_deg)#120
+                n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
+
+                map_resolution_phi = 0.1 #degrees
+                min_phi     = min(self.range_phi_deg)#-90#-180
+                max_phi     = max(self.range_phi_deg)#90#180
+                n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
+
+                upsample = 2**17
+                max_method = 0
+
+                notch_tv = True
+                misc_notches = True
+                # , notch_tv=notch_tv, misc_notches=misc_notches
+
+
 
             waveform_index_range = info.returnDefaultWaveformIndexRange()
             map_source_distance_m = info.returnDefaultSourceDistance()
 
-            self.cor = Correlator(self.data_slicers[0].reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=True, sine_subtract=sine_subtract, deploy_index=self.data_slicers[0].map_deploy_index, map_source_distance_m=map_source_distance_m,notch_tv=True,misc_notches=True)
+            self.cor = Correlator(self.data_slicers[0].reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, tukey=True, sine_subtract=sine_subtract, deploy_index=self.data_slicers[0].map_deploy_index, map_source_distance_m=map_source_distance_m,notch_tv=notch_tv,misc_notches=misc_notches)
             if sine_subtract:
                 self.cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
 
@@ -4849,13 +4914,16 @@ class dataSlicer():
         This will loop over the data slicers and remove any that do not have all required datasets.
         '''
         try:
-            cut = numpy.array([ds.dsets_present for ds in self.data_slicers])
-            if sum(~cut) > 0:
-                print('Removing the following runs for not having all required datasets:')
-                print(self.runs[~cut])
+            if self.low_ram_mode == False:
+                cut = numpy.array([ds.dsets_present for ds in self.data_slicers])
+                if sum(~cut) > 0:
+                    print('Removing the following runs for not having all required datasets:')
+                    print(self.runs[~cut])
 
-            self.runs = self.runs[cut]
-            self.data_slicers = self.data_slicers[cut]
+                self.runs = self.runs[cut]
+                self.data_slicers = self.data_slicers[cut]
+            else:
+                print('Low Ram Mode enabled, no cut was performed as individual data slicer contents were not checked.')
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -4863,6 +4931,13 @@ class dataSlicer():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def setCurrentSingleDataSlicer(self, run):
+        '''
+        Used in low_snr_mode, this will set self.data_slicers[0] to the given run, and make the relevant updates.
+        '''
+        if self.data_slicers[0].reader.run != int(run):
+            reader = Reader(raw_datapath,run)
+            self.data_slicers[0].updateReader(reader,analysis_data_dir=self.data_slicers[0].analysis_data_dir, verbose=False)
 
     def returnMaskedArray(self,*args,**kwargs):
         '''
@@ -4982,45 +5057,42 @@ class dataSlicer():
     def printKnownParamKeys(self):
         return self.data_slicers[0].printKnownParamKeys()
     def checkForComplementaryBothMapDatasets(self, verbose=False):
-        for run_index, run in enumerate(self.runs):
-            if verbose:
-                print('Run %i'%run)
-            self.data_slicers[run_index].checkForComplementaryBothMapDatasets()
+        if self.low_ram_mode == False:
+            for run_index, run in enumerate(self.runs):
+                if verbose:
+                    print('Run %i'%run)
+                self.data_slicers[run_index].checkForComplementaryBothMapDatasets()
+        else:
+            self.data_slicers[0].checkForComplementaryBothMapDatasets()
     def printDatasets(self, verbose=False):
-        for run_index, run in enumerate(self.runs):
-            if verbose:
-                print('Run %i'%run)
-            self.data_slicers[run_index].printDatasets()
+        if self.low_ram_mode == False:
+            for run_index, run in enumerate(self.runs):
+                if verbose:
+                    print('Run %i'%run)
+                self.data_slicers[run_index].printDatasets()
+        else:
+            print('Low Ram Mode enabled, only printing datasets for current run: %i'%self.data_slicers[0].run)
+            self.data_slicers[0].printDatasets()
     def printSampleROI(self, verbose=False):
-        return self.data_slicers[0].printDatasets
+        return self.data_slicers[0].printDatasets()
     def addROI(self, roi_key, roi_dict, verbose=False):
         '''
         Note that cuts are conducted in the order the are supplied to the ROI definition.
         '''
         self.roi[roi_key] = roi_dict
         self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, len(list(self.roi.keys())))]
-        for run_index, run in enumerate(self.runs):
+        for ds in self.data_slicers:
             if verbose:
-                print('Run %i'%run)
-            self.data_slicers[run_index].addROI(roi_key, roi_dict)
+                print('Run %i'%ds.run)
+            ds.addROI(roi_key, roi_dict)
+
     def resetAllROI(self, verbose=False):
-        for run_index, run in enumerate(self.runs):
+        for ds in self.data_slicers:
             if verbose:
-                print('Run %i'%run)
-            self.data_slicers[run_index].resetAllROI()
+                print('Run %i'%ds.run)
+            ds.resetAllROI()
         self.roi = {}
         self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, len(list(self.roi.keys())))]
-
-    def addROI(self, roi_key, roi_dict, verbose=False):
-        '''
-        Note that cuts are conducted in the order the are supplied to the ROI definition.
-        '''
-        self.roi[roi_key] = roi_dict
-        self.roi_colors = [cm.rainbow(x) for x in numpy.linspace(0, 1, len(list(self.roi.keys())))]
-        for run_index, run in enumerate(self.runs):
-            if verbose:
-                print('Run %i'%run)
-            self.data_slicers[run_index].addROI(roi_key, roi_dict)
 
     def addParameterFunction(self, name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins, description='', verbose=False):
         '''
@@ -5033,18 +5105,26 @@ class dataSlicer():
         '''
         if verbose:
             print('Adding %s'%name)
-        for run_index, run in enumerate(self.runs):
+        for ds in self.data_slicers:
             if verbose:
-                print('Run %i'%run)
-            self.data_slicers[run_index].addParameterFunction(name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins, description=description)
+                print('Run %i'%ds.run)
+            ds.addParameterFunction(name, param_keys, func, plot_label, min_bin_val, max_bin_val, n_bins, description=description)
 
     def getEventidsFromTriggerType(self, trigger_types=None, verbose=False):
         eventids_dict = {}
-        for run_index, run in enumerate(self.runs):
-            if verbose:
-                print('Run %i'%run)
-            eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType(trigger_types=trigger_types)
-        return eventids_dict
+        if self.low_ram_mode == False:
+            for run_index, run in enumerate(self.runs):
+                if verbose:
+                    print('Run %i'%run)
+                eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType(trigger_types=trigger_types)
+            return eventids_dict
+        else:
+            for run_index, run in enumerate(self.runs):
+                if verbose:
+                    print('Run %i'%run)
+                self.setCurrentSingleDataSlicer(run)
+                eventids_dict[run] = self.data_slicers[0].getEventidsFromTriggerType(trigger_types=trigger_types)
+            return eventids_dict
     def getDataFromParam(self, eventids_dict, param_key, verbose=False):
         '''
         Key should be run number as int.  Will return data for all events given in the eventids_dict.
@@ -5055,8 +5135,13 @@ class dataSlicer():
                 if run in list(eventids_dict.keys()):
                     if verbose:
                         print('Run %i'%run)
-                    eventids = eventids_dict[run]
-                    data[run] = self.data_slicers[run_index].getDataFromParam(eventids, param_key)
+                    if self.low_ram_mode == False:
+                        eventids = eventids_dict[run]
+                        data[run] = self.data_slicers[run_index].getDataFromParam(eventids, param_key)
+                    else:
+                        eventids = eventids_dict[run]
+                        self.setCurrentSingleDataSlicer(run)
+                        data[run] = self.data_slicers[0].getDataFromParam(eventids, param_key)
             return data
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -5084,25 +5169,32 @@ class dataSlicer():
                 sys.stdout.write('Run %i/%i\r'%(run_index+1,len(self.runs)))
                 sys.stdout.flush()
 
+            if self.low_ram_mode == True:
+                self.setCurrentSingleDataSlicer(run)
+                r_i = 0
+            else:
+                r_i = run_index
+
+
             if run in eventids_dict.keys():
                 if return_successive_cut_counts and return_total_cut_counts:
-                    eventids_dict[run], _successive_cut_counts, _total_cut_counts    = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
+                    eventids_dict[run], _successive_cut_counts, _total_cut_counts    = self.data_slicers[r_i].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
                 elif return_successive_cut_counts:
-                    eventids_dict[run], _successive_cut_counts                       = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
+                    eventids_dict[run], _successive_cut_counts                       = self.data_slicers[r_i].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
                 elif return_total_cut_counts:
-                    eventids_dict[run], _total_cut_counts                            = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
+                    eventids_dict[run], _total_cut_counts                            = self.data_slicers[r_i].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
                 else:
-                    eventids_dict[run]                                               = self.data_slicers[run_index].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
+                    eventids_dict[run]                                               = self.data_slicers[r_i].getCutsFromROI(roi_key,eventids=eventids_dict[run],load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
 
             elif all_runs == True:
                 if return_successive_cut_counts and return_total_cut_counts:
-                    eventids_dict[run], _successive_cut_counts, _total_cut_counts    = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
+                    eventids_dict[run], _successive_cut_counts, _total_cut_counts    = self.data_slicers[r_i].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
                 elif return_successive_cut_counts:
-                    eventids_dict[run], _successive_cut_counts                       = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
+                    eventids_dict[run], _successive_cut_counts                       = self.data_slicers[r_i].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
                 elif return_total_cut_counts:
-                    eventids_dict[run], _total_cut_counts                            = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
+                    eventids_dict[run], _total_cut_counts                            = self.data_slicers[r_i].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
                 else:
-                    eventids_dict[run]                                               = self.data_slicers[run_index].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
+                    eventids_dict[run]                                               = self.data_slicers[r_i].getCutsFromROI(roi_key, load=load,save=save, return_successive_cut_counts=return_successive_cut_counts, return_total_cut_counts=return_total_cut_counts)
             else:
                 eventids_dict[run] = numpy.array([])
 
@@ -5173,18 +5265,28 @@ class dataSlicer():
             if eventids_dict is None:
                 eventids_dict = {}
                 for run_index, run in enumerate(self.runs):
-                    eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+                    if self.low_ram_mode == False:
+                        eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+                    else:
+                        self.setCurrentSingleDataSlicer(run)
+                        eventids_dict[run] = self.data_slicers[0].getEventidsFromTriggerType()
 
             for run_index, run in enumerate(self.runs):
-                if run in list(eventids_dict.keys()):
-                    self.data_slicers[run_index].setCurrentPlotBins(main_param_key_x, main_param_key_y, eventids_dict[run])
+                if self.low_ram_mode == False:
+                    r_i = run_index
+                else:
+                    r_i = 0
+                    self.setCurrentSingleDataSlicer(run)
 
-                    current_bin_edges_x, current_label_x = self.data_slicers[run_index].getSingleParamPlotBins(main_param_key_x, eventids_dict[run])
+                if run in list(eventids_dict.keys()):
+                    self.data_slicers[r_i].setCurrentPlotBins(main_param_key_x, main_param_key_y, eventids_dict[run])
+
+                    current_bin_edges_x, current_label_x = self.data_slicers[r_i].getSingleParamPlotBins(main_param_key_x, eventids_dict[run])
                     if main_param_key_x == main_param_key_y:
                         current_bin_edges_y = current_bin_edges_x
                         current_label_y = current_label_x
                     else:
-                        current_bin_edges_y, current_label_y = self.data_slicers[run_index].getSingleParamPlotBins(main_param_key_y, eventids_dict[run])
+                        current_bin_edges_y, current_label_y = self.data_slicers[r_i].getSingleParamPlotBins(main_param_key_y, eventids_dict[run])
 
                     if min(current_bin_edges_x) < x_bin_min:
                         x_bin_min = min(current_bin_edges_x)
@@ -5325,6 +5427,17 @@ class dataSlicer():
                         plt.ylim(min(y1) - 5, 90)
                         plt.xlim(-90,90)
 
+                    if True:
+                        with open(os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'data', 'horizon', 'horizon_v1.csv')) as csvfile:
+                            csv_reader = csv.reader(csvfile, delimiter=',')
+                            horizon_data = []
+                            for row in csv_reader:
+                                horizon_data.append(row)
+                            horizon_data = numpy.asarray(horizon_data).astype(float)
+                            horizon_azimuth_deg = horizon_data[:,0]
+                            horizon_elevation_deg = horizon_data[:,1]
+                            plt.plot(horizon_azimuth_deg, horizon_elevation_deg, c='k', linewidth=1)
+
             plt.xlabel(self.current_label_x)
             plt.ylabel(self.current_label_y)
             plt.grid(which='both', axis='both')
@@ -5369,7 +5482,7 @@ class dataSlicer():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def plot1dHist(self, main_param_key, eventids_dict, cumulative=None, pdf=False, title=None, lognorm=True, return_counts=False, ax=None, **kwargs):
+    def plot1dHist(self, main_param_key, eventids_dict, cumulative=None, pdf=False, title=None, lognorm=True, return_counts=False, return_only_count_details=False, ax=None, **kwargs):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
         (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
@@ -5404,33 +5517,36 @@ class dataSlicer():
             if pdf == True:
                 counts = counts/(sum(raw_counts)*bin_width)
 
-            if ax is None:
-                fig, ax = plt.subplots()
-                if title is None:
-                    if numpy.all(numpy.diff(list(eventids_dict.keys())) == 1):
-                        title = '%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types))
-                    else:
-                        title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key,str(list(eventids_dict.keys())),str(self.trigger_types))
-                plt.title(title)
+            if return_only_count_details:
+                return counts, bin_centers, bin_width
             else:
-                fig = ax.get_figure()
+                if ax is None:
+                    fig, ax = plt.subplots()
+                    if title is None:
+                        if numpy.all(numpy.diff(list(eventids_dict.keys())) == 1):
+                            title = '%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types))
+                        else:
+                            title = '%s, Runs = %s\nIncluded Triggers = %s'%(main_param_key,str(list(eventids_dict.keys())),str(self.trigger_types))
+                    plt.title(title)
+                else:
+                    fig = ax.get_figure()
 
-            
-            plt.bar(bin_centers, counts, width=bin_width, **kwargs)
+                
+                plt.bar(bin_centers, counts, width=bin_width, **kwargs)
 
-            if lognorm == True:
-                ax.set_yscale('log')
-            plt.xlabel(self.current_label_x)
-            plt.ylabel(ylabel)
-            plt.grid(which='both', axis='both')
-            ax.minorticks_on()
-            ax.grid(b=True, which='major', color='k', linestyle='-')
-            ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                if lognorm == True:
+                    ax.set_yscale('log')
+                plt.xlabel(self.current_label_x)
+                plt.ylabel(ylabel)
+                plt.grid(which='both', axis='both')
+                ax.minorticks_on()
+                ax.grid(b=True, which='major', color='k', linestyle='-')
+                ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-            if return_counts:
-                return fig, ax, counts
-            else:
-                return fig, ax
+                if return_counts:
+                    return fig, ax, counts
+                else:
+                    return fig, ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -5526,7 +5642,11 @@ class dataSlicer():
             if eventids_dict is None:
                 eventids_dict = {}
                 for run_index, run in enumerate(self.runs):
-                    eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+                    if self.low_ram_mode == False:
+                        eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+                    else:
+                        self.setCurrentSingleDataSlicer(run)
+                        eventids_dict[run] = self.data_slicers[0].getEventidsFromTriggerType()
                 #The given eventids don't necessarily match the default cut, and thus shouldn't be labeled as such in the title.
                 if numpy.all(numpy.diff(list(eventids_dict.keys())) == 1):
                     title = '%s, Runs = %i-%i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1],str(self.trigger_types))
@@ -5582,8 +5702,11 @@ class dataSlicer():
         try:
             eventids_dict = {}
             for run_index, run in enumerate(self.runs):
-                eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
-                
+                if self.low_ram_mode == False:
+                    eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+                else:
+                    self.setCurrentSingleDataSlicer(run)
+                    eventids_dict[run] = self.data_slicers[0].getEventidsFromTriggerType()
 
             if include_roi:
                 roi_eventids_dict = {}
@@ -5640,7 +5763,11 @@ class dataSlicer():
                 roi_keys = list(self.roi.keys())
             eventids_dict = {}
             for run_index, run in enumerate(self.runs):
-                eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+                if self.low_ram_mode == False:
+                    eventids_dict[run] = self.data_slicers[run_index].getEventidsFromTriggerType()
+                else:
+                    self.setCurrentSingleDataSlicer(run)
+                    eventids_dict[run] = self.data_slicers[0].getEventidsFromTriggerType()
             self.setCurrentPlotBins('calibrated_trigtime', 'calibrated_trigtime', eventids_dict)
 
             bin_edges = numpy.arange(min(self.current_bin_edges_x),max(self.current_bin_edges_x)+time_bin_width_s,time_bin_width_s)
@@ -5669,10 +5796,17 @@ class dataSlicer():
                 plt.plot((bin_centers - min(bin_centers))/3600,counts,label=roi_key)
 
             if plot_run_start_times:
-                for data_slicer in self.data_slicers:
-                    t = (data_slicer.getDataFromParam([0],'calibrated_trigtime')[0] - min(bin_centers))/3600
+                for run_index, run in enumerate(self.runs):
+                    if self.low_ram_mode:
+                        r_i = run_index
+                    else:
+                        r_i = 0
+                        self.setCurrentSingleDataSlicer(run)
+
+                    t = (self.data_slicers[r_i].getDataFromParam([0],'calibrated_trigtime')[0] - min(bin_centers))/3600
                     plt.axvline(t,c='k',alpha=0.5)
-                    plt.text(t,0.9*max_counts,str(data_slicer.reader.run),c='k',alpha=0.5,rotation=90)
+                    plt.text(t,0.9*max_counts,str(self.data_slicers[r_i].reader.run),c='k',alpha=0.5,rotation=90)
+
 
 
             plt.legend()
@@ -5722,6 +5856,9 @@ class dataSlicer():
         '''
         '''
         try:
+            if self.low_ram_mode == True:
+                self.setCurrentSingleDataSlicer(self.runs[run_index])
+
             start_data = numpy.round(self.getSingleEventTableValues(self.table_params, run_index, eventid),decimals=3) #Meta information about the event that will be put in the table.
             self.mollweide = mollweide
             try:
@@ -5756,36 +5893,58 @@ class dataSlicer():
                         for artist in self.inspector_mpl[key].lines + self.inspector_mpl[key].collections:
                             artist.remove()
             #Plot Waveforms
-            self.cor.setReader(self.data_slicers[run_index].reader, verbose=False)
+            if self.low_ram_mode == False:
+                self.cor.setReader(self.data_slicers[run_index].reader, verbose=False)
+            else:
+                self.cor.setReader(self.data_slicers[0].reader, verbose=False)
             self.cor.reader.setEntry(eventid)
 
-            #t = self.data_slicers[run_index].reader.t()
-            #t = self.cor.times_resampled
-            #self.cor.prep.redefineNotches([(62,63.5)],append=True,plot_filters=True,verbose=True)
             waveforms = self.cor.wf(eventid, numpy.array([0,1,2,3,4,5,6,7]),div_std=False,hilbert=False,apply_filter=True,tukey=True, sine_subtract=True)
             
-            self.inspector_mpl['fig1_wf_0'].plot(self.cor.times_resampled, waveforms[0], c=self.mpl_colors[0])
-            self.inspector_mpl['fig1_wf_0'].set_ylim(-70,70)
-            self.inspector_mpl['fig1_wf_1'].plot(self.cor.times_resampled, waveforms[1], c=self.mpl_colors[1])
-            self.inspector_mpl['fig1_wf_1'].set_ylim(-70,70)
-            self.inspector_mpl['fig1_wf_2'].plot(self.cor.times_resampled, waveforms[2], c=self.mpl_colors[2])
-            self.inspector_mpl['fig1_wf_2'].set_ylim(-70,70)
-            self.inspector_mpl['fig1_wf_3'].plot(self.cor.times_resampled, waveforms[3], c=self.mpl_colors[3])
-            self.inspector_mpl['fig1_wf_3'].set_ylim(-70,70)
-            self.inspector_mpl['fig1_wf_4'].plot(self.cor.times_resampled, waveforms[4], c=self.mpl_colors[4])
-            self.inspector_mpl['fig1_wf_4'].set_ylim(-70,70)
-            self.inspector_mpl['fig1_wf_5'].plot(self.cor.times_resampled, waveforms[5], c=self.mpl_colors[5])
-            self.inspector_mpl['fig1_wf_5'].set_ylim(-70,70)
-            self.inspector_mpl['fig1_wf_6'].plot(self.cor.times_resampled, waveforms[6], c=self.mpl_colors[6])
-            self.inspector_mpl['fig1_wf_6'].set_ylim(-70,70)
-            self.inspector_mpl['fig1_wf_7'].plot(self.cor.times_resampled, waveforms[7], c=self.mpl_colors[7])
-            self.inspector_mpl['fig1_wf_7'].set_ylim(-70,70)
-
-            raw_t = self.data_slicers[run_index].reader.t()
-            #Zoom in
+            if self.low_ram_mode == False:
+                raw_t = self.data_slicers[run_index].reader.t()
+            else:
+                raw_t = self.data_slicers[0].reader.t()
             start = self.cor.prep.start_waveform_index
             stop = self.cor.prep.end_waveform_index+1
-            self.inspector_mpl['fig1_wf_0'].set_xlim(min(raw_t[start:stop]), max(raw_t[start:stop])) #All others will follow
+
+            if self.conference_mode == True:
+                time_offset = -350
+                self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 0//2 + waveforms[0]/128.0, c=self.mpl_colors[0], linewidth=3)
+                self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 1//2 + waveforms[1]/128.0, c=self.mpl_colors[1], linewidth=3)
+                self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 2//2 + waveforms[2]/128.0, c=self.mpl_colors[2], linewidth=3)
+                self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 3//2 + waveforms[3]/128.0, c=self.mpl_colors[3], linewidth=3)
+                self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 4//2 + waveforms[4]/128.0, c=self.mpl_colors[4], linewidth=3)
+                self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 5//2 + waveforms[5]/128.0, c=self.mpl_colors[5], linewidth=3)
+                self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 6//2 + waveforms[6]/128.0, c=self.mpl_colors[6], linewidth=3)
+                self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 7//2 + waveforms[7]/128.0, c=self.mpl_colors[7], linewidth=3)
+                
+                self.inspector_mpl['fig1_wf_h'].set_ylim(-0.75,3.75)
+                self.inspector_mpl['fig1_wf_h'].set_xlim(0,500) #All others will follow
+
+                self.inspector_mpl['fig1_wf_h'].set_yticks([0,1,2,3])
+
+
+            else:
+                self.inspector_mpl['fig1_wf_0'].plot(self.cor.times_resampled, waveforms[0], c=self.mpl_colors[0])
+                self.inspector_mpl['fig1_wf_0'].set_ylim(-70,70)
+                self.inspector_mpl['fig1_wf_1'].plot(self.cor.times_resampled, waveforms[1], c=self.mpl_colors[1])
+                self.inspector_mpl['fig1_wf_1'].set_ylim(-70,70)
+                self.inspector_mpl['fig1_wf_2'].plot(self.cor.times_resampled, waveforms[2], c=self.mpl_colors[2])
+                self.inspector_mpl['fig1_wf_2'].set_ylim(-70,70)
+                self.inspector_mpl['fig1_wf_3'].plot(self.cor.times_resampled, waveforms[3], c=self.mpl_colors[3])
+                self.inspector_mpl['fig1_wf_3'].set_ylim(-70,70)
+                self.inspector_mpl['fig1_wf_4'].plot(self.cor.times_resampled, waveforms[4], c=self.mpl_colors[4])
+                self.inspector_mpl['fig1_wf_4'].set_ylim(-70,70)
+                self.inspector_mpl['fig1_wf_5'].plot(self.cor.times_resampled, waveforms[5], c=self.mpl_colors[5])
+                self.inspector_mpl['fig1_wf_5'].set_ylim(-70,70)
+                self.inspector_mpl['fig1_wf_6'].plot(self.cor.times_resampled, waveforms[6], c=self.mpl_colors[6])
+                self.inspector_mpl['fig1_wf_6'].set_ylim(-70,70)
+                self.inspector_mpl['fig1_wf_7'].plot(self.cor.times_resampled, waveforms[7], c=self.mpl_colors[7])
+                self.inspector_mpl['fig1_wf_7'].set_ylim(-70,70)
+
+                #Zoom in
+                self.inspector_mpl['fig1_wf_0'].set_xlim(min(raw_t[start:stop]), max(raw_t[start:stop])) #All others will follow
 
 
             # time_delay_dict : dict of list of floats
@@ -5794,13 +5953,12 @@ class dataSlicer():
             # will correspond to a list of floats with all of the time delays for that baseline you want plotted.
 
             if self.include_time_delays:
-                time_delay_dict = self.data_slicers[run_index].getTimeDelayDictSingleEvent(eventid)
+                if self.low_ram_mode == False:
+                    time_delay_dict = self.data_slicers[run_index].getTimeDelayDictSingleEvent(eventid)
+                else:
+                    time_delay_dict = self.data_slicers[0].getTimeDelayDictSingleEvent(eventid)
             else:
                 time_delay_dict = {}
-
-
-
-
 
             #Plot Maps
             if self.conference_mode == True:
@@ -5838,24 +5996,30 @@ class dataSlicer():
                     freqs, spec_dbish, spec = self.cor.prep.rfftWrapper(raw_t[start:stop], wf)
                     ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel, c=self.mpl_colors[channel])
                 ax.set_ylim(-20,50)
-                ax.set_ylabel(apply_filter*'filtered ' + 'db ish')
+                ax.set_ylabel(apply_filter*'Filtered ' + 'dB (arb)', fontsize=18)
                 if self.show_all:
                     ax.set_xlim(0,150)
 
-            #Populate Table
-            name_column = list(self.table_params.values())
-            self.inspector_mpl['fig1_table'].clear() #Clear previous table.
-            table = self.inspector_mpl['fig1_table'].table(cellText=list(zip(name_column,start_data)), loc='center', in_layout=True)
-            table.auto_set_font_size(False)
-            table.set_fontsize(12)
-            #table.scale(1,4)
-            self.inspector_mpl['fig1_table'].axis('tight')
-            self.inspector_mpl['fig1_table'].axis('off')
+                if self.conference_mode:
+                    ax.set_xlim(0,150) #All others will follow
+                    ax.set_xticks([0,30,80,150])
+                    ax.set_ylim(-20,40)
+                    if apply_filter:
+                        ax.set_xlabel('Frequency (MHz)', fontsize=18)
 
-            self.inspector_mpl['fig1'].canvas.draw()
-            # self.inspector_mpl['fig1'].canvas.flush_events()
-            # plt.show()
-            # plt.pause(0.05)
+
+            if self.conference_mode == False:
+                #Populate Table
+                name_column = list(self.table_params.values())
+                self.inspector_mpl['fig1_table'].clear() #Clear previous table.
+                table = self.inspector_mpl['fig1_table'].table(cellText=list(zip(name_column,start_data)), loc='center', in_layout=True)
+                table.auto_set_font_size(False)
+                table.set_fontsize(12)
+                #table.scale(1,4)
+                self.inspector_mpl['fig1_table'].axis('tight')
+                self.inspector_mpl['fig1_table'].axis('off')
+
+                self.inspector_mpl['fig1'].canvas.draw()
             return
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -5869,6 +6033,11 @@ class dataSlicer():
         Given a run and eventid this will pull the values for the param keys listed in the table dict.
         '''
         try:
+            if self.low_ram_mode == False:
+                r_i = run_index
+            else:
+                self.setCurrentSingleDataSlicer(self.runs[run_index])
+                r_i = 0
             out_array = numpy.zeros(len(list(table_dict.keys())))
             for param_index, param_key in enumerate(list(table_dict.keys())):
                 if param_key == 'eventid':
@@ -5876,7 +6045,7 @@ class dataSlicer():
                 elif param_key == 'run':
                     out_array[param_index] = self.runs[run_index]
                 else:
-                    out_array[param_index] = self.data_slicers[run_index].getDataFromParam([eventid], param_key)
+                    out_array[param_index] = self.data_slicers[r_i].getDataFromParam([eventid], param_key)
             return out_array
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
@@ -5922,63 +6091,81 @@ class dataSlicer():
             self.cor.conference_mode = self.conference_mode
             
             fig1 = plt.figure(constrained_layout=True)
-            gs = fig1.add_gridspec(4,5, width_ratios=[1,1,1,1,0.75])
+            if self.conference_mode:
+                gs = fig1.add_gridspec(4,4, width_ratios=[1,1,1,1]) #No table
 
-            fig1_wf_0 = fig1.add_subplot(gs[0,0])
-            fig1_wf_0.set_ylabel('0H')
-            fig1_wf_0.yaxis.label.set_color(self.mpl_colors[0])
-            fig1_wf_0.minorticks_on()
-            fig1_wf_0.grid(b=True, which='major', color='k', linestyle='-')
-            fig1_wf_0.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                fig1_wf_h = fig1.add_subplot(gs[0:2,0:2])
+                fig1_wf_h.set_ylabel('Filtered HPol Waveforms\n adu/128, Offset by Antenna Number', fontsize=18)
+                fig1_wf_h.set_xlabel('Time (ns)', fontsize=18)
+                fig1_wf_h.minorticks_on()
+                fig1_wf_h.grid(b=True, which='major', color='k', linestyle='-')
+                fig1_wf_h.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-            fig1_wf_1 = fig1.add_subplot(gs[0,1], sharex=fig1_wf_0, sharey=fig1_wf_0)
-            fig1_wf_1.set_ylabel('0V')
-            fig1_wf_1.yaxis.label.set_color(self.mpl_colors[1])
-            fig1_wf_1.minorticks_on()
-            fig1_wf_1.grid(b=True, which='major', color='k', linestyle='-')
-            fig1_wf_1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                fig1_wf_v = fig1.add_subplot(gs[0:2,2:4], sharex=fig1_wf_h, sharey=fig1_wf_h)
+                fig1_wf_v.set_ylabel('Filtered VPol Waveforms\n adu/128, Offset by Antenna Number', fontsize=18)
+                fig1_wf_v.set_xlabel('Time (ns)', fontsize=18)
+                fig1_wf_v.minorticks_on()
+                fig1_wf_v.grid(b=True, which='major', color='k', linestyle='-')
+                fig1_wf_v.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-            fig1_wf_2 = fig1.add_subplot(gs[0,2], sharex=fig1_wf_0, sharey=fig1_wf_0)
-            fig1_wf_2.set_ylabel('1H')
-            fig1_wf_2.yaxis.label.set_color(self.mpl_colors[2])
-            fig1_wf_2.minorticks_on()
-            fig1_wf_2.grid(b=True, which='major', color='k', linestyle='-')
-            fig1_wf_2.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            else:
+                gs = fig1.add_gridspec(4,5, width_ratios=[1,1,1,1,0.75])
 
-            fig1_wf_3 = fig1.add_subplot(gs[0,3], sharex=fig1_wf_0, sharey=fig1_wf_0)
-            fig1_wf_3.set_ylabel('1V')
-            fig1_wf_3.yaxis.label.set_color(self.mpl_colors[3])
-            fig1_wf_3.minorticks_on()
-            fig1_wf_3.grid(b=True, which='major', color='k', linestyle='-')
-            fig1_wf_3.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                fig1_wf_0 = fig1.add_subplot(gs[0,0])
+                fig1_wf_0.set_ylabel('0H')
+                fig1_wf_0.yaxis.label.set_color(self.mpl_colors[0])
+                fig1_wf_0.minorticks_on()
+                fig1_wf_0.grid(b=True, which='major', color='k', linestyle='-')
+                fig1_wf_0.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-            fig1_wf_4 = fig1.add_subplot(gs[1,0], sharex=fig1_wf_0, sharey=fig1_wf_0)
-            fig1_wf_4.set_ylabel('2H')
-            fig1_wf_4.yaxis.label.set_color(self.mpl_colors[4])
-            fig1_wf_4.minorticks_on()
-            fig1_wf_4.grid(b=True, which='major', color='k', linestyle='-')
-            fig1_wf_4.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                fig1_wf_1 = fig1.add_subplot(gs[0,1], sharex=fig1_wf_0, sharey=fig1_wf_0)
+                fig1_wf_1.set_ylabel('0V')
+                fig1_wf_1.yaxis.label.set_color(self.mpl_colors[1])
+                fig1_wf_1.minorticks_on()
+                fig1_wf_1.grid(b=True, which='major', color='k', linestyle='-')
+                fig1_wf_1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-            fig1_wf_5 = fig1.add_subplot(gs[1,1], sharex=fig1_wf_0, sharey=fig1_wf_0)
-            fig1_wf_5.set_ylabel('2V')
-            fig1_wf_5.yaxis.label.set_color(self.mpl_colors[5])
-            fig1_wf_5.minorticks_on()
-            fig1_wf_5.grid(b=True, which='major', color='k', linestyle='-')
-            fig1_wf_5.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                fig1_wf_2 = fig1.add_subplot(gs[0,2], sharex=fig1_wf_0, sharey=fig1_wf_0)
+                fig1_wf_2.set_ylabel('1H')
+                fig1_wf_2.yaxis.label.set_color(self.mpl_colors[2])
+                fig1_wf_2.minorticks_on()
+                fig1_wf_2.grid(b=True, which='major', color='k', linestyle='-')
+                fig1_wf_2.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-            fig1_wf_6 = fig1.add_subplot(gs[1,2], sharex=fig1_wf_0, sharey=fig1_wf_0)
-            fig1_wf_6.set_ylabel('3H')
-            fig1_wf_6.yaxis.label.set_color(self.mpl_colors[6])
-            fig1_wf_6.minorticks_on()
-            fig1_wf_6.grid(b=True, which='major', color='k', linestyle='-')
-            fig1_wf_6.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                fig1_wf_3 = fig1.add_subplot(gs[0,3], sharex=fig1_wf_0, sharey=fig1_wf_0)
+                fig1_wf_3.set_ylabel('1V')
+                fig1_wf_3.yaxis.label.set_color(self.mpl_colors[3])
+                fig1_wf_3.minorticks_on()
+                fig1_wf_3.grid(b=True, which='major', color='k', linestyle='-')
+                fig1_wf_3.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-            fig1_wf_7 = fig1.add_subplot(gs[1,3], sharex=fig1_wf_0, sharey=fig1_wf_0)
-            fig1_wf_7.set_ylabel('3V')
-            fig1_wf_7.yaxis.label.set_color(self.mpl_colors[7])
-            fig1_wf_7.minorticks_on()
-            fig1_wf_7.grid(b=True, which='major', color='k', linestyle='-')
-            fig1_wf_7.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                fig1_wf_4 = fig1.add_subplot(gs[1,0], sharex=fig1_wf_0, sharey=fig1_wf_0)
+                fig1_wf_4.set_ylabel('2H')
+                fig1_wf_4.yaxis.label.set_color(self.mpl_colors[4])
+                fig1_wf_4.minorticks_on()
+                fig1_wf_4.grid(b=True, which='major', color='k', linestyle='-')
+                fig1_wf_4.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                fig1_wf_5 = fig1.add_subplot(gs[1,1], sharex=fig1_wf_0, sharey=fig1_wf_0)
+                fig1_wf_5.set_ylabel('2V')
+                fig1_wf_5.yaxis.label.set_color(self.mpl_colors[5])
+                fig1_wf_5.minorticks_on()
+                fig1_wf_5.grid(b=True, which='major', color='k', linestyle='-')
+                fig1_wf_5.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                fig1_wf_6 = fig1.add_subplot(gs[1,2], sharex=fig1_wf_0, sharey=fig1_wf_0)
+                fig1_wf_6.set_ylabel('3H')
+                fig1_wf_6.yaxis.label.set_color(self.mpl_colors[6])
+                fig1_wf_6.minorticks_on()
+                fig1_wf_6.grid(b=True, which='major', color='k', linestyle='-')
+                fig1_wf_6.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                fig1_wf_7 = fig1.add_subplot(gs[1,3], sharex=fig1_wf_0, sharey=fig1_wf_0)
+                fig1_wf_7.set_ylabel('3V')
+                fig1_wf_7.yaxis.label.set_color(self.mpl_colors[7])
+                fig1_wf_7.minorticks_on()
+                fig1_wf_7.grid(b=True, which='major', color='k', linestyle='-')
+                fig1_wf_7.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
 
             if mollweide == True:
@@ -6008,23 +6195,9 @@ class dataSlicer():
             fig1_spec_filt.grid(b=True, which='major', color='k', linestyle='-')
             fig1_spec_filt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-            fig1_table = fig1.add_subplot(gs[:,4])
-            #fig1_table = fig1.add_subplot(gs[0:3,4])
-
-            #Could not get this working
-            # def submit(text):
-            #     print(text)
-                #eval(text)
-                #Rerun update event.  Should account for anything done to waveform cropping as well.  
-            # ax_textbox = fig1.add_subplot(gs[3,4])
-            # self.text_box = TextBox(ax_textbox, 'Apply', initial='[(  ,  )]')#
-            # self.text_box.on_submit(submit)
-
-            
-            #[['phi_best_h','elevation_best_h'],['hpol_max_map_value_abovehorizon','vpol_max_map_value_abovehorizon'], ['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value','vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'], ['hpol_max_map_value','vpol_max_map_value'], ['hpol_peak_to_sidelobe_abovehorizon', 'vpol_peak_to_sidelobe_abovehorizon'],['hpol_peak_to_sidelobe_belowhorizon','hpol_peak_to_sidelobe_abovehorizon'], ['impulsivity_h','impulsivity_v'], ['cr_template_search_h', 'cr_template_search_v'], ['std_h', 'std_v'], ['p2p_h', 'p2p_v'], ['snr_h', 'snr_v'], ['hpol_max_possible_map_value','vpol_max_possible_map_value']]
             self.table_params = OrderedDict()
-            #Format is param_key : 'Name In Table'
             if self.conference_mode == True:
+                #still getting values for table just not displaying.
                 self.table_params['run'] = 'Run'
                 self.table_params['eventid'] = 'Event id'
                 self.table_params['phi_best_choice'] = 'Az (BEST)'
@@ -6038,7 +6211,10 @@ class dataSlicer():
                 self.table_params['p2p_h'] = 'P2P H'
                 self.table_params['p2p_v'] = 'P2P V'
 
-            else:
+            if self.conference_mode == False:
+                fig1_table = fig1.add_subplot(gs[:,4])
+
+                #Format is param_key : 'Name In Table'
                 self.table_params['run'] = 'Run'
                 self.table_params['eventid'] = 'Event id'
                 self.table_params['phi_best_choice'] = 'Az (BEST)'
@@ -6095,22 +6271,25 @@ class dataSlicer():
             self.inspector_mpl = {}
             self.inspector_mpl['fig1'] = fig1
             self.inspector_mpl['gs'] = gs
-            self.inspector_mpl['fig1_wf_0'] = fig1_wf_0
-            self.inspector_mpl['fig1_wf_1'] = fig1_wf_1
-            self.inspector_mpl['fig1_wf_2'] = fig1_wf_2
-            self.inspector_mpl['fig1_wf_3'] = fig1_wf_3
-            self.inspector_mpl['fig1_wf_4'] = fig1_wf_4
-            self.inspector_mpl['fig1_wf_5'] = fig1_wf_5
-            self.inspector_mpl['fig1_wf_6'] = fig1_wf_6
-            self.inspector_mpl['fig1_wf_7'] = fig1_wf_7
             self.inspector_mpl['fig1_map_h'] = fig1_map_h
             self.inspector_mpl['fig1_map_v'] = fig1_map_v
             if self.show_all:
                 self.inspector_mpl['fig1_map_all'] = fig1_map_all
             self.inspector_mpl['fig1_spec_raw'] = fig1_spec_raw
             self.inspector_mpl['fig1_spec_filt'] = fig1_spec_filt
-            self.inspector_mpl['fig1_table'] = fig1_table
-            
+            if self.conference_mode == False:
+                self.inspector_mpl['fig1_wf_0'] = fig1_wf_0
+                self.inspector_mpl['fig1_wf_1'] = fig1_wf_1
+                self.inspector_mpl['fig1_wf_2'] = fig1_wf_2
+                self.inspector_mpl['fig1_wf_3'] = fig1_wf_3
+                self.inspector_mpl['fig1_wf_4'] = fig1_wf_4
+                self.inspector_mpl['fig1_wf_5'] = fig1_wf_5
+                self.inspector_mpl['fig1_wf_6'] = fig1_wf_6
+                self.inspector_mpl['fig1_wf_7'] = fig1_wf_7
+                self.inspector_mpl['fig1_table'] = fig1_table
+            else:
+                self.inspector_mpl['fig1_wf_h'] = fig1_wf_h
+                self.inspector_mpl['fig1_wf_v'] = fig1_wf_v
             
             self.updateEventInspect(run_index, eventid, mollweide=mollweide)
 
@@ -6278,11 +6457,16 @@ if __name__ == '__main__':
     
     #runs = [1642,1643,1644,1645,1646,1647]
     if True:
-        for runs in [[5733,5735,5734,5741,5742,5736,5740,5763,5750,5757,5749,5751,5743,5773,5739,5758,5756,5774,5775,5738,5746,5776,5789,5771]]:
+        #[[5733,5735,5734,5741,5742,5736,5740,5763,5750,5757,5749,5751,5743,5773,5739,5758,5756,5774,5775,5738,5746,5776,5789,5771]]:
+        for runs in [numpy.arange(5900,5925)]:
+            # impulsivity_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+            # time_delays_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+            # map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'
 
             impulsivity_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
             time_delays_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
-            map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'
+            map_length = 16384
+            map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
             print("Preparing dataSlicer")
 
             map_resolution_theta = 0.25 #degrees
@@ -6300,8 +6484,12 @@ if __name__ == '__main__':
                             std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
                             snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
                             n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta))
-
+            ds.conference_mode = True
             print('Generating plots:')
+
+            ds.plotROI2dHist('phi_best_choice', 'elevation_best_choice', cmap='coolwarm', include_roi=False)
+            continue
+
             # for key_x, key_y in [['impulsivity_h','impulsivity_v'],['phi_best_h','elevation_best_h'],['phi_best_v','elevation_best_v'],['p2p_h', 'p2p_v']]:#[['p2p_h','p2p_v'],['impulsivity_h','impulsivity_v'],['p2p_h','impulsivity_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h']]:#ds.known_param_keys:
             for key_x, key_y in [['filtered_t_max_h', 'filtered_t_max_v'], ['filtered_snr_h', 'filtered_snr_v'], ['filtered_csnr_h', 'filtered_csnr_v']]:#[['p2p_h','p2p_v'],['impulsivity_h','impulsivity_v'],['p2p_h','impulsivity_v'],['time_delay_0subtract1_h','time_delay_0subtract2_h']]:#ds.known_param_keys:
                 print('Generating %s plot'%(key_x + ' vs ' + key_y))

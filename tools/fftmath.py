@@ -2182,6 +2182,77 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def calculatePolarizationFromTimeDelays(self, eventid, apply_filter=True, waveforms=None, plot=False, sine_subtract=True):
+        '''
+        This will calculate the polarization of the event in the reference frame of the antennas.  This can then
+        be compared to observed distrobutions of this parameter as produced via simulation for varification of
+        cosmic ray properties.  The calculation is relatively simple and aimed at replicating how it is being
+        calculated in the cranberry simulation.
+
+        If waveforms are given they will be used, but must match timing of self.t()
+        '''
+        try:
+            self.setEntry(eventid)
+            if waveforms is None:
+                waveforms = numpy.zeros((8,len(self.t())))
+                for channel in range(8):
+                    waveforms[channel] = self.wf(channel, apply_filter=apply_filter, hilbert=False, tukey=None, sine_subtract=sine_subtract, return_sine_subtract_info=False, ss_first=True)
+
+            for antenna_index in range(4):
+                h = 2*antenna_index
+                v = h + 1
+                if antenna_index == 0:
+                    hpol_base = waveforms[h]
+                    vpol_base = waveforms[v]
+                else:
+                    correlation = scipy.signal.correlate(hpol_base, waveforms[h])
+                    roll = numpy.argmax(correlation) - len(correlation)//2
+                    waveforms[h] = numpy.roll(waveforms[h], roll)
+                    
+                    correlation = scipy.signal.correlate(vpol_base, waveforms[v])
+                    roll = numpy.argmax(correlation) - len(correlation)//2
+                    waveforms[v] = numpy.roll(waveforms[v], roll)
+
+            summed_adu_h = numpy.sum(waveforms[0::2,:],axis=0)
+            summed_adu_v = numpy.sum(waveforms[1::2,:],axis=0)
+
+            polarization_deg = numpy.rad2deg(numpy.arctan2(max(abs(summed_adu_v)),max(abs(summed_adu_h))))
+
+            if plot == True:
+                plt.figure()
+                plt.subplot(2,1,1)
+                for channel in range(8):
+                    plt.plot(self.t(), channel%2 + waveforms[channel]/128.0, label='Ch %i'%channel)
+                plt.legend()
+
+                ax = plt.subplot(2,1,2)
+
+                plt.plot(self.t(), numpy.abs(summed_adu_h)/128.0, label='HPol Summed')
+                
+                plt.plot(self.t(), numpy.abs(summed_adu_v)/128.0, label='VPol Summed')
+
+                title = 'Calculated Polarization = %0.3f deg'%polarization_deg
+
+                if apply_filter == True:
+                    title += '\nFilters Applied'
+                    if self.notch_tv == True:
+                        title += ', TV Notched in HPol (Not in VPol)'
+                    else:
+                        title += ', No TV Notch'
+
+                else:
+                    title += '\nNo Additional Filters Applied'
+
+                plt.suptitle(title)
+                plt.legend()
+            return polarization_deg
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
 class TemplateCompareTool(FFTPrepper):
     '''
     Takes a run reader and does the math required for cross correlations.  The user can then

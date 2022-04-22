@@ -14,6 +14,7 @@ import pymap3d as pm
 import itertools
 from itertools import groupby
 import copy
+import csv
 
 #from    beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
@@ -2371,7 +2372,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)  
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True, override_to_time_window=(None,None)):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True, override_to_time_window=(None,None), plot_horizon=True):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -2769,8 +2770,21 @@ class Correlator:
 
                 if minimal == True:
                     #cbar = plt.colorbar(im, ax=map_ax,fraction=0.046, pad=0.04)
-                    map_ax.set_xlabel(pol + ' MV=%0.2f'%(mean_corr_values.flat[linear_max_index]),fontsize=14)
+                    #map_ax.set_xlabel(pol + ' MV=%0.2f'%(mean_corr_values.flat[linear_max_index]),fontsize=14)
                     map_ax.grid(True)
+                    if pol == 'hpol':
+                        map_ax.set_ylabel('Elevation (Degrees)',fontsize=18) #A bit hacky, don't want label on vpol in event inspector.
+                        textstr = 'HPol'
+                    elif pol == 'vpol':
+                        textstr = 'VPol'
+                    else:
+                        textstr = None
+                    map_ax.set_xlabel('Azimuth (Degrees)',fontsize=18)
+                    map_ax.set_xticks([-90, -45, 0, 45, 90])
+                    map_ax.set_yticks([-30, -15, 0, 15, 30, 45, 60, 75, 90])
+                    if textstr is not None:
+                        props = dict(facecolor='#9DC3E6', alpha=1.0)
+                        map_ax.text(0.95, 0.05, textstr, transform=map_ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='right', bbox=props)
                 else:
                     cbar = plt.colorbar(im, ax=map_ax)
                     if hilbert == True:
@@ -2811,6 +2825,31 @@ class Correlator:
                         upper_plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)
                         lower_plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)
 
+                if plot_horizon:
+                    with open(os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'data', 'horizon', 'horizon_v1.csv')) as csvfile:
+                        csv_reader = csv.reader(csvfile, delimiter=',')
+                        horizon_data = []
+                        for row in csv_reader:
+                            horizon_data.append(row)
+                        horizon_data = numpy.asarray(horizon_data).astype(float)
+                        horizon_azimuth_deg = horizon_data[:,0]
+                        horizon_elevation_deg = horizon_data[:,1]
+                        
+                        horizon_azimuth_deg += azimuth_offset_deg
+                        if horizon_azimuth_deg > 180.0:
+                            horizon_azimuth_deg -= 360.0
+                        elif horizon_azimuth_deg < -180.0:
+                            horizon_azimuth_deg += 360.0
+
+                        if mollweide == False:
+                            map_ax.plot(horizon_azimuth_deg, horizon_elevation_deg, c='k',linewidth=1)
+                        else:
+                            map_ax.plot(numpy.deg2rad(horizon_azimuth_deg), numpy.deg2rad(horizon_elevation_deg), c='k',linewidth=1)
+
+                        
+                        # import pdb; pdb.set_trace()
+
+
                 #Plot array plane 0 elevation curve.
                 im = self.addCurveToMap(im, plane_xy, ax=map_ax, mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
 
@@ -2847,6 +2886,10 @@ class Correlator:
                 if circle_map_max:
                     #Added circles as specified.
                     map_ax, peak_circle = self.addCircleToMap(map_ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+
+
+
+
 
                 if circle_az is not None:
                     if circle_zenith is not None:
