@@ -53,6 +53,50 @@ processed_datapath = os.environ['BEACON_PROCESSED_DATA']
 print('SETTING processed_datapath TO: ', processed_datapath)
 
 gc.enable()
+
+'''
+# cut_name = cut_dict_key + '-' + param_key
+
+# ds.setCurrentPlotBins(param_key, param_key, None)
+# current_label = ds.current_label_x.replace('\n','  ')
+# sub_eventids_dict = ds.getCutsFromROI(cut_name,load=False,save=False,verbose=True, return_successive_cut_counts=False, return_total_cut_counts=False) #Events passing all cuts BUT current key
+
+# _runs = numpy.array(list(sub_eventids_dict.keys()))
+# for key in _runs:
+#     sub_eventids_dict[str(key)] = sub_eventids_dict.pop(key)
+
+# counts, bin_centers, bin_width = ds.plot1dHist(param_key, None, return_only_count_details=True)
+# sub_eventids_dict['bin_centers'] = bin_centers
+# sub_eventids_dict['bin_width'] = bin_width
+# sub_eventids_dict['counts'] = counts.astype(int)
+# sub_eventids_dict['label'] = current_label
+# sub_eventids_dict['cut_dict'] = str(ds.roi[cut_name])
+# sub_eventids_dict['included_runs'] = runs
+
+# numpy.savez_compressed(os.path.join(out_dir, './%s.npz'%cut_name), **sub_eventids_dict)
+
+
+# #How to load the data back
+# if False:
+#     loaded_eventids_dict = {}
+#     hist_data = {}
+#     with numpy.load(os.path.join(out_dir, './%s.npz'%cut_name)) as data:
+#         for key in list(data.keys()):
+#             if key.isdigit():
+#                 loaded_eventids_dict[int(key)] = data[key]
+#             else:
+#                 hist_data[key] = data[key]
+
+
+# for key in numpy.array(list(sub_eventids_dict.keys())):
+#     del sub_eventids_dict[key] 
+# del sub_eventids_dict
+# del counts
+# del bin_centers
+# del bin_width
+# gc.collect()
+'''
+
 if __name__ == '__main__':
     plt.close('all')
     cmap = 'cool'#'coolwarm'
@@ -68,7 +112,7 @@ if __name__ == '__main__':
         runs = runs[runs<=6640]
     elif True:
         runs = numpy.arange(5733,6641)
-    elif False:
+    elif True:
         #Quicker for testing
         runs = numpy.arange(5910,5912)
     elif False:
@@ -117,8 +161,11 @@ if __name__ == '__main__':
         ds.addROI(cut_dict_key + '-' + param_key, copy.deepcopy(copied_dict)) #Add an ROI containing all cuts BUT the current key (used as ROI label).
 
 
-    out_dir = './cuts__run%i-run%i_%i'%(min(runs), max(runs), time.time())
+    out_dir = './cuts_run%i-run%i_%i'%(min(runs), max(runs), time.time())
     os.mkdir(out_dir)
+
+
+    pass_all_cuts_eventids_dict, successive_cut_counts, total_cut_counts = ds.getCutsFromROI(cut_dict_key,load=False,save=False,verbose=True, return_successive_cut_counts=True, return_total_cut_counts=True) #Events passing all cuts
 
 
     '''
@@ -126,6 +173,7 @@ if __name__ == '__main__':
     the order they are made.  Can I store the information for 2d histograms this way as well?  I much prefer them.
     '''
 
+    # Save histograms with no cuts
 
     for param_key in list(ds.roi[cut_dict_key].keys()):
         if param_key in ['elevation_best_choice', 'phi_best_choice']:
@@ -134,13 +182,15 @@ if __name__ == '__main__':
         cut_name = cut_dict_key + '-' + param_key
         ds.setCurrentPlotBins(param_key, param_key, None)
         current_label = ds.current_label_x.replace('\n','  ')
+
+        # Save histograms with all cuts BUT specified cut
         sub_eventids_dict = ds.getCutsFromROI(cut_name,load=False,save=False,verbose=True, return_successive_cut_counts=False, return_total_cut_counts=False) #Events passing all cuts BUT current key
+
+        counts, bin_centers, bin_width = ds.plot1dHist(param_key, sub_eventids_dict, return_only_count_details=True)
 
         _runs = numpy.array(list(sub_eventids_dict.keys()))
         for key in _runs:
             sub_eventids_dict[str(key)] = sub_eventids_dict.pop(key)
-
-        counts, bin_centers, bin_width = ds.plot1dHist(param_key, None, return_only_count_details=True)
         sub_eventids_dict['bin_centers'] = bin_centers
         sub_eventids_dict['bin_width'] = bin_width
         sub_eventids_dict['counts'] = counts.astype(int)
@@ -148,7 +198,55 @@ if __name__ == '__main__':
         sub_eventids_dict['cut_dict'] = str(ds.roi[cut_name])
         sub_eventids_dict['included_runs'] = runs
 
-        numpy.savez_compressed(os.path.join(out_dir, './%s.npz'%cut_name), **sub_eventids_dict)
+        numpy.savez_compressed(os.path.join(out_dir, './hist_for_%s_with_all_cuts_but_%s.npz'%(param_key, param_key)), **sub_eventids_dict)
+
+
+        # Save histograms after all cuts
+        for key in numpy.array(list(sub_eventids_dict.keys())):
+            del sub_eventids_dict[key] 
+        del sub_eventids_dict
+        del counts
+        del bin_centers
+        del bin_width
+        gc.collect()
+
+        counts, bin_centers, bin_width = ds.plot1dHist(param_key, pass_all_cuts_eventids_dict, return_only_count_details=True)
+
+        sub_eventids_dict = copy.deepcopy(pass_all_cuts_eventids_dict)
+        _runs = numpy.array(list(sub_eventids_dict.keys()))
+
+        for key in _runs:
+            sub_eventids_dict[str(key)] = sub_eventids_dict.pop(key)
+
+        sub_eventids_dict['bin_centers'] = bin_centers
+        sub_eventids_dict['bin_width'] = bin_width
+        sub_eventids_dict['counts'] = counts.astype(int)
+        sub_eventids_dict['label'] = current_label
+        sub_eventids_dict['cut_dict'] = str(ds.roi[cut_dict_key])
+        sub_eventids_dict['included_runs'] = runs
+
+        numpy.savez_compressed(os.path.join(out_dir, './hist_for_%s_with_all_cuts.npz'%(param_key)), **sub_eventids_dict)
+
+        # Save histograms after no cuts
+        for key in numpy.array(list(sub_eventids_dict.keys())):
+            del sub_eventids_dict[key] 
+        del sub_eventids_dict
+        del counts
+        del bin_centers
+        del bin_width
+        gc.collect()
+
+        counts, bin_centers, bin_width = ds.plot1dHist(param_key, None, return_only_count_details=True)
+
+        sub_eventids_dict = {}
+        sub_eventids_dict['bin_centers'] = bin_centers
+        sub_eventids_dict['bin_width'] = bin_width
+        sub_eventids_dict['counts'] = counts.astype(int)
+        sub_eventids_dict['label'] = current_label
+        sub_eventids_dict['cut_dict'] = str({})
+        sub_eventids_dict['included_runs'] = runs
+
+        numpy.savez_compressed(os.path.join(out_dir, './hist_for_%s_with_no_cuts.npz'%(param_key)), **sub_eventids_dict)
 
         for key in numpy.array(list(sub_eventids_dict.keys())):
             del sub_eventids_dict[key] 
@@ -159,44 +257,23 @@ if __name__ == '__main__':
         gc.collect()
 
 
-        # cut_name = cut_dict_key + '-' + param_key
+    for key in list(successive_cut_counts.keys()):
+        if key == 'initial':
+            print('Initial Event Count is %i'%(successive_cut_counts[key]))
+        else:
+            print('%0.3f%% events then cut by %s with bounds %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key, str(ds.roi[cut_dict_key][key])))
+            print('%0.3f%% of initial events would be cut by %s with bounds %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key, str(ds.roi[cut_dict_key][key])))
+            print('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]))
+        previous_count = successive_cut_counts[key]
 
-        # ds.setCurrentPlotBins(param_key, param_key, None)
-        # current_label = ds.current_label_x.replace('\n','  ')
-        # sub_eventids_dict = ds.getCutsFromROI(cut_name,load=False,save=False,verbose=True, return_successive_cut_counts=False, return_total_cut_counts=False) #Events passing all cuts BUT current key
-
-        # _runs = numpy.array(list(sub_eventids_dict.keys()))
-        # for key in _runs:
-        #     sub_eventids_dict[str(key)] = sub_eventids_dict.pop(key)
-
-        # counts, bin_centers, bin_width = ds.plot1dHist(param_key, None, return_only_count_details=True)
-        # sub_eventids_dict['bin_centers'] = bin_centers
-        # sub_eventids_dict['bin_width'] = bin_width
-        # sub_eventids_dict['counts'] = counts.astype(int)
-        # sub_eventids_dict['label'] = current_label
-        # sub_eventids_dict['cut_dict'] = str(ds.roi[cut_name])
-        # sub_eventids_dict['included_runs'] = runs
-
-        # numpy.savez_compressed(os.path.join(out_dir, './%s.npz'%cut_name), **sub_eventids_dict)
+    print('')
+    eventids_array = ds.organizeEventDict(pass_all_cuts_eventids_dict)
+    print('Final number of events remaining is %i'%len(eventids_array))
 
 
-        # #How to load the data back
-        # if False:
-        #     loaded_eventids_dict = {}
-        #     hist_data = {}
-        #     with numpy.load(os.path.join(out_dir, './%s.npz'%cut_name)) as data:
-        #         for key in list(data.keys()):
-        #             if key.isdigit():
-        #                 loaded_eventids_dict[int(key)] = data[key]
-        #             else:
-        #                 hist_data[key] = data[key]
 
 
-        # for key in numpy.array(list(sub_eventids_dict.keys())):
-        #     del sub_eventids_dict[key] 
-        # del sub_eventids_dict
-        # del counts
-        # del bin_centers
-        # del bin_width
-        # gc.collect()
+
+
+        
 

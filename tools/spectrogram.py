@@ -16,7 +16,7 @@ import tools.interpret #Must be imported before matplotlib or else plots don't l
 import matplotlib.pyplot as plt
 plt.ion()
 
-def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=False):
+def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=False, channels=numpy.arange(8)):
     '''
     This function obtains the data for a spectrogram.
 
@@ -53,8 +53,20 @@ def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=F
         they are calculated as if the waveforms were in volts, but in reality the waveforms are in
         adu.  Some there is some offset from these values to true dB units.
     '''
+    channels = channels.astype(int)
     reader = Reader(datapath,run)
-    N = reader.N() if event_limit == None else min(reader.N(),abs(event_limit))
+
+    draw = reader.head_tree.Draw("trig_time:trigger_type","","goff")
+    ttypes = trigger_type = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), draw).astype(int)
+    trigtimes = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), draw)[ttypes == trigger_type]
+    eventids = numpy.arange(reader.N())[ttypes == trigger_type]
+
+
+    if event_limit is not None:
+        if event_limit < len(eventids):
+            eventids = eventids[0:event_limit]
+            trigtimes = trigtimes[0:event_limit]
+    event_limit = len(eventids)
 
     print('\nReader:')
     d = tools.interpret.getReaderDict(reader)
@@ -90,27 +102,27 @@ def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=F
         spectra_dbish = {}
         readout_times = []
         
-        for channel in range(8):
+        for channel in channels:
             if group_fft == True:
-                waveforms['ch%i'%channel] = numpy.zeros((N,reader.header().buffer_length),dtype=int)
-            spectra_dbish['ch%i'%channel] = numpy.zeros((N,reader.header().buffer_length//2 + 1),dtype=float)
+                waveforms['ch%i'%channel] = numpy.zeros((len(eventids),reader.header().buffer_length),dtype=int)
+            spectra_dbish['ch%i'%channel] = numpy.zeros((len(eventids),reader.header().buffer_length//2 + 1),dtype=float)
 
         print('')
 
-        for event_index, eventid in enumerate(range(N if event_limit == None else event_limit)):
-            sys.stdout.write('\r(%i/%i)'%(eventid+1,N))
+        for event_index, eventid in enumerate(eventids):
+            sys.stdout.write('\r(%i/%i)'%(eventid+1,len(eventids)))
             sys.stdout.flush()
             reader.setEntry(eventid) 
             readout_times.append(getattr(reader.header(),'readout_time'))
-            for channel in range(8):
+            for channel in channels:
                 if group_fft == True:
-                    waveforms['ch%i'%channel][event_index] = reader.wf(channel)
+                    waveforms['ch%i'%channel][event_index] = reader.wf(int(channel))
                 else:
-                    spectra_dbish['ch%i'%channel][event_index] = rfftWrapper('ch%i'%channel, waveform_times, reader.wf(channel))[1]
+                    spectra_dbish['ch%i'%channel][event_index] = rfftWrapper('ch%i'%channel, waveform_times, reader.wf(int(channel)))[1]
         if group_fft == True:
             with concurrent.futures.ThreadPoolExecutor(max_workers = cpu_count()) as executor:
                 thread_results = []
-                for channel in range(8):
+                for channel in channels:
                     thread_results.append( executor.submit(rfftWrapper,'ch%i'%channel, waveform_times, waveforms['ch%i'%channel]) )
                     
             print('Weaving threads')
@@ -118,7 +130,7 @@ def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=F
 
             for index, future in enumerate(concurrent.futures.as_completed(thread_results)):
                 spectra_dbish[future.result()[0]] = future.result()[1] 
-                print('%i/8 Channel FFTs Completed'%(index+1))
+                print('Channel %i FFTs Completed'%(index+1))
         
         bin_edges = numpy.arange(min(readout_times),max(readout_times)+bin_size,bin_size)
         bin_L_2d = numpy.tile( bin_edges[:-1] , (len(readout_times),1))
@@ -132,13 +144,15 @@ def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=F
         del readout_times_2d
 
         spectra_dbish_binned = {}
-        for channel in range(8):
+        for channel in channels:
             spectra_dbish_binned['ch%i'%channel] = numpy.zeros((len(freqs),len(bin_edges)-1))
             for index,cut in enumerate(cut_2d):
                 spectra_dbish_binned['ch%i'%channel][:,index] = numpy.mean( spectra_dbish['ch%i'%channel][cut], axis=0 )
             spectra_dbish_binned['ch%i'%channel] = numpy.flipud(numpy.ma.array(spectra_dbish_binned['ch%i'%channel], mask=numpy.isnan(spectra_dbish_binned['ch%i'%channel])))
         
-        return reader, freqs, spectra_dbish_binned
+
+        time_range = (0,(max(bin_edges)-min(bin_edges))/60.0)
+        return reader, freqs, spectra_dbish_binned, time_range
 
 if __name__ == '__main__':
     #plt.close('all')
@@ -149,7 +163,7 @@ if __name__ == '__main__':
 
     import time
 
-    reader, freqs, spectra_dbish_binned = getSpectData(datapath,run,event_limit,bin_size=10,group_fft=False)
+    reader, freqs, spectra_dbish_binned, time_range = getSpectData(datapath,run,event_limit,bin_size=100,group_fft=False)
 
     gc.collect()
 
@@ -163,14 +177,13 @@ if __name__ == '__main__':
             ax = plt.gca()
             plt.title('Run %i, Channel %i'%(run,channel),fontsize=28)
             plt.imshow(spectra_dbish_binned['ch%i'%channel],extent = [0,(reader.head_tree.GetMaximum('readout_time')-reader.head_tree.GetMinimum('readout_time'))/60.0,min(freqs)/1e6,max(freqs)/1e6],aspect='auto',cmap=cmap)
-            plt.ylim(0,200)
             #plt.xlim(0,100)
             plt.ylabel('Freq (MHz)',fontsize=20)
             plt.xlabel('Readout Time (min)',fontsize=20)
             cb = plt.colorbar()
-            cb.set_label('Power (~dB)',fontsize=20)
+            cb.set_label('dB (arb)',fontsize=20)
+            #cb.set_label('Power (~dB)',fontsize=20)
             #f.savefig('./spectrogram_run%i_ch%i_20MHz-100MHz_cmap%s.pdf'%(run,channel,cmap), bbox_inches='tight')
             #plt.close(f)
-
 
     #,cmap='RdGy'

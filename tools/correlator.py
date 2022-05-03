@@ -2372,7 +2372,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)  
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True, override_to_time_window=(None,None), plot_horizon=True):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True, override_to_time_window=(None,None), plot_horizon=False):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -2832,14 +2832,13 @@ class Correlator:
                         for row in csv_reader:
                             horizon_data.append(row)
                         horizon_data = numpy.asarray(horizon_data).astype(float)
-                        horizon_azimuth_deg = horizon_data[:,0]
-                        horizon_elevation_deg = horizon_data[:,1]
+                        horizon_azimuth_deg = numpy.asarray(horizon_data[:,0]).astype(float)
+                        horizon_elevation_deg = numpy.asarray(horizon_data[:,1]).astype(float)
                         
                         horizon_azimuth_deg += azimuth_offset_deg
-                        if horizon_azimuth_deg > 180.0:
-                            horizon_azimuth_deg -= 360.0
-                        elif horizon_azimuth_deg < -180.0:
-                            horizon_azimuth_deg += 360.0
+
+                        horizon_azimuth_deg[horizon_azimuth_deg < -180.0] += 360.0
+                        horizon_azimuth_deg[horizon_azimuth_deg > 180.0] -= 360.0
 
                         if mollweide == False:
                             map_ax.plot(horizon_azimuth_deg, horizon_elevation_deg, c='k',linewidth=1)
@@ -2975,6 +2974,186 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def multiEventMaxMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E'):
+        '''
+        Does the same thing as map, but then takes the maximum value from each events maps and plots that as the map.
+        Hopefully this is useful for showing things like trajectories, but that is unlikely. 
+        '''
+        total_max_corr_values = -999*numpy.ones((self.n_theta, self.n_phi))
+        for event_index, eventid in enumerate(eventids):
+            sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
+            sys.stdout.flush()
+            m, max_possible_map_value = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=False, zenith_cut_ENU=zenith_cut_ENU, return_max_possible_map_value=True)
+            total_max_corr_values = numpy.maximum(total_max_corr_values, m/max_possible_map_value)
+        print('')
+
+        if zenith_cut_ENU is not None:
+            if len(zenith_cut_ENU) != 2:
+                print('zenith_cut_ENU must be a 2 valued list.')
+                return
+            else:
+                if zenith_cut_ENU[0] is None:
+                    zenith_cut_ENU[0] = 0
+                if zenith_cut_ENU[1] is None:
+                    zenith_cut_ENU[1] = 180
+
+                theta_cut = numpy.logical_and(self.thetas_deg >= min(zenith_cut_ENU), self.thetas_deg <= max(zenith_cut_ENU))
+        else:
+            theta_cut = numpy.ones_like(self.thetas_deg,dtype=bool)
+
+        theta_cut_row_indices = numpy.where(theta_cut)[0]
+
+        if plot_map:
+            if center_dir.upper() == 'E':
+                center_dir_full = 'East'
+                azimuth_offset_rad = 0 #This is subtracted from the xaxis to roll it effectively.
+                azimuth_offset_deg = 0 #This is subtracted from the xaxis to roll it effectively.
+                xlabel = 'Azimuth (From East = 0 deg, North = 90 deg)'
+                roll = 0
+            elif center_dir.upper() == 'N':
+                center_dir_full = 'North'
+                azimuth_offset_rad = numpy.pi/2 #This is subtracted from the xaxis to roll it effectively. 
+                azimuth_offset_deg = 90 #This is subtracted from the xaxis to roll it effectively. 
+                xlabel = 'Azimuth (From North = 0 deg, West = 90 deg)'
+                roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+            elif center_dir.upper() == 'W':
+                center_dir_full = 'West'
+                azimuth_offset_rad = numpy.pi #This is subtracted from the xaxis to roll it effectively.
+                azimuth_offset_deg = 180 #This is subtracted from the xaxis to roll it effectively.
+                xlabel = 'Azimuth (From West = 0 deg, South = 90 deg)'
+                roll = len(self.phis_rad)//2
+            elif center_dir.upper() == 'S':
+                center_dir_full = 'South'
+                azimuth_offset_rad = -numpy.pi/2 #This is subtracted from the xaxis to roll it effectively.
+                azimuth_offset_deg = -90 #This is subtracted from the xaxis to roll it effectively.
+                xlabel = 'Azimuth (From South = 0 deg, East = 90 deg)'
+                roll = numpy.argmin(abs(self.phis_rad - azimuth_offset_rad))
+
+            rolled_values = numpy.roll(total_max_corr_values,roll,axis=1)
+
+            if max_method is not None:
+                linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_max_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,pol=pol)
+            else:
+                linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(total_max_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,pol=pol)        
+
+            elevation_best_deg = 90.0 - theta_best
+
+            if pol == 'hpol':
+                t_best_0subtract1  = self.t_hpol_0subtract1.flat[linear_max_index]
+                t_best_0subtract2  = self.t_hpol_0subtract2.flat[linear_max_index]
+                t_best_0subtract3  = self.t_hpol_0subtract3.flat[linear_max_index]
+                t_best_1subtract2  = self.t_hpol_1subtract2.flat[linear_max_index]
+                t_best_1subtract3  = self.t_hpol_1subtract3.flat[linear_max_index]
+                t_best_2subtract3  = self.t_hpol_2subtract3.flat[linear_max_index]
+            elif pol == 'vpol':
+                t_best_0subtract1  = self.t_vpol_0subtract1.flat[linear_max_index]
+                t_best_0subtract2  = self.t_vpol_0subtract2.flat[linear_max_index]
+                t_best_0subtract3  = self.t_vpol_0subtract3.flat[linear_max_index]
+                t_best_1subtract2  = self.t_vpol_1subtract2.flat[linear_max_index]
+                t_best_1subtract3  = self.t_vpol_1subtract3.flat[linear_max_index]
+                t_best_2subtract3  = self.t_vpol_2subtract3.flat[linear_max_index]
+            else:
+                print('Invalid polarization option.  Returning nothing.')
+                return
+            fig = plt.figure()
+            fig.canvas.set_window_title('r%i %s Max From Each Correlation Map'%(self.reader.run,pol.title()))
+            if mollweide == True:
+                ax = fig.add_subplot(1,1,1, projection='mollweide')
+            else:
+                ax = fig.add_subplot(1,1,1)
+
+            #im = ax.imshow(total_max_corr_values, interpolation='none', extent=[min(self.phis_deg),max(self.phis_deg),max(self.thetas_deg),min(self.thetas_deg)],cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
+            vmax = numpy.max(numpy.abs(rolled_values))
+            # vmin = vmax
+            vmin = numpy.min(rolled_values)
+            if mollweide == True:
+                #Automatically converts from rads to degs
+                im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm)
+            else:
+                im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm)
+
+            cbar = fig.colorbar(im)
+            plt.xlabel(xlabel)
+            plt.ylabel('Elevation Angle (Degrees)')
+            plt.grid(True)
+            if hilbert == True:
+                cbar.set_label('Normalized Max Hilbert Enveloped\nCorrelation Value Across All Events')
+            else:
+                cbar.set_label('Normalized Max Correlation Value\nAcross All Events')
+
+
+            #Prepare array cut curves
+            if pol is not None:
+                if zenith_cut_array_plane is not None:
+                    if len(zenith_cut_array_plane) != 2:
+                        print('zenith_cut_array_plane must be a 2 valued list.')
+                        return
+                    else:
+                        if zenith_cut_array_plane[0] is None:
+                            zenith_cut_array_plane[0] = 0
+                        if zenith_cut_array_plane[1] is None:
+                            zenith_cut_array_plane[1] = 180
+
+            #Prepare center line and plot the map.  Prep cut lines as well.
+            if pol == 'hpol':
+                selection_index = 1
+            elif pol == 'vpol':
+                selection_index = 2 
+            
+            #Plot array plane 0 elevation curve.
+            plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+            im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
+            
+            if zenith_cut_array_plane is not None:
+                #Plot upper zenith array cut
+                upper_plane_xy = self.getArrayPlaneZenithCurves(zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                im = self.addCurveToMap(im, upper_plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
+                #Plot lower zenith array cut
+                lower_plane_xy = self.getArrayPlaneZenithCurves(zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                im = self.addCurveToMap(im, lower_plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k',linestyle = '--')
+
+            if self.conference_mode:
+                ticks_deg = numpy.array([-60,-40,-30,-15,0,15,30,45,60,75])
+                if mollweide == True:
+                    ax.set_yticks(numpy.deg2rad(ticks_deg))
+                else:
+                    ax.set_yticks(ticks_deg)
+                x = plane_xy[0]
+                y1 = plane_xy[1]
+                if mollweide == True:
+                    y2 = -numpy.pi/2 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
+                else:
+                    y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
+                ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
+                if mollweide == False:
+                    ax.set_xlim(-90, 90)
+                    ax.set_ylim(-30, 90)
+
+            #Block out simple ENU zenith cut region. 
+            if zenith_cut_ENU is not None:
+                if mollweide == True:
+                    #Block out simple ENU zenith cut region. 
+                    plt.axhspan(numpy.deg2rad(90 - min(zenith_cut_ENU)),numpy.deg2rad(90.0),alpha=0.5)
+                    plt.axhspan(numpy.deg2rad(-90) , numpy.deg2rad(90 - max(zenith_cut_ENU)),alpha=0.5)
+                    plt.ylim(numpy.deg2rad((90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg))  ))
+                    plt.xlim(numpy.deg2rad(self.range_phi_deg))
+
+                else:
+                    #Block out simple ENU zenith cut region. 
+                    plt.axhspan(90 - min(zenith_cut_ENU),90.0,alpha=0.5)
+                    plt.axhspan(-90 , 90 - max(zenith_cut_ENU),alpha=0.5)
+                    plt.ylim(90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg)  )
+                    plt.xlim(self.range_phi_deg)
+
+
+
+            ax.legend(loc='lower left')
+            self.figs.append(fig)
+            self.axs.append(ax)
+
+            return total_max_corr_values, fig, ax
+        else:
+            return total_max_corr_values
 
     def averagedMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={}):
         '''
@@ -4411,7 +4590,7 @@ class Correlator:
         period of time specified (given in UTC timestamps).
 
         Calls pt.getENUTrackDict(start,stop,min_approach_cut_km,hour_window = 12,flights_of_interest=[])
-        return flight_tracks_ENU, all_vals
+        return flight_tracks_ENU, all_vals300
         return {}, []
 
         '''
@@ -4801,7 +4980,7 @@ if __name__=="__main__":
                     cor.apply_filter = apply_filter
                     cor.apply_sine_subtract = apply_filter
                     for mode in ['hpol']:
-                        mean_corr_values, fig, ax, max_possible_map_value = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=cor.conference_mode, zenith_cut_ENU=None, zenith_cut_array_plane=[0.0,90.0], center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=True, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=not cor.conference_mode)
+                        mean_corr_values, fig, ax, max_possible_map_value = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=cor.conference_mode, zenith_cut_ENU=None, zenith_cut_array_plane=[0.0,90.0], center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=True, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=not cor.conference_mode,plot_horizon=False)
                         #mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,90.0], center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
                         fig.set_size_inches(16, 9)
                         plt.sca(ax)
