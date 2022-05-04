@@ -5961,7 +5961,7 @@ class dataSlicer():
                 time_delay_dict = {}
 
             #Plot Maps
-            self.plot_horizon=True
+            self.plot_horizon=False
             if self.conference_mode == True:
                 m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, plot_horizon=self.plot_horizon)
                 self.inspector_mpl['fig1_map_h'].set_xlim(-90,90)

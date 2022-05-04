@@ -2785,6 +2785,8 @@ class Correlator:
                     if textstr is not None:
                         props = dict(facecolor='#9DC3E6', alpha=1.0)
                         map_ax.text(0.95, 0.05, textstr, transform=map_ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='right', bbox=props)
+                        map_ax.text(0.03, 0.03, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+                        
                 else:
                     cbar = plt.colorbar(im, ax=map_ax)
                     if hilbert == True:
@@ -2865,6 +2867,7 @@ class Correlator:
                     else:
                         y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
                     map_ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
+                    map_ax.text(0.03, 0.03, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                     if mollweide == False:
                         map_ax.set_xlim(-90, 90)
                         map_ax.set_ylim(-30, 90)
@@ -3125,6 +3128,7 @@ class Correlator:
                 else:
                     y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
                 ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
+                map_ax.text(0.03, 0.03, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                 if mollweide == False:
                     ax.set_xlim(-90, 90)
                     ax.set_ylim(-30, 90)
@@ -3537,6 +3541,7 @@ class Correlator:
                 y2 = -numpy.pi/2 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
                 y1_interp = scipy.interpolate.interp1d(x,y1)
                 ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
+                map_ax.text(0.03, 0.03, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                 #plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=6,color='#41719C')
 
             def update(frame):
@@ -3564,6 +3569,7 @@ class Correlator:
 
                     if self.conference_mode:
                         ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
+                        map_ax.text(0.03, 0.03, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
 
                 except Exception as e:
                     pass
@@ -4970,8 +4976,7 @@ if __name__=="__main__":
         if True:
             for map_source_distance_m in [1e6]:
                 cor = Correlator(reader,  upsample=upsample, n_phi=n_phi, range_phi_deg=range_phi_deg, n_theta=n_theta, range_theta_deg=range_theta_deg, waveform_index_range=waveform_index_range,crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order, plot_filter=False,apply_phase_response=apply_phase_response, deploy_index=deploy_index, map_source_distance_m=map_source_distance_m)
-                
-                cor.conference_mode = False
+                cor.conference_mode = True
 
                 if sine_subtract:
                     cor.prep.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=3, verbose=False, plot=False)
@@ -4980,7 +4985,7 @@ if __name__=="__main__":
                     cor.apply_filter = apply_filter
                     cor.apply_sine_subtract = apply_filter
                     for mode in ['hpol']:
-                        mean_corr_values, fig, ax, max_possible_map_value = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=cor.conference_mode, zenith_cut_ENU=None, zenith_cut_array_plane=[0.0,90.0], center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=True, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=not cor.conference_mode,plot_horizon=False)
+                        mean_corr_values, fig, ax, max_possible_map_value = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0.0,90.0], center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=True, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=not cor.conference_mode,plot_horizon=False)
                         #mean_corr_values, fig, ax = cor.map(eventid, mode, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, plot_corr=False, hilbert=False,interactive=True, max_method=0, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=[0,90.0], center_dir='E', circle_zenith=None, circle_az=None, time_delay_dict={},window_title=None,add_airplanes=True)
                         fig.set_size_inches(16, 9)
                         plt.sca(ax)

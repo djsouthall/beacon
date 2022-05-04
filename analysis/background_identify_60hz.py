@@ -134,7 +134,7 @@ def alg1(_calibrated_trig_time, atol=0.001):
     plt.grid(b=True, which='major', color='k', linestyle='-')
     plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_period=1/60.0, normalize_by_window_index=False, plot_sample_hist=False, plot_test_plot_A=False):
+def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_period=1/60.0, normalize_by_window_index=False, normalize_by_density=True, plot_sample_hist=False, plot_test_plot_A=False, axs=None, fontsize=18):
     '''
     This is intended to cluster any 60 Hz noise by simply looping over events.
 
@@ -163,6 +163,10 @@ def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_pe
     end of the run.
     '''
     try:
+        if normalize_by_density and normalize_by_window_index:
+            print('Density normalization overriding window, normalize_by_window_index -> False')
+            normalize_by_window_index = False
+
         l = len(_calibrated_trig_time)
         output_metric = numpy.zeros(l)
         bin_edges = numpy.linspace(0,expected_period/2,21) #21 posts = 20 bins = 5% of possible outcome space per bin.
@@ -171,14 +175,14 @@ def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_pe
         #print('half_index_window = ',half_index_window)
         half_expected_period = expected_period/2.0
 
-        if plot_sample_hist == True:
+        if plot_sample_hist == True or axs is not None:
             total_hist_counts = numpy.zeros(len(bin_edges)-1)
             
         for event_index, t in enumerate(_calibrated_trig_time):
             diff_from_period = numpy.abs((_calibrated_trig_time[max(event_index - half_index_window,0):int(min(event_index + half_index_window + 1,l))] - t + half_expected_period)%expected_period - half_expected_period)
-            hist_counts,hist_edges = numpy.histogram(diff_from_period,bins=bin_edges)
+            hist_counts,hist_edges = numpy.histogram(diff_from_period,bins=bin_edges, weights=numpy.ones(len(diff_from_period))/(len(diff_from_period) if normalize_by_density else 1))
             output_metric[event_index] = hist_counts[0] - numpy.mean(hist_counts[10:20])
-            if plot_sample_hist == True:
+            if plot_sample_hist == True or axs is not None:
                 total_hist_counts += hist_counts
             
         if plot_test_plot_A:
@@ -204,50 +208,112 @@ def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_pe
             plt.grid(b=True, which='major', color='k', linestyle='-')
             plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-        if plot_sample_hist == True:
+        if plot_sample_hist == True or axs is not None:
             max_event_index = numpy.argmax(output_metric)
-            median_event_index = numpy.argsort(output_metric)[l//2]
+
+            mode = 'median'#'low'#'median'
+
+            if mode == 'median':
+                secondary_event_index = numpy.argsort(output_metric)[l//2]
+            elif mode == 'low':
+                secondary_event_index = numpy.argmin(output_metric)
 
             max_diff_from_period = numpy.abs((_calibrated_trig_time[max(max_event_index - half_index_window,0):int(min(max_event_index + half_index_window + 1,l))] - _calibrated_trig_time[max_event_index] + half_expected_period)%expected_period - half_expected_period)
-            median_diff_from_period = numpy.abs((_calibrated_trig_time[max(median_event_index - half_index_window,0):int(min(median_event_index + half_index_window + 1,l))] - _calibrated_trig_time[median_event_index] + half_expected_period)%expected_period - half_expected_period)
-            plt.figure()
-            plt.subplot(2,2,1)
-            plt.hist(max_diff_from_period,bins=bin_edges,label='High TS')
-            plt.legend(loc='upper right')
-            plt.ylabel('Counts')
-            plt.xlabel('Remainder (Shifted)')
-            plt.minorticks_on()
-            plt.grid(b=True, which='major', color='k', linestyle='-')
-            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            secondary_diff_from_period = numpy.abs((_calibrated_trig_time[max(secondary_event_index - half_index_window,0):int(min(secondary_event_index + half_index_window + 1,l))] - _calibrated_trig_time[secondary_event_index] + half_expected_period)%expected_period - half_expected_period)
 
-            plt.subplot(2,2,2)
-            plt.hist(median_diff_from_period,bins=bin_edges,label='Median TS')
-            plt.legend(loc='upper right')
-            plt.ylabel('Counts')
-            plt.xlabel('Remainder (Shifted)')
-            plt.minorticks_on()
-            plt.grid(b=True, which='major', color='k', linestyle='-')
-            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            if False:
+                fig = plt.figure(figsize = (12,16))
+                plt.subplot(2,2,1)
+                plt.hist(max_diff_from_period,bins=bin_edges,label='High TS')
+                plt.legend(loc='upper right', fontsize=fontsize-2)
+                plt.ylabel('Counts', fontsize=fontsize)
+                plt.xlabel(r'$(t_i - t_j)\%r^{-1}$ (s)', fontsize=fontsize)
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
-            plt.subplot(2,1,2)
-            plt.hist(bin_centers,bins=bin_edges,weights=total_hist_counts, label='All Events')
-            plt.legend(loc='upper right')
-            plt.ylabel('Counts')
-            plt.xlabel('Remainder (Shifted)')
-            plt.minorticks_on()
-            plt.grid(b=True, which='major', color='k', linestyle='-')
-            plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                plt.subplot(2,2,2)
+                plt.hist(secondary_diff_from_period,bins=bin_edges,label='%s TS'%mode.title())
+                plt.legend(loc='upper right', fontsize=fontsize-2)
+                plt.ylabel('Counts', fontsize=fontsize)
+                plt.xlabel('Remainder (Shifted)', fontsize=fontsize)
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
+                plt.subplot(2,1,2)
+                plt.hist(bin_centers,bins=bin_edges,weights=total_hist_counts, label='All Events')
+                plt.legend(loc='upper right', fontsize=fontsize-2)
+                plt.ylabel('Counts', fontsize=fontsize)
+                plt.xlabel('Remainder (Shifted)', fontsize=fontsize)
+                plt.minorticks_on()
+                plt.grid(b=True, which='major', color='k', linestyle='-')
+                plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                plt.tight_layout()
+                plt.subplots_adjust(left=0.8, bottom=0.11,right=0.96, top=0.96, wspace=0.2, hspace=0.2)
+            else:
+
+                if axs is None:
+                    fig = plt.figure(figsize = (12,16))
+                    ax = plt.subplot(2,1,1)
+                else:
+                    ax = axs[0]
+                    
+                
+                ax.axvspan(bin_edges[0],bin_edges[1],color='r',alpha=0.3,label='5% Bin Most Consistent\nWith Rate ' + r'$\mathbf{r}$')
+                ax.axvspan(numpy.mean(bin_edges),bin_edges[-1],color='g',alpha=0.3,label='50% of Bins Least\nConsistent With Rate ' + r'$\mathbf{r}$')
+                
+                n, bins, patches = ax.hist(max_diff_from_period,bins=bin_edges,label='Distribution for\nMax TS Event', edgecolor='k', linewidth=1 , weights=numpy.ones(len(max_diff_from_period))/(len(max_diff_from_period) if normalize_by_density else 1))
+                ax.set_ylim(0,max(n)*1.2)
+                if normalize_by_density:
+                    ax.set_ylabel('Normalized Counts\nin Window $w$', fontsize=fontsize)
+                else:
+                    ax.set_ylabel('Counts in Window $w$', fontsize=fontsize)
+                ax.minorticks_on()
+                ax.grid(b=True, which='major', color='k', linestyle='-')
+                ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+
+                ax.legend(loc='upper right', fontsize=fontsize-4)
+
+                if axs is None:
+                    ax = plt.subplot(2,1,2)
+                else:
+                    ax = axs[1]
+
+                ax.hist(bin_centers,bins=bin_edges,weights=total_hist_counts, label='Combined Distribution\nfor All Events', edgecolor='k', linewidth=1 )
+                ax.legend(loc='upper right', fontsize=fontsize-4)
+                ax.set_ylabel('Combined Counts', fontsize=fontsize)
+                ax.grid(b=True, which='major', color='k', linestyle='-')
+                ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                ax.set_xlabel('Absolute Time Difference Remainder\nfrom Expected Periodicity (s)', fontsize=fontsize)
+                #ax.set_xlabel(r'$(t_i - t_j)\%r^{-1}$ (s)', fontsize=fontsize)
+
+
+                if axs is None:
+                    ax.tight_layout()
+                    ax.subplots_adjust(left=0.08, bottom=0.11,right=0.96, top=0.96, wspace=0.2, hspace=0.2)
+            
+            if axs is None:
+                if normalize_by_window_index == True:
+                    return output_metric/(2.0*half_index_window + 1.0), fig
+                else:
+                    return output_metric, fig
+            else:
+                if normalize_by_window_index == True:
+                    return output_metric/(2.0*half_index_window + 1.0), axs
+                else:
+                    return output_metric, axs
 
         if normalize_by_window_index == True:
             return output_metric/(2.0*half_index_window + 1.0)
         else:
             return output_metric
     except Exception as e:
-        print('Error in plotSubVSec.')
-        file.close()
+        print('Error in diffFromPeriodic.')
         print('\nError in %s'%inspect.stack()[0][3])
         print(e)
+        import pdb; pdb.set_trace()
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)

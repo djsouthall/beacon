@@ -74,18 +74,34 @@ plot_filter=False
 
 apply_phase_response=True
 
-map_resolution_theta = 0.5 #degrees
-min_theta   = 0
-max_theta   = 120
-n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
+mollweide = False
 
-map_resolution_phi = 0.25 #degrees
-min_phi     = -90
-max_phi     = 90
-n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
+if mollweide == True:
+    map_resolution_theta = 0.5 #degrees
+    min_theta   = 0
+    max_theta   = 120
+    n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
 
-range_phi_deg = (min_phi, max_phi)
-range_theta_deg = (min_theta, max_theta)
+    map_resolution_phi = 0.25 #degrees
+    min_phi     = -180
+    max_phi     = 180
+    n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
+
+    range_phi_deg = (min_phi, max_phi)
+    range_theta_deg = (min_theta, max_theta)
+else:        
+    map_resolution_theta = 0.5 #degrees
+    min_theta   = 0
+    max_theta   = 120
+    n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
+
+    map_resolution_phi = 0.25 #degrees
+    min_phi     = -90
+    max_phi     = 90
+    n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
+
+    range_phi_deg = (min_phi, max_phi)
+    range_theta_deg = (min_theta, max_theta)
 
 upsample = 2**16
 max_method = 0
@@ -100,7 +116,7 @@ waveform_index_range = info.returnDefaultWaveformIndexRange()
 if __name__ == '__main__':
     plt.close('all')
 
-    fontsize = 18
+    fontsize = 22
 
     font = {'family' : 'normal',
         'size'   : fontsize}
@@ -117,7 +133,7 @@ if __name__ == '__main__':
                 passing_df = xls.parse(sheet_name)
                 passing_df = passing_df.sort_values(by = ['run', 'eventid'], ascending = [True, True], na_position = 'last')
 
-                if False:
+                if True:
                     airplanes = ['a15c54']#['a4d5f0', 'a466fc', 'ad7828']
                 else:
                     airplanes = numpy.unique(passing_df['suspected_airplane_icao24'].to_numpy(dtype=str))
@@ -196,21 +212,33 @@ if __name__ == '__main__':
 
                     if True:
                         cor.overwriteSourceDistance(numpy.mean(rpt[:,0]), verbose=False, suppress_time_delay_calculations=False, debug=False)
+                        for hilbert in [True, False]:
+                            total_max_corr_values, fig, ax = cor.multiEventMaxMap(eventids, 'hpol', plot_map=True, hilbert=hilbert, max_method=None, mollweide=mollweide, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E')
 
-                        total_max_corr_values, fig, ax = cor.multiEventMaxMap(eventids, 'hpol', plot_map=True, hilbert=True, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E')
+                            fig.set_size_inches(16, 9)
 
-                        fig.set_size_inches(16, 9)
+                            if pandas.__version__ == '1.4.0' and True:
+                                if poly.valid == True:
+                                    if mollweide == True:
+                                        rpe[:,1] = numpy.deg2rad(rpe[:,1])
+                                        rpe[:,2] = numpy.deg2rad(rpe[:,2])
+                                    ax.plot(rpe[:,1], rpe[:,2], linestyle = '-', c='k', alpha=1.0, label='Airplane Trajectory\nICAO24 %s'%airplane)
 
-                        if pandas.__version__ == '1.4.0' and True:
-                            if poly.valid == True:
-                                ax.plot(rpe[:,1], rpe[:,2], linestyle = '-', c='k', alpha=1.0, label='Airplane Trajectory\nfrom OpenSky Network')
+                                #plt.title('Airplane ICAO24 %s\n%i RF Triggered Events'%(airplane,len(eventids)))
+                                plt.legend(loc='upper right', fontsize=fontsize-2)
 
-                            plt.title('Airplane ICAO24 %s\n%i RF Triggered Events'%(airplane,len(eventids)))
-                            plt.legend(loc='upper right', fontsize=fontsize)
-
-                        plt.tight_layout()
-                        fig.savefig('./airplanes/%i_events_%s.pdf'%(len(eventids),airplane),dpi=300)
-                        plt.close(fig)
+                            plt.tight_layout()
+                            if hilbert == True:
+                                if mollweide == True:
+                                    fig.savefig('./airplanes/%i_events_%s_hilbert_mollweide.pdf'%(len(eventids),airplane),dpi=300)
+                                else:
+                                    fig.savefig('./airplanes/%i_events_%s_hilbert.pdf'%(len(eventids),airplane),dpi=300)
+                            else:
+                                if mollweide == True:
+                                    fig.savefig('./airplanes/%i_events_%s_raw_mollweide.pdf'%(len(eventids),airplane),dpi=300)
+                                else:
+                                    fig.savefig('./airplanes/%i_events_%s_raw.pdf'%(len(eventids),airplane),dpi=300)
+                            plt.close(fig)
 
                     if True:
                         pass
