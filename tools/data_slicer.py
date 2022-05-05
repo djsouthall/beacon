@@ -4208,7 +4208,7 @@ class dataSlicerSingleRun():
             print(exc_type, fname, exc_tb.tb_lineno)
 
 
-    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids, title=None,cmap='coolwarm', return_counts=False, load=False,lognorm=True, mask_top_N_bins=0, fill_value=None):
+    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids, title=None,cmap='coolwarm', return_counts=False, load=False,lognorm=True, mask_top_N_bins=0, fill_value=None, fig=None, ax=None):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
         (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
@@ -4226,8 +4226,8 @@ class dataSlicerSingleRun():
             if mask_top_N_bins > 0:
                 masked_bins = numpy.sum(counts.mask())
 
-
-            _fig, _ax = plt.subplots()
+            if fig is None or ax is None:
+                fig, ax = plt.subplots()
             if title is None:
                 title = '%s, Run = %i\nIncluded Triggers = %s'%(main_param_key_x + ' vs ' + main_param_key_y,int(self.reader.run),str(self.trigger_types))
                 if mask_top_N_bins > 0:
@@ -4235,11 +4235,11 @@ class dataSlicerSingleRun():
             plt.title(title)
 
             if lognorm == True:
-                _im = _ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+                _im = ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
             else:
-                _im = _ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts,cmap=cmap)
+                _im = ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts,cmap=cmap)
             if 'theta_best_' in main_param_key_y:
-                _ax.invert_yaxis()
+                ax.invert_yaxis()
             if True:
                 if numpy.logical_or(numpy.logical_and('phi_best_' in main_param_key_x,'phi_best_' in main_param_key_y),numpy.logical_or(numpy.logical_and('theta_best_' in main_param_key_x,'theta_best_' in main_param_key_y),numpy.logical_and('elevation_best_' in main_param_key_x,'elevation_best_' in main_param_key_y))):
                     plt.plot(self.current_bin_centers_mesh_y[:,0],self.current_bin_centers_mesh_y[:,0],linewidth=1,linestyle='--',color='tab:gray',alpha=0.5)
@@ -4270,22 +4270,22 @@ class dataSlicerSingleRun():
             plt.ylabel(self.current_label_y)
 
             plt.grid(which='both', axis='both')
-            _ax.minorticks_on()
-            _ax.grid(b=True, which='major', color='k', linestyle='-')
-            _ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            ax.minorticks_on()
+            ax.grid(b=True, which='major', color='k', linestyle='-')
+            ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
             if numpy.sum(counts) > 0:
                 try:
-                    cbar = _fig.colorbar(_im)
-                    cbar.set_label('Counts')
+                    cbar = fig.colorbar(_im)
+                    cbar.set_label('Counts',fontsize=18)
                 except Exception as e:
                     print('Error in colorbar, often caused by no events.')
                     print(e)
 
             if return_counts:
-                return _fig, _ax, counts
+                return fig, ax, counts
             else:
-                return _fig, _ax
+                return fig, ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print('Run: ',self.reader.run)
@@ -4400,7 +4400,7 @@ class dataSlicerSingleRun():
                     legend_labels.append('roi %i: %s'%(roi_index, roi_key))
 
                 if suppress_legend == False:
-                    plt.legend(legend_properties,legend_labels,loc='upper left')
+                    ax.legend(legend_properties,legend_labels,loc='upper left')
 
             return fig, ax
         except Exception as e:
@@ -4459,7 +4459,7 @@ class dataSlicerSingleRun():
                         c = numpy.copy(self.roi_colors[roi_index])
                         c[3] = 0.7 #setting alpha for fill but not for edge.
                         plt.hist(param, bins = self.current_bin_edges_x,label = 'roi %i: %s'%(roi_index, roi_key), color = c, edgecolor='black', linewidth=1)
-                plt.legend(fontsize=10)
+                ax.legend(fontsize=10)
 
 
     def saveHistogramData(self, param_key):
@@ -4728,6 +4728,8 @@ class dataSlicer():
             self.runs = []#numpy.sort(runs).astype(int)
             self.cor = None
             self.low_ram_mode = low_ram_mode
+
+            self.plot_horizon=False
 
             try:
                 #Angular ranges are handled such that their bin centers are the same as the values sampled by the corrolator class given the same min, max, and n.  
@@ -5368,7 +5370,7 @@ class dataSlicer():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids_dict, title=None,cmap='coolwarm', lognorm=True, return_counts=False, mask_top_N_bins=0, fill_value=0):
+    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids_dict, title=None,cmap='coolwarm', lognorm=True, return_counts=False, mask_top_N_bins=0, fill_value=0, fig=None, ax=None):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
         (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
@@ -5377,7 +5379,9 @@ class dataSlicer():
         try:
             #Should make eventids a self.eventids so I don't need to call this every time.
             counts = self.get2dHistCounts(main_param_key_x,main_param_key_y,eventids_dict,set_bins=True,mask_top_N_bins=mask_top_N_bins, fill_value=fill_value) #set_bins should only be called on first call, not on contours.
-            _fig, _ax = plt.subplots()
+            
+            if fig is None or ax is None:
+                fig, ax = plt.subplots()
 
             if title is None:
                 if numpy.all(numpy.diff(list(eventids_dict.keys())) == 1):
@@ -5388,11 +5392,11 @@ class dataSlicer():
                     title += ', masked_bins = %i'%masked_bins
             plt.title(title)
             if lognorm == True:
-                _im = _ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts, norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
+                _im = ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts, norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap)#cmap=plt.cm.coolwarm
             else:
-                _im = _ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts, cmap=cmap)#cmap=plt.cm.coolwarm
+                _im = ax.pcolormesh(self.current_bin_edges_mesh_x, self.current_bin_edges_mesh_y, counts, cmap=cmap)#cmap=plt.cm.coolwarm
             if 'theta_best_' in main_param_key_y:
-                _ax.invert_yaxis()
+                ax.invert_yaxis()
             if True:
                 if numpy.logical_or(numpy.logical_and('phi_best_' in main_param_key_x,'phi_best_' in main_param_key_y),numpy.logical_or(numpy.logical_and('theta_best_' in main_param_key_x,'theta_best_' in main_param_key_y),numpy.logical_and('elevation_best_' in main_param_key_x,'elevation_best_' in main_param_key_y))):
                     plt.plot(self.current_bin_centers_mesh_y[:,0],self.current_bin_centers_mesh_y[:,0],linewidth=1,linestyle='--',color='tab:gray',alpha=0.5)
@@ -5423,11 +5427,13 @@ class dataSlicer():
                         x = plane_xy[0]
                         y1 = plane_xy[1]
                         y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
-                        _ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
+                        ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
+                        ax.text(0.03, 0.03, 'Local\nMountainside', transform=ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+
                         plt.ylim(min(y1) - 5, 90)
                         plt.xlim(-90,90)
 
-                    if True:
+                    if False:
                         with open(os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'data', 'horizon', 'horizon_v1.csv')) as csvfile:
                             csv_reader = csv.reader(csvfile, delimiter=',')
                             horizon_data = []
@@ -5441,9 +5447,9 @@ class dataSlicer():
             plt.xlabel(self.current_label_x)
             plt.ylabel(self.current_label_y)
             plt.grid(which='both', axis='both')
-            _ax.minorticks_on()
-            _ax.grid(b=True, which='major', color='k', linestyle='-')
-            _ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+            ax.minorticks_on()
+            ax.grid(b=True, which='major', color='k', linestyle='-')
+            ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
             if self.conference_mode:
                 plt.title('')
@@ -5462,19 +5468,19 @@ class dataSlicer():
                     plt.xlabel(self.current_label_x.replace('hpol','HPol'), fontsize=24)
                     plt.ylabel(self.current_label_y.replace('vpol','VPol'), fontsize=24)
                     plt.xlim(20,128)
-                _fig.canvas.set_window_title(self.current_label_x)
+                fig.canvas.set_window_title(self.current_label_x)
                 if numpy.sum(counts) > 0:
                     try:
-                        cbar = _fig.colorbar(_im)
-                        cbar.set_label('Counts')
+                        cbar = fig.colorbar(_im)
+                        cbar.set_label('Counts',fontsize=18)
                     except Exception as e:
                         print('Error in colorbar, often caused by no events.')
                         print(e)
 
             if return_counts:
-                return _fig, _ax, counts
+                return fig, ax, counts
             else:
-                return _fig, _ax
+                return fig, ax
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -5627,7 +5633,7 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', return_counts=False, include_roi=True, lognorm=True, mask_top_N_bins=0, fill_value=0, suppress_legend=False):
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', return_counts=False, include_roi=True, lognorm=True, mask_top_N_bins=0, fill_value=0, suppress_legend=False, fig=None, ax=None):
         '''
         This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
         calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
@@ -5659,7 +5665,7 @@ class dataSlicer():
                     title = '%s, Runs = %i-%i'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1])
                 else:
                     title = '%s, Runs = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())))
-            fig, ax, counts = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap, lognorm=lognorm, return_counts=True, mask_top_N_bins=mask_top_N_bins, fill_value=fill_value) #prepares binning, must be called early (before addContour)
+            fig, ax, counts = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap, lognorm=lognorm, return_counts=True, mask_top_N_bins=mask_top_N_bins, fill_value=fill_value, fig=fig, ax=ax) #prepares binning, must be called early (before addContour)
             #these few lines below this should be used for adding contours to the map. 
             if include_roi:
                 legend_properties = []
@@ -5682,7 +5688,7 @@ class dataSlicer():
                     else:
                         legend_labels.append('%s'%(roi_key))
                 if suppress_legend == False:
-                    plt.legend(legend_properties,legend_labels,loc='upper left')
+                    ax.legend(legend_properties,legend_labels,loc='upper left', fontsize=14)
 
             if return_counts == True:
                 return fig, ax, counts
@@ -5744,7 +5750,7 @@ class dataSlicer():
                             c = numpy.copy(self.roi_colors[roi_index])
                             c[3] = 0.7 #setting alpha for fill but not for edge.
                             plt.hist(param, bins = self.current_bin_edges_x,label = 'roi %i: %s'%(roi_index, roi_key), color = c, edgecolor='black', linewidth=1)
-                    plt.legend(fontsize=10)
+                    ax.legend(fontsize=10)
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
@@ -5809,7 +5815,7 @@ class dataSlicer():
 
 
 
-            plt.legend()
+            ax.legend()
             plt.xlabel('Calibrated Trigger Time (h)\nFrom Timestamp %0.2f s'%min(bin_centers))
             plt.ylabel('Binned Counts\n%0.2f s Bins'%time_bin_width_s)
             plt.grid(which='both', axis='both')
@@ -5961,7 +5967,6 @@ class dataSlicer():
                 time_delay_dict = {}
 
             #Plot Maps
-            self.plot_horizon=False
             if self.conference_mode == True:
                 m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, plot_horizon=self.plot_horizon)
                 self.inspector_mpl['fig1_map_h'].set_xlim(-90,90)

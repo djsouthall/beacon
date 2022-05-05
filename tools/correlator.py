@@ -2827,7 +2827,8 @@ class Correlator:
                         upper_plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', zenith_cut_array_plane[0], azimuth_offset_deg=azimuth_offset_deg)
                         lower_plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', zenith_cut_array_plane[1], azimuth_offset_deg=azimuth_offset_deg)
 
-                if plot_horizon:
+                if plot_horizon == True:
+                    import pdb; pdb.set_trace()
                     with open(os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'data', 'horizon', 'horizon_v1.csv')) as csvfile:
                         csv_reader = csv.reader(csvfile, delimiter=',')
                         horizon_data = []
