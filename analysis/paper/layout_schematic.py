@@ -485,4 +485,4 @@ if __name__ == '__main__':
                 plt.xlim(min(e_vals),max(e_vals))
                 plt.tight_layout()
 
-                fig.savefig('./array_schematic_%s.pdf'%mode, dpi=300, transparent=True)
+                fig.savefig('./figures/array_schematic_%s.pdf'%mode, dpi=300, transparent=True)

@@ -155,7 +155,7 @@ if __name__ == '__main__':
                                     fc="w"),
                   )
             plt.tight_layout()
-            fig.savefig('./spectrogram/spectrogram_run%i_ch%i_%s.pdf'%(run, channel, cmap), dpi=300)
+            fig.savefig('./figures/spectrogram/spectrogram_run%i_ch%i_%s.pdf'%(run, channel, cmap), dpi=300)
 
 
 

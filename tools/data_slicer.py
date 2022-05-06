@@ -427,11 +427,16 @@ class dataSlicerSingleRun():
         This will check whether the given datasets are actually available for the given run.
         '''
         try:
+            verbose=True
+            print('\n\nHERE\n\n')
             with h5py.File(self.analysis_filename, 'r') as file:
                 if numpy.all( numpy.isin(['map_direction','map_direction','time_delays'] ,list(file.keys()))):
                     map_present = self.map_dset_key in list(file['map_direction'].keys())
                     if verbose:
                         print('map_present', map_present)
+                        print('self.map_dset_key: ')
+                        print(self.map_dset_key)
+                        print('Present Map Keys: ')
                         print(list(file['map_direction'].keys()))
                     impulsivity_present = self.impulsivity_dset_key in list(file['impulsivity'].keys())
                     if verbose:
@@ -451,6 +456,10 @@ class dataSlicerSingleRun():
                         print([map_present,impulsivity_present,time_delays_present])
                 else:
                     self.dsets_present = False
+
+                if self.dsets_present == False:
+                    print(list(file.keys()))
+                    import pdb; pdb.set_trace()
 
 
         except Exception as e:
@@ -4122,6 +4131,8 @@ class dataSlicerSingleRun():
             print('\nError in %s'%inspect.stack()[0][3])
             print('Run: ',self.reader.run)
             print(e)
+            print('Stuck using %i'%param_key)
+            import pdb; pdb.set_trace()
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)

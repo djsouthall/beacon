@@ -226,12 +226,12 @@ if __name__ == '__main__':
                 plt.tight_layout()
                 plt.subplots_adjust(left=0.06, bottom=0.12,right=0.98, top=0.95, wspace=0.3, hspace=0.2)
 
-                fig.savefig('./run%i_subsecond_plot_mode%i.pdf'%(run,mode), dpi=300)
+                fig.savefig('./figures/run%i_subsecond_plot_mode%i.pdf'%(run,mode), dpi=300)
 
                 print('Events from run %i that are expected to be 60 Hz events using the test statistic cut of %0.2f can be found by printing eventids[load_cut][~cut], which is executed below:'%(run,TS_cut_level))
                 print(eventids[load_cut][~cut])
                 print('If you would like to save the above eventids you can do so by either hacking in code below this print statement or doing so after the fact.')
-                # numpy.savetxt('./run%i_60Hz_eventids.csv'%run,eventids[load_cut][~cut])  #COULD USE THIS TO SAVE
+                # numpy.savetxt('./figures/run%i_60Hz_eventids.csv'%run,eventids[load_cut][~cut])  #COULD USE THIS TO SAVE
             elif mode == 1:
                 fig = plt.figure(figsize=(16,8))
                 ax = plt.subplot(1,2,1)
@@ -296,12 +296,12 @@ if __name__ == '__main__':
                 plt.tight_layout()
                 plt.subplots_adjust(left=0.06, bottom=0.12,right=0.98, top=0.95, wspace=0.3, hspace=0.2)
 
-                fig.savefig('./run%i_subsecond_plot_mode%i.pdf'%(run,mode), dpi=300)
+                fig.savefig('./figures/run%i_subsecond_plot_mode%i.pdf'%(run,mode), dpi=300)
 
                 print('Events from run %i that are expected to be 60 Hz events using the test statistic cut of %0.2f can be found by printing eventids[load_cut][~cut], which is executed below:'%(run,TS_cut_level))
                 print(eventids[load_cut][~cut])
                 print('If you would like to save the above eventids you can do so by either hacking in code below this print statement or doing so after the fact.')
-                # numpy.savetxt('./run%i_60Hz_eventids.csv'%run,eventids[load_cut][~cut])  #COULD USE THIS TO SAVE
+                # numpy.savetxt('./figures/run%i_60Hz_eventids.csv'%run,eventids[load_cut][~cut])  #COULD USE THIS TO SAVE
             elif mode == 2:
                 fig = plt.figure(figsize=(20,10))
 
@@ -481,7 +481,7 @@ if __name__ == '__main__':
                 plt.tight_layout()
                 plt.subplots_adjust(left=0.06, bottom=0.12,right=0.98, top=0.95, wspace=0.3, hspace=0.2)
 
-                fig.savefig('./run%i_subsecond_plot_mode%i.pdf'%(run,mode), dpi=300)
+                fig.savefig('./figures/run%i_subsecond_plot_mode%i.pdf'%(run,mode), dpi=300)
 
                 print('Events from run %i that are expected to be 60 Hz events using the test statistic cut of %0.2f can be found by printing eventids[load_cut][~cut], which is executed below:'%(run,TS_cut_level))
                 print(eventids[load_cut][~cut])

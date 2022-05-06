@@ -36,7 +36,7 @@ import matplotlib.dates as mdates
 import time
 from datetime import datetime
 import pytz
-plt.ion()
+plt.ioff()
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -222,7 +222,7 @@ if __name__ == '__main__':
                                     if mollweide == True:
                                         rpe[:,1] = numpy.deg2rad(rpe[:,1])
                                         rpe[:,2] = numpy.deg2rad(rpe[:,2])
-                                    ax.plot(rpe[:,1], rpe[:,2], linestyle = '-', c='k', alpha=1.0, label='Airplane Trajectory\nICAO24 %s'%airplane)
+                                    ax.plot(rpe[:,1], rpe[:,2], linestyle = '-', c='k', alpha=1.0, label='Airplane Trajectory')
 
                                 #plt.title('Airplane ICAO24 %s\n%i RF Triggered Events'%(airplane,len(eventids)))
                                 plt.legend(loc='upper right', fontsize=fontsize-2)
@@ -230,14 +230,14 @@ if __name__ == '__main__':
                             plt.tight_layout()
                             if hilbert == True:
                                 if mollweide == True:
-                                    fig.savefig('./airplanes/%i_events_%s_hilbert_mollweide.pdf'%(len(eventids),airplane),dpi=300)
+                                    fig.savefig('./figures/airplanes/%i_events_%s_hilbert_mollweide.pdf'%(len(eventids),airplane),dpi=300)
                                 else:
-                                    fig.savefig('./airplanes/%i_events_%s_hilbert.pdf'%(len(eventids),airplane),dpi=300)
+                                    fig.savefig('./figures/airplanes/%i_events_%s_hilbert.pdf'%(len(eventids),airplane),dpi=300)
                             else:
                                 if mollweide == True:
-                                    fig.savefig('./airplanes/%i_events_%s_raw_mollweide.pdf'%(len(eventids),airplane),dpi=300)
+                                    fig.savefig('./figures/airplanes/%i_events_%s_raw_mollweide.pdf'%(len(eventids),airplane),dpi=300)
                                 else:
-                                    fig.savefig('./airplanes/%i_events_%s_raw.pdf'%(len(eventids),airplane),dpi=300)
+                                    fig.savefig('./figures/airplanes/%i_events_%s_raw.pdf'%(len(eventids),airplane),dpi=300)
                             plt.close(fig)
 
                     if True:

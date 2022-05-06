@@ -3129,7 +3129,7 @@ class Correlator:
                 else:
                     y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
                 ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
-                map_ax.text(0.03, 0.03, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+                ax.text(0.03, 0.03, 'Local\nMountainside', transform=ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                 if mollweide == False:
                     ax.set_xlim(-90, 90)
                     ax.set_ylim(-30, 90)

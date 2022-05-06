@@ -235,6 +235,7 @@ if __name__ == '__main__':
         if mode == 'rfi':
             # runs = numpy.arange(5733,5736)# numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5736)
             runs = numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5736)
+
             roi_dict = {}
             roi_dict['RFI Source 0'] = {'phi_best_h':[-9,-7.0],      'elevation_best_h':[-7.2,1.8],  'phi_best_v':[-9,-7.0],'elevation_best_v':[-7.2,1.8],'std_h':[1,10], 'std_v':[1,5]}
             roi_dict['RFI Source 1'] = {'phi_best_h':[-7.5,-3.7] ,   'elevation_best_h':[-6.3,-3.7], 'p2p_v':[0,40],'impulsivity_v':[0,0.35]}
@@ -246,7 +247,6 @@ if __name__ == '__main__':
             trigger_types = [2]
             # pols = ['hpol']
             pols = ['hpol']#,'choice']
-            map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'
         else:
             origin = info.loadAntennaZeroLocation()
             pulser_info = PulserInfo()
@@ -279,11 +279,8 @@ if __name__ == '__main__':
 
             trigger_types = [3]
             pols = ['hpol']#['hpol','vpol']
-            map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_32768-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_belowhorizon'
 
-
-
-        ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],\
+        ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, remove_incomplete_runs=True, curve_choice=0, trigger_types=trigger_types,included_antennas=[0,1,2,3,4,5,6,7],\
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                         std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
@@ -296,7 +293,7 @@ if __name__ == '__main__':
         ds.conference_mode = True
 
         #ds.addROI('RFI Source 1',{'elevation_best_h':[-7.2,1.8],'phi_best_h':[-9,-7.0],'elevation_best_v':[-7.2,1.8],'phi_best_v':[-9,-7.0],'std_h':[1,10], 'std_v':[1,5]})
-        save_fig_dir = './resolution_plots/' #Set to None for interactive mode
+        save_fig_dir = './figures/resolution_plots/' #Set to None for interactive mode
         fullsize_fig_dims = (20,10)
         halfsize_fig_dims = (10,10)
 
