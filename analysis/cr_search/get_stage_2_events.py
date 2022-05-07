@@ -92,6 +92,8 @@ if __name__ == '__main__':
     run_batches['batch_6'] = numpy.arange(6474,6573)
     run_batches['batch_7'] = numpy.arange(6574,6641)
 
+    #The way I did this I skipped several runs..
+
     ########
     batch_key = 'batch_0'
     # run_batches['test_batch_3'] = numpy.array([6199])

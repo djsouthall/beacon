@@ -87,19 +87,26 @@ if __name__ == '__main__':
         load_cut = trigger_type == 2
         calibrated_trig_time = getEventTimes(reader)[load_cut]
 
-        numpy.random.seed(2)
-        randomized_times = numpy.sort(numpy.random.uniform(low=calibrated_trig_time[0],high=calibrated_trig_time[-1],size=(len(calibrated_trig_time),)))
-
-
         #This was used in initial testing of diffFromPeriodic to demonstrate it can work, fontsize=label_fontsize.
         window_s = 20.0
         rate_hz = 60.0
         expected_period = 1/rate_hz
         fold_subsecond_plot = False
 
-        metric = diffFromPeriodic(calibrated_trig_time,window_s=window_s, expected_period=expected_period, normalize_by_window_index=normalize_by_window_index, normalize_by_density=normalize_by_density, plot_sample_hist=False, plot_test_plot_A=False, fontsize=label_fontsize)
-        metric_rand = diffFromPeriodic(randomized_times,window_s=window_s, expected_period=expected_period, atol=0.001, normalize_by_window_index=normalize_by_window_index, normalize_by_density=normalize_by_density, plot_sample_hist=False, fontsize=label_fontsize)
-        bins = numpy.linspace(min(min(metric),min(metric_rand)),max(max(metric),max(metric_rand)),100)
+
+        numpy.random.seed(2)
+        randomized_times = numpy.sort(numpy.random.uniform(low=calibrated_trig_time[0],high=calibrated_trig_time[-1],size=(len(calibrated_trig_time),)))
+        randomized_times_rounded = randomized_times - randomized_times%expected_period
+
+
+        metric              = diffFromPeriodic(calibrated_trig_time,    window_s=window_s, expected_period=expected_period, normalize_by_window_index=normalize_by_window_index, normalize_by_density=normalize_by_density, plot_sample_hist=False, plot_test_plot_A=False, fontsize=label_fontsize)
+        metric_rand         = diffFromPeriodic(randomized_times,        window_s=window_s, expected_period=expected_period, normalize_by_window_index=normalize_by_window_index, normalize_by_density=normalize_by_density, plot_sample_hist=False, plot_test_plot_A=False, fontsize=label_fontsize)
+        metric_rand_rounded = diffFromPeriodic(randomized_times_rounded,window_s=window_s, expected_period=expected_period, normalize_by_window_index=normalize_by_window_index, normalize_by_density=normalize_by_density, plot_sample_hist=False, plot_test_plot_A=False, fontsize=label_fontsize)
+        
+        mins = numpy.array([min(metric),min(metric_rand), min(metric_rand_rounded)])
+        maxs = numpy.array([max(metric),max(metric_rand), max(metric_rand_rounded)])
+
+        bins = numpy.linspace(min(mins),max(maxs),100)
         bin_centers = (bins[:-1] + bins[1:]) / 2.0
         
 
@@ -192,15 +199,19 @@ if __name__ == '__main__':
                 if normalize:
                     n, bin_edges, patches = plt.hist(metric,alpha=0.7,density=True,label='Actual\nTrigger Times',bins=bins)
                     plt.hist(metric_rand,alpha=0.7,density=True,label='Uniformly\nRandomized\nTrigger Times',bins=bin_edges)
+                    plt.hist(metric_rand,alpha=0.7,density=True,label='Purely %i Hz\nTrigger Times'%rate_hz,bins=bin_edges)
                     plt.ylabel('Normalized Counts',fontsize=label_fontsize)
                     arrow_xy = (0.115,1.15)
                     relative_xy = (0.05, 0.1)
                 else:
                     n, bin_edges, patches = plt.hist(metric,alpha=0.7,density=False,label='Actual\nTrigger Times',bins=bins)
                     plt.hist(metric_rand,alpha=0.7,density=False,label='Uniformly\nRandomized\nTrigger Times',bins=bin_edges)
+                    plt.hist(metric_rand,alpha=0.7,density=False,label='Purely %i Hz\nTrigger Times'%rate_hz,bins=bin_edges)
                     plt.ylabel('Counts',fontsize=label_fontsize)
                     arrow_xy = (0.115,4700)
                     relative_xy = (0.05, 1000)
+
+
                 plt.xlabel('Test Statistic',fontsize=label_fontsize)
 
                 plt.xlim(min(bin_edges),max(bin_edges))
@@ -303,7 +314,7 @@ if __name__ == '__main__':
                 print('If you would like to save the above eventids you can do so by either hacking in code below this print statement or doing so after the fact.')
                 # numpy.savetxt('./figures/run%i_60Hz_eventids.csv'%run,eventids[load_cut][~cut])  #COULD USE THIS TO SAVE
             elif mode == 2:
-                fig = plt.figure(figsize=(20,10))
+                fig = plt.figure(figsize=(22,10))
 
                 inset = False
 

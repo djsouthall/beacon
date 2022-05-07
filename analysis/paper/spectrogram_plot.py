@@ -26,6 +26,7 @@ from matplotlib.ticker import FormatStrFormatter, ScalarFormatter, FuncFormatter
 from matplotlib.patches import Circle
 from matplotlib.offsetbox import (TextArea, DrawingArea, OffsetImage,
                                   AnnotationBbox)
+
 import matplotlib.dates as mdates
 import time
 from datetime import datetime
@@ -43,13 +44,13 @@ if __name__ == '__main__':
     run = int(6049)
 
     event_limit = 30000
-    channels = numpy.array([0])
+    channels = numpy.array([0, 1])
 
     reader, freqs, spectra_dbish_binned, time_range = getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=False, channels=channels)
 
     gc.collect()
 
-    cmaps=[ 'coolwarm', 'Greys','viridis','plasma','inferno']#['PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu', 'RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic']
+    cmaps=['inferno']#[ 'coolwarm', 'Greys','viridis','plasma','inferno']#['PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu', 'RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic']
 
 
     time_offset = 0.5 #To remove the run startup events
@@ -77,14 +78,15 @@ if __name__ == '__main__':
             plt.ylabel('Frequency (MHz)',fontsize=20)
             plt.xlabel('Readout Time (min)',fontsize=20)
             cb = plt.colorbar()
-            cb.set_label('dB (arb)',fontsize=20)
+            plt.clim(-15,42)
+            cb.set_label('Power Spectral Density\n' + 'dB (arb)',fontsize=20)
 
-            #Label 48 MHz blip 
+            #Label 48 MHz Signal 
             arrow_head_xy = (26.05 + 0.15, 48.5 - 0.1)#10.88
             text_xy = (32,30)
 
 
-            ann = ax.annotate("48 MHz Blip",
+            ann = ax.annotate("48 MHz Signal",
                   xy=arrow_head_xy, xycoords='data',
                   xytext=text_xy, textcoords='data',
                   size=label_fontsize, va="center", ha="center",
@@ -94,12 +96,12 @@ if __name__ == '__main__':
                                   fc="w"),
                   )
 
-            #Label 42 MHz blip 
+            #Label 42 MHz Signal 
             arrow_head_xy = (20.17 + 0.1, 42.2 - 0.5)#10.88
             text_xy = (28,10)
 
 
-            ann = ax.annotate("42 MHz Blip",
+            ann = ax.annotate("42 MHz Signal",
                   xy=arrow_head_xy, xycoords='data',
                   xytext=text_xy, textcoords='data',
                   size=label_fontsize, va="center", ha="center",
@@ -123,37 +125,47 @@ if __name__ == '__main__':
                                   fc="w"),
                   )
 
-            arrow_head_xy = (23, 92)
-            text_xy = (28,90)
+            if channel%2 == 0:
+                arrow_head_xy = (23, 92)
+                text_xy = (28,90)
 
-            ann = ax.annotate("CW",
-                  xy=arrow_head_xy, xycoords='data',
-                  xytext=text_xy, textcoords='data',
-                  size=label_fontsize, va="center", ha="center",
-                  bbox=dict(boxstyle="round", fc="w"),
-                  arrowprops=dict(arrowstyle="-|>",
-                                  connectionstyle="arc3,rad=+0.1",
-                                  fc="w"),
-                  )
+                ann = ax.annotate("CW",
+                      xy=arrow_head_xy, xycoords='data',
+                      xytext=text_xy, textcoords='data',
+                      size=label_fontsize, va="center", ha="center",
+                      bbox=dict(boxstyle="round", fc="w"),
+                      arrowprops=dict(arrowstyle="-|>",
+                                      connectionstyle="arc3,rad=+0.1",
+                                      fc="w"),
+                      )
 
 
             # Add label of TV band
+            if channel%2 == 0:
+                tv_top = 60
+                tv_bottom = 54
+                tv_middle = (tv_top + tv_bottom)/2.0
+                x = 28
+                arrow_head_xy = (x,tv_middle)
+                text_xy = (x+5,tv_middle)
 
-            tv_top = 60
-            tv_bottom = 54
-            tv_middle = (tv_top + tv_bottom)/2.0
-            x = 28
-            arrow_head_xy = (x,tv_middle)
-            text_xy = (x+5,tv_middle)
+                ann = ax.annotate("TV Band",
+                      xy=arrow_head_xy, xycoords='data',
+                      xytext=text_xy, textcoords='data',
+                      size=label_fontsize, va="center", ha="center",
+                      bbox=dict(boxstyle="round", fc="w"),
+                      arrowprops=dict(  arrowstyle="-[,widthB=0.55, lengthB=0.2, angleB=0",
+                                        fc="w"),
+                      )
 
-            ann = ax.annotate("TV Band",
-                  xy=arrow_head_xy, xycoords='data',
-                  xytext=text_xy, textcoords='data',
-                  size=label_fontsize, va="center", ha="center",
-                  bbox=dict(boxstyle="round", fc="w"),
-                  arrowprops=dict(  arrowstyle="-[,widthB=0.55, lengthB=0.2, angleB=0",
-                                    fc="w"),
-                  )
+            if channel%2 == 0:
+                ax.text(2, 9, 'HPol',
+                    size=label_fontsize+4,
+                    bbox=dict(boxstyle="round", fc="w"))
+            else:
+                ax.text(2, 9, 'VPol',
+                    size=label_fontsize+4,
+                    bbox=dict(boxstyle="round", fc="w"))
             plt.tight_layout()
             fig.savefig('./figures/spectrogram/spectrogram_run%i_ch%i_%s.pdf'%(run, channel, cmap), dpi=300)
 

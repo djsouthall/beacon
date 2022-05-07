@@ -109,7 +109,7 @@ if __name__ == '__main__':
     time_delays_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     map_length = 16384
     map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
-    if True:
+    if False:
         #These batches skip ~1% of runs, but it is what I acutally analyzed so it is what I am presenting the stats for. 
         run_batches = {}
         run_batches['batch_0'] = numpy.arange(5733,5974) # September data, should setup to auto add info to the "notes" section based off of existing sorting, and run this one those events for consistency
@@ -123,22 +123,22 @@ if __name__ == '__main__':
 
         batch = 0
         runs = run_batches['batch_%i'%batch]
-    elif False:
-        batch = 0
-        batch_length = 150
-        runs = 5733 + numpy.arange(batch_length) + batch_length*batch
-        # runs = numpy.arange(5733,6641)
-        runs = runs[runs<=6640]
     elif True:
-        runs = numpy.arange(5733,6641)
-    elif True:
-        #Quicker for testing
-        runs = numpy.arange(5910,5912)
-    elif False:
-        runs = numpy.arange(5733,5974)
-        runs = runs[runs != 5864]
+        #These batches skip ~1% of runs, but it is what I acutally analyzed so it is what I am presenting the stats for. 
+        run_batches = {}
+        run_batches['batch_0'] = numpy.arange(5733,5974) # September data, should setup to auto add info to the "notes" section based off of existing sorting, and run this one those events for consistency
+        run_batches['batch_1'] = numpy.arange(5974,6073)
+        run_batches['batch_2'] = numpy.arange(6074,6173)
+        run_batches['batch_3'] = numpy.arange(6174,6273)
+        run_batches['batch_4'] = numpy.arange(6274,6373)
+        run_batches['batch_5'] = numpy.arange(6374,6473)
+        run_batches['batch_6'] = numpy.arange(6474,6573)
+        run_batches['batch_7'] = numpy.arange(6574,6641)
+        runs = numpy.array([])
+        for k in (run_batches.keys()):
+            runs = numpy.append(runs,run_batches[k])
     else:
-        runs = numpy.arange(5910,5934)#numpy.arange(5733,5974)#numpy.arange(5910,5912)
+        runs = numpy.arange(5733,5740)#numpy.arange(5974,6073)#numpy.arange(5733,5974)#numpy.arange(5910,5913)#numpy.arange(5733,5974)#numpy.arange(5910,5912)
 
     print("Preparing dataSlicer")
 
@@ -153,7 +153,7 @@ if __name__ == '__main__':
     n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
 
     ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, \
-                    low_ram_mode=False,\
+                    low_ram_mode=True,\
                     analysis_data_dir=processed_datapath, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
                     cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                     std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
@@ -180,8 +180,11 @@ if __name__ == '__main__':
         ds.addROI(cut_dict_key + '-' + param_key, copy.deepcopy(copied_dict)) #Add an ROI containing all cuts BUT the current key (used as ROI label).
 
 
-    out_dir = './cuts_run%i-run%i_%i'%(min(runs), max(runs), time.time())
+    out_dir = './data/cuts_run%i-run%i_%i'%(min(runs), max(runs), time.time())
     os.mkdir(out_dir)
+    os.mkdir(os.path.join(out_dir, 'all_cuts'))
+    os.mkdir(os.path.join(out_dir, 'all_but_cuts'))
+    os.mkdir(os.path.join(out_dir, 'no_cuts'))
 
 
     pass_all_cuts_eventids_dict, successive_cut_counts, total_cut_counts = ds.getCutsFromROI(cut_dict_key,load=False,save=False,verbose=True, return_successive_cut_counts=True, return_total_cut_counts=True) #Events passing all cuts
@@ -195,8 +198,8 @@ if __name__ == '__main__':
     # Save histograms with no cuts
 
     for param_key in list(ds.roi[cut_dict_key].keys()):
-        if param_key in ['elevation_best_choice', 'phi_best_choice']:
-            continue
+        # if param_key in ['elevation_best_choice', 'phi_best_choice']:
+        #     continue
 
         cut_name = cut_dict_key + '-' + param_key
         ds.setCurrentPlotBins(param_key, param_key, None)
@@ -217,7 +220,7 @@ if __name__ == '__main__':
         sub_eventids_dict['cut_dict'] = str(ds.roi[cut_name])
         sub_eventids_dict['included_runs'] = runs
 
-        numpy.savez_compressed(os.path.join(out_dir, 'hist_for_%s_with_all_cuts_but_%s.npz'%(param_key, param_key)), **sub_eventids_dict)
+        numpy.savez_compressed(os.path.join(out_dir, 'all_but_cuts', 'hist_for_%s_with_all_cuts_but_%s.npz'%(param_key, param_key)), **sub_eventids_dict)
 
 
         # Save histograms after all cuts
@@ -244,7 +247,7 @@ if __name__ == '__main__':
         sub_eventids_dict['cut_dict'] = str(ds.roi[cut_dict_key])
         sub_eventids_dict['included_runs'] = runs
 
-        numpy.savez_compressed(os.path.join(out_dir, 'hist_for_%s_with_all_cuts.npz'%(param_key)), **sub_eventids_dict)
+        numpy.savez_compressed(os.path.join(out_dir, 'all_cuts', 'hist_for_%s_with_all_cuts.npz'%(param_key)), **sub_eventids_dict)
 
         # Save histograms after no cuts
         for key in numpy.array(list(sub_eventids_dict.keys())):
@@ -265,7 +268,7 @@ if __name__ == '__main__':
         sub_eventids_dict['cut_dict'] = str({})
         sub_eventids_dict['included_runs'] = runs
 
-        numpy.savez_compressed(os.path.join(out_dir, 'hist_for_%s_with_no_cuts.npz'%(param_key)), **sub_eventids_dict)
+        numpy.savez_compressed(os.path.join(out_dir, 'no_cuts', 'hist_for_%s_with_no_cuts.npz'%(param_key)), **sub_eventids_dict)
 
         for key in numpy.array(list(sub_eventids_dict.keys())):
             del sub_eventids_dict[key] 

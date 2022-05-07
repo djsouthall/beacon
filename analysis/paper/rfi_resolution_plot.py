@@ -74,32 +74,13 @@ def bivariateGaus(xy ,x0,sigma_x, y0,sigma_y, rho, scale_factor=1.0, return_2d=F
 
 
 
-def fitGaus(x, _counts, _ax, add_label=False, center=False, normalize=False, debug=False, **kwargs):
+def fitGaus(x, _counts, debug=False):
     try:
         p0 = [numpy.max(_counts),x[numpy.argmax(_counts)],2*numpy.abs(x[numpy.argmax(_counts[_counts != 0])] - x[numpy.argmin(_counts[_counts != 0])])]
         if debug == True:
             import pdb; pdb.set_trace()
-        popt, pcov = curve_fit(gaus,x,_counts,p0=p0) #Only want to use normalize when plotting not fitting.
-        popt[2] = abs(popt[2]) #I want positive sigma.
-
-        plot_x = numpy.linspace(min(x),max(x),100*len(x))
-
-
-        if center == False:
-            if add_label == True:
-                _ax.plot(plot_x,gaus(plot_x,*popt),label='Center = %0.4f,  Sigma = %0.4f deg'%(popt[1],popt[2]), **kwargs)
-                _ax.axvline(popt[1], **kwargs)
-            else:
-                _ax.plot(plot_x,gaus(plot_x,*popt), **kwargs)
-        else:
-            if add_label == True:
-                _ax.plot(plot_x - popt[1],gaus(plot_x,*popt, normalize=normalize),label='Center = %0.4f,  Sigma = %0.4f deg'%(popt[1],popt[2]), **kwargs)
-            else:
-                _ax.plot(plot_x - popt[1],gaus(plot_x,*popt, normalize=normalize), **kwargs)
-
+        popt, pcov = curve_fit(gaus,x,_counts,p0=p0,bounds=(numpy.array([0,-numpy.inf,0]), numpy.array([numpy.inf,numpy.inf,numpy.inf]))) #Only want to use normalize when plotting not fitting.
         return popt
-
-
     except Exception as e:
         print('Failed to fit histogram')
         print(e)
@@ -226,24 +207,28 @@ if __name__ == '__main__':
     min_phi     = -90
     max_phi     = 90
     n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
-    run_modes = ['rfi']#['rfi', 'pulsers']#['pulsers']#['rfi', 'pulsers']
+    run_modes = ['rfi']#['pulsers']#['rfi', 'pulsers']
 
     cut_range = 2.5
+    small_log = True
 
     for mode in run_modes:
         print('Generating %s plots:'%mode)
         if mode == 'rfi':
-            # runs = numpy.arange(5733,5736)# numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5736)
-            runs = numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5736)
+            # runs = numpy.arange(5733,5736)
+            runs = numpy.arange(5733,5790)# numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5736)
+            # runs = numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5736)#
 
             roi_dict = {}
-            roi_dict['RFI Source 0'] = {'phi_best_h':[-9,-7.0],      'elevation_best_h':[-7.2,1.8],  'phi_best_v':[-9,-7.0],'elevation_best_v':[-7.2,1.8],'std_h':[1,10], 'std_v':[1,5]}
-            roi_dict['RFI Source 1'] = {'phi_best_h':[-7.5,-3.7] ,   'elevation_best_h':[-6.3,-3.7], 'p2p_v':[0,40],'impulsivity_v':[0,0.35]}
+            roi_dict['RFI Source 0'] = {'phi_best_h':[-9,-7.0],      'elevation_best_h':[-6.8,-1.5],  'phi_best_v':[-9,-7.0],'elevation_best_v':[-7.2,1.8],'std_h':[1,10], 'std_v':[1,5]}
+            roi_dict['RFI Source 1'] = {'phi_best_h':[-7.5,-3.7] ,   'elevation_best_h':[-7,-3.7],   'p2p_v':[0,40],'impulsivity_v':[0,0.35]}
             roi_dict['RFI Source 2'] = {'phi_best_h':[-3,-1.6] ,     'elevation_best_h':[-7.2,-4],   'cr_template_search_v':[0.25,0.5],'impulsivity_v':[0.2,1]}
             roi_dict['RFI Source 3'] = {'phi_best_h':[-1.7,0.0] ,    'elevation_best_h':[-10,-2.25], 'mean_max_corr_h':[0.65,1.1],'mean_max_corr_v':[0.775,1.1],'impulsivity_v':[0.4,0.6]}
             roi_dict['RFI Source 4'] = {'phi_best_h':[17,18.5] ,     'elevation_best_h':[-6,-2.0],   'std_v':[0,4],'mean_max_corr_v':[0.3,1.0]}
             roi_dict['RFI Source 5'] = {'phi_best_h':[22.35,23.6] ,  'elevation_best_h':[-5,-0.5],   'p2p_v':[0,40]}
-            roi_dict['RFI Source 6'] = {'phi_best_h':[40.75,42] ,    'elevation_best_h':[-5,-0.5],   'std_v':[2.5,8],'std_h':[4,9.5], 'cr_template_search_v':[0.775,1.0],'vpol_peak_to_sidelobe':[2.05,3.5]}
+            # roi_dict['RFI Source 6'] = {'phi_best_h':[40.75,42] ,    'elevation_best_h':[-5,-0.5],   'std_v':[2.5,8],'std_h':[4,9.5], 'cr_template_search_v':[0.775,1.0],'vpol_peak_to_sidelobe':[2.05,3.5]}
+            roi_dict['RFI Source 6'] = {'phi_best_h':[50.5,52.5] ,    'elevation_best_h':[-5.6,-1.5]}
+            
             trigger_types = [2]
             # pols = ['hpol']
             pols = ['hpol']#,'choice']
@@ -336,7 +321,7 @@ if __name__ == '__main__':
 
 
             do = list(ds.roi.keys())
-            # do = ['RFI Source 3']
+            # do = ['RFI Source 4']
             for roi_index, roi_key in enumerate(list(ds.roi.keys())):
                 if roi_key not in do:
                     continue
@@ -379,6 +364,68 @@ if __name__ == '__main__':
                     #Add events for single ROI, counts plotted manually later.
                     _fig, _ax, counts = ds.plotROI2dHist(key_x, key_y, eventids_dict=roi_eventids_dict, return_counts=True, cmap='coolwarm', include_roi=False, fig=None, ax =None)
                     plt.close(_fig)
+                    plt.sca(ax2)
+
+                    if small_log:
+                        im = ax2.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, counts, norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap='coolwarm')
+                    else:
+                        im = ax2.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, counts,cmap='coolwarm')
+                    
+                    x0 = (roi_dict[roi_key]['phi_best_h'][0] + roi_dict[roi_key]['phi_best_h'][1])/2.0
+                    y0 = (roi_dict[roi_key]['elevation_best_h'][0] + roi_dict[roi_key]['elevation_best_h'][1])/2.0
+
+                    ax2.set_ylim(y0 - 1.5, y0 + 2)
+                    ax2.set_xlim(x0 - 1.25, x0 + 1.25)
+
+                    # Bins must be called after plotROI2dHist
+                    current_bin_edges_x = ds.current_bin_edges_x
+                    current_bin_centers_x = (current_bin_edges_x[:-1] + current_bin_edges_x[1:])/2
+                    current_label_x = ds.current_label_x
+
+                    current_bin_edges_y = ds.current_bin_edges_y
+                    current_bin_centers_y = (current_bin_edges_y[:-1] + current_bin_edges_y[1:])/2
+                    current_label_y  = ds.current_label_y
+
+                    max_x_column = numpy.argmax(numpy.max(counts,axis=0))
+                    max_x_value = current_bin_centers_x[max_x_column]
+                    #numpy.isin(numpy.max(counts), counts[:,max_x_column])
+
+                    max_y_row = numpy.argmax(numpy.max(counts,axis=1))
+                    max_y_value = current_bin_centers_y[max_y_row]
+
+                    cut_range = 2.5
+                    rows = range(numpy.shape(counts)[0])#[max_y_row]
+                    x_range_cut = numpy.where(numpy.abs(current_bin_centers_x - max_x_value) < cut_range)[0]
+
+                    for row in rows:
+                        if sum(counts[row,:]) > 0:
+                            if row == max_y_row:
+                                popt = fitGaus(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut])
+
+                                max_row_popt = fitGaus(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut])
+                                best_azimuth = max_row_popt[1]
+                                best_azimuth_sigma = max_row_popt[2]
+                            else:
+                                popt = fitGaus(current_bin_centers_x[x_range_cut], counts[row,:][x_range_cut])
+
+                    popt = fitGaus(current_bin_centers_x[x_range_cut], numpy.sum(counts[:,x_range_cut], axis=0))
+                    popt = fitGaus(current_bin_centers_x[x_range_cut], numpy.sum(counts[:,x_range_cut], axis=0))
+
+                    columns = range(numpy.shape(counts)[1])#[max_x_column]
+                    y_range_cut = numpy.where(numpy.abs(current_bin_centers_y - max_y_value) < cut_range)[0]
+                    for column in columns:
+                        if sum(counts[:,column]) > 0:
+                            if column == max_x_column:
+                                popt = fitGaus(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut])
+
+                                max_column_popt = fitGaus(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut])
+                                best_elevation = max_column_popt[1]
+                                best_elevation_sigma = max_column_popt[2]
+                            else:
+                                popt = fitGaus(current_bin_centers_y[y_range_cut], counts[:,column][y_range_cut])
+
+                    popt = fitGaus(current_bin_centers_y[y_range_cut], numpy.sum(counts[y_range_cut,:], axis=1))
+                    popt = fitGaus(current_bin_centers_y[y_range_cut], numpy.sum(counts[y_range_cut,:], axis=1))
 
                     
                     # Bins must be called after plotROI2dHist
@@ -407,12 +454,71 @@ if __name__ == '__main__':
                     x_guess = numpy.mean(ds.roi[roi_key]['phi_best_h'])
                     y_guess = numpy.mean(ds.roi[roi_key]['elevation_best_h'])
 
-                    fit_guess_params =  [x_guess, 0.1, y_guess, 0.2, 0.0]#x0,sigma_x, y0,sigma_y, rho 
+                    rho_guesses = {}
+                    if False:
+                        rho_guesses['RFI Source 0'] = 0.6
+                        rho_guesses['RFI Source 1'] = 0.1
+                        rho_guesses['RFI Source 2'] = 0.2
+                        rho_guesses['RFI Source 3'] = 0.4
+                        rho_guesses['RFI Source 4'] = -0.1
+                        rho_guesses['RFI Source 5'] = -0.4
+                        rho_guesses['RFI Source 6'] = -0.6
+                    elif True:
+                        rho_guesses['RFI Source 0'] = 0.0
+                        rho_guesses['RFI Source 1'] = 0.0
+                        rho_guesses['RFI Source 2'] = 0.0
+                        rho_guesses['RFI Source 3'] = 0.0
+                        rho_guesses['RFI Source 4'] = 0.0
+                        rho_guesses['RFI Source 5'] = 0.0
+                        rho_guesses['RFI Source 6'] = 0.0
+
+                    else:
+                        rho_guesses['RFI Source 0'] = 0.4
+                        rho_guesses['RFI Source 1'] = 0.2
+                        rho_guesses['RFI Source 2'] = -0.05
+                        rho_guesses['RFI Source 3'] = 0.4
+                        rho_guesses['RFI Source 4'] = -0.1
+                        rho_guesses['RFI Source 5'] = -0.2
+                        rho_guesses['RFI Source 6'] = -0.4
+
+                    #fit_guess_params =  [x_guess, 0.2, y_guess, 0.3, rho_guesses[roi_key]]#x0,sigma_x, y0,sigma_y, rho 
+                    fit_guess_params =  [max_row_popt[1], max_row_popt[2]*2, max_column_popt[1], max_column_popt[2]*4, 0.0]
 
                     xy_range_cut = numpy.where(numpy.logical_and(numpy.abs(x - max_x_value) < cut_range , numpy.abs(y - max_y_value) < cut_range).ravel())[0]
 
-                    popt, pcov = curve_fit(bivariateGaus,(x.ravel()[xy_range_cut], y.ravel()[xy_range_cut]),counts.ravel()[xy_range_cut] / (numpy.sum(counts.ravel()[xy_range_cut])*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]),p0=fit_guess_params) #Only want to use normalize when plotting not fitting.
-                    
+                    if False and roi_key == 'RFI SOURCE 6':
+                        lower_bounds = numpy.array([    fit_guess_params[0] - 0.25,
+                                                         fit_guess_params[1] - 0.35,
+                                                         fit_guess_params[2] - 0.25,
+                                                         fit_guess_params[3] - 1.5,
+                                                         fit_guess_params[4] - 0.4])
+                            
+                        upper_bounds = numpy.array([    fit_guess_params[0] + 0.25,
+                                                         fit_guess_params[1] + 0.5,
+                                                         fit_guess_params[2] + 0.25,
+                                                         fit_guess_params[3] + 1.5,
+                                                         fit_guess_params[4] + 0.4])
+
+                        popt, pcov = curve_fit(bivariateGaus,(x.ravel()[xy_range_cut], y.ravel()[xy_range_cut]),counts.ravel()[xy_range_cut] / (numpy.sum(counts.ravel()[xy_range_cut])*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]),p0=fit_guess_params,bounds = (lower_bounds, upper_bounds)) #Only want to use normalize when plotting not fitting.
+                    elif True and roi_key != 'RFI Source 4':
+                        lower_bounds = numpy.array([    fit_guess_params[0] - 0.25,
+                                                         fit_guess_params[1] - 0.3,
+                                                         fit_guess_params[2] - 0.25,
+                                                         fit_guess_params[3] - 1.5,
+                                                         fit_guess_params[4] - 0.5])
+                            
+                        upper_bounds = numpy.array([    fit_guess_params[0] + 0.25,
+                                                         fit_guess_params[1] + 0.6,
+                                                         fit_guess_params[2] + 0.25,
+                                                         fit_guess_params[3] + 0.5,
+                                                         fit_guess_params[4] + 0.2])
+
+                        popt, pcov = curve_fit(bivariateGaus,(x.ravel()[xy_range_cut], y.ravel()[xy_range_cut]),counts.ravel()[xy_range_cut] / (numpy.sum(counts.ravel()[xy_range_cut])*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]),p0=fit_guess_params,bounds = (lower_bounds, upper_bounds)) #Only want to use normalize when plotting not fitting.
+                    else:
+                        popt, pcov = curve_fit(bivariateGaus,(x.ravel()[xy_range_cut], y.ravel()[xy_range_cut]),counts.ravel()[xy_range_cut] / (numpy.sum(counts.ravel()[xy_range_cut])*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]),p0=fit_guess_params) #Only want to use normalize when plotting not fitting.
+
+
+
                     x0          = popt[0]
                     sigma_x     = popt[1]
                     y0          = popt[2]
@@ -424,10 +530,10 @@ if __name__ == '__main__':
                     ellipse_vertices = parametricCovarianceEllipse(sigma, mean, confidence_integral_value, n=1000)
                     ellipse_path = matplotlib.path.Path(ellipse_vertices)
                     ellipse_area = contourArea(ellipse_path.vertices) #square degrees
-                    
 
-                    print('Comparing Initial and Fit Values')
-                    
+
+                    print('%s Comparing Initial and Fit Values'%roi_key)
+
                     print('x0 :         initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[0], x0,       x0 - fit_guess_params[0]))
                     print('sigma_x :    initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[1], sigma_x,  sigma_x - fit_guess_params[1]))
                     print('y0 :         initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[2], y0,       y0 - fit_guess_params[2]))
@@ -449,24 +555,31 @@ if __name__ == '__main__':
                     plot_x_edges_mesh, plot_y_edges_mesh = numpy.meshgrid(plot_x_edges, plot_y_edges)
                     plot_x_centers_mesh, plot_y_centers_mesh = numpy.meshgrid(plot_x_centers, plot_y_centers)
 
+                    if False:
+                        plot_x_centers_mesh = ds.current_bin_centers_mesh_x
+                        plot_x_edges_mesh = ds.current_bin_edges_mesh_x
+
+                        plot_y_centers_mesh = ds.current_bin_centers_mesh_y
+                        plot_y_edges_mesh = ds.current_bin_edges_mesh_y
+                        
 
                     initial_z = bivariateGaus( (x, y) ,fit_guess_params[0], fit_guess_params[1], fit_guess_params[2], fit_guess_params[3], fit_guess_params[4], scale_factor = (numpy.sum(counts)*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]), return_2d=True)
                     
                     scale_factor = (numpy.sum(counts)*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0])
                     fit_z = bivariateGaus( (plot_x_centers_mesh, plot_y_centers_mesh) ,popt[0], popt[1], popt[2], popt[3], popt[4], scale_factor = scale_factor, return_2d=True)
 
-                    plt.sca(ax2)
-                    im = ax2.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, counts,norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap='coolwarm')
                     # y_modifier = 0.6
                     # x_modifier = 0.2
                     # ax2.set_ylim(y0 - y_modifier*cut_range, y0 + y_modifier*cut_range + 0.5)
                     # ax2.set_xlim(x0 - x_modifier*cut_range, x0 + x_modifier*cut_range)
-                    ax2.set_ylim(y0 - 2.5, y0 + 3.5)
-                    ax2.set_xlim(x0 - 1.5, x0 + 1.5)
+                    ax2.set_ylim(y0 - 1.5, y0 + 2)
+                    ax2.set_xlim(x0 - 1.25, x0 + 1.25)
 
 
                     try:
                         cbar = plt.colorbar(im, ax=ax2)
+                        if small_log == False:
+                            cbar.formatter.set_powerlimits((0, 0))
                         cbar.set_label('Counts', fontsize=fontsize)
                     except Exception as e:
                         print('Error in colorbar, often caused by no events.')
@@ -481,8 +594,15 @@ if __name__ == '__main__':
                     ax2.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
                     plt.sca(ax3)
-                    im = ax3.pcolormesh(plot_x_edges_mesh, plot_y_edges_mesh, fit_z,norm=colors.LogNorm(vmin=0.5, vmax=fit_z.max()),cmap='coolwarm', label='2D Gaussian Fit')
+                    
+                    if small_log:
+                        im = ax3.pcolormesh(plot_x_edges_mesh, plot_y_edges_mesh, fit_z,norm=colors.LogNorm(vmin=0.5, vmax=fit_z.max()),cmap='coolwarm', label='2D Gaussian Fit')
+                    else:
+                        im = ax3.pcolormesh(plot_x_edges_mesh, plot_y_edges_mesh, fit_z,cmap='coolwarm', label='2D Gaussian Fit')
+                    
+
                     # ax3.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color=ds.roi_colors[roi_index],label='%0.2f'%(confidence_integral_value*100) + r'% PDF Area = ' + '%0.3f deg^2\nrho = %0.3f'%(ellipse_area,rho))
+                    ax2.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color=ds.roi_colors[roi_index])
                     ax3.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color=ds.roi_colors[roi_index],label='%i'%(confidence_integral_value*100) + r'%' + 'Fit PDF Area\n= %0.2f deg^2'%(ellipse_area))
 
                     if mode == 'pulsers':
@@ -509,6 +629,8 @@ if __name__ == '__main__':
 
                     try:
                         cbar = plt.colorbar(im, ax=ax3)
+                        if small_log == False:
+                            cbar.formatter.set_powerlimits((0, 0))
                         cbar.set_label('Counts', fontsize=fontsize)
                     except Exception as e:
                         print('Error in colorbar, often caused by no events.')
@@ -532,12 +654,14 @@ if __name__ == '__main__':
                                       fc="w"),
                       )
 
+                    plt.subplots_adjust(left=0.05, bottom=0.1,right=0.95, top=0.95, wspace=0.05, hspace=0.27)
 
                     #fig_2d.set_tight_layout(True)
                     if save_fig_dir is not None:
                         # fig_2d.set_size_inches(halfsize_fig_dims)
                         fig_2d.subplots_adjust(top=0.93)
-                        fig_2d.savefig(os.path.join(save_fig_dir,'%s_spot_%s.pdf'%(roi_key.replace(' ','').lower() , pol)) , dpi=300,transparent=True)
+                        fig_2d.savefig(os.path.join(save_fig_dir,'%s_spot_%s.pdf'%(roi_key.replace(' ','').lower() , pol)),transparent=True)
+                        fig_2d.savefig(os.path.join(save_fig_dir,'%s_spot_%s.png'%(roi_key.replace(' ','').lower() , pol)), dpi=150,transparent=True)
 
                     if True:
                         # Sanity check
@@ -555,3 +679,88 @@ if __name__ == '__main__':
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                     print(exc_type, fname, exc_tb.tb_lineno)
 
+
+
+
+'''
+From one week of data
+RFI Source 0 90% Confidence = 0.0883 deg^2
+RFI Source 1 90% Confidence = 0.0514 deg^2
+RFI Source 2 90% Confidence = 0.1101 deg^2
+RFI Source 3 90% Confidence = 0.0757 deg^2
+RFI Source 4 90% Confidence = 0.0626 deg^2
+RFI Source 5 90% Confidence = 0.0518 deg^2
+RFI Source 6 90% Confidence = 0.0662 deg^2
+
+
+Comparing Initial and Fit Values
+x0 :         initial -8.2543,   fit  -8.2541,   diff  0.000227
+sigma_x :    initial 0.1167,    fit  0.0449,    diff  -0.071782
+y0 :         initial -3.7468,   fit  -3.7482,   diff  -0.001427
+sigma_y :    initial 1.0903,    fit  0.1392,    diff  -0.951071
+rho :        initial 0.0000,    fit  0.1766,    diff  0.176589
+RFI Source 0 90% Confidence = 0.0883 deg^2
+No handles with labels found to put in legend.
+Under a MC-based sanity check the percentage of randomly generated events within the given 90.00 CI is 89.6910
+
+Comparing Initial and Fit Values
+x0 :         initial -4.6043,   fit  -4.6102,   diff  -0.005918
+sigma_x :    initial 0.2835,    fit  0.0380,    diff  -0.245541
+y0 :         initial -5.6939,   fit  -5.7937,   diff  -0.099770
+sigma_y :    initial 0.5779,    fit  0.0970,    diff  -0.480920
+rho :        initial 0.0000,    fit  0.2000,    diff  0.200000
+RFI Source 1 90% Confidence = 0.0514 deg^2
+No handles with labels found to put in legend.
+Under a MC-based sanity check the percentage of randomly generated events within the given 90.00 CI is 89.3720
+
+Comparing Initial and Fit Values
+x0 :         initial -2.2652,   fit  -2.2812,   diff  -0.015918
+sigma_x :    initial 0.1631,    fit  0.0516,    diff  -0.111518
+y0 :         initial -6.1705,   fit  -6.1392,   diff  0.031260
+sigma_y :    initial 0.8939,    fit  0.1606,    diff  -0.733268
+rho :        initial 0.0000,    fit  -0.3326,   diff  -0.332574
+RFI Source 2 90% Confidence = 0.1101 deg^2
+No handles with labels found to put in legend.
+Under a MC-based sanity check the percentage of randomly generated events within the given 90.00 CI is 89.2740
+
+Comparing Initial and Fit Values
+x0 :         initial -1.2477,   fit  -1.2231,   diff  0.024624
+sigma_x :    initial 0.1143,    fit  0.0341,    diff  -0.080149
+y0 :         initial -6.7179,   fit  -6.6879,   diff  0.030050
+sigma_y :    initial 1.0718,    fit  0.1571,    diff  -0.914726
+rho :        initial 0.0000,    fit  0.2000,    diff  0.200000
+RFI Source 3 90% Confidence = 0.0757 deg^2
+No handles with labels found to put in legend.
+Under a MC-based sanity check the percentage of randomly generated events within the given 90.00 CI is 89.9280
+
+Comparing Initial and Fit Values
+x0 :         initial 17.5532,   fit  17.5263,   diff  -0.026890
+sigma_x :    initial 0.1447,    fit  0.0398,    diff  -0.104852
+y0 :         initial -3.2463,   fit  -3.2989,   diff  -0.052545
+sigma_y :    initial 0.9386,    fit  0.1159,    diff  -0.822669
+rho :        initial 0.0000,    fit  0.2832,    diff  0.283181
+RFI Source 4 90% Confidence = 0.0626 deg^2
+No handles with labels found to put in legend.
+Under a MC-based sanity check the percentage of randomly generated events within the given 90.00 CI is 89.5180
+
+Comparing Initial and Fit Values
+x0 :         initial 22.8668,   fit  22.8265,   diff  -0.040262
+sigma_x :    initial 0.1312,    fit  0.0275,    diff  -0.103746
+y0 :         initial -2.6695,   fit  -2.5504,   diff  0.119027
+sigma_y :    initial 0.6959,    fit  0.1530,    diff  -0.542843
+rho :        initial 0.0000,    fit  -0.5000,   diff  -0.500000
+RFI Source 5 90% Confidence = 0.0518 deg^2
+No handles with labels found to put in legend.
+Under a MC-based sanity check the percentage of randomly generated events within the given 90.00 CI is 89.5380
+
+Comparing Initial and Fit Values
+x0 :         initial 51.3786,   fit  51.3910,   diff  0.012430
+sigma_x :    initial 0.0836,    fit  0.0483,    diff  -0.035320
+y0 :         initial -3.1940,   fit  -3.2254,   diff  -0.031394
+sigma_y :    initial 0.3894,    fit  0.1211,    diff  -0.268331
+rho :        initial 0.0000,    fit  -0.5000,   diff  -0.500000
+RFI Source 6 90% Confidence = 0.0662 deg^2
+No handles with labels found to put in legend.
+Under a MC-based sanity check the percentage of randomly generated events within the given 90.00 CI is 87.1110
+
+'''
