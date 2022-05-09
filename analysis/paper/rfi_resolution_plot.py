@@ -210,7 +210,7 @@ if __name__ == '__main__':
     run_modes = ['rfi']#['pulsers']#['rfi', 'pulsers']
 
     cut_range = 2.5
-    small_log = True
+    small_log = False
 
     for mode in run_modes:
         print('Generating %s plots:'%mode)
@@ -517,6 +517,7 @@ if __name__ == '__main__':
                     else:
                         popt, pcov = curve_fit(bivariateGaus,(x.ravel()[xy_range_cut], y.ravel()[xy_range_cut]),counts.ravel()[xy_range_cut] / (numpy.sum(counts.ravel()[xy_range_cut])*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]),p0=fit_guess_params) #Only want to use normalize when plotting not fitting.
 
+                    popt, pcov = curve_fit(bivariateGaus,(x.ravel()[xy_range_cut], y.ravel()[xy_range_cut]),counts.ravel()[xy_range_cut] / (numpy.sum(counts.ravel()[xy_range_cut])*numpy.diff(x,axis=1)[0][0]*numpy.diff(y,axis=0)[0][0]),p0=popt)
 
 
                     x0          = popt[0]
@@ -540,6 +541,8 @@ if __name__ == '__main__':
                     print('sigma_y :    initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[3], sigma_y,  sigma_y - fit_guess_params[3]))
                     print('rho :        initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(fit_guess_params[4], rho,      rho - fit_guess_params[4]))
                     print(roi_key + r' 90% Confidence = ' + '%0.4f deg^2'%(ellipse_area))
+                    print('pcov = ')
+                    print(pcov)
 
 
                     #popt[2] = abs(popt[2]) #I want positive sigma.
@@ -603,7 +606,7 @@ if __name__ == '__main__':
 
                     # ax3.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color=ds.roi_colors[roi_index],label='%0.2f'%(confidence_integral_value*100) + r'% PDF Area = ' + '%0.3f deg^2\nrho = %0.3f'%(ellipse_area,rho))
                     ax2.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color=ds.roi_colors[roi_index])
-                    ax3.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color=ds.roi_colors[roi_index],label='%i'%(confidence_integral_value*100) + r'%' + 'Fit PDF Area\n= %0.2f deg^2'%(ellipse_area))
+                    ax3.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color=ds.roi_colors[roi_index],label='%i'%(confidence_integral_value*100) + r'%' + ' Fit Area\n= %0.2f deg^2'%(ellipse_area))
 
                     if mode == 'pulsers':
                         ax2.axvline(direction_dict[roi_key]['azimuth_deg'], linewidth=2, color='fuchsia', label='Expected Dir: %0.2f, %0.2f'%(direction_dict[roi_key]['azimuth_deg'], direction_dict[roi_key]['elevation_deg']))
@@ -678,6 +681,37 @@ if __name__ == '__main__':
                     exc_type, exc_obj, exc_tb = sys.exc_info()
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                     print(exc_type, fname, exc_tb.tb_lineno)
+
+
+
+
+'''
+Double fitting one week
+RFI Source 0 Comparing Initial and Fit Values
+x0 : -8.2541 , Area : 0.0883 deg^2, rho : 0.1766
+
+RFI Source 1 Comparing Initial and Fit Values
+x0 : -4.6093 , Area : 0.0572 deg^2, rho : 0.4100
+
+RFI Source 2 Comparing Initial and Fit Values
+x0 : -2.2812 , Area : 0.1101 deg^2, rho : -0.3326
+
+RFI Source 3 Comparing Initial and Fit Values
+x0 : -1.2265 , Area : 0.0842 deg^2, rho : 0.4620
+
+RFI Source 4 Comparing Initial and Fit Values
+x0 : 17.5263 , Area : 0.0626 deg^2, rho : 0.2832
+
+RFI Source 5 Comparing Initial and Fit Values
+x0 : 22.8223 , Area : 0.0448 deg^2, rho : -0.7765
+
+RFI Source 6 Comparing Initial and Fit Values
+x0 : 51.3847 , Area : 0.0645 deg^2, rho : -0.6645
+
+
+
+'''
+
 
 
 
@@ -762,5 +796,66 @@ rho :        initial 0.0000,    fit  -0.5000,   diff  -0.500000
 RFI Source 6 90% Confidence = 0.0662 deg^2
 No handles with labels found to put in legend.
 Under a MC-based sanity check the percentage of randomly generated events within the given 90.00 CI is 87.1110
+
+'''
+
+
+'''
+RFI Source 0 Comparing Initial and Fit Values
+x0 :         initial -8.2543,   fit  -8.2541,   diff  0.000227
+sigma_x :    initial 0.1167,    fit  0.0449,    diff  -0.071782
+y0 :         initial -3.7468,   fit  -3.7482,   diff  -0.001427
+sigma_y :    initial 1.0903,    fit  0.1392,    diff  -0.951071
+rho :        initial 0.0000,    fit  0.1766,    diff  0.176589
+RFI Source 0 90% Confidence = 0.0883 deg^2
+
+RFI Source 1 Comparing Initial and Fit Values
+x0 :         initial -4.6043,   fit  -4.6102,   diff  -0.005918
+sigma_x :    initial 0.2835,    fit  0.0380,    diff  -0.245541
+y0 :         initial -5.6939,   fit  -5.7937,   diff  -0.099770
+sigma_y :    initial 0.5779,    fit  0.0970,    diff  -0.480920
+rho :        initial 0.0000,    fit  0.2000,    diff  0.200000
+RFI Source 1 90% Confidence = 0.0514 deg^2
+
+RFI Source 2 Comparing Initial and Fit Values
+x0 :         initial -2.2652,   fit  -2.2812,   diff  -0.015918
+sigma_x :    initial 0.1631,    fit  0.0516,    diff  -0.111518
+y0 :         initial -6.1705,   fit  -6.1392,   diff  0.031260
+sigma_y :    initial 0.8939,    fit  0.1606,    diff  -0.733268
+rho :        initial 0.0000,    fit  -0.3326,   diff  -0.332574
+RFI Source 2 90% Confidence = 0.1101 deg^2
+
+RFI Source 3 Comparing Initial and Fit Values
+x0 :         initial -1.2477,   fit  -1.2231,   diff  0.024624
+sigma_x :    initial 0.1143,    fit  0.0341,    diff  -0.080149
+y0 :         initial -6.7179,   fit  -6.6879,   diff  0.030050
+sigma_y :    initial 1.0718,    fit  0.1571,    diff  -0.914726
+rho :        initial 0.0000,    fit  0.2000,    diff  0.200000
+RFI Source 3 90% Confidence = 0.0757 deg^2
+
+RFI Source 4 Comparing Initial and Fit Values
+x0 :         initial 17.5532,   fit  17.5263,   diff  -0.026890
+sigma_x :    initial 0.1447,    fit  0.0398,    diff  -0.104852
+y0 :         initial -3.2463,   fit  -3.2989,   diff  -0.052545
+sigma_y :    initial 0.9386,    fit  0.1159,    diff  -0.822669
+rho :        initial 0.0000,    fit  0.2832,    diff  0.283181
+RFI Source 4 90% Confidence = 0.0626 deg^2
+
+RFI Source 5 Comparing Initial and Fit Values
+x0 :         initial 22.8668,   fit  22.8265,   diff  -0.040262
+sigma_x :    initial 0.1312,    fit  0.0275,    diff  -0.103746
+y0 :         initial -2.6695,   fit  -2.5504,   diff  0.119027
+sigma_y :    initial 0.6959,    fit  0.1530,    diff  -0.542843
+rho :        initial 0.0000,    fit  -0.5000,   diff  -0.500000
+RFI Source 5 90% Confidence = 0.0518 deg^2
+
+RFI Source 6 Comparing Initial and Fit Values
+x0 :         initial 51.3786,   fit  51.3910,   diff  0.012430
+sigma_x :    initial 0.0836,    fit  0.0483,    diff  -0.035320
+y0 :         initial -3.1940,   fit  -3.2254,   diff  -0.031394
+sigma_y :    initial 0.3894,    fit  0.1211,    diff  -0.268331
+rho :        initial 0.0000,    fit  -0.5000,   diff  -0.500000
+RFI Source 6 90% Confidence = 0.0662 deg^2
+
 
 '''

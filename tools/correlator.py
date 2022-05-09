@@ -2784,9 +2784,9 @@ class Correlator:
                     map_ax.set_yticks([-30, -15, 0, 15, 30, 45, 60, 75, 90])
                     if textstr is not None:
                         props = dict(facecolor='#9DC3E6', alpha=1.0)
-                        map_ax.text(0.95, 0.05, textstr, transform=map_ax.transAxes, fontsize=16, verticalalignment='bottom', horizontalalignment='right', bbox=dict(boxstyle="round", fc="w"))
+                        map_ax.text(0.97, 0.02, textstr, transform=map_ax.transAxes, fontsize=16, verticalalignment='bottom', horizontalalignment='right', bbox=dict(boxstyle="round", fc="w"))
                         if label_mountainside:
-                            map_ax.text(0.03, 0.03, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=16, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+                            map_ax.text(0.02, 0.02, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=12, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                         
                 else:
                     cbar = plt.colorbar(im, ax=map_ax)
@@ -2869,7 +2869,7 @@ class Correlator:
                     else:
                         y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
                     map_ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
-                    map_ax.text(0.03, 0.03, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+                    map_ax.text(0.015, 0.005, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=14, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                     if mollweide == False:
                         map_ax.set_xlim(-90, 90)
                         map_ax.set_ylim(-30, 90)
@@ -3130,7 +3130,7 @@ class Correlator:
                 else:
                     y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
                 ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
-                ax.text(0.03, 0.03, 'Local\nMountainside', transform=ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+                ax.text(0.015, 0.005, 'Local\nMountainside', transform=ax.transAxes, fontsize=14, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                 if mollweide == False:
                     ax.set_xlim(-90, 90)
                     ax.set_ylim(-30, 90)

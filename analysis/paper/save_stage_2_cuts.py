@@ -47,9 +47,23 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore")
 
+def saveprint(*args, outfile=None):
+    print(*args) #Print once to command line
+    if outfile is not None:
+        print(*args, file=open(outfile,'a')) #Print once to file
+
+
+start_time = time.time()
+
 raw_datapath = os.environ['BEACON_DATA']
 #processed_datapath = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'backup_pre_all_map_run_12-5-2021')
-processed_datapath = os.environ['BEACON_PROCESSED_DATA']
+
+if True:
+    processed_datapath = '/project2/avieregg/dsouthall/beacon/cr_search_backup/backup_feb28_2022'#os.environ['BEACON_PROCESSED_DATA']
+else:
+    processed_datapath = os.environ['BEACON_PROCESSED_DATA']
+
+
 print('SETTING processed_datapath TO: ', processed_datapath)
 
 gc.enable()
@@ -97,10 +111,7 @@ gc.enable()
 # gc.collect()
 '''
 
-def saveprint(*args, outfile=None):
-    print(*args) #Print once to command line
-    if outfile is not None:
-        print(*args, file=open(outfile,'a')) #Print once to file
+
 
 if __name__ == '__main__':
     plt.close('all')
@@ -140,6 +151,16 @@ if __name__ == '__main__':
     else:
         runs = numpy.arange(5733,5740)#numpy.arange(5974,6073)#numpy.arange(5733,5974)#numpy.arange(5910,5913)#numpy.arange(5733,5974)#numpy.arange(5910,5912)
 
+
+    out_dir = './data/cuts_run%i-run%i_%i'%(min(runs), max(runs), start_time)
+    os.mkdir(out_dir)
+    os.mkdir(os.path.join(out_dir, 'all_cuts'))
+    os.mkdir(os.path.join(out_dir, 'all_but_cuts'))
+    os.mkdir(os.path.join(out_dir, 'no_cuts'))
+    output_text_file = os.path.join(out_dir, 'output_histogram_saving_%i.txt'%start_time)
+    saveprint('SETTING processed_datapath TO: ', processed_datapath, outfile=output_text_file)
+
+
     print("Preparing dataSlicer")
 
     map_resolution_theta = 0.25 #degrees
@@ -163,16 +184,15 @@ if __name__ == '__main__':
     cut_dict_key = 'all_cuts'
     ds.addROI(cut_dict_key, {   'elevation_best_choice':[10,90],
                                 'phi_best_choice':[-90,90],
-                                'similarity_count_h':[0,10],
-                                'similarity_count_v':[0,10],
-                                'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,1e10],
-                                'impulsivity_hSLICERADDimpulsivity_v':[0.4,1e10],
-                                'cr_template_search_hSLICERADDcr_template_search_v':[0.8,1e10],
+                                'similarity_count_h':[-0.1,10],
+                                'similarity_count_v':[-0.1,10],
+                                'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':[1.2,1e10],
+                                'impulsivity_hSLICERADDimpulsivity_v':[0.3,1e10],
+                                'cr_template_search_hSLICERMAXcr_template_search_v':[0.4,1e10],
                                 'p2p_gap_h':[-1e10, 95],
                                 'above_normalized_map_max_line':[0,1e10],
                                 'above_snr_line':[0,1e10],
                                 'in_targeted_box':[-0.5, 0.5]})
-
 
     for param_key in list(ds.roi[cut_dict_key].keys()):
         copied_dict = copy.deepcopy(ds.roi[cut_dict_key])
@@ -180,16 +200,22 @@ if __name__ == '__main__':
         ds.addROI(cut_dict_key + '-' + param_key, copy.deepcopy(copied_dict)) #Add an ROI containing all cuts BUT the current key (used as ROI label).
 
 
-    out_dir = './data/cuts_run%i-run%i_%i'%(min(runs), max(runs), time.time())
-    os.mkdir(out_dir)
-    os.mkdir(os.path.join(out_dir, 'all_cuts'))
-    os.mkdir(os.path.join(out_dir, 'all_but_cuts'))
-    os.mkdir(os.path.join(out_dir, 'no_cuts'))
-
-
     pass_all_cuts_eventids_dict, successive_cut_counts, total_cut_counts = ds.getCutsFromROI(cut_dict_key,load=False,save=False,verbose=True, return_successive_cut_counts=True, return_total_cut_counts=True) #Events passing all cuts
 
+    for key in list(successive_cut_counts.keys()):
+        if key == 'initial':
+            saveprint('Initial Event Count is %i'%(successive_cut_counts[key]), outfile=output_text_file)
+        else:
+            saveprint('%0.3f%% events then cut by %s with bounds %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key, str(ds.roi[cut_dict_key][key])), outfile=output_text_file)
+            saveprint('%0.3f%% of initial events would be cut by %s with bounds %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key, str(ds.roi[cut_dict_key][key])), outfile=output_text_file)
+            saveprint('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]), outfile=output_text_file)
+        previous_count = successive_cut_counts[key]
 
+    saveprint('', outfile=output_text_file)
+    eventids_array = ds.organizeEventDict(pass_all_cuts_eventids_dict)
+    saveprint('Final number of events remaining is %i'%len(eventids_array), outfile=output_text_file)
+
+    
     '''
     I want to add in saving the same histograms with NO cuts applied and ALL cuts applied, as well as sequentially in
     the order they are made.  Can I store the information for 2d histograms this way as well?  I much prefer them.
@@ -280,25 +306,79 @@ if __name__ == '__main__':
 
 
 
-    output_text_file = os.path.join(out_dir, 'output_histogram_saving_%i.txt'%time.time())
-
-    for key in list(successive_cut_counts.keys()):
-        if key == 'initial':
-            saveprint('Initial Event Count is %i'%(successive_cut_counts[key]), outfile=output_text_file)
-        else:
-            saveprint('%0.3f%% events then cut by %s with bounds %s'%(100*(previous_count-successive_cut_counts[key])/previous_count , key, str(ds.roi[cut_dict_key][key])), outfile=output_text_file)
-            saveprint('%0.3f%% of initial events would be cut by %s with bounds %s'%(100*(total_cut_counts['initial']-total_cut_counts[key])/total_cut_counts['initial'] , key, str(ds.roi[cut_dict_key][key])), outfile=output_text_file)
-            saveprint('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]), outfile=output_text_file)
-        previous_count = successive_cut_counts[key]
-
-    saveprint('', outfile=output_text_file)
-    eventids_array = ds.organizeEventDict(pass_all_cuts_eventids_dict)
-    saveprint('Final number of events remaining is %i'%len(eventids_array), outfile=output_text_file)
-
-
 
 
 
 
         
 
+'''
+Remaining Events After Step similarity_count_h is 1116064
+1.081% events then cut by similarity_count_v with bounds [-0.1, 10]
+85.258% of initial events would be cut by similarity_count_v with bounds [-0.1, 10]
+
+Remaining Events After Step similarity_count_v is 1104002
+81.710% events then cut by hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe with bounds [1.2, 10000000000.0]
+6.496% of initial events would be cut by hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe with bounds [1.2, 10000000000.0]
+
+Remaining Events After Step hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe is 201926
+71.441% events then cut by impulsivity_hSLICERADDimpulsivity_v with bounds [0.3, 10000000000.0]
+2.888% of initial events would be cut by impulsivity_hSLICERADDimpulsivity_v with bounds [0.3, 10000000000.0]
+
+Remaining Events After Step impulsivity_hSLICERADDimpulsivity_v is 57669
+26.852% events then cut by cr_template_search_hSLICERMAXcr_template_search_v with bounds [0.4, 10000000000.0]
+2.755% of initial events would be cut by cr_template_search_hSLICERMAXcr_template_search_v with bounds [0.4, 10000000000.0]
+
+Remaining Events After Step cr_template_search_hSLICERMAXcr_template_search_v is 42184
+55.433% events then cut by p2p_gap_h with bounds [-10000000000.0, 95]
+0.382% of initial events would be cut by p2p_gap_h with bounds [-10000000000.0, 95]
+
+Remaining Events After Step p2p_gap_h is 18800
+45.138% events then cut by above_normalized_map_max_line with bounds [0, 10000000000.0]
+23.144% of initial events would be cut by above_normalized_map_max_line with bounds [0, 10000000000.0]
+
+Remaining Events After Step above_normalized_map_max_line is 10314
+28.679% events then cut by above_snr_line with bounds [0, 10000000000.0]
+4.395% of initial events would be cut by above_snr_line with bounds [0, 10000000000.0]
+
+Remaining Events After Step above_snr_line is 7356
+0.272% events then cut by in_targeted_box with bounds [-0.5, 0.5]
+0.017% of initial events would be cut by in_targeted_box with bounds [-0.5, 0.5]
+
+Remaining Events After Step in_targeted_box is 7336
+
+Final number of events remaining is 7336
+        Getting counts from 1dhists for elevation_best_choice
+        Getting counts from 1dhists for elevation_best_choice
+        Getting counts from 1dhists for elevation_best_choice
+        Getting counts from 1dhists for phi_best_choice
+        Getting counts from 1dhists for phi_best_choice
+        Getting counts from 1dhists for phi_best_choice
+        Getting counts from 1dhists for similarity_count_h
+        Getting counts from 1dhists for similarity_count_h
+        Getting counts from 1dhists for similarity_count_h
+        Getting counts from 1dhists for similarity_count_v
+        Getting counts from 1dhists for similarity_count_v
+        Getting counts from 1dhists for similarity_count_v
+        Getting counts from 1dhists for hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe
+        Getting counts from 1dhists for hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe
+        Getting counts from 1dhists for hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe
+        Getting counts from 1dhists for impulsivity_hSLICERADDimpulsivity_v
+        Getting counts from 1dhists for impulsivity_hSLICERADDimpulsivity_v
+        Getting counts from 1dhists for impulsivity_hSLICERADDimpulsivity_v
+        Getting counts from 1dhists for cr_template_search_hSLICERMAXcr_template_search_v
+        Getting counts from 1dhists for cr_template_search_hSLICERMAXcr_template_search_v
+        Getting counts from 1dhists for cr_template_search_hSLICERMAXcr_template_search_v
+        Getting counts from 1dhists for p2p_gap_h
+        Getting counts from 1dhists for p2p_gap_h
+        Getting counts from 1dhists for p2p_gap_h
+        Getting counts from 1dhists for above_normalized_map_max_line
+        Getting counts from 1dhists for above_normalized_map_max_line
+        Getting counts from 1dhists for above_normalized_map_max_line
+        Getting counts from 1dhists for above_snr_line
+        Getting counts from 1dhists for above_snr_line
+        Getting counts from 1dhists for above_snr_line
+        Getting counts from 1dhists for in_targeted_box
+        Getting counts from 1dhists for in_targeted_box
+        Getting counts from 1dhists for in_targeted_box
+'''

@@ -71,7 +71,13 @@ append_notches = None
 ignore_airplanes = []#['a73278']
 
 if __name__ == '__main__':
-    plt.ioff()
+    save = True
+
+
+    if save == True:
+        plt.ioff()
+    else:
+        plt.ion()
 
     run = 5911
     eventid = 73399
@@ -89,6 +95,15 @@ if __name__ == '__main__':
     ds.inspector_mpl['fig1'].set_size_inches(20,12)
     [ds.inspector_mpl[p].set_ylabel('Power Spectral Density\n' + apply_filter*'Filtered ' + 'dB (arb)', fontsize=16) for p, apply_filter in [['fig1_spec_raw',False] ,['fig1_spec_filt', True]]]
 
+    [ds.inspector_mpl[p].yaxis.set_label_coords(-0.05,0.5) for p in ['fig1_spec_raw' ,'fig1_spec_filt']]
+
+    ds.inspector_mpl['fig1_wf_h'].text(0.97, 0.02, 'HPol', transform=ds.inspector_mpl['fig1_wf_h'].transAxes, fontsize=16, verticalalignment='bottom', horizontalalignment='right', bbox=dict(boxstyle="round", fc="w"))
+    ds.inspector_mpl['fig1_wf_v'].text(0.97, 0.02, 'VPol', transform=ds.inspector_mpl['fig1_wf_v'].transAxes, fontsize=16, verticalalignment='bottom', horizontalalignment='right', bbox=dict(boxstyle="round", fc="w"))
+
     plt.tight_layout()
-    ds.inspector_mpl['fig1'].savefig('./figures/r%i_e%i_event_display.pdf'%(run,eventid), dpi=300)
+
+    plt.subplots_adjust(left=0.05, bottom=0.1,right=0.95, top=0.95, wspace=0.33, hspace=0.4)
+
+    if save == True:
+        ds.inspector_mpl['fig1'].savefig('./figures/r%i_e%i_event_display.pdf'%(run,eventid), dpi=300)
     # plt.subplots_adjust(left=0.06, bottom=0.12,right=0.98, top=0.95, wspace=0.3, hspace=0.2)

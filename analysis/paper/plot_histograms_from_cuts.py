@@ -86,14 +86,15 @@ if __name__ == '__main__':
     cut_dict_key = 'above horizon full with stage 2'
     ds.addROI(cut_dict_key, {   'elevation_best_choice':[10,90],
                                 'phi_best_choice':[-90,90],
-                                'similarity_count_h':[0,10],
-                                'similarity_count_v':[0,10],
-                                'hpol_peak_to_sidelobeSLICERADDvpol_peak_to_sidelobe':[2.15,1e10],
-                                'impulsivity_hSLICERADDimpulsivity_v':[0.4,1e10],
-                                'cr_template_search_hSLICERADDcr_template_search_v':[0.8,1e10],
+                                'similarity_count_h':[-0.1,10],
+                                'similarity_count_v':[-0.1,10],
+                                'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':[1.2,1e10],
+                                'impulsivity_hSLICERADDimpulsivity_v':[0.3,1e10],
+                                'cr_template_search_hSLICERMAXcr_template_search_v':[0.4,1e10],
                                 'p2p_gap_h':[-1e10, 95],
                                 'above_normalized_map_max_line':[0,1e10],
-                                'above_snr_line':[0,1e10]})
+                                'above_snr_line':[0,1e10],
+                                'in_targeted_box':[-0.5, 0.5]})
 
 
     #Add - 1 ROI:
@@ -102,22 +103,30 @@ if __name__ == '__main__':
         del copied_dict[param_key]
         ds.addROI(cut_dict_key + '-' + param_key, copy.deepcopy(copied_dict)) #Add an ROI containing all cuts BUT the current key (used as ROI label).
 
-    root_dir = './data/cuts_run5733-run5739_1651958970'
-    load_dirs = [os.path.join(root_dir,'all_cuts'), os.path.join(root_dir,'all_but_cuts'), os.path.join(root_dir,'no_cuts')]
+    root_dir = './data/cuts_run5733-run6640_1651969811'
+    load_dirs = [os.path.join(root_dir,'no_cuts'), os.path.join(root_dir,'all_but_cuts'), ]#[os.path.join(root_dir,'all_cuts'), os.path.join(root_dir,'all_but_cuts'), os.path.join(root_dir,'no_cuts')]
 
-    for load_dir in load_dirs:
-        for param_key in list(ds.roi[cut_dict_key].keys()):
+    save_dir = './figures/cut_histograms'
 
-            if param_key in ['elevation_best_choice', 'phi_best_choice']:
-                continue
-            else:
-                fig = plt.figure(figsize=(25,10))
+    for param_key in list(ds.roi[cut_dict_key].keys()):
+        if param_key in ['elevation_best_choice', 'phi_best_choice']:
+            continue
+        else:
+            fig = plt.figure(figsize=(25,10))
+            axs = []
+            for dir_index, load_dir in enumerate(load_dirs):
+                if dir_index == 0:
+                    axs.append(plt.subplot(1,len(load_dirs),dir_index+1))
+                else:
+                    axs.append(plt.subplot(1,len(load_dirs),dir_index+1, sharex=axs[0]))
+
+            for dir_index, load_dir in enumerate(load_dirs):
                 if 'all_cuts' in load_dir:
                     filename = 'hist_for_%s_with_all_cuts.npz'%(param_key)
                     plt.title('All Cuts Applied')
                 elif 'all_but_cuts' in load_dir:
                     filename = 'hist_for_%s_with_all_cuts_but_%s.npz'%(param_key, param_key)
-                    plt.title('All Cuts Applied Except:\n%s'%param_key.replace('_','').title())
+                    plt.title('All Cuts Applied Except:\n%s'%param_key.replace('_',' ').title())
                 else:
                     filename = 'hist_for_%s_with_no_cuts.npz'%(param_key)
                     plt.title('No Cuts Applied')
@@ -135,7 +144,8 @@ if __name__ == '__main__':
                 print(cut_name)
                 print(list(hist_data.keys()))
 
-                ax = plt.gca()
+                ax = axs[dir_index]
+                plt.sca(ax)
                 ax.minorticks_on()
                 ax.grid(b=True, which='major', color='tab:gray', linestyle='-',alpha=0.4)
                 ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.3)
@@ -152,8 +162,6 @@ if __name__ == '__main__':
                     plt.axvline(ds.roi[cut_dict_key][param_key][0], c='g', label=textwrap.fill('Cut Lower Limit',width=25))
                 if ds.roi[cut_dict_key][param_key][1] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][1] <= max(hist_data['bin_centers']):
                     plt.axvline(ds.roi[cut_dict_key][param_key][1], c='b', label=textwrap.fill('Cut Upper Limit',width=25))
-
-
 
                 plt.legend(loc='center right', fontsize=12)
                 plt.ylabel('Counts\nAll Cuts Applied Except %s'%param_key, fontsize=18)

@@ -5497,7 +5497,7 @@ class dataSlicer():
                         y1 = plane_xy[1]
                         y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
                         ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
-                        ax.text(0.02, 0.02, 'Local\nMountainside', transform=ax.transAxes, fontsize=12, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+                        ax.text(0.01, 0.01, 'Local\nMountainside', transform=ax.transAxes, fontsize=8, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
 
                         plt.ylim(min(y1) - 5, 90)
                         plt.xlim(-90,90)

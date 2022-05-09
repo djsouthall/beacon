@@ -63,6 +63,9 @@ if __name__ == '__main__':
     datapath = os.environ['BEACON_DATA']
     normalize_by_window_index = False
     normalize_by_density = True
+    include_perfectly_periodic = False
+
+
     if False:
         runs = run + numpy.arange(10)
     else:
@@ -101,10 +104,16 @@ if __name__ == '__main__':
 
         metric              = diffFromPeriodic(calibrated_trig_time,    window_s=window_s, expected_period=expected_period, normalize_by_window_index=normalize_by_window_index, normalize_by_density=normalize_by_density, plot_sample_hist=False, plot_test_plot_A=False, fontsize=label_fontsize)
         metric_rand         = diffFromPeriodic(randomized_times,        window_s=window_s, expected_period=expected_period, normalize_by_window_index=normalize_by_window_index, normalize_by_density=normalize_by_density, plot_sample_hist=False, plot_test_plot_A=False, fontsize=label_fontsize)
-        metric_rand_rounded = diffFromPeriodic(randomized_times_rounded,window_s=window_s, expected_period=expected_period, normalize_by_window_index=normalize_by_window_index, normalize_by_density=normalize_by_density, plot_sample_hist=False, plot_test_plot_A=False, fontsize=label_fontsize)
         
-        mins = numpy.array([min(metric),min(metric_rand), min(metric_rand_rounded)])
-        maxs = numpy.array([max(metric),max(metric_rand), max(metric_rand_rounded)])
+        if include_perfectly_periodic:
+            metric_rand_rounded = diffFromPeriodic(randomized_times_rounded,window_s=window_s, expected_period=expected_period, normalize_by_window_index=normalize_by_window_index, normalize_by_density=normalize_by_density, plot_sample_hist=False, plot_test_plot_A=False, fontsize=label_fontsize)
+            
+            mins = numpy.array([min(metric),min(metric_rand), min(metric_rand_rounded)])
+            maxs = numpy.array([max(metric),max(metric_rand), max(metric_rand_rounded)])
+        else:
+            mins = numpy.array([min(metric),min(metric_rand)])
+            maxs = numpy.array([max(metric),max(metric_rand)])
+
 
         bins = numpy.linspace(min(mins),max(maxs),100)
         bin_centers = (bins[:-1] + bins[1:]) / 2.0
@@ -136,7 +145,7 @@ if __name__ == '__main__':
                     if marker == ',':
                         scatter_1 = _ax.plot((calibrated_trig_time-min(calibrated_trig_time))/60.0,calibrated_trig_time % (expected_period if fold_subsecond_plot else 1.0),marker=marker,linestyle='None',c='b',label='All RF Events')#,s=1
                     else:
-                        scatter_1 = _ax.scatter((calibrated_trig_time-min(calibrated_trig_time))/60.0,calibrated_trig_time % (expected_period if fold_subsecond_plot else 1.0),marker=marker,linestyle='None',c='b',label='All RF Events',s=4)
+                        scatter_1 = _ax.scatter((calibrated_trig_time-min(calibrated_trig_time))/60.0,calibrated_trig_time % (expected_period if fold_subsecond_plot else 1.0),marker=marker,linestyle='None',c='b',label='All RF Events',s=8)
                 plt.sca(ax)
                 plt.legend(fontsize=label_fontsize, loc='lower right',framealpha=1)
                 
@@ -172,7 +181,7 @@ if __name__ == '__main__':
                     if marker == ',':
                         scatter_2 = _ax.plot((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker=marker,linestyle='None',c='r',label='Flagged %i Hz'%rate_hz)#,s=1
                     else:
-                        scatter_2 = _ax.scatter((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker=marker,linestyle='None',c='r',label='Flagged %i Hz'%rate_hz,s=0.5)
+                        scatter_2 = _ax.scatter((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker=marker,linestyle='None',c='r',label='Flagged %i Hz'%rate_hz,s=2)
                 plt.sca(ax2)
                 plt.xlim(0,100)
                 if fold_subsecond_plot == True:
@@ -199,14 +208,14 @@ if __name__ == '__main__':
                 if normalize:
                     n, bin_edges, patches = plt.hist(metric,alpha=0.7,density=True,label='Actual\nTrigger Times',bins=bins)
                     plt.hist(metric_rand,alpha=0.7,density=True,label='Uniformly\nRandomized\nTrigger Times',bins=bin_edges)
-                    plt.hist(metric_rand,alpha=0.7,density=True,label='Purely %i Hz\nTrigger Times'%rate_hz,bins=bin_edges)
+                    plt.hist(metric_rand_rounded,alpha=0.7,density=True,label='Purely %i Hz\nTrigger Times'%rate_hz,bins=bin_edges)
                     plt.ylabel('Normalized Counts',fontsize=label_fontsize)
                     arrow_xy = (0.115,1.15)
                     relative_xy = (0.05, 0.1)
                 else:
                     n, bin_edges, patches = plt.hist(metric,alpha=0.7,density=False,label='Actual\nTrigger Times',bins=bins)
                     plt.hist(metric_rand,alpha=0.7,density=False,label='Uniformly\nRandomized\nTrigger Times',bins=bin_edges)
-                    plt.hist(metric_rand,alpha=0.7,density=False,label='Purely %i Hz\nTrigger Times'%rate_hz,bins=bin_edges)
+                    plt.hist(metric_rand_rounded,alpha=0.7,density=False,label='Purely %i Hz\nTrigger Times'%rate_hz,bins=bin_edges)
                     plt.ylabel('Counts',fontsize=label_fontsize)
                     arrow_xy = (0.115,4700)
                     relative_xy = (0.05, 1000)
@@ -219,7 +228,7 @@ if __name__ == '__main__':
                     plt.axvline(TS_cut_level,c='r',linestyle='--',linewidth=3, label='Cut')
                 
 
-                plt.legend(fontsize=label_fontsize, loc='upper right',framealpha=1)
+                plt.legend(fontsize=label_fontsize-4, loc='upper right',framealpha=1)
                 plt.minorticks_on()
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
@@ -314,158 +323,160 @@ if __name__ == '__main__':
                 print('If you would like to save the above eventids you can do so by either hacking in code below this print statement or doing so after the fact.')
                 # numpy.savetxt('./figures/run%i_60Hz_eventids.csv'%run,eventids[load_cut][~cut])  #COULD USE THIS TO SAVE
             elif mode == 2:
-                fig = plt.figure(figsize=(22,10))
+                include_total_counts = False
 
-                inset = False
-
-                axs = [plt.subplot(2,3,2)]
-                axs.append(plt.subplot(2,3,5, sharex=axs[0]))
+                if include_total_counts:
+                    fig = plt.figure(figsize=(20,15))
+                    axs = [plt.subplot(2,3,2)]
+                    axs.append(plt.subplot(2,3,5, sharex=axs[0]))
+                else:
+                    # fig = plt.figure()
+                    fig, ((gs_ax1, gs_ax2), (gs_ax3, gs_ax4)) = plt.subplots(2, 2, figsize=(20,12), gridspec_kw={'width_ratios': [3, 2]})
+                    gs_ax1.get_shared_x_axes().join(gs_ax1, gs_ax3)
+                    gs_ax1.get_shared_y_axes().join(gs_ax1, gs_ax3)
+                    burner_fig, burner_ax = plt.subplots()
+                    axs = [gs_ax2]
+                    axs.append(burner_ax)
 
                 metric, axs = diffFromPeriodic(calibrated_trig_time,window_s=window_s, expected_period=expected_period, normalize_by_window_index=normalize_by_window_index, normalize_by_density=normalize_by_density, plot_sample_hist=False, plot_test_plot_A=False, axs=axs, fontsize=label_fontsize)
-                
-                axs[1].set_ylim(0,axs[1].get_ylim()[1]*1.2)
 
-                if inset:
-                    ax = plt.subplot(1,3,1)
-                    inset_axes = zoomed_inset_axes(ax,
-                                       zoom, # zoom factor
-                                       loc=1)
-                    scatter_1 = ax.plot((calibrated_trig_time[cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[cut] % (expected_period if fold_subsecond_plot else 1.0),marker=',',linestyle='None',c='b',label='Non-Flagged RF Triggers')#,s=1
-                    scatter_2 = ax.scatter((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker='o',linestyle='None',c='r',label='Flagged %i Hz'%rate_hz,s=0.5)
-
-                    inset_axes.scatter((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker='o',linestyle='None',c='r',label='Flagged %i Hz'%rate_hz,s=4)
-                    plt.sca(ax)
-                    plt.legend(fontsize=label_fontsize, loc='lower right',framealpha=1)
-                    if False:
-                        plt.ylabel('Trigger Time Remainder\nFrom Expected Period (s)',fontsize=label_fontsize)
-                    else:
-                        plt.ylabel('Trigger Sub-Second (s)',fontsize=label_fontsize)
-                    plt.xlabel('Time From Start of Run (min)',fontsize=label_fontsize)
-                    plt.minorticks_on()
-                    plt.grid(b=True, which='major', color='k', linestyle='-')
-                    plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    plt.xlim(0,100)
-                    if fold_subsecond_plot == True:
-                        plt.ylim(0,expected_period)
-                    else:
-                        plt.ylim(0,1)
-
-                    #Zoomed inset axis
-                    plt.sca(inset_axes)
-
-                    inset_axes.set_xlim(x1, x2)
-                    inset_axes.set_ylim(y1, y2)
-
-                    plt.xticks(visible=False)
-                    plt.yticks(visible=False)
-
-                    # draw a bbox of the region of the inset axes in the parent axes and
-                    # connecting lines between the bbox and the inset axes area
-                    mark_inset(ax, inset_axes, loc1=2, loc2=4, fc="none", ec="k", lw=2)
+                if include_total_counts == False:
+                    plt.close(burner_fig)
+                    axs[0].set_xlabel('Absolute Time Difference Remainder\nfrom Expected Periodicity (s)', fontsize=label_fontsize)
                 else:
-                    ax1 = plt.subplot(2,3,1)
-                    scatter_1 = ax1.plot((calibrated_trig_time[cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[cut] % (expected_period if fold_subsecond_plot else 1.0),marker=',',linestyle='None',c='b',label='Non-Flagged RF Triggers')#,s=1
-                    ax2 = plt.subplot(2,3,4, sharex=ax1, sharey=ax1)
-                    scatter_2 = ax2.plot((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker=',',linestyle='None',c='r',label='Flagged %i Hz'%rate_hz)
-                    #scatter_2 = ax2.scatter((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker='o',linestyle='None',c='r',label='Flagged %i Hz'%rate_hz,s=0.5)
-                    
-                    ax1.legend(fontsize=label_fontsize, loc='lower right',framealpha=1)
-                    ax2.legend(fontsize=label_fontsize, loc='lower right',framealpha=1)
+                    axs[1].set_ylim(0,axs[1].get_ylim()[1]*1.2)
 
-                    #Zoomed inset axis
-                    inset_axes1 = zoomed_inset_axes(ax1,
-                                       zoom, # zoom factor
-                                       loc=1)
-                    [inset_axes1.spines[k].set_linewidth(2) for k in inset_axes1.spines.keys()]
-                    plt.sca(inset_axes1)
-                    inset_axes1.scatter((calibrated_trig_time[cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[cut] % (expected_period if fold_subsecond_plot else 1.0),marker='o',linestyle='None',c='b',label='Flagged %i Hz'%rate_hz,s=1)
-
-                    inset_axes1.set_xlim(x1, x2)
-                    inset_axes1.set_ylim(y1, y2)
-
-                    minor_ticks = numpy.arange(inset_axes1.get_ylim()[0] - expected_period, inset_axes1.get_ylim()[1] + expected_period, expected_period) + expected_period/2
             
+                if include_total_counts:
+                    ax1 = plt.subplot(2,2,1)
+                else:
+                    ax1 = gs_ax1
+                scatter_1 = ax1.plot((calibrated_trig_time[cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[cut] % (expected_period if fold_subsecond_plot else 1.0),marker=',',linestyle='None',c='b',label='Non-Flagged RF Triggers')#,s=1
+                
 
-                    inset_axes1.set_yticks(minor_ticks)
-                    plt.grid(b=True, which='major', color='tab:gray', linestyle='--',alpha=0.5)
+                if include_total_counts:
+                    ax2 = plt.subplot(2,3,4, sharex=ax1, sharey=ax1)
+                else:
+                    ax2 = gs_ax3
+                    plt.sca(ax2)
+                
 
-                    plt.xticks(visible=False)
-                    plt.yticks(visible=False)
-                    # draw a bbox of the region of the inset axes in the parent axes and
-                    # connecting lines between the bbox and the inset axes area
-                    mark_inset(ax1, inset_axes1, loc1=3, loc2=4, fc="none", ec="k", lw=2)
+                scatter_2 = ax2.plot((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker=',',linestyle='None',c='r',label='Flagged %i Hz'%rate_hz)
+                #scatter_2 = ax2.scatter((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker='o',linestyle='None',c='r',label='Flagged %i Hz'%rate_hz,s=0.5)
+                
+                ax1.legend(fontsize=label_fontsize, loc='lower right',framealpha=1)
+                ax2.legend(fontsize=label_fontsize, loc='lower right',framealpha=1)
 
-                    #Zoomed inset axis
-                    inset_axes2 = zoomed_inset_axes(ax2,
-                                       zoom, # zoom factor
-                                       loc=1)
-                    [inset_axes2.spines[k].set_linewidth(2) for k in inset_axes2.spines.keys()]
-                    plt.sca(inset_axes2)
-                    inset_axes2.scatter((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker='o',linestyle='None',c='r',label='Flagged %i Hz'%rate_hz,s=4)
+                #Zoomed inset axis
+                inset_axes1 = zoomed_inset_axes(ax1,
+                                   zoom, # zoom factor
+                                   loc=1)
+                [inset_axes1.spines[k].set_linewidth(2) for k in inset_axes1.spines.keys()]
+                plt.sca(inset_axes1)
+                inset_axes1.scatter((calibrated_trig_time[cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[cut] % (expected_period if fold_subsecond_plot else 1.0),marker='o',linestyle='None',c='b',label='Flagged %i Hz'%rate_hz,s=1)
 
-                    inset_axes2.set_xlim(x1, x2)
-                    inset_axes2.set_ylim(y1, y2)
+                inset_axes1.set_xlim(x1, x2)
+                inset_axes1.set_ylim(y1, y2)
 
-                    inset_axes2.set_yticks(minor_ticks)
-                    plt.grid(b=True, which='major', color='tab:gray', linestyle='--',alpha=0.5)
+                minor_ticks = numpy.arange(inset_axes1.get_ylim()[0] - expected_period, inset_axes1.get_ylim()[1] + expected_period, expected_period) + expected_period/2
+        
 
-                    plt.xticks(visible=False)
-                    plt.yticks(visible=False)
+                inset_axes1.set_yticks(minor_ticks)
+                plt.grid(b=True, which='major', color='tab:gray', linestyle='--',alpha=0.5)
 
-                    start_tick = 2
-                    arrow_xy = ( x1 + (x2-x1)/2  - 0.10*(x2-x1)/2 , (minor_ticks[start_tick] + minor_ticks[start_tick+1])/2)
-                    text_xy =  ( x1 + (x2-x1)/2  - 0.40*(x2-x1)/2 , (minor_ticks[start_tick] + minor_ticks[start_tick+1])/2)
-                    ann = inset_axes2.annotate("$1/r$",
-                          weight='bold',
-                          xy=arrow_xy, xycoords='data',
-                          xytext=text_xy, textcoords='data',
-                          size=label_fontsize-2, va="center", ha="center",
-                          bbox=dict(boxstyle="round", fc="w", lw=2),
-                          arrowprops=dict(  arrowstyle="-[,widthB=0.55, lengthB=0.2, angleB=0",
-                                            fc="w", lw=2),
-                          )
+                plt.xticks(visible=False)
+                plt.yticks(visible=False)
+                # draw a bbox of the region of the inset axes in the parent axes and
+                # connecting lines between the bbox and the inset axes area
+                mark_inset(ax1, inset_axes1, loc1=3, loc2=4, fc="none", ec="k", lw=2)
 
-                    # draw a bbox of the region of the inset axes in the parent axes and
-                    # connecting lines between the bbox and the inset axes area
-                    mark_inset(ax2, inset_axes2, loc1=3, loc2=4, fc="none", ec="k", lw=2)
+                #Zoomed inset axis
+                inset_axes2 = zoomed_inset_axes(ax2,
+                                   zoom, # zoom factor
+                                   loc=1)
+                [inset_axes2.spines[k].set_linewidth(2) for k in inset_axes2.spines.keys()]
+                plt.sca(inset_axes2)
+                inset_axes2.scatter((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker='o',linestyle='None',c='r',label='Flagged %i Hz'%rate_hz,s=4)
 
-                    if False:
-                        ax1.set_ylabel('Trigger Time Remainder\nFrom Expected Period (s)',fontsize=label_fontsize)
-                        ax2.set_ylabel('Trigger Time Remainder\nFrom Expected Period (s)',fontsize=label_fontsize)
-                    else:
-                        ax1.set_ylabel('Trigger Sub-Second (s)',fontsize=label_fontsize)
-                        ax2.set_ylabel('Trigger Sub-Second (s)',fontsize=label_fontsize)
-                    ax2.set_xlabel('Time From Start of Run (min)',fontsize=label_fontsize)
-                    
-                    # plt.minorticks_on()
-                    # plt.grid(b=True, which='major', color='k', linestyle='-')
-                    # plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
-                    ax1.set_xlim(0,60)
-                    if fold_subsecond_plot == True:
-                        ax1.set_ylim(0,expected_period)
-                    else:
-                        ax1.set_ylim(0,1)
+                inset_axes2.set_xlim(x1, x2)
+                inset_axes2.set_ylim(y1, y2)
+
+                inset_axes2.set_yticks(minor_ticks)
+                plt.grid(b=True, which='major', color='tab:gray', linestyle='--',alpha=0.5)
+
+                plt.xticks(visible=False)
+                plt.yticks(visible=False)
+
+                start_tick = 2
+                arrow_xy = ( x1 + (x2-x1)/2  - 0.00*(x2-x1)/2 , (minor_ticks[start_tick] + minor_ticks[start_tick+1])/2)
+                text_xy =  ( x1 + (x2-x1)/2  - 0.35*(x2-x1)/2 , (minor_ticks[start_tick] + minor_ticks[start_tick+1])/2)
+                #r"$T = 1/60 \mathrm{Hz}$"
+                ann = inset_axes2.annotate(r'$T = \frac{1}{60 \mathrm{Hz}}$',
+                      weight='bold',
+                      xy=arrow_xy, xycoords='data',
+                      xytext=text_xy, textcoords='data',
+                      size=label_fontsize-2, va="center", ha="center",
+                      bbox=dict(boxstyle="round", fc="w", lw=2),
+                      arrowprops=dict(  arrowstyle="-[,widthB=0.68, lengthB=0.2, angleB=0",
+                                        fc="w", lw=2),
+                      )
+
+                # draw a bbox of the region of the inset axes in the parent axes and
+                # connecting lines between the bbox and the inset axes area
+                mark_inset(ax2, inset_axes2, loc1=3, loc2=4, fc="none", ec="k", lw=2)
+
+                if False:
+                    ax1.set_ylabel('Trigger Time Remainder\nFrom Expected Period (s)',fontsize=label_fontsize)
+                    ax2.set_ylabel('Trigger Time Remainder\nFrom Expected Period (s)',fontsize=label_fontsize)
+                else:
+                    ax1.set_ylabel('Trigger Sub-Second (s)',fontsize=label_fontsize)
+                    ax2.set_ylabel('Trigger Sub-Second (s)',fontsize=label_fontsize)
+                ax2.set_xlabel('Time From Start of Run (min)',fontsize=label_fontsize)
+                
+                # plt.minorticks_on()
+                # plt.grid(b=True, which='major', color='k', linestyle='-')
+                # plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
+                ax1.set_xlim(0,60)
+                if fold_subsecond_plot == True:
+                    ax1.set_ylim(0,expected_period)
+                else:
+                    ax1.set_ylim(0,1)
 
 
 
 
-
-                plt.subplot(1,3,3)
+                if include_total_counts:
+                    plt.subplot(1,3,3)
+                else:
+                    plt.sca(gs_ax4)
                 normalize = False
 
                 if double_sided:
                     plt.axvspan(-1,-TS_cut_level,color='r',alpha=0.3,label='Cut Region')
                     plt.axvspan(TS_cut_level,1,color='r',alpha=0.3)
                 if normalize:
-                    n, bin_edges, patches = plt.hist(metric,alpha=0.7,density=True,label='Actual\nTrigger Times',bins=bins)
-                    plt.hist(metric_rand,alpha=0.7,density=True,label='Uniformly\nRandomized\nTrigger Times',bins=bin_edges)
+                    n, bin_edges, patches = plt.hist(metric_rand,alpha=0.7,density=True,label='Uniformly\nRandomized\nTrigger Times',bins=bins)
+                    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
+                    plt.plot(bin_centers + numpy.diff(bin_centers)[0]/2, n, drawstyle='steps', lw=1, c='k')
+
+                    n, bin_edges, patches = plt.hist(metric,alpha=0.7,density=True,label='Actual\nTrigger Times',bins=bin_edges)
+                    plt.plot(bin_centers + numpy.diff(bin_centers)[0]/2, n, drawstyle='steps', lw=2, c='k')
                     plt.ylabel('Normalized Counts',fontsize=label_fontsize, labelpad=0)
                     arrow_xy = (0.115,1.15)
                     relative_xy = (0.05, 0.1)
                 else:
-                    n, bin_edges, patches = plt.hist(metric,alpha=0.7,density=False,label='Actual\nTrigger Times',bins=bins)
-                    plt.hist(metric_rand,alpha=0.7,density=False,label='Uniformly\nRandomized\nTrigger Times',bins=bin_edges)
-                    plt.ylabel('Counts',fontsize=label_fontsize, labelpad=-5)
+                    n, bin_edges, patches = plt.hist(metric_rand,alpha=0.7,density=False,label='Uniformly\nRandomized\nTrigger Times',bins=bins)
+                    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
+                    plt.plot(bin_centers + numpy.diff(bin_centers)[0]/2, n, drawstyle='steps', lw=1, c='k')
+
+                    n, bin_edges, patches = plt.hist(metric,alpha=0.7,density=False,label='Actual\nTrigger Times',bins=bin_edges)
+                    plt.plot(bin_centers + numpy.diff(bin_centers)[0]/2, n, drawstyle='steps', lw=2, c='k')
+
+                    if include_perfectly_periodic:
+                        n, bin_edges, patches = plt.hist(metric_rand_rounded,alpha=0.7,density=False,label='Perfectly\nPeriod\nTrigger Times',bins=bin_edges)
+                        plt.plot(bin_centers + numpy.diff(bin_centers)[0]/2, n, drawstyle='steps', lw=2, c='k')
+                    
+                    plt.ylabel('Counts',fontsize=label_fontsize, labelpad=0)
                     arrow_xy = (0.115,4700)
                     relative_xy = (0.05, 1000)
                 plt.xlabel('Test Statistic',fontsize=label_fontsize)
@@ -490,7 +501,10 @@ if __name__ == '__main__':
 
 
                 plt.tight_layout()
-                plt.subplots_adjust(left=0.06, bottom=0.12,right=0.98, top=0.95, wspace=0.3, hspace=0.2)
+                if include_total_counts:
+                    plt.subplots_adjust(left=0.06, bottom=0.12, right=0.98, top=0.95, wspace=0.3, hspace=0.2)
+                else:
+                    plt.subplots_adjust(left=0.06, bottom=0.06, right=0.98, top=0.97, wspace=0.25, hspace=0.25)
 
                 fig.savefig('./figures/run%i_subsecond_plot_mode%i.pdf'%(run,mode), dpi=300)
 
