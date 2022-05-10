@@ -58,8 +58,10 @@ start_time = time.time()
 raw_datapath = os.environ['BEACON_DATA']
 #processed_datapath = os.path.join(os.environ['BEACON_PROCESSED_DATA'],'backup_pre_all_map_run_12-5-2021')
 
-if True:
-    processed_datapath = '/project2/avieregg/dsouthall/beacon/cr_search_backup/backup_feb28_2022'#os.environ['BEACON_PROCESSED_DATA']
+if False:
+    processed_datapath = '/home/dsouthall/scratch-midway2/beacon/backup_mar31_2022'
+elif True:
+    processed_datapath = '/home/dsouthall/scratch-midway2/beacon/backup_feb28_2022'
 else:
     processed_datapath = os.environ['BEACON_PROCESSED_DATA']
 
@@ -161,7 +163,7 @@ if __name__ == '__main__':
     saveprint('SETTING processed_datapath TO: ', processed_datapath, outfile=output_text_file)
 
 
-    print("Preparing dataSlicer")
+    saveprint("Preparing dataSlicer", outfile=output_text_file)
 
     map_resolution_theta = 0.25 #degrees
     min_theta   = 0
@@ -173,8 +175,30 @@ if __name__ == '__main__':
     max_phi     = 180
     n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
 
+    if 'backup_feb28_2022' in processed_datapath:
+        low_ram_mode = False
+        exclude_runs = numpy.array([    5981, 5993, 6033, 6090, 6500, 6500, 6501, 6502, 6503, 6504, 6505,
+                                        6506, 6507, 6508, 6509, 6510, 6511, 6512, 6513, 6514, 6515, 6516,
+                                        6517, 6518, 6519, 6520, 6521, 6522, 6523, 6524, 6525, 6526, 6527,
+                                        6528, 6529, 6530, 6531, 6532, 6533, 6534, 6535, 6536, 6540, 6541,
+                                        6542, 6543, 6544, 6545, 6546, 6547, 6548, 6549, 6550, 6551, 6552,
+                                        6553, 6554, 6555, 6556, 6557, 6558, 6559, 6560, 6561, 6562, 6563,
+                                        6564, 6565, 6566, 6567, 6568, 6569, 6570, 6571, 6572, 6573, 6574,
+                                        6575, 6576, 6577, 6578, 6579, 6580, 6581, 6582, 6583, 6584, 6585,
+                                        6586, 6587, 6588, 6589, 6590, 6591, 6592, 6593, 6594, 6595, 6596,
+                                        6597, 6598, 6599, 6600, 6601, 6602, 6603, 6604, 6605, 6606, 6607,
+                                        6608, 6609, 6610, 6611, 6612, 6613, 6614, 6615, 6616, 6617, 6618,
+                                        6619, 6620, 6621, 6622, 6623, 6624, 6625, 6626, 6627, 6628, 6629,
+                                        6630, 6631, 6632, 6633, 6634, 6635, 6636, 6637, 6638, 6639, 6640])
+
+        runs = runs[~numpy.isin(runs, exclude_runs)]
+
+    else:
+        low_ram_mode = True
+
+
     ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, \
-                    low_ram_mode=True,\
+                    low_ram_mode=low_ram_mode,\
                     analysis_data_dir=processed_datapath, curve_choice=0, trigger_types=[2],included_antennas=[0,1,2,3,4,5,6,7],\
                     cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                     std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
@@ -182,24 +206,29 @@ if __name__ == '__main__':
                     n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), remove_incomplete_runs=True)
 
     cut_dict_key = 'all_cuts'
-    ds.addROI(cut_dict_key, {   'elevation_best_choice':[10,90],
-                                'phi_best_choice':[-90,90],
-                                'similarity_count_h':[-0.1,10],
-                                'similarity_count_v':[-0.1,10],
-                                'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':[1.2,1e10],
-                                'impulsivity_hSLICERADDimpulsivity_v':[0.3,1e10],
-                                'cr_template_search_hSLICERMAXcr_template_search_v':[0.4,1e10],
-                                'p2p_gap_h':[-1e10, 95],
-                                'above_normalized_map_max_line':[0,1e10],
-                                'above_snr_line':[0,1e10],
-                                'in_targeted_box':[-0.5, 0.5]})
+    if False and 'backup_feb28_2022' in processed_datapath:
+        ds.addROI(cut_dict_key, { 'p2p_gap_h':[-1e10, 95]})
+    else:
+        ds.addROI(cut_dict_key, {   'elevation_best_choice':[10,90],
+                                    'phi_best_choice':[-90,90],
+                                    'similarity_count_h':[-0.1,10],
+                                    'similarity_count_v':[-0.1,10],
+                                    'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':[1.2,1e10],
+                                    'impulsivity_hSLICERADDimpulsivity_v':[0.3,1e10],
+                                    'cr_template_search_hSLICERMAXcr_template_search_v':[0.4,1e10],
+                                    'in_targeted_box':[-0.5, 0.5],
+                                    'p2p_gap_h':[-1e10, 95],
+                                    'above_normalized_map_max_line':[0,1e10],
+                                    'above_snr_line':[0,1e10]})
+
+        
 
     for param_key in list(ds.roi[cut_dict_key].keys()):
         copied_dict = copy.deepcopy(ds.roi[cut_dict_key])
         del copied_dict[param_key]
         ds.addROI(cut_dict_key + '-' + param_key, copy.deepcopy(copied_dict)) #Add an ROI containing all cuts BUT the current key (used as ROI label).
 
-
+    saveprint("Getting initial cut statistics\n", outfile=output_text_file)
     pass_all_cuts_eventids_dict, successive_cut_counts, total_cut_counts = ds.getCutsFromROI(cut_dict_key,load=False,save=False,verbose=True, return_successive_cut_counts=True, return_total_cut_counts=True) #Events passing all cuts
 
     for key in list(successive_cut_counts.keys()):
@@ -211,19 +240,27 @@ if __name__ == '__main__':
             saveprint('\nRemaining Events After Step %s is %i'%(key, successive_cut_counts[key]), outfile=output_text_file)
         previous_count = successive_cut_counts[key]
 
+
     saveprint('', outfile=output_text_file)
     eventids_array = ds.organizeEventDict(pass_all_cuts_eventids_dict)
     saveprint('Final number of events remaining is %i'%len(eventids_array), outfile=output_text_file)
 
+    outfile_name = os.path.join(out_dir, 'pass_all_cuts_eventids_dict.npy')
+    if os.path.exists(outfile_name):
+        outfile_name.replace('.npy','_%i.npy'%time.time())
+
+    saveprint('Saving pass_all_cuts_eventids_dict as %s'%outfile_name, outfile=output_text_file)
+    numpy.save(outfile_name, pass_all_cuts_eventids_dict, allow_pickle=True)
     
     '''
     I want to add in saving the same histograms with NO cuts applied and ALL cuts applied, as well as sequentially in
     the order they are made.  Can I store the information for 2d histograms this way as well?  I much prefer them.
     '''
 
-    # Save histograms with no cuts
-
+    saveprint("\nSaving Histograms\n", outfile=output_text_file)
     for param_key in list(ds.roi[cut_dict_key].keys()):
+        saveprint(param_key, outfile=output_text_file)
+        # Save histograms with no cuts
         # if param_key in ['elevation_best_choice', 'phi_best_choice']:
         #     continue
 
@@ -247,7 +284,7 @@ if __name__ == '__main__':
         sub_eventids_dict['included_runs'] = runs
 
         numpy.savez_compressed(os.path.join(out_dir, 'all_but_cuts', 'hist_for_%s_with_all_cuts_but_%s.npz'%(param_key, param_key)), **sub_eventids_dict)
-
+        saveprint(os.path.join(out_dir, 'all_but_cuts', 'hist_for_%s_with_all_cuts_but_%s.npz'%(param_key, param_key)), outfile=output_text_file)
 
         # Save histograms after all cuts
         for key in numpy.array(list(sub_eventids_dict.keys())):
@@ -274,6 +311,7 @@ if __name__ == '__main__':
         sub_eventids_dict['included_runs'] = runs
 
         numpy.savez_compressed(os.path.join(out_dir, 'all_cuts', 'hist_for_%s_with_all_cuts.npz'%(param_key)), **sub_eventids_dict)
+        saveprint(os.path.join(out_dir, 'all_cuts', 'hist_for_%s_with_all_cuts.npz'%(param_key)), outfile=output_text_file)
 
         # Save histograms after no cuts
         for key in numpy.array(list(sub_eventids_dict.keys())):
@@ -295,6 +333,7 @@ if __name__ == '__main__':
         sub_eventids_dict['included_runs'] = runs
 
         numpy.savez_compressed(os.path.join(out_dir, 'no_cuts', 'hist_for_%s_with_no_cuts.npz'%(param_key)), **sub_eventids_dict)
+        saveprint(os.path.join(out_dir, 'no_cuts', 'hist_for_%s_with_no_cuts.npz'%(param_key)), outfile=output_text_file)
 
         for key in numpy.array(list(sub_eventids_dict.keys())):
             del sub_eventids_dict[key] 
