@@ -89,8 +89,17 @@ def writeEventDictionaryToDataFrame(initial_eventids_dict, ds=None, include_airp
                     'p2p_h',
                     'p2p_v',
                     'std_h',
-                    'std_v'
-                    ]
+                    'std_v',
+                    'filtered_std_h',
+                    'filtered_std_v',
+                    'filtered_snr_h',
+                    'filtered_snr_v',
+                    'filtered_p2p_h',
+                    'filtered_p2p_v',
+                    'filtered_p2p_gap_h',
+                    'filtered_p2p_gap_v',
+                    'filtered_csnr_h',
+                    'filtered_csnr_v']
 
         if numpy.all([numpy.issubdtype(k, numpy.integer) for k in initial_eventids_dict.keys()]) or numpy.all(numpy.array(list(initial_eventids_dict.keys()))%1 == 0):
             print('Assuming passed "initial_eventids_dict" as eventids_dict format')
@@ -330,23 +339,82 @@ def writeEventDictionaryToExcel(initial_eventids_dict, filename, sheetname, ds=N
 
 
 if __name__ == '__main__':
-    if int(pd.__version__.split('.')[0]) >= 1 and int(pd.__version__.split('.')[1]) >= 4:
-        # flipbook_path = '/home/dsouthall/scratch-midway2/event_flipbook_1643154940'#'/home/dsouthall/scratch-midway2/event_flipbook_1642725413'
-        # flipbook_path = './airplane_event_flipbook_1643947072'
-        flawed_runs = numpy.array([6537,6538,6539]) #numpy.array([5775,5981,5993,6033,6090,6520,6537,6538,6539]) 
-        filename = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'analysis','sept2021-week1-analysis','hand-scanned-event-info.xlsx')
-        # include_airplanes = False
-        for include_airplanes in [False, True]:
-            #['/home/dsouthall/scratch-midway2/event_flipbook_1643154940', './airplane_event_flipbook_1643947072']
-            for flipbook_path in ['./september-flipbook']:
-                sorted_dict = flipbookToDict(flipbook_path, ignore_runs=flawed_runs)
-                if True:
-                    sheetname = os.path.split(flipbook_path)[-1] + '_airplanes-included-%s'%str(include_airplanes)
-                else:
-                    sheetname = 'raw_airplanes-included-%s'%str(include_airplanes)
 
-                df = writeEventDictionaryToDataFrame(sorted_dict, include_airplanes=include_airplanes)
-                writeDataFrameToExcel(df, filename, sheetname)
-                # writeEventDictionaryToExcel(sorted_dict, filename, ds=None)
+
+    if False:
+        if int(pd.__version__.split('.')[0]) >= 1 and int(pd.__version__.split('.')[1]) >= 4:
+            # flipbook_path = '/home/dsouthall/scratch-midway2/event_flipbook_1643154940'#'/home/dsouthall/scratch-midway2/event_flipbook_1642725413'
+            # flipbook_path = './airplane_event_flipbook_1643947072'
+            flawed_runs = numpy.array([6537,6538,6539]) #numpy.array([5775,5981,5993,6033,6090,6520,6537,6538,6539]) 
+            filename = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'analysis','sept2021-week1-analysis','hand-scanned-event-info.xlsx')
+            # include_airplanes = False
+            for include_airplanes in [False, True]:
+                #['/home/dsouthall/scratch-midway2/event_flipbook_1643154940', './airplane_event_flipbook_1643947072']
+                for flipbook_path in ['./september-flipbook']:
+                    sorted_dict = flipbookToDict(flipbook_path, ignore_runs=flawed_runs)
+                    if True:
+                        sheetname = os.path.split(flipbook_path)[-1] + '_airplanes-included-%s'%str(include_airplanes)
+                    else:
+                        sheetname = 'raw_airplanes-included-%s'%str(include_airplanes)
+
+                    df = writeEventDictionaryToDataFrame(sorted_dict, include_airplanes=include_airplanes)
+                    writeDataFrameToExcel(df, filename, sheetname)
+                    # writeEventDictionaryToExcel(sorted_dict, filename, ds=None)
+        else:
+            print('This script requires pandas version >= 1.4.0')
     else:
-        print('This script requires pandas version >= 1.4.0')
+        cmap = 'cool'#'coolwarm'
+        impulsivity_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+        time_delays_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
+        map_length = 16384
+        map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_%i-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'%map_length
+        
+        run_batches = {}
+        run_batches['batch_0'] = numpy.arange(5733,5974) # September data, should setup to auto add info to the "notes" section based off of existing sorting, and run this one those events for consistency
+        run_batches['batch_1'] = numpy.arange(5974,6073)
+        run_batches['batch_2'] = numpy.arange(6074,6173)
+        run_batches['batch_3'] = numpy.arange(6174,6273)
+        run_batches['batch_4'] = numpy.arange(6274,6373)
+        run_batches['batch_5'] = numpy.arange(6374,6473)
+        run_batches['batch_6'] = numpy.arange(6474,6573)
+        run_batches['batch_7'] = numpy.arange(6574,6641)
+        runs = numpy.array([])
+        for k in (run_batches.keys()):
+            runs = numpy.append(runs,run_batches[k])
+
+        ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, \
+                        low_ram_mode=True,\
+                        analysis_data_dir=processed_datapath, trigger_types=[2], remove_incomplete_runs=True)
+
+        filename = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'analysis','paper', 'data','new-cut-event-info.xlsx')
+        new_cut_dict = numpy.load( os.path.join( '/home/dsouthall/Projects/Beacon/beacon/analysis/paper/data/cuts_run5733-run6640_1652152119' , 'pass_all_cuts_eventids_dict.npy')  , allow_pickle=True)[()]
+        
+        df = writeEventDictionaryToDataFrame(sorted_dict, include_airplanes=False, ds=ds)
+        writeDataFrameToExcel(df, filename, 'passing all cuts')
+
+        old_cut_dicts = {}
+        for i in range(8):
+            f = os.path.join('/home/dsouthall/Projects/Beacon/beacon/analysis/paper/data/eventid_dicts', 'stage_2_eventids_dict_batch_%i.npy'%i)
+            out = numpy.load( f , allow_pickle=True)[()]
+            for run in list(out.keys()):
+                old_cut_dicts[run] = out[run]
+
+
+        new_cut_array = ds.organizeEventDict(new_cut_dict)
+        old_cut_array = ds.organizeEventDict(old_cut_dicts)
+
+        matching                        = ds.organizeEventDict(ds.returnCommonEvents(new_cut_dict, old_cut_dicts))
+        matching_dict                   = ds.returnCommonEvents(new_cut_dict, old_cut_dicts)
+        
+        events_in_new_not_old         = ds.organizeEventDict(ds.returnEventsAWithoutB(new_cut_dict, old_cut_dicts))
+        events_in_new_not_old_dict    = ds.returnEventsAWithoutB(new_cut_dict, old_cut_dicts)
+
+
+        matching_df = df[numpy.logical_and(numpy.isin(df['run'], matching['run']), numpy.isin(df['eventid'], matching['eventid']))]
+        writeDataFrameToExcel(matching_df, filename, 'in old')
+
+        new_events_df = df[numpy.logical_and(numpy.isin(df['run'], events_in_new_not_old['run']), numpy.isin(df['eventid'], events_in_new_not_old['eventid']))]
+        writeDataFrameToExcel(new_events_df, filename, 'new')
+
+
+

@@ -951,16 +951,16 @@ class dataSlicerSingleRun():
                                                 [[6,8.5]    , [-12,-4]] )
 
             in_box = numpy.zeros(len(xy[0]),dtype=bool)
-            for remove_box_az, remove_el in exclude_below_horizon_clusters:
+            for remove_box_az, remove_box_el in exclude_below_horizon_clusters:
                 cut_az = numpy.logical_and(xy[0] >= remove_box_az[0], xy[0] < remove_box_az[1])
-                cut_el = numpy.logical_and(xy[1] >= remove_box_az[0], xy[1] < remove_box_az[1])
+                cut_el = numpy.logical_and(xy[1] >= remove_box_el[0], xy[1] < remove_box_el[1])
 
                 in_box = numpy.logical_or(in_box, numpy.logical_and(cut_az, cut_el)) #If in any previous box or in current box then True
             return in_box.astype(int)
 
         self.addParameterFunction(
             'in_targeted_box', 
-            ['phi_best_choice','elevation_best_choice'], 
+            ['phi_best_all_belowhorizon','elevation_best_all_belowhorizon'], 
             aboveTargetedBelowHorizonCutFunc, 
             'Inside Below\nHorizon Box (bool)', 
             -0.5, 1.5, 2,
@@ -1101,8 +1101,9 @@ class dataSlicerSingleRun():
             if len(numpy.shape(eventids)) > 1:
                 print('WARNING!!! eventids is in the incorrect format.')
             
-            if numpy.any(numpy.diff(eventids) < 1):
-                print('WARNING!!! eventids is not sorted or has duplicate entries.  May mess up output of getDataFromParam.')
+            if len(eventids) > 1:
+                if numpy.any(numpy.diff(eventids) < 1):
+                    print('WARNING!!! eventids is not sorted or has duplicate entries.  May mess up output of getDataFromParam.')
 
             len_eventids = len(eventids)
             if len(eventids) > 0:

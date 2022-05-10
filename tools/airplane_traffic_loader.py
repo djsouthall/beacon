@@ -86,6 +86,8 @@ def enu2Spherical(enu):
 
 def addDirectionInformationToDataFrame(df, origin=default_origin, altitude_str='geoaltitude'):
     '''
+    See https://opensky-network.org/datasets/states/README.txt
+
     This will add ENU, and distance, azimuth, and zenith information to the dataframe.
 
     Note that both geoaltitude and altitude (barometric) are available.
