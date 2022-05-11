@@ -389,7 +389,7 @@ if __name__ == '__main__':
         filename = os.path.join(os.environ['BEACON_ANALYSIS_DIR'],'analysis','paper', 'data','new-cut-event-info.xlsx')
         new_cut_dict = numpy.load( os.path.join( '/home/dsouthall/Projects/Beacon/beacon/analysis/paper/data/cuts_run5733-run6640_1652152119' , 'pass_all_cuts_eventids_dict.npy')  , allow_pickle=True)[()]
         
-        df = writeEventDictionaryToDataFrame(sorted_dict, include_airplanes=False, ds=ds)
+        df = writeEventDictionaryToDataFrame(new_cut_dict, include_airplanes=False, ds=ds)
         writeDataFrameToExcel(df, filename, 'passing all cuts')
 
         old_cut_dicts = {}

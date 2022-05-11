@@ -206,12 +206,12 @@ if __name__ == '__main__':
     ax.grid(b=True, which='major', color='tab:gray', linestyle='-',alpha=0.4)
     ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.3)
 
-    plt.bar(bin_centers, vals, bin_width, edgecolor='k', facecolor=None, label='Observable Cosmic Ray Polarization\nDistribution From Cranberry')
+    plt.bar(bin_centers, vals, bin_width, edgecolor='k', facecolor="dodgerblue", label='Observable Cosmic Ray Polarization\nDistribution From Cranberry')
 
-    # plt.axvline(polarization_degs[0], c='r', label=textwrap.fill('5911-73399 with Symettric Filtering',width=25))
+    # plt.axvline(polarization_degs[0], c='gold', label=textwrap.fill('5911-73399 with Symettric Filtering',width=25))
     # plt.axvline(polarization_degs[1], c='g', label='5911-73399 with Asymettric Filtering')
     # plt.axvline(polarization_degs[2], c='m', label='5911-73399 with Only Sine Subtraction')
-    plt.axvline(polarization_degs[0], c='r', label=textwrap.fill('5911-73399 Polarization',width=25))
+    plt.axvline(polarization_degs[0], c='gold', label=textwrap.fill('5911-73399 Polarization',width=25))
 
     plt.legend(loc='center right', fontsize=12)
     plt.ylabel('Frequency of Occurance Per Bin From Cranberry', fontsize=18)
@@ -234,9 +234,9 @@ if __name__ == '__main__':
     ax.grid(b=True, which='major', color='tab:gray', linestyle='-',alpha=0.4)
     ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.3)
 
-    plt.bar(bin_centers, vals, bin_width, edgecolor='k', facecolor=None, label=textwrap.fill('Observable Cosmic Ray Elevation Distribution From Cranberry',width=25))
+    plt.bar(bin_centers, vals, bin_width, edgecolor='k', facecolor="dodgerblue", label=textwrap.fill('Observable Cosmic Ray Elevation Distribution From Cranberry',width=25))
 
-    plt.axvline(18.852, c='r', label=textwrap.fill('5911-73399 Elevation',width=25))
+    plt.axvline(18.852, c='gold', label=textwrap.fill('5911-73399 Elevation',width=25))
 
     plt.legend(loc='center right', fontsize=12)
     plt.ylabel('Frequency of Occurance Per Bin From Cranberry', fontsize=18)
@@ -257,9 +257,9 @@ if __name__ == '__main__':
     ax.grid(b=True, which='major', color='tab:gray', linestyle='-',alpha=0.4)
     ax.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.3)
 
-    plt.bar(bin_centers, vals, bin_width, edgecolor='k', facecolor=None, label=textwrap.fill('Observable Cosmic Ray Azimuth Distribution From Cranberry',width=25))
+    plt.bar(bin_centers, vals, bin_width, edgecolor='k', facecolor="dodgerblue", label=textwrap.fill('Observable Cosmic Ray Azimuth Distribution From Cranberry',width=25))
 
-    plt.axvline(-33.959, c='r', label=textwrap.fill('5911-73399 Azimuth',width=25))
+    plt.axvline(-33.959, c='gold', label=textwrap.fill('5911-73399 Azimuth',width=25))
 
     plt.legend(loc='center right', fontsize=12)
     plt.ylabel('Frequency of Occurance Per Bin From Cranberry', fontsize=18)

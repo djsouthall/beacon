@@ -455,21 +455,21 @@ if __name__ == '__main__':
                     plt.axvspan(-1,-TS_cut_level,color='r',alpha=0.3,label='Cut Region')
                     plt.axvspan(TS_cut_level,1,color='r',alpha=0.3)
                 if normalize:
-                    n, bin_edges, patches = plt.hist(metric_rand,alpha=0.7,density=True,label='Uniformly\nRandomized\nTrigger Times',bins=bins)
+                    n, bin_edges, patches = plt.hist(metric_rand,alpha=0.7,density=True,label='Uniformly\nRandomized\nTrigger Times',bins=bins, facecolor="dodgerblue")
                     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
                     plt.plot(bin_centers + numpy.diff(bin_centers)[0]/2, n, drawstyle='steps', lw=1, c='k')
 
-                    n, bin_edges, patches = plt.hist(metric,alpha=0.7,density=True,label='Actual\nTrigger Times',bins=bin_edges)
+                    n, bin_edges, patches = plt.hist(metric,alpha=0.7,density=True,label='Actual\nTrigger Times',bins=bin_edges, facecolor="tab:orange")
                     plt.plot(bin_centers + numpy.diff(bin_centers)[0]/2, n, drawstyle='steps', lw=2, c='k')
                     plt.ylabel('Normalized Counts',fontsize=label_fontsize, labelpad=0)
                     arrow_xy = (0.115,1.15)
                     relative_xy = (0.05, 0.1)
                 else:
-                    n, bin_edges, patches = plt.hist(metric_rand,alpha=0.7,density=False,label='Uniformly\nRandomized\nTrigger Times',bins=bins)
+                    n, bin_edges, patches = plt.hist(metric_rand,alpha=0.7,density=False,label='Uniformly\nRandomized\nTrigger Times',bins=bins, facecolor="dodgerblue")
                     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
                     plt.plot(bin_centers + numpy.diff(bin_centers)[0]/2, n, drawstyle='steps', lw=1, c='k')
 
-                    n, bin_edges, patches = plt.hist(metric,alpha=0.7,density=False,label='Actual\nTrigger Times',bins=bin_edges)
+                    n, bin_edges, patches = plt.hist(metric,alpha=0.7,density=False,label='Actual\nTrigger Times',bins=bin_edges, facecolor="tab:orange")
                     plt.plot(bin_centers + numpy.diff(bin_centers)[0]/2, n, drawstyle='steps', lw=2, c='k')
 
                     if include_perfectly_periodic:

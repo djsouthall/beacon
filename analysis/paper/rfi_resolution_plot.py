@@ -598,6 +598,13 @@ if __name__ == '__main__':
 
                     plt.sca(ax3)
                     
+
+                    '''
+                    Todo: Either rasterize or lower resolution of parts of this plt.
+
+
+                    '''
+
                     if small_log:
                         im = ax3.pcolormesh(plot_x_edges_mesh, plot_y_edges_mesh, fit_z,norm=colors.LogNorm(vmin=0.5, vmax=fit_z.max()),cmap='coolwarm', label='2D Gaussian Fit')
                     else:

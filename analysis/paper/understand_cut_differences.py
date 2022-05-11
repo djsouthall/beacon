@@ -97,11 +97,25 @@ if __name__ == '__main__':
                                     6619, 6620, 6621, 6622, 6623, 6624, 6625, 6626, 6627, 6628, 6629,
                                     6630, 6631, 6632, 6633, 6634, 6635, 6636, 6637, 6638, 6639, 6640])
 
-
+    runs = runs.astype(int)
 
     ds = dataSlicer(runs, impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, \
                     low_ram_mode=True,\
                     analysis_data_dir=processed_datapath, trigger_types=[2], remove_incomplete_runs=True)
+
+
+    total_time = 0
+    for run in runs:
+        sys.stdout.write('Run %i\r'%(run))
+        sys.stdout.flush()
+        reader = Reader(raw_datapath, int(run))
+        t = ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict={run:[0,reader.N()-1]})
+        total_time += t[1] - t[0]
+
+    print('Total Time : %0.2f s'%total_time)
+    print('Minutes:\t', total_time/60)
+    print('Hours:\t', total_time/3600)
+    print('Days:\t', total_time/(24*3600))
 
     ds.addROI('cuts', {   'elevation_best_choice':[10,90],
                                 'phi_best_choice':[-90,90],
@@ -140,10 +154,13 @@ if __name__ == '__main__':
     events_in_new_not_old_dict    = ds.returnEventsAWithoutB(new_cut_dict, old_cut_dicts)
 
 
-    if True:
+    if False:
         print('Getting combined impulsivity')
         new_impulsivity = ds.getDataArrayFromParam('impulsivity_hSLICERADDimpulsivity_v', eventids_dict=new_cut_dict)
-
+        events_by_interest = new_cut_array[numpy.argsort(new_impulsivity)[::-1]]
+        ds.eventInspector({6027:[53175], 6303:[102086], 5911:[73399]})
+        # 6027:[53175] flagged as part of a cluster of events potentially an airplane but not sure
+        # 6303:[102086] believed to be a below horizon source, reconstructed above horizon due to coincident event
     
     events_in_old_not_new         = ds.organizeEventDict(ds.returnEventsAWithoutB(old_cut_dicts, new_cut_dict))
     events_in_old_not_new_dict    = ds.returnEventsAWithoutB(old_cut_dicts, new_cut_dict)

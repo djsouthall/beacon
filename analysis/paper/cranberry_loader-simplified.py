@@ -328,10 +328,10 @@ if __name__ == '__main__':
     plt.ylabel('Relative Frequency of Occurrence', fontsize=fontsize)
 
 
-    # plt.axvline(polarization_degs[0], c='r', label=textwrap.fill('5911-73399 with Symmetric Filtering',width=25))
+    # plt.axvline(polarization_degs[0], c='gold', label=textwrap.fill('5911-73399 with Symmetric Filtering',width=25))
     # plt.axvline(polarization_degs[1], c='g', label='5911-73399 with Asymettric Filtering')
     # plt.axvline(polarization_degs[2], c='m', label='5911-73399 with Only Sine Subtraction')
-    plt.axvline(polarization_degs[0], c='r', label='5911-73399\nPolarization = %0.2f$^\circ$'%polarization_degs[0], lw=4)
+    plt.axvline(polarization_degs[0], c='gold', label='5911-73399\nPolarization = %0.2f$^\circ$'%polarization_degs[0], lw=4)
     plt.xlim(10., 70.)
     plt.legend()
 
@@ -358,7 +358,7 @@ if __name__ == '__main__':
     #plt.xlabel(r'Azimuth Angle $\phi_{Xmax}$ (deg)', fontsize=fontsize)
     #plt.ylabel(r'Zenith Angle $\theta_{Xmax}$ (deg)', fontsize=fontsize)
 
-    plt.scatter(cr_az, cr_el,s=40, c='r', label='5911-73399')
+    plt.scatter(cr_az, cr_el,s=100, c='gold', ec='k', linewidths=1, label='5911-73399')
     plt.legend(loc='upper right',fontsize=18)
 
 
