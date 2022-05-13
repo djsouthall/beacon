@@ -120,9 +120,9 @@ final_corr_length = 2**17
 if __name__ == '__main__':
     plt.close('all')
     start_time = time.time()
-    infile = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'cr_search', 'event_info_collated.xlsx')
+    infile = '/home/dsouthall/Projects/Beacon/beacon/analysis/paper/data/new-cut-event-info.xlsx'#os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'analysis', 'cr_search', 'event_info_collated.xlsx')
     outfile = infile.replace('.xlsx','_%i.xlsx'%start_time)
-    main_sheet_name = 'good-with-airplane'
+    main_sheet_name = 'passing all cuts'#'good-with-airplane'
 
     plot = True
 
