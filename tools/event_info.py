@@ -140,7 +140,7 @@ if __name__ == '__main__':
         map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_16384-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'
 
         ds = dataSlicer([run], impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath)
-        ds.conference_mode = True
+        ds.conference_mode = False
         
         # Custom testing values
         if apply_additional_notches:
@@ -184,7 +184,7 @@ if __name__ == '__main__':
             if ds.show_all:
                 ax_keys.append('fig1_map_all')
             try:
-
+                print('Looking for airplanes...')
                 time_window_s = 5*60
                 plot_distance_cut_limit = 500
                 min_approach_cut_km = 1e6

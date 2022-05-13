@@ -39,7 +39,8 @@ def getFileNamesFromTimestamps(start_time_utc_timestamp, stop_time_utc_timestamp
     stop_date = datetime(stop_datetime.year, stop_datetime.month, stop_datetime.day)
     stop_hour = start_datetime.hour
 
-    delta = stop_date - start_date
+    delta = stop_datetime - start_datetime
+    print('DELTA = ', delta)
 
 
     filenames = []

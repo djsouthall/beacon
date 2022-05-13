@@ -2372,7 +2372,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)  
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True, override_to_time_window=(None,None), plot_horizon=False, label_mountainside=True):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True, override_to_time_window=(None,None), plot_horizon=False, label_mountainside=True, rasterized=False):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -2757,9 +2757,9 @@ class Correlator:
 
                 if mollweide == True:
                     #Automatically converts from rads to degs
-                    im = map_ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm)
+                    im = map_ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm,rasterized=rasterized)
                 else:
-                    im = map_ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm)
+                    im = map_ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm,rasterized=rasterized)
 
                 if self.conference_mode == False:
                     if plot_peak_to_sidelobe and max_method is not None:
@@ -2784,7 +2784,7 @@ class Correlator:
                     map_ax.set_yticks([-30, -15, 0, 15, 30, 45, 60, 75, 90])
                     if textstr is not None:
                         props = dict(facecolor='#9DC3E6', alpha=1.0)
-                        map_ax.text(0.97, 0.02, textstr, transform=map_ax.transAxes, fontsize=16, verticalalignment='bottom', horizontalalignment='right', bbox=dict(boxstyle="round", fc="w"))
+                        map_ax.text(0.97, 0.02, textstr, transform=map_ax.transAxes, fontsize=16, verticalalignment='bottom', horizontalalignment='right', bbox=dict(boxstyle="square", fc="w"))
                         if label_mountainside:
                             map_ax.text(0.02, 0.02, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=12, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                         
@@ -2979,7 +2979,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def multiEventMaxMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', fig=None, ax=None):
+    def multiEventMaxMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', fig=None, ax=None, include_cbar=True):
         '''
         Does the same thing as map, but then takes the maximum value from each events maps and plots that as the map.
         Hopefully this is useful for showing things like trajectories, but that is unlikely. 
@@ -3069,18 +3069,19 @@ class Correlator:
                 vmin = numpy.min(rolled_values)
                 if mollweide == True:
                     #Automatically converts from rads to degs
-                    im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm)
+                    im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, rolled_values, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm, rasterized=True)
                 else:
-                    im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm)
+                    im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm, rasterized=True)
 
-                cbar = fig.colorbar(im)
                 plt.xlabel(xlabel)
                 plt.ylabel('Elevation Angle (Degrees)')
                 plt.grid(True)
-                if hilbert == True:
-                    cbar.set_label('Normalized Max Hilbert Enveloped\nCorrelation Value Across All Events')
-                else:
-                    cbar.set_label('Normalized Max Correlation Value\nAcross All Events')
+                if include_cbar:
+                    cbar = fig.colorbar(im)
+                    if hilbert == True:
+                        cbar.set_label('Normalized Max Hilbert Enveloped\nCorrelation Value')
+                    else:
+                        cbar.set_label('Normalized Max Correlation Value')
 
 
                 #Prepare array cut curves
@@ -3128,7 +3129,7 @@ class Correlator:
                     else:
                         y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
                     ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
-                    ax.text(0.015, 0.005, 'Local\nMountainside', transform=ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+                    # ax.text(0.015, 0.005, 'Local\nMountainside', transform=ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                     if mollweide == False:
                         ax.set_xlim(-90, 90)
                         ax.set_ylim(-30, 90)
