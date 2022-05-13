@@ -248,11 +248,12 @@ if __name__ == '__main__':
             plt.tight_layout()
 
 
-    label_group_0  = ['elevation_best_choice','phi_best_choice','similarity_count_h','similarity_count_v','hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe']
+    label_group_0 =  ['elevation_best_choice','phi_best_choice','similarity_count_h','similarity_count_v','hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe']
     label_group_1 =  ['impulsivity_hSLICERADDimpulsivity_v','cr_template_search_hSLICERMAXcr_template_search_v','p2p_gap_h','above_normalized_map_max_line','above_snr_line']
     label_group_2 =  ['elevation_best_choice','phi_best_choice','impulsivity_hSLICERADDimpulsivity_v','cr_template_search_hSLICERMAXcr_template_search_v']
     label_group_3 =  ['impulsivity_hSLICERADDimpulsivity_v','cr_template_search_hSLICERMAXcr_template_search_v']
-    label_group_4 =  [label_group_0, label_group_1]
+    label_group_4 =  ['elevation_best_choice','phi_best_choice']
+    label_group_5 =  [label_group_0, label_group_1]
     if False:
         plt.ioff()
         for lg_index, label_group in enumerate([label_group_0, label_group_1, label_group_2]):
@@ -385,13 +386,19 @@ if __name__ == '__main__':
     if True:
         plt.ioff()
         # plt.ion()
-        for lg_index, label_group in enumerate([label_group_0, label_group_1, label_group_2, label_group_3, label_group_4]):
-            if lg_index > 1 and lg_index < 4:
+        for lg_index, label_group in enumerate([label_group_0, label_group_1, label_group_2, label_group_3, label_group_4, label_group_5]):
+            if lg_index > 1 and lg_index < 5:
                 fig = plt.figure(figsize=(12,4*len(label_group)))
-            elif lg_index == 4:
+                major_fontsize = 36
+                minor_fontsize = 20
+            elif lg_index == 5:
                 fig = plt.figure(figsize=(12*len(label_group),6*len(label_group[0])))
+                major_fontsize = 42
+                minor_fontsize = 28
             else:
                 fig = plt.figure(figsize=(12,4*len(label_group)))
+                major_fontsize = 36
+                minor_fontsize = 20
 
             for param_index, param_key in enumerate(numpy.asarray(label_group).T.flatten()):
                 if param_key == 'elevation_best_choice':
@@ -429,12 +436,12 @@ if __name__ == '__main__':
                     x_units = ' (0 = Not Inside, 1 = Inside)'
 
 
-                if lg_index > 1:
-                    ylabel = 'Normalized Counts'
-                else:
-                    ylabel = 'Normalized\nCounts'
+                # if lg_index > 1:
+                #     ylabel = 'Normalized Counts'
+                # else:
+                ylabel = 'Normalized\nCounts'
 
-                if lg_index == 4:
+                if lg_index == 5:
                     if param_key in label_group[0]:
                         ax1 = plt.subplot(len(label_group[0]), len(label_group), 1 + param_index)
                     else:
@@ -516,7 +523,7 @@ if __name__ == '__main__':
                 if param_key == 'elevation_best_choice' and lg_index > 1:
                     cut_range = numpy.logical_and(hist_data['bin_centers'] > 30, hist_data['bin_centers'] < 40)
                     xy = [hist_data['bin_centers'][cut_range][numpy.argmax(hist_data['counts'][cut_range])], numpy.max(hist_data['counts'][cut_range]/normalization_factor)]
-                    xy_text = [55,0.5e-1]
+                    xy_text = [52,0.5e-1]
 
                     # raw_text = "Above horizon clustering corresponds to below horizon events misreconstructing to a prominent sidelobe"
                     # text = textwrap.fill(raw_text,width=int(len(raw_text)//3))
@@ -524,7 +531,7 @@ if __name__ == '__main__':
                     ann = ax1.annotate(text,
                           xy=xy, xycoords='data',
                           xytext=xy_text, textcoords='data',
-                          size=18, va="center", ha="center",
+                          size=16, va="center", ha="center",
                           bbox=dict(boxstyle="round", fc="w"),
                           arrowprops=dict(arrowstyle="-|>",
                                           connectionstyle="arc3,rad=+0.2",
@@ -532,24 +539,26 @@ if __name__ == '__main__':
                           )
 
 
-                if lg_index == 4:
+                if lg_index == 5:
                     if param_key in label_group[0]:
-                        plt.ylabel(ylabel, fontsize=24)
+                        plt.ylabel(ylabel, fontsize=major_fontsize)
                 else:
-                    plt.ylabel(ylabel, fontsize=24)
+                    plt.ylabel(ylabel, fontsize=major_fontsize)
 
-                plt.xlabel(xlabel + x_units, fontsize=24)
-                plt.xticks(fontsize=20)
-                plt.yticks(fontsize=20)
+                plt.xlabel(xlabel + x_units, fontsize=major_fontsize)
+                plt.xticks(fontsize=minor_fontsize)
+                plt.yticks(fontsize=minor_fontsize)
+
 
 
                 plt.xlim(xlim[0], xlim[1])
                 ax1.set_yscale('log')
+                ax1.tick_params(axis='both', labelsize=minor_fontsize)
 
                 if param_index == len(numpy.asarray(label_group).T.flatten())-1:
-                    plt.legend(loc='upper right', fontsize=18)
+                    plt.legend(loc='upper right', fontsize=minor_fontsize)
                 plt.tight_layout()
                 plt.subplots_adjust(hspace=0.30)#left=0.06, bottom=0.12,right=0.98, top=0.95, wspace=0.3, 
 
-            fig.savefig('./figures/cuts_same_axis_pg_%i.pdf'%(lg_index+1))
-            fig.savefig('./figures/cuts_same_axis_pg_%i.png'%(lg_index+1), dpi=300)
+            fig.savefig('./figures/cut_histograms/cuts_same_axis_pg_%i.pdf'%(lg_index+1))
+            fig.savefig('./figures/cut_histograms/cuts_same_axis_pg_%i.png'%(lg_index+1), dpi=300)

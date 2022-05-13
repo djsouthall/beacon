@@ -185,10 +185,9 @@ attenuations_dict = {        'hpol':{   'd2sa' : [20],
 
 if __name__ == '__main__':
 
-    fontsize = 18
+    fontsize = 24
 
     plt.close('all')
-    cmap = 'cool'
     impulsivity_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     time_delays_dset_key = 'LPf_80.0-LPo_14-HPf_20.0-HPo_4-Phase_1-Hilb_0-corlen_131072-align_0-shortensignals-0-shortenthresh-0.70-shortendelay-10.00-shortenlength-90.00-sinesubtract_1'
     map_length = 16384
@@ -210,13 +209,19 @@ if __name__ == '__main__':
     run_modes = ['rfi']#['pulsers']#['rfi', 'pulsers']
 
     cut_range = 2.5
-    small_log = False
+    small_log = True
+
+    cmap = 'coolwarm'
+    roi_cmap = cm.inferno
 
     for mode in run_modes:
         print('Generating %s plots:'%mode)
         if mode == 'rfi':
             # runs = numpy.arange(5733,5736)
-            runs = numpy.arange(5733,5790)# numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5736)
+            if False:
+                runs = numpy.arange(5733,5790)
+            else:
+                runs = numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5790)# numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5736)
             # runs = numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5736)#
 
             roi_dict = {}
@@ -269,7 +274,7 @@ if __name__ == '__main__':
                         cr_template_n_bins_h=200,cr_template_n_bins_v=200,impulsivity_n_bins_h=200,impulsivity_n_bins_v=200,\
                         std_n_bins_h=200,std_n_bins_v=200,max_std_val=12,p2p_n_bins_h=128,p2p_n_bins_v=128,max_p2p_val=128,\
                         snr_n_bins_h=200,snr_n_bins_v=200,max_snr_val=35,include_test_roi=False,\
-                        n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta))
+                        n_phi=n_phi, range_phi_deg=(min_phi,max_phi), n_theta=n_theta, range_theta_deg=(min_theta,max_theta), roi_cmap=roi_cmap)
 
 
         for key, item in roi_dict.items():
@@ -336,8 +341,10 @@ if __name__ == '__main__':
                     ax3 = fig_2d.add_subplot(gs[1, 1], sharex=ax2, sharey=ax2)
 
                     plt.sca(ax1)
-                    fig_2d, ax1 = ds.plotROI2dHist(key_x, key_y, cmap='coolwarm', include_roi=True, eventids_dict=eventids_dict, fig=fig_2d, ax=ax1)
+                    fig_2d, ax1 = ds.plotROI2dHist(key_x, key_y, cmap=cmap, include_roi=True, eventids_dict=eventids_dict, fig=fig_2d, ax=ax1, rasterized=True)
                     
+                    ax1.text(0.01, 0.01, 'Local\nMountainside', transform=ax1.transAxes, fontsize=fontsize, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+
                     ax1.set_ylim((-25, 10))
                     ax1.set_xlim((-90, 90))
 
@@ -362,14 +369,14 @@ if __name__ == '__main__':
                     print('Testing plot for calculating %s and %s'%(key_x,key_y))
 
                     #Add events for single ROI, counts plotted manually later.
-                    _fig, _ax, counts = ds.plotROI2dHist(key_x, key_y, eventids_dict=roi_eventids_dict, return_counts=True, cmap='coolwarm', include_roi=False, fig=None, ax =None)
+                    _fig, _ax, counts = ds.plotROI2dHist(key_x, key_y, eventids_dict=roi_eventids_dict, return_counts=True, cmap=cmap, include_roi=False, fig=None, ax =None, rasterized=True)
                     plt.close(_fig)
                     plt.sca(ax2)
 
                     if small_log:
-                        im = ax2.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, counts, norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap='coolwarm')
+                        im = ax2.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, counts, norm=colors.LogNorm(vmin=0.5, vmax=counts.max()),cmap=cmap, rasterized=True)
                     else:
-                        im = ax2.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, counts,cmap='coolwarm')
+                        im = ax2.pcolormesh(ds.current_bin_edges_mesh_x, ds.current_bin_edges_mesh_y, counts,cmap=cmap, rasterized=True)
                     
                     x0 = (roi_dict[roi_key]['phi_best_h'][0] + roi_dict[roi_key]['phi_best_h'][1])/2.0
                     y0 = (roi_dict[roi_key]['elevation_best_h'][0] + roi_dict[roi_key]['elevation_best_h'][1])/2.0
@@ -606,14 +613,14 @@ if __name__ == '__main__':
                     '''
 
                     if small_log:
-                        im = ax3.pcolormesh(plot_x_edges_mesh, plot_y_edges_mesh, fit_z,norm=colors.LogNorm(vmin=0.5, vmax=fit_z.max()),cmap='coolwarm', label='2D Gaussian Fit')
+                        im = ax3.pcolormesh(plot_x_edges_mesh, plot_y_edges_mesh, fit_z,norm=colors.LogNorm(vmin=0.5, vmax=fit_z.max()),cmap=cmap, label='2D Gaussian Fit', rasterized=True)
                     else:
-                        im = ax3.pcolormesh(plot_x_edges_mesh, plot_y_edges_mesh, fit_z,cmap='coolwarm', label='2D Gaussian Fit')
+                        im = ax3.pcolormesh(plot_x_edges_mesh, plot_y_edges_mesh, fit_z,cmap=cmap, label='2D Gaussian Fit', rasterized=True)
                     
 
-                    # ax3.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color=ds.roi_colors[roi_index],label='%0.2f'%(confidence_integral_value*100) + r'% PDF Area = ' + '%0.3f deg^2\nrho = %0.3f'%(ellipse_area,rho))
-                    ax2.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color=ds.roi_colors[roi_index])
-                    ax3.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color=ds.roi_colors[roi_index],label='%i'%(confidence_integral_value*100) + r'%' + ' Fit Area\n= %0.2f deg^2'%(ellipse_area))
+                    # ax3.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color="k",label='%0.2f'%(confidence_integral_value*100) + r'% PDF Area = ' + '%0.3f deg^2\nrho = %0.3f'%(ellipse_area,rho))
+                    ax2.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color="k")
+                    ax3.plot(ellipse_vertices[:,0],ellipse_vertices[:,1], color="k",label='%i'%(confidence_integral_value*100) + r'%' + ' Fit Area\n= %0.2f deg^2'%(ellipse_area))
 
                     if mode == 'pulsers':
                         ax2.axvline(direction_dict[roi_key]['azimuth_deg'], linewidth=2, color='fuchsia', label='Expected Dir: %0.2f, %0.2f'%(direction_dict[roi_key]['azimuth_deg'], direction_dict[roi_key]['elevation_deg']))
@@ -641,7 +648,7 @@ if __name__ == '__main__':
                         cbar = plt.colorbar(im, ax=ax3)
                         if small_log == False:
                             cbar.formatter.set_powerlimits((0, 0))
-                        cbar.set_label('Counts', fontsize=fontsize)
+                        cbar.set_label('Counts (Fit)', fontsize=fontsize)
                     except Exception as e:
                         print('Error in colorbar, often caused by no events.')
                         print(e)
@@ -656,8 +663,8 @@ if __name__ == '__main__':
 
 
                     ann = ax1.annotate(roi_key,
-                      xy=(x0, y0-5*sigma_y), xycoords='data',
-                      xytext=(x0, y0-5*sigma_y-4), textcoords='data',
+                      xy=(x0, y0-8*sigma_y), xycoords='data',
+                      xytext=(x0, y0-8*sigma_y-4), textcoords='data',
                       size=fontsize-4, va="center", ha="center",
                       bbox=dict(boxstyle="round", fc="w"),
                       arrowprops=dict(arrowstyle="-|>",

@@ -47,7 +47,7 @@ import inspect
 warnings.simplefilter(action='ignore', category=FutureWarning)
 plt.ion()
 
-label_fontsize = 20
+label_fontsize = 24
 plt.rc('xtick',labelsize=label_fontsize)
 plt.rc('ytick',labelsize=label_fontsize)
 
@@ -143,9 +143,9 @@ if __name__ == '__main__':
                 for _ax, marker in [[ax, ','], [inset_axes, 'o']]:
 
                     if marker == ',':
-                        scatter_1 = _ax.plot((calibrated_trig_time-min(calibrated_trig_time))/60.0,calibrated_trig_time % (expected_period if fold_subsecond_plot else 1.0),marker=marker,linestyle='None',c='b',label='All RF Events')#,s=1
+                        scatter_1 = _ax.plot((calibrated_trig_time-min(calibrated_trig_time))/60.0,calibrated_trig_time % (expected_period if fold_subsecond_plot else 1.0),marker=marker,linestyle='None',c='dodgerblue',label='All RF Events')#,s=1
                     else:
-                        scatter_1 = _ax.scatter((calibrated_trig_time-min(calibrated_trig_time))/60.0,calibrated_trig_time % (expected_period if fold_subsecond_plot else 1.0),marker=marker,linestyle='None',c='b',label='All RF Events',s=8)
+                        scatter_1 = _ax.scatter((calibrated_trig_time-min(calibrated_trig_time))/60.0,calibrated_trig_time % (expected_period if fold_subsecond_plot else 1.0),marker=marker,linestyle='None',c='dodgerblue',label='All RF Events',s=8)
                 plt.sca(ax)
                 plt.legend(fontsize=label_fontsize, loc='lower right',framealpha=1)
                 
@@ -256,7 +256,7 @@ if __name__ == '__main__':
                 fig = plt.figure(figsize=(16,8))
                 ax = plt.subplot(1,2,1)
 
-                scatter_1 = ax.plot((calibrated_trig_time-min(calibrated_trig_time))/60.0,calibrated_trig_time % (expected_period if fold_subsecond_plot else 1.0),marker=',',linestyle='None',c='b',label='All RF Events')#,s=1
+                scatter_1 = ax.plot((calibrated_trig_time-min(calibrated_trig_time))/60.0,calibrated_trig_time % (expected_period if fold_subsecond_plot else 1.0),marker=',',linestyle='None',c='dodgerblue',label='All RF Events')#,s=1
                 scatter_2 = ax.scatter((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker=marker,linestyle='None',c='r',label='Flagged %i Hz'%rate_hz,s=4)
                 
                 plt.legend(fontsize=label_fontsize, loc='lower right',framealpha=1)
@@ -298,7 +298,7 @@ if __name__ == '__main__':
                 plt.xlim(min(bin_edges),max(bin_edges))
 
                 plt.xlabel('Test Statistic',fontsize=label_fontsize)
-                plt.legend(fontsize=label_fontsize, loc='upper right',framealpha=1)
+                plt.legend(fontsize=label_fontsize-4, loc='upper right',framealpha=1)
                 plt.minorticks_on()
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
@@ -351,7 +351,7 @@ if __name__ == '__main__':
                     ax1 = plt.subplot(2,2,1)
                 else:
                     ax1 = gs_ax1
-                scatter_1 = ax1.plot((calibrated_trig_time[cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[cut] % (expected_period if fold_subsecond_plot else 1.0),marker=',',linestyle='None',c='b',label='Non-Flagged RF Triggers')#,s=1
+                scatter_1 = ax1.plot((calibrated_trig_time[cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[cut] % (expected_period if fold_subsecond_plot else 1.0),marker=',',linestyle='None',c='dodgerblue',label='Non-Flagged RF Triggers')#,s=1
                 
 
                 if include_total_counts:
@@ -364,8 +364,21 @@ if __name__ == '__main__':
                 scatter_2 = ax2.plot((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker=',',linestyle='None',c='r',label='Flagged %i Hz'%rate_hz)
                 #scatter_2 = ax2.scatter((calibrated_trig_time[~cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[~cut] % (expected_period if fold_subsecond_plot else 1.0),marker='o',linestyle='None',c='r',label='Flagged %i Hz'%rate_hz,s=0.5)
                 
-                ax1.legend(fontsize=label_fontsize, loc='lower right',framealpha=1)
-                ax2.legend(fontsize=label_fontsize, loc='lower right',framealpha=1)
+                if True:
+                    ax1.text(0.035,0.08, 'Non-Flagged RF Triggers',
+                        size=label_fontsize-3,
+                        bbox=dict(boxstyle="square", fc="w"),
+                        transform=ax1.transAxes,horizontalalignment='left',verticalalignment='bottom')
+
+                    ax2.text(0.035,0.08, 'Flagged %i Hz'%rate_hz,
+                        size=label_fontsize-3,
+                        bbox=dict(boxstyle="square", fc="w"),
+                        transform=ax2.transAxes)
+                else:
+                    ax1.legend(fontsize=label_fontsize-6, loc='lower right',framealpha=1)
+                    ax2.legend(fontsize=label_fontsize-6, loc='lower right',framealpha=1)
+
+
 
                 #Zoomed inset axis
                 inset_axes1 = zoomed_inset_axes(ax1,
@@ -373,7 +386,7 @@ if __name__ == '__main__':
                                    loc=1)
                 [inset_axes1.spines[k].set_linewidth(2) for k in inset_axes1.spines.keys()]
                 plt.sca(inset_axes1)
-                inset_axes1.scatter((calibrated_trig_time[cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[cut] % (expected_period if fold_subsecond_plot else 1.0),marker='o',linestyle='None',c='b',label='Flagged %i Hz'%rate_hz,s=1)
+                inset_axes1.scatter((calibrated_trig_time[cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[cut] % (expected_period if fold_subsecond_plot else 1.0),marker='o',linestyle='None',c='dodgerblue',label='Flagged %i Hz'%rate_hz,s=1)
 
                 inset_axes1.set_xlim(x1, x2)
                 inset_axes1.set_ylim(y1, y2)
@@ -408,18 +421,37 @@ if __name__ == '__main__':
                 plt.yticks(visible=False)
 
                 start_tick = 2
-                arrow_xy = ( x1 + (x2-x1)/2  - 0.00*(x2-x1)/2 , (minor_ticks[start_tick] + minor_ticks[start_tick+1])/2)
+                tick_half_width = (x2-x1)/100 #For annotation caps
+                arrow_xy = ( x1 + (x2-x1)/2  - 0.00*(x2-x1)/2 - tick_half_width , (minor_ticks[start_tick] + minor_ticks[start_tick+1])/2)
                 text_xy =  ( x1 + (x2-x1)/2  - 0.35*(x2-x1)/2 , (minor_ticks[start_tick] + minor_ticks[start_tick+1])/2)
                 #r"$T = 1/60 \mathrm{Hz}$"
+
+                custom_arrow = True
+                if custom_arrow == False:
+                    arrowprops = dict(  arrowstyle="-[,widthB=0.68, lengthB=0.2, angleB=0",fc="w", lw=2)
+                else:
+                    arrowprops = dict(  arrowstyle="-",fc="w", lw=2)
                 ann = inset_axes2.annotate(r'$T = \frac{1}{60 \mathrm{Hz}}$',
                       weight='bold',
                       xy=arrow_xy, xycoords='data',
                       xytext=text_xy, textcoords='data',
-                      size=label_fontsize-2, va="center", ha="center",
+                      size=label_fontsize, va="center", ha="center",
                       bbox=dict(boxstyle="round", fc="w", lw=2),
-                      arrowprops=dict(  arrowstyle="-[,widthB=0.68, lengthB=0.2, angleB=0",
-                                        fc="w", lw=2),
+                      arrowprops=arrowprops,
                       )
+
+                if custom_arrow == True:
+                    line_x = [arrow_xy[0] , arrow_xy[0]]
+                    line_y = [arrow_xy[1] - expected_period/2.0 , arrow_xy[1] + expected_period/2.0]
+                    plt.plot(line_x,line_y, lw=2, c='k') #Vertical line
+
+                    line_x = [arrow_xy[0] - tick_half_width, arrow_xy[0] + tick_half_width]
+                    line_y = [arrow_xy[1] - expected_period/2.0 , arrow_xy[1] - expected_period/2.0 ]
+                    plt.plot(line_x,line_y, lw=2, c='k', solid_capstyle='round')
+                    line_y = [arrow_xy[1] + expected_period/2.0 , arrow_xy[1] + expected_period/2.0 ]
+                    plt.plot(line_x,line_y, lw=2, c='k', solid_capstyle='round')
+
+
 
                 # draw a bbox of the region of the inset axes in the parent axes and
                 # connecting lines between the bbox and the inset axes area
@@ -479,13 +511,14 @@ if __name__ == '__main__':
                     plt.ylabel('Counts',fontsize=label_fontsize, labelpad=0)
                     arrow_xy = (0.115,4700)
                     relative_xy = (0.05, 1000)
+
                 plt.xlabel('Test Statistic',fontsize=label_fontsize)
 
                 if not double_sided:
                     plt.axvline(TS_cut_level,c='r',linestyle='--',linewidth=3, label='Cut')
                 plt.xlim(min(bin_edges),max(bin_edges))
 
-                plt.legend(fontsize=label_fontsize, loc='upper right',framealpha=1)
+                plt.legend(fontsize=label_fontsize-4, loc='upper right',framealpha=1)
                 plt.minorticks_on()
                 plt.grid(b=True, which='major', color='k', linestyle='-')
                 plt.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
@@ -502,9 +535,9 @@ if __name__ == '__main__':
 
                 plt.tight_layout()
                 if include_total_counts:
-                    plt.subplots_adjust(left=0.06, bottom=0.12, right=0.98, top=0.95, wspace=0.3, hspace=0.2)
+                    plt.subplots_adjust(left=0.1, right=0.98, top=0.95, wspace=0.3, hspace=0.2)#, bottom=0.12
                 else:
-                    plt.subplots_adjust(left=0.06, bottom=0.06, right=0.98, top=0.97, wspace=0.25, hspace=0.25)
+                    plt.subplots_adjust(left=0.1, right=0.98, top=0.97, wspace=0.25, hspace=0.25)#, bottom=0.06
 
                 fig.savefig('./figures/run%i_subsecond_plot_mode%i.pdf'%(run,mode), dpi=300)
 

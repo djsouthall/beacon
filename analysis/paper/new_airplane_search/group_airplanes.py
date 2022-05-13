@@ -158,7 +158,7 @@ if __name__ == '__main__':
         for k in (run_batches.keys()):
             runs = numpy.append(runs,run_batches[k])
     else:
-        batch = 0
+        batch = 7
         runs = run_batches['batch_%i'%batch]
 
 
@@ -184,8 +184,8 @@ if __name__ == '__main__':
 
     only_new_dict               = ds.returnEventsAWithoutB(new_cut_dict, old_cut_dicts)
     only_new_array              = ds.organizeEventDict(only_new_dict)
-    matching_cut_dict           = ds.returnCommonEvents(new_cut_dict, old_cut_dicts)
-    matching_array              = ds.organizeEventDict(matching_cut_dict)
+    only_matching_cut_dict      = ds.returnCommonEvents(new_cut_dict, old_cut_dicts)
+    only_matching_array         = ds.organizeEventDict(only_matching_cut_dict)
     
 
     only_new_azimuth            = ds.getDataArrayFromParam('phi_best_choice', eventids_dict=only_new_dict)
@@ -193,10 +193,10 @@ if __name__ == '__main__':
     only_new_times              = ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=only_new_dict)
     only_new_impulsivity        = ds.getDataArrayFromParam('impulsivity_hSLICERADDimpulsivity_v', eventids_dict=only_new_dict)
 
-    only_matching_azimuth       = ds.getDataArrayFromParam('phi_best_choice', eventids_dict=matching_cut_dict)
-    only_matching_elevation     = ds.getDataArrayFromParam('elevation_best_choice', eventids_dict=matching_cut_dict)
-    only_matching_times         = ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=matching_cut_dict)
-    only_matching_impulsivity   = ds.getDataArrayFromParam('impulsivity_hSLICERADDimpulsivity_v', eventids_dict=matching_cut_dict)
+    only_matching_azimuth       = ds.getDataArrayFromParam('phi_best_choice', eventids_dict=only_matching_cut_dict)
+    only_matching_elevation     = ds.getDataArrayFromParam('elevation_best_choice', eventids_dict=only_matching_cut_dict)
+    only_matching_times         = ds.getDataArrayFromParam('calibrated_trigtime', eventids_dict=only_matching_cut_dict)
+    only_matching_impulsivity   = ds.getDataArrayFromParam('impulsivity_hSLICERADDimpulsivity_v', eventids_dict=only_matching_cut_dict)
 
 
     markersize = 40
@@ -204,16 +204,19 @@ if __name__ == '__main__':
     vmin = min(min(only_new_impulsivity), min(only_matching_impulsivity))
     vmax = max(max(only_new_impulsivity), max(only_matching_impulsivity))
     min_t = min(min(only_new_times), min(only_matching_times))
+    max_t = max(max(only_new_times), max(only_matching_times))
 
-    normalize = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    impulsivity_normalize = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    time_normalize = matplotlib.colors.Normalize(vmin=min_t, vmax=max_t + 0.3*(max_t - min_t)) #Don't like top end of this cmap
+
 
     fig1 = plt.figure(figsize=(16,9))
     ax1 = plt.gca()
     
-    s_a = plt.scatter( (only_new_times - min_t)/3600.0, only_new_azimuth, c=only_new_impulsivity, norm=normalize, marker='o', label='New', cmap='inferno')
+    s_a = plt.scatter( (only_new_times - min_t)/3600.0, only_new_azimuth, c=only_new_impulsivity, norm=impulsivity_normalize, marker='1', label='New', cmap='inferno')
     time_selector_only_new = SelectFromCollection(ax1, s_a, only_new_array['eventid'], only_new_array['run'])
 
-    s_b = plt.scatter( (only_matching_times - min_t)/3600.0, only_matching_azimuth, c=only_matching_impulsivity, norm=normalize, marker=',', label='Matching', cmap='inferno')
+    s_b = plt.scatter( (only_matching_times - min_t)/3600.0, only_matching_azimuth, c=only_matching_impulsivity, norm=impulsivity_normalize, marker='.', label='Matching', cmap='inferno')
     time_selector_only_old = SelectFromCollection(ax1, s_b, only_new_array['eventid'], only_new_array['run'])
 
     plt.ylabel('Azimuth (deg)')
@@ -224,10 +227,10 @@ if __name__ == '__main__':
     fig2 = plt.figure(figsize=(16,9))
     ax2 = plt.gca()
     
-    s_c = plt.scatter( only_new_azimuth, only_new_elevation, c=only_new_impulsivity, norm=normalize, marker='o', label='New', cmap='inferno')
+    s_c = plt.scatter( only_new_azimuth, only_new_elevation, c=only_new_times, norm=time_normalize, marker='1', label='New', cmap='inferno')
     space_selector_only_new = SelectFromCollection(ax2, s_c, only_new_array['eventid'], only_new_array['run'])
 
-    s_d = plt.scatter( only_matching_azimuth, only_matching_elevation, c=only_matching_impulsivity, norm=normalize, marker=',', label='Matching', cmap='inferno')
+    s_d = plt.scatter( only_matching_azimuth, only_matching_elevation, c=only_matching_times, norm=time_normalize, marker='.', label='Matching', cmap='inferno')
     space_selector_only_old = SelectFromCollection(ax2, s_d, only_matching_array['eventid'], only_new_array['run'])
 
     plt.ylabel('Azimuth (deg)')
@@ -248,8 +251,8 @@ if __name__ == '__main__':
     # fig2 = plt.figure(figsize=(16,9))
     # ax2 = plt.gca()
 
-    # s1 = plt.scatter( (only_new_times - min_t)/3600.0, only_new_azimuth, c=only_new_impulsivity, norm=normalize, marker='o', label='New', cmap='inferno')
-    # s2 = plt.scatter( (only_matching_times - min_t)/3600.0, only_matching_azimuth, c=only_matching_impulsivity, norm=normalize, marker='*', label='Matching', cmap='inferno')
+    # s1 = plt.scatter( (only_new_times - min_t)/3600.0, only_new_azimuth, c=only_new_impulsivity, norm=impulsivity_normalize, marker='o', label='New', cmap='inferno')
+    # s2 = plt.scatter( (only_matching_times - min_t)/3600.0, only_matching_azimuth, c=only_matching_impulsivity, norm=impulsivity_normalize, marker='*', label='Matching', cmap='inferno')
 
     # plt.ylabel('Elevation (deg)')
     # plt.xlabel('Trigger Time (hours)')

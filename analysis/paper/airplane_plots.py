@@ -117,10 +117,11 @@ if __name__ == '__main__':
     start_time = time.time()
     plt.close('all')
 
-    fontsize = 22
+    major_fontsize = 36
+    minor_fontsize = 28
 
     font = {'family' : 'normal',
-        'size'   : fontsize}
+        'size'   : major_fontsize}
 
     matplotlib.rc('font', **font)
 
@@ -239,113 +240,195 @@ if __name__ == '__main__':
 
                         if True:
                             cor.overwriteSourceDistance(numpy.mean(rpt[:,0]), verbose=False, suppress_time_delay_calculations=False, debug=False)
-                            for hilbert in [True, False]:
-                                
+                            for include_hist in [True, False]:
+                                for hilbert in [False]:
+                                    
 
-
-                                fig, (_gs_ax1, gs_ax2) = plt.subplots(1, 2, figsize=(20,12), gridspec_kw={'width_ratios': [3, 1]})
-
-                                if mollweide == True:
-                                    _gs_ax1.remove()
-                                    _fig, (gs_ax1, _gs_ax2) = plt.subplots(1, 2, figsize=(20,12), gridspec_kw={'width_ratios': [3, 1]}, projection='mollweide')
-                                    plt.close(_fig)
-                                    gs_ax1 = fig.add_subplot(gs_ax1)
-                                else:
-                                    gs_ax1 = _gs_ax1
-
-
-                                plt.sca(gs_ax1)
-                                total_max_corr_values, airplane_phi_deg, airplane_theta_deg, fig, gs_ax1 = cor.multiEventMaxMap(eventids, pol, plot_map=True, hilbert=hilbert, max_method=None, mollweide=mollweide, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', fig=fig, ax=gs_ax1)
-                                if mollweide:
-                                    airplane_phi_deg = numpy.rad2deg(airplane_phi_deg)
-                                    airplane_theta_deg = numpy.rad2deg(airplane_theta_deg)
-                                airplane_el_deg = 90.0 - airplane_theta_deg
-
-                                if False:
-                                    #IF want to us preloaded data not presently calculated data.
-                                    if True:
-                                        airplane_phi_deg = ds.getDataArrayFromParam(eventids_dict, 'phi_best_choice')
-                                        airplane_el_deg = ds.getDataArrayFromParam(eventids_dict, 'elevation_best_choice')
+                                    if include_hist:
+                                        fig, (_gs_ax1, gs_ax2) = plt.subplots(1, 2, figsize=(24,12), gridspec_kw={'width_ratios': [3, 1]})
+                                        if mollweide == True:
+                                            _gs_ax1.remove()
+                                            _fig, (gs_ax1, _gs_ax2) = plt.subplots(1, 2, figsize=(24,12), gridspec_kw={'width_ratios': [3, 1]}, projection='mollweide')
+                                            plt.close(_fig)
+                                            gs_ax1 = fig.add_subplot(gs_ax1)
+                                        else:
+                                            gs_ax1 = _gs_ax1
                                     else:
-                                        if pol == 'all':
+                                        fig, gs_ax1 = plt.subplots(1, 1, figsize=(20,12))
+
+
+
+
+                                    plt.sca(gs_ax1)
+                                    total_max_corr_values, airplane_phi_deg, airplane_theta_deg, fig, gs_ax1 = cor.multiEventMaxMap(eventids, pol, plot_map=True, hilbert=hilbert, max_method=None, mollweide=mollweide, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', fig=fig, ax=gs_ax1)
+                                    if mollweide:
+                                        airplane_phi_deg = numpy.rad2deg(airplane_phi_deg)
+                                        airplane_theta_deg = numpy.rad2deg(airplane_theta_deg)
+                                    airplane_el_deg = 90.0 - airplane_theta_deg
+
+                                    if False:
+                                        #IF want to us preloaded data not presently calculated data.
+                                        if True:
                                             airplane_phi_deg = ds.getDataArrayFromParam(eventids_dict, 'phi_best_choice')
                                             airplane_el_deg = ds.getDataArrayFromParam(eventids_dict, 'elevation_best_choice')
                                         else:
-                                            airplane_phi_deg = ds.getDataArrayFromParam(eventids_dict, 'phi_best_%s'%pol[0])
-                                            airplane_el_deg = ds.getDataArrayFromParam(eventids_dict, 'elevation_best_%s'%pol[0])
+                                            if pol == 'all':
+                                                airplane_phi_deg = ds.getDataArrayFromParam(eventids_dict, 'phi_best_choice')
+                                                airplane_el_deg = ds.getDataArrayFromParam(eventids_dict, 'elevation_best_choice')
+                                            else:
+                                                airplane_phi_deg = ds.getDataArrayFromParam(eventids_dict, 'phi_best_%s'%pol[0])
+                                                airplane_el_deg = ds.getDataArrayFromParam(eventids_dict, 'elevation_best_%s'%pol[0])
 
-                                # gs_ax1.scatter(airplane_phi_deg,airplane_el_deg, s=4, c='k',label=('Event Map Peaks'))
-                                
-                                if pandas.__version__ == '1.4.0' and True:
-                                    if poly.valid == True:
-                                        if mollweide == True:
-                                            rpe[:,1] = numpy.deg2rad(rpe[:,1])
-                                            rpe[:,2] = numpy.deg2rad(rpe[:,2])
-                                        gs_ax1.plot(rpe[:,1], rpe[:,2], linestyle = '-', c='k', alpha=1.0, label='Airplane Trajectory')
-
-                                        el_f = scipy.interpolate.interp1d(rpe[:,1], rpe[:,2], kind='cubic')
-
-                                    #plt.title('Airplane ICAO24 %s\n%i RF Triggered Events'%(airplane,len(eventids)))
-                                    plt.legend(loc='upper right', fontsize=fontsize-2)
-                                
-                                # if mollweide == True:
-                                #     gs_ax1.scatter(numpy.deg2rad(airplane_phi_deg),numpy.deg2ra(airplane_el_deg), s=4, c='k',label=('Event Map Peaks'))
-                                # else:
-                                #     gs_ax1.scatter(airplane_phi_deg,airplane_el_deg, s=4, c='k',label=('Event Map Peaks'))
-
-                                if mollweide == True:
-                                    for i in range(len(expected_rpe)):
-                                        gs_ax1.plot(numpy.deg2rad([expected_rpe[:,1][i], airplane_phi_deg[i]]) , numpy.deg2rad([expected_rpe[:,2][i], airplane_el_deg[i]]), linestyle='-', lw=1, c='k',alpha=0.5)
-                                    gs_ax1.scatter(numpy.deg2rad(expected_rpe[:,1]), numpy.deg2rad(expected_rpe[:,2]), c='k', label='Expected Location at Trigger Time', s=10)
-                                    gs_ax1.scatter(numpy.deg2rad(airplane_phi_deg), numpy.deg2rad(airplane_el_deg), c='b', label='Measured Location at Trigger Time', s=10)
-                                    gs_ax1.legend(loc='upper center')
+                                    # gs_ax1.scatter(airplane_phi_deg,airplane_el_deg, s=4, c='k',label=('Event Map Peaks'))
                                     
-                                    # gs_ax2.hist2d(airplane_phi_deg - expected_rpe[:,1] , airplane_el_deg - expected_rpe[:,2], bins=10, cmap='coolwarm')
-                                    # gs_ax2.scatter(numpy.deg2rad(airplane_phi_deg - expected_rpe[:,1]) , numpy.deg2rad(airplane_el_deg - expected_rpe[:,2]), c='k')
-                                    # gs_ax2.set_xlabel('Azimuth Residual (rad)')
-                                    # gs_ax2.set_ylabel('Elevation Residual (rad)')
-                                    gs_ax2.hist(numpy.deg2rad(airplane_el_deg - el_f(airplane_phi_deg)), bins=10, orientation='horizontal')
-                                    gs_ax2.set_xlabel('Counts')
-                                    gs_ax2.set_ylabel('Elevation Residual to Trajectory\nat Measured Azimuth (deg)')
+                                    if pandas.__version__ == '1.4.0' and True:
+                                        if poly.valid == True:
+                                            if mollweide == True:
+                                                rpe[:,1] = numpy.deg2rad(rpe[:,1])
+                                                rpe[:,2] = numpy.deg2rad(rpe[:,2])
+                                            gs_ax1.plot(rpe[:,1], rpe[:,2], linestyle = '-', c='k', alpha=1.0, label='Airplane Trajectory')
 
-                                else:
-                                    for i in range(len(expected_rpe)):
-                                        gs_ax1.plot([expected_rpe[:,1][i], airplane_phi_deg[i]] , [expected_rpe[:,2][i], airplane_el_deg[i]], linestyle='-', lw=1, c='k',alpha=0.5)
-                                    gs_ax1.scatter(expected_rpe[:,1], expected_rpe[:,2], c='k', label='Expected Location at Trigger Time', s=10)
-                                    gs_ax1.scatter(airplane_phi_deg, airplane_el_deg, c='b', label='Measured Location at Trigger Time', s=10)
-                                    gs_ax1.legend(loc='upper center')
+                                            x = [rpe[:,1][-2], rpe[:,1][-1]]
+                                            y = [rpe[:,2][-2], rpe[:,2][-1]]
+                                            dx = x[1] - x[0]
+                                            dy = y[1] - y[0]
+                                            gs_ax1.arrow(x[0], y[0], dx, dy, fc='k', ec='k', head_width=3, head_length=3)#, head_width=0.05, head_length=0.1
+
+
+                                            el_f = scipy.interpolate.interp1d(rpe[:,1], rpe[:,2], kind='cubic')
+
+                                        #plt.title('Airplane ICAO24 %s\n%i RF Triggered Events'%(airplane,len(eventids)))
+                                        plt.legend(loc='upper right', fontsize=minor_fontsize)
                                     
-                                    
-                                    gs_ax2.hist(airplane_el_deg - el_f(airplane_phi_deg), bins=10, orientation='horizontal')
-                                    gs_ax2.set_xlabel('Counts')
-                                    gs_ax2.set_ylabel('Elevation Residual to Curve\nat Measured Azimuth (deg)')
-                                    
+                                    # if mollweide == True:
+                                    #     gs_ax1.scatter(numpy.deg2rad(airplane_phi_deg),numpy.deg2ra(airplane_el_deg), s=4, c='k',label=('Event Map Peaks'))
+                                    # else:
+                                    #     gs_ax1.scatter(airplane_phi_deg,airplane_el_deg, s=4, c='k',label=('Event Map Peaks'))
 
-                                    # # gs_ax2.scatter(airplane_phi_deg,airplane_el_deg, s=4, c='k',label=('Filler Data'))
+                                    gs_ax1.text(0.015, 0.005, 'Local\nMountainside', transform=gs_ax1.transAxes, fontsize=minor_fontsize, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
 
-                                    # # gs_ax2.hist2d(airplane_phi_deg - expected_rpe[:,1] , airplane_el_deg - expected_rpe[:,2], bins=10, cmap='coolwarm')
-                                    # gs_ax2.scatter(airplane_phi_deg - expected_rpe[:,1] , airplane_el_deg - expected_rpe[:,2], c='k')
-
-
-
-
-
-                                plt.tight_layout()
-                                if hilbert == True:
                                     if mollweide == True:
-                                        fig.savefig('./figures/airplanes/%i_events_%s_%s_hilbert_mollweide_%i.pdf'%(len(eventids), pol, airplane, int(start_time)),dpi=300)
-                                    else:
-                                        fig.savefig('./figures/airplanes/%i_events_%s_%s_hilbert_%i.pdf'%(len(eventids), pol, airplane, int(start_time)),dpi=300)
-                                else:
-                                    if mollweide == True:
-                                        fig.savefig('./figures/airplanes/%i_events_%s_%s_raw_mollweide_%i.pdf'%(len(eventids), pol, airplane, int(start_time)),dpi=300)
-                                    else:
-                                        fig.savefig('./figures/airplanes/%i_events_%s_%s_raw_%i.pdf'%(len(eventids), pol, airplane, int(start_time)),dpi=300)
-                                plt.close(fig)
+                                        for i in range(len(expected_rpe)):
+                                            gs_ax1.plot(numpy.deg2rad([expected_rpe[:,1][i], airplane_phi_deg[i]]) , numpy.deg2rad([expected_rpe[:,2][i], airplane_el_deg[i]]), linestyle='-', lw=1, c='k',alpha=0.5)
 
-                        if True:
-                            pass
-                            #Write code to make histograms between best reconstruction directions (pre-saved in passed_df)
-                            #and the trajectories
+                                        gs_ax1.scatter(numpy.deg2rad(expected_rpe[:,1]), numpy.deg2rad(expected_rpe[:,2]), c='k', label='Expected Location at Trigger Time', s=20)
+                                        gs_ax1.scatter(numpy.deg2rad(airplane_phi_deg), numpy.deg2rad(airplane_el_deg), c='dodgerblue', label='Measured Location at Trigger Time', s=20)
+                                        gs_ax1.legend(loc='upper center')
+                                        
+
+                                        if include_hist:
+                                            plt.sca(gs_ax2)
+                                            vals = airplane_el_deg - el_f(airplane_phi_deg)
+                                            bins = numpy.arange(min(vals) - 2, max(vals) + 2, 0.25)
+
+                                            vals = numpy.deg2rad(vals)
+                                            bins = numpy.deg2rad(bins)
+
+                                            counts, bin_edges = numpy.histogram(vals,bins=bins)
+                                            w = numpy.diff(bin_edges)[0]
+                                            bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
+
+                                            plt.barh(bin_centers, counts, height=w, fc="dodgerblue")
+                                            lines = plt.step(bin_centers, counts, where='post', drawstyle='steps', lw=4, c='k')[0]
+                                            x = lines.get_xdata()
+                                            y = lines.get_ydata()
+                                            lines.set_xdata(y)
+                                            lines.set_ydata(x + w/2)
+
+
+                                            # gs_ax2.hist(numpy.deg2rad(airplane_el_deg - el_f(airplane_phi_deg)), bins=10, orientation='horizontal')
+                                            # gs_ax2.set_xlabel('Counts')
+                                            # gs_ax2.set_ylabel('Elevation Residual to Trajectory\nat Measured Azimuth (deg)')
+
+                                    else:
+                                        for i in range(len(expected_rpe)):
+                                            gs_ax1.plot([expected_rpe[:,1][i], airplane_phi_deg[i]] , [expected_rpe[:,2][i], airplane_el_deg[i]], linestyle='-', lw=1, c='k',alpha=0.5)
+
+                                        if include_hist == False:
+                                            i = 0
+                                            vals = airplane_el_deg - el_f(airplane_phi_deg)
+
+                                            xy = [numpy.mean([expected_rpe[:,1][i], airplane_phi_deg[i]]) , numpy.mean([expected_rpe[:,2][i], airplane_el_deg[i]])]
+
+                                            ann = gs_ax1.annotate("Systematic Offset\n~%0.1f deg"%abs(numpy.mean(vals)),
+                                              xy=xy, xycoords='data',
+                                              xytext=(-30,7.5), textcoords='data',
+                                              size=minor_fontsize-4, va="center", ha="center",
+                                              bbox=dict(boxstyle="round", fc="w"),
+                                              arrowprops=dict(arrowstyle="-|>",
+                                                              connectionstyle="arc3,rad=-0.2",
+                                                              fc="w"),
+                                              )
+
+                                        gs_ax1.scatter(expected_rpe[:,1], expected_rpe[:,2], c='k', label='Expected Location at Trigger Time', s=20)
+                                        gs_ax1.scatter(airplane_phi_deg, airplane_el_deg, c='dodgerblue', label='Measured Location at Trigger Time', s=20)
+                                        gs_ax1.legend(loc='upper center', fontsize=minor_fontsize)
+                                        
+                                        if include_hist:
+                                            plt.sca(gs_ax2)
+                                            vals = airplane_el_deg - el_f(airplane_phi_deg)
+                                            bins = numpy.arange(min(vals) - 2, max(vals) + 2, 0.1)
+                                            counts, bin_edges = numpy.histogram(vals,bins=bins)
+                                            w = numpy.diff(bin_edges)[0]
+                                            bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
+
+                                            plt.barh(bin_centers, counts, height=w, fc="dodgerblue")
+                                            lines = plt.step(bin_centers, counts, where='post', drawstyle='steps', lw=4, c='k')[0]
+                                            x = lines.get_xdata()
+                                            y = lines.get_ydata()
+                                            lines.set_xdata(y)
+                                            lines.set_ydata(x + w/2)
+
+
+                                            # plt.plot(bin_edges[1:], counts, drawstyle='steps', lw=2, c='k')
+                                            gs_ax2.set_xlim(0, max(counts)+1)
+                                            gs_ax2.set_ylim(min(bin_centers[counts > 0]) - w/2, max(bin_centers[counts > 0]) + w/2)
+                                            # gs_ax2.set_ylim(min(vals), max(vals))
+
+                                            # n, bins, patches = gs_ax2.hist(, bins=10, orientation='horizontal')
+
+                                            gs_ax2.set_xlabel('Counts', fontsize=major_fontsize)
+                                            gs_ax2.set_ylabel('Nearest Elevation Residual (deg)', fontsize=major_fontsize-4)
+                                            
+
+                                            # # gs_ax2.scatter(airplane_phi_deg,airplane_el_deg, s=4, c='k',label=('Filler Data'))
+
+                                            # # gs_ax2.hist2d(airplane_phi_deg - expected_rpe[:,1] , airplane_el_deg - expected_rpe[:,2], bins=10, cmap='coolwarm')
+                                            # gs_ax2.scatter(airplane_phi_deg - expected_rpe[:,1] , airplane_el_deg - expected_rpe[:,2], c='k')
+
+
+
+
+                                    plt.tight_layout()
+
+                                    if include_hist:
+                                        if hilbert == True:
+                                            if mollweide == True:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_hilbert_mollweide_include_hist.pdf'%(len(eventids), pol, airplane),dpi=300)
+                                            else:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_hilbert_include_hist.pdf'%(len(eventids), pol, airplane),dpi=300)
+                                        else:
+                                            if mollweide == True:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_mollweide_include_hist.pdf'%(len(eventids), pol, airplane),dpi=300)
+                                            else:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_include_hist.pdf'%(len(eventids), pol, airplane),dpi=300)
+                                    else:
+                                        if hilbert == True:
+                                            if mollweide == True:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_hilbert_mollweide.pdf'%(len(eventids), pol, airplane),dpi=300)
+                                            else:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_hilbert.pdf'%(len(eventids), pol, airplane),dpi=300)
+                                        else:
+                                            if mollweide == True:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_mollweide.pdf'%(len(eventids), pol, airplane),dpi=300)
+                                            else:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s.pdf'%(len(eventids), pol, airplane),dpi=300)
+
+                                    # plt.close(fig)
+
+                            if True:
+                                pass
+                                #Write code to make histograms between best reconstruction directions (pre-saved in passed_df)
+                                #and the trajectories
 
 

@@ -50,36 +50,46 @@ if __name__ == '__main__':
 
     gc.collect()
 
-    cmaps=['inferno']#[ 'coolwarm', 'Greys','viridis','plasma','inferno']#['PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu', 'RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic']
+    cmaps=['inferno', 'coolwarm']#[ 'coolwarm', 'Greys','viridis','plasma','inferno']#['PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu', 'RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic']
 
 
     time_offset = 0.5 #To remove the run startup events
 
     #Label Tuning
-    label_fontsize = 18
+    minor_fontsize = 20
+    major_fontsize = 28
     box_pad = 0.2
     rounding_size = 0.2
 
 
-    plt.rc('xtick',labelsize=label_fontsize)
-    plt.rc('ytick',labelsize=label_fontsize)
+    plt.rc('xtick',labelsize=minor_fontsize)
+    plt.rc('ytick',labelsize=minor_fontsize)
 
 
 
     for cmap in cmaps:
-        for channel in channels:
-            fig = plt.figure(figsize=(12,6))
-            ax = plt.gca()
+        if len(channels) == 2:
+            fig = plt.figure(figsize=(12,12))
+        for channel_index, channel in enumerate(channels):
+            if len(channels) == 2:
+                ax = plt.subplot(2,1,channel_index + 1)
+            else:
+                fig = plt.figure(figsize=(12,6))
+                ax = plt.gca()
             #plt.title('Run %i, Channel %i'%(run,channel),fontsize=28)
             plt.imshow(spectra_dbish_binned['ch%i'%channel],extent = [time_range[0]-time_offset, time_range[1] - time_offset, min(freqs)/1e6,max(freqs)/1e6],aspect='auto',cmap=cmap)
             plt.xlim(0, time_range[1] - time_offset)
+
+            # ax.set_ylim(0,150) #All others will follow
+            # ax.set_yticks([0,30,80,150])
             plt.ylim(0,100)
+
             #plt.xlim(0,100)
-            plt.ylabel('Frequency (MHz)',fontsize=20)
-            plt.xlabel('Readout Time (min)',fontsize=20)
+            plt.ylabel('Frequency (MHz)',fontsize=major_fontsize)
+            plt.xlabel('Readout Time (min)',fontsize=major_fontsize)
             cb = plt.colorbar()
             plt.clim(-15,42)
-            cb.set_label('Power Spectral Density\n' + 'dB (arb)',fontsize=20)
+            cb.set_label('Power Spectral Density\n' + 'dB (arb)',fontsize=major_fontsize)
 
             #Label 48 MHz Signal 
             arrow_head_xy = (26.05 + 0.15, 48.5 - 0.1)#10.88
@@ -89,7 +99,7 @@ if __name__ == '__main__':
             ann = ax.annotate("48 MHz Signal",
                   xy=arrow_head_xy, xycoords='data',
                   xytext=text_xy, textcoords='data',
-                  size=label_fontsize, va="center", ha="center",
+                  size=minor_fontsize, va="center", ha="center",
                   bbox=dict(boxstyle="round", fc="w"),
                   arrowprops=dict(arrowstyle="-|>",
                                   connectionstyle="arc3,rad=+0.2",
@@ -104,7 +114,7 @@ if __name__ == '__main__':
             ann = ax.annotate("42 MHz Signal",
                   xy=arrow_head_xy, xycoords='data',
                   xytext=text_xy, textcoords='data',
-                  size=label_fontsize, va="center", ha="center",
+                  size=minor_fontsize, va="center", ha="center",
                   bbox=dict(boxstyle="round", fc="w"),
                   arrowprops=dict(arrowstyle="-|>",
                                   connectionstyle="arc3,rad=-0.2",
@@ -118,7 +128,7 @@ if __name__ == '__main__':
             ann = ax.annotate("CW",
                   xy=arrow_head_xy, xycoords='data',
                   xytext=text_xy, textcoords='data',
-                  size=label_fontsize, va="center", ha="center",
+                  size=minor_fontsize, va="center", ha="center",
                   bbox=dict(boxstyle="round", fc="w"),
                   arrowprops=dict(arrowstyle="-|>",
                                   connectionstyle="arc3,rad=-0.1",
@@ -132,7 +142,7 @@ if __name__ == '__main__':
                 ann = ax.annotate("CW",
                       xy=arrow_head_xy, xycoords='data',
                       xytext=text_xy, textcoords='data',
-                      size=label_fontsize, va="center", ha="center",
+                      size=minor_fontsize, va="center", ha="center",
                       bbox=dict(boxstyle="round", fc="w"),
                       arrowprops=dict(arrowstyle="-|>",
                                       connectionstyle="arc3,rad=+0.1",
@@ -152,7 +162,7 @@ if __name__ == '__main__':
                 ann = ax.annotate("TV Band",
                       xy=arrow_head_xy, xycoords='data',
                       xytext=text_xy, textcoords='data',
-                      size=label_fontsize, va="center", ha="center",
+                      size=minor_fontsize, va="center", ha="center",
                       bbox=dict(boxstyle="round", fc="w"),
                       arrowprops=dict(  arrowstyle="-[,widthB=0.55, lengthB=0.2, angleB=0",
                                         fc="w"),
@@ -160,14 +170,19 @@ if __name__ == '__main__':
 
             if channel%2 == 0:
                 ax.text(2, 9, 'HPol',
-                    size=label_fontsize+4,
-                    bbox=dict(boxstyle="round", fc="w"))
+                    size=minor_fontsize+4,
+                    bbox=dict(boxstyle="square", fc="w"))
             else:
                 ax.text(2, 9, 'VPol',
-                    size=label_fontsize+4,
-                    bbox=dict(boxstyle="round", fc="w"))
+                    size=minor_fontsize+4,
+                    bbox=dict(boxstyle="square", fc="w"))
             plt.tight_layout()
-            fig.savefig('./figures/spectrogram/spectrogram_run%i_ch%i_%s.pdf'%(run, channel, cmap), dpi=300)
+
+            if not len(channels) == 2:
+                fig.savefig('./figures/spectrogram/spectrogram_run%i_ch%i_%s.pdf'%(run, channel, cmap), dpi=300)
+
+        if len(channels) == 2:
+            fig.savefig('./figures/spectrogram/spectrogram_run%i_chs_%i-%i_%s.pdf'%(run, channels[0], channels[1], cmap), dpi=300)
 
 
 

@@ -129,8 +129,12 @@ cr_el = 18.60124969
 
 if __name__ == '__main__':
     plt.close('all')
-    fontsize = 18
+    major_fontsize = 24
+    minor_fontsize = 18
+    highlight_color = 'gold'##'r'#'gold'
+
     data_dir = '/home/dsouthall/Projects/Beacon/beacon/analysis/paper/data/cranberry_results'
+
 
     # In[4]:
 
@@ -166,12 +170,13 @@ if __name__ == '__main__':
     # plot the acceptance
     plt.semilogy(e_array, acc, lw=3, label=r'$5\sigma$')
     plt.xticks(numpy.arange(16.0, 19.1, 0.5))
-    plt.xlabel('$\log_{10}(E/\mathrm{eV})$', fontsize=fontsize)
-    plt.ylabel('Acceptance (km$^2$ sr)', fontsize=fontsize)
+    plt.xlabel('$\log_{10}(E/\mathrm{eV})$', fontsize=major_fontsize)
+    plt.ylabel('Acceptance (km$^2$ sr)', fontsize=major_fontsize)
     plt.grid(True, which='both', linestyle='--', alpha=0.5)
     plt.xlim(16.0, 19)
+    ax.tick_params(axis='both', labelsize=minor_fontsize)
     plt.tight_layout()
-    plt.legend(title='Threshold', loc=4)
+    plt.legend(title='Threshold', loc=4, fontsize=major_fontsize)
     plt.ylim(1e-4, 1e1)
     #plt.savefig('/home/avz5228/Pictures/acceptance.pdf')
     
@@ -202,22 +207,23 @@ if __name__ == '__main__':
     T_live = 24. / (365.25 * 24.)
 
     # plot the expected CR rate
-    fig, ax = plt.subplots(figsize=(8,6))
+    fig, ax = plt.subplots(figsize=(10,7.5))
     width = numpy.diff(e_array)[0]
     flux_y = flx * 10 ** e_array * acc * numpy.log(10.) * 0.1 * T_live
-    plt.bar(e_array-width/2.0, flux_y, width = width)
+    plt.bar(e_array-width/2.0, flux_y, width = width, fc="dodgerblue")
     plt.plot(e_array, flux_y, drawstyle='steps', label=r'$5\sigma$', lw=2,c='k')
-    plt.xlabel('$\log_{10}(E/\mathrm{eV})$', fontsize=fontsize)
-    plt.ylabel('Predicted Cosmic Ray Events\nPer Day Per Bin', fontsize=fontsize)
+    plt.xlabel('$\log_{10}(E/\mathrm{eV})$', fontsize=major_fontsize)
+    plt.ylabel('Predicted Cosmic Ray Events\nPer Day Per Bin', fontsize=major_fontsize)
     plt.grid(True, which='both', linestyle='--', alpha=0.5)
     plt.xlim(16.0, 19)
+    ax.tick_params(axis='both', labelsize=minor_fontsize)
     y1, y2 = plt.ylim()
     plt.ylim(0., y2)
 
     ann = ax.annotate("Summed Rate:\n$\sim%0.1f$ Events Per Day"%sum(flux_y),
                   xy=(e_array[len(e_array)//2 - 2], 0.9*flux_y[len(e_array)//2 - 2]), xycoords='data',
                   xytext=(e_array[len(e_array)//2 + 7], flux_y[len(e_array)//2 - 3]), textcoords='data',
-                  size=fontsize, va="center", ha="center",
+                  size=minor_fontsize+2, va="center", ha="center",
                   bbox=dict(boxstyle="round", fc="w"),
                   arrowprops=dict(arrowstyle="-|>",
                                   connectionstyle="arc3,rad=-0.2",
@@ -226,7 +232,7 @@ if __name__ == '__main__':
     # plt.text(0.7, 0.6, r'Total: $\sim8.5$ events/day', horizontalalignment='center',
     #      verticalalignment = 'center', transform = ax.transAxes, fontsize=12)
 
-    plt.legend(title='Threshold')
+    plt.legend(title='Threshold', fontsize=major_fontsize)
     plt.tight_layout()
     #plt.savefig('/home/avz5228/Pictures/event_rate.pdf')
     fig.savefig('./figures/event_rate.pdf',dpi=300)
@@ -246,17 +252,18 @@ if __name__ == '__main__':
         cc += 1
     # normalized histogram of zenith angle, all energies, weighted
     width = numpy.diff(b[1:])[0]
-    plt.bar(b[1:]-width/2.0, wh / numpy.sum(wh), width = width)
-    plt.plot(b[1:], 90.0 - wh / numpy.sum(wh), drawstyle='steps', lw=2, c='k')
+    plt.bar(90 - b[1:] - width/2.0, wh / numpy.sum(wh), width = width, fc="dodgerblue")
+    plt.plot(90.0 - b[1:], wh / numpy.sum(wh), drawstyle='steps', lw=2, c='k')
     y1, y2 = plt.ylim()
     # plt.ylim(0., y2)
     plt.xlim(0., 90.)
+    ax.tick_params(axis='both', labelsize=minor_fontsize)
     plt.xticks(numpy.arange(0., 91., 10.))
     plt.grid(True, which='both', linestyle='--', alpha=0.5)
-    plt.xlabel(r'Elevation Angle $\theta_{Xmax}$ (deg)', fontsize=fontsize)
-    plt.ylabel('Relative Frequency of Occurrence', fontsize=fontsize)
+    plt.xlabel(r'Elevation Angle $\theta_{Xmax}$ (deg)', fontsize=major_fontsize)
+    plt.ylabel('Relative Frequency', fontsize=major_fontsize)
 
-    #plt.legend()
+    #plt.legend(fontsize=major_fontsize, fontsize=major_fontsize)
     #plt.savefig('/home/avz5228/Pictures/antenna_zenith.pdf')
     fig.savefig('./figures/antenna_zenith.pdf',dpi=300)
     
@@ -286,15 +293,16 @@ if __name__ == '__main__':
     # normalized histogram of azimuth angle, all energies, weighted
 
     width = numpy.diff(b[1:])[0]
-    plt.bar(b[1:]-width/2.0, wh / numpy.sum(wh), width = width)
+    plt.bar(b[1:]-width/2.0, wh / numpy.sum(wh), width = width, fc="dodgerblue")
     plt.plot(b[1:], wh / numpy.sum(wh), drawstyle='steps', lw=2, c='k')
     y1, y2 = plt.ylim()
     plt.ylim(0., y2)
     plt.xlim(-180., 180.)
+    ax.tick_params(axis='both', labelsize=minor_fontsize)
     plt.xticks(numpy.arange(-180., 181., 45.))
     plt.grid(True, which='both', linestyle='--', alpha=0.5)
-    plt.xlabel(r'Azimuth Angle $\phi_{Xmax}$ (deg)', fontsize=fontsize)
-    plt.ylabel('Relative Frequency of Occurrence', fontsize=fontsize)
+    plt.xlabel(r'Azimuth Angle $\phi_{Xmax}$ (deg)', fontsize=major_fontsize)
+    plt.ylabel('Relative Frequency', fontsize=major_fontsize)
 
     #plt.vlines(-12.58, y1, y2, color='red')
     fig.savefig('./figures/antenna_azimuth.pdf',dpi=300)
@@ -317,23 +325,24 @@ if __name__ == '__main__':
     
 
     width = numpy.diff(b[1:])[0]
-    plt.bar(b[1:]-width/2.0, wh / numpy.sum(wh), width = width)
+    plt.bar(b[1:]-width/2.0, wh / numpy.sum(wh), width = width, fc="dodgerblue")
     plt.plot(b[1:], wh / numpy.sum(wh), drawstyle='steps', lw=2, c='k')
 
     y1, y2 = plt.ylim()
     plt.ylim(0., y2)
     plt.xticks(numpy.arange(0., 91., 10.))
     plt.grid(True, which='both', linestyle='--', alpha=0.5)
-    plt.xlabel(r'Polarization Angle (deg)', fontsize=fontsize)
-    plt.ylabel('Relative Frequency of Occurrence', fontsize=fontsize)
+    plt.xlabel(r'Polarization Angle (deg)', fontsize=major_fontsize)
+    plt.ylabel('Relative Frequency', fontsize=major_fontsize)
 
 
-    # plt.axvline(polarization_degs[0], c='gold', label=textwrap.fill('5911-73399 with Symmetric Filtering',width=25))
+    # plt.axvline(polarization_degs[0], c=highlight_color, label=textwrap.fill('5911-73399 with Symmetric Filtering',width=25))
     # plt.axvline(polarization_degs[1], c='g', label='5911-73399 with Asymettric Filtering')
     # plt.axvline(polarization_degs[2], c='m', label='5911-73399 with Only Sine Subtraction')
-    plt.axvline(polarization_degs[0], c='gold', label='5911-73399\nPolarization = %0.2f$^\circ$'%polarization_degs[0], lw=4)
+    plt.axvline(polarization_degs[0], c=highlight_color, label='5911-73399\nPolarization = %0.2f$^\circ$'%polarization_degs[0], lw=4)
     plt.xlim(10., 70.)
-    plt.legend()
+    ax1.tick_params(axis='both', labelsize=minor_fontsize)
+    plt.legend(fontsize=minor_fontsize)
 
     #plt.savefig('/home/avz5228/Pictures/polarization_angle.pdf')
     
@@ -354,20 +363,21 @@ if __name__ == '__main__':
 
     m = plt.pcolormesh(X, Y, wh / numpy.sum(wh), cmap='Greys')#
     cbar = plt.colorbar(m)
-    cbar.set_label('Relative Frequency of Occurrence', labelpad=15, fontsize=fontsize)
-    #plt.xlabel(r'Azimuth Angle $\phi_{Xmax}$ (deg)', fontsize=fontsize)
-    #plt.ylabel(r'Zenith Angle $\theta_{Xmax}$ (deg)', fontsize=fontsize)
+    cbar.set_label('Relative Frequency', labelpad=15, fontsize=major_fontsize)
+    #plt.xlabel(r'Azimuth Angle $\phi_{Xmax}$ (deg)', fontsize=major_fontsize)
+    #plt.ylabel(r'Zenith Angle $\theta_{Xmax}$ (deg)', fontsize=major_fontsize)
 
-    plt.scatter(cr_az, cr_el,s=100, c='gold', ec='k', linewidths=1, label='5911-73399')
-    plt.legend(loc='upper right',fontsize=18)
+    plt.scatter(cr_az, cr_el,s=100, c=highlight_color, ec='k', linewidths=1, label='5911-73399')
+    plt.legend(loc='upper right', fontsize=minor_fontsize)
 
 
-    plt.xlabel(r'Event Azimuth Angle (deg)', fontsize=fontsize)
-    plt.ylabel(r'Event Elevation Angle (deg)', fontsize=fontsize)
+    plt.xlabel(r'Azimuth (deg)', fontsize=major_fontsize)
+    plt.ylabel(r'Elevation (deg)', fontsize=major_fontsize)
     plt.xticks(numpy.arange(-90., 91., 30.))
     y1, y2 = plt.ylim()
     plt.ylim(0,60)
     plt.xlim(-60,60)
+    ax2.tick_params(axis='both', labelsize=minor_fontsize)
     #plt.title('Location of Ground Intersection Point \n for Triggered Showers')
     # plt.gca().invert_yaxis()
     plt.tight_layout()
