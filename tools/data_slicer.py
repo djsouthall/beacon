@@ -899,10 +899,11 @@ class dataSlicerSingleRun():
             '''
             Returns the signed distance above a line defined by the given x and y intercepts.
             '''
-            #x/xint + y/yint = 1
-            #x/xint + y/yint - 1 = 0
-            #Line = a*x + b*y + c = 0
-            #distance = abs(a*x_i + b*y_i + c)/sqrt(a**2 + b**2) #Distance of x_i, y_i from line
+            #x/xint + y/yint = 1            -->                         Equation of a line in intercept form
+            #x/xint + y/yint - 1 = 0        -->                         Rearranged to match form of distance from line formula
+            #Line = a*x + b*y + c = 0       -->                         Form of line used in distance of line formula
+            #distance = abs(a*x_i + b*y_i + c)/sqrt(a**2 + b**2) -->    Distance of x_i, y_i from line
+            #sign_i = sign(y_i - y_line[x_i]) -->                       Positive if above line, negative if below
             y_int = 1.5
             x_int = 1.25
             a = 1.0/x_int
@@ -923,10 +924,11 @@ class dataSlicerSingleRun():
             '''
             Returns the signed distance above a line defined by the given x and y intercepts.
             '''
-            #x/xint + y/yint = 1
-            #x/xint + y/yint - 1 = 0
-            #Line = a*x + b*y + c = 0
-            #distance = abs(a*x_i + b*y_i + c)/sqrt(a**2 + b**2) #Distance of x_i, y_i from line
+            #x/xint + y/yint = 1            -->                         Equation of a line in intercept form
+            #x/xint + y/yint - 1 = 0        -->                         Rearranged to match form of distance from line formula
+            #Line = a*x + b*y + c = 0       -->                         Form of line used in distance of line formula
+            #distance = abs(a*x_i + b*y_i + c)/sqrt(a**2 + b**2) -->    Distance of x_i, y_i from line
+            #sign_i = sign(y_i - y_line[x_i]) -->                       Positive if above line, negative if below
             y_int = 11
             x_int = 6
             a = 1.0/x_int
@@ -6031,19 +6033,30 @@ class dataSlicer():
 
             if self.conference_mode == True:
                 time_offset = -350
-                self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 0//2 + waveforms[0]/128.0, c=self.mpl_colors[0], linewidth=3)
-                self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 1//2 + waveforms[1]/128.0, c=self.mpl_colors[1], linewidth=3)
-                self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 2//2 + waveforms[2]/128.0, c=self.mpl_colors[2], linewidth=3)
-                self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 3//2 + waveforms[3]/128.0, c=self.mpl_colors[3], linewidth=3)
-                self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 4//2 + waveforms[4]/128.0, c=self.mpl_colors[4], linewidth=3)
-                self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 5//2 + waveforms[5]/128.0, c=self.mpl_colors[5], linewidth=3)
-                self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 6//2 + waveforms[6]/128.0, c=self.mpl_colors[6], linewidth=3)
-                self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 7//2 + waveforms[7]/128.0, c=self.mpl_colors[7], linewidth=3)
+                if self.div128:
+                    self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 0//2 + waveforms[0]/128, c=self.mpl_colors[0], linewidth=3)
+                    self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 1//2 + waveforms[1]/128, c=self.mpl_colors[1], linewidth=3)
+                    self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 2//2 + waveforms[2]/128, c=self.mpl_colors[2], linewidth=3)
+                    self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 3//2 + waveforms[3]/128, c=self.mpl_colors[3], linewidth=3)
+                    self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 4//2 + waveforms[4]/128, c=self.mpl_colors[4], linewidth=3)
+                    self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 5//2 + waveforms[5]/128, c=self.mpl_colors[5], linewidth=3)
+                    self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 6//2 + waveforms[6]/128, c=self.mpl_colors[6], linewidth=3)
+                    self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 7//2 + waveforms[7]/128, c=self.mpl_colors[7], linewidth=3)
+                    self.inspector_mpl['fig1_wf_h'].set_ylim(-0.75,3.75)
+                    self.inspector_mpl['fig1_wf_h'].set_yticks([0,1,2,3])
+                else:
+                    self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 64*(0//2) + waveforms[0], c=self.mpl_colors[0], linewidth=3)
+                    self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 64*(1//2) + waveforms[1], c=self.mpl_colors[1], linewidth=3)
+                    self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 64*(2//2) + waveforms[2], c=self.mpl_colors[2], linewidth=3)
+                    self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 64*(3//2) + waveforms[3], c=self.mpl_colors[3], linewidth=3)
+                    self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 64*(4//2) + waveforms[4], c=self.mpl_colors[4], linewidth=3)
+                    self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 64*(5//2) + waveforms[5], c=self.mpl_colors[5], linewidth=3)
+                    self.inspector_mpl['fig1_wf_h'].plot(self.cor.times_resampled + time_offset, 64*(6//2) + waveforms[6], c=self.mpl_colors[6], linewidth=3)
+                    self.inspector_mpl['fig1_wf_v'].plot(self.cor.times_resampled + time_offset, 64*(7//2) + waveforms[7], c=self.mpl_colors[7], linewidth=3)
+                    self.inspector_mpl['fig1_wf_h'].set_ylim(-0.75*64,3.75*64)
                 
-                self.inspector_mpl['fig1_wf_h'].set_ylim(-0.75,3.75)
                 self.inspector_mpl['fig1_wf_h'].set_xlim(0,500) #All others will follow
 
-                self.inspector_mpl['fig1_wf_h'].set_yticks([0,1,2,3])
 
 
             else:
@@ -6117,7 +6130,7 @@ class dataSlicer():
                     freqs, spec_dbish, spec = self.cor.prep.rfftWrapper(raw_t[start:stop], wf)
                     ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel, c=self.mpl_colors[channel])
                 ax.set_ylim(-20,50)
-                ax.set_ylabel('Power Spectral Density\n' + apply_filter*'Filtered ' + 'dB (arb)', fontsize=18)
+                ax.set_ylabel('Power Spectral Density\n' + apply_filter*'Filtered ' + 'dB (arb)', fontsize=20)
                 if self.show_all:
                     ax.set_xlim(0,150)
 
@@ -6126,7 +6139,7 @@ class dataSlicer():
                     ax.set_xticks([0,30,80,150])
                     ax.set_ylim(-20,40)
                     if apply_filter:
-                        ax.set_xlabel('Frequency (MHz)', fontsize=18)
+                        ax.set_xlabel('Frequency (MHz)', fontsize=20)
 
 
             if self.conference_mode == False:
@@ -6185,7 +6198,7 @@ class dataSlicer():
             del self.inspector_mpl
 
 
-    def eventInspector(self, eventids_dict, mollweide=False, show_all=False, include_time_delays=False, append_notches=None, include_baselines=numpy.array([0,1,2,3,4,5]), savedir='./', savename_prepend='', rasterized=True, azimuth_range=None):
+    def eventInspector(self, eventids_dict, mollweide=False, show_all=False, include_time_delays=False, append_notches=None, include_baselines=numpy.array([0,1,2,3,4,5]), savedir='./', savename_prepend='', rasterized=True, azimuth_range=None, div128=False):
         '''
         This is meant to provide a tool to quickly flick through events from multiple runs.  It will create a one panel
         view of the events info as best as I can manage, and provide easy support for choosing which event you want to
@@ -6204,6 +6217,7 @@ class dataSlicer():
             self.include_time_delays = include_time_delays
             self.show_all = show_all
             self.savename_prepend = savename_prepend
+            self.div128 = div128
 
             self.mpl_colors = [u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf']
 
@@ -6220,15 +6234,19 @@ class dataSlicer():
                 gs = fig1.add_gridspec(4,4, width_ratios=[1,1,1,1]) #No table
 
                 fig1_wf_h = fig1.add_subplot(gs[0:2,0:2])
-                fig1_wf_h.set_ylabel('Filtered HPol Waveforms\n adu/128, Offset by Antenna Number', fontsize=18)
-                fig1_wf_h.set_xlabel('Time (ns)', fontsize=18)
+                # fig1_wf_h.set_ylabel('Filtered HPol Waveforms\n adu/128, Offset by Antenna Number', fontsize=20)
+                if self.div128:
+                    fig1_wf_h.set_ylabel('Filtered Waveforms (adu/128)\nOffset by Antenna Number', fontsize=20)
+                else:
+                    fig1_wf_h.set_ylabel('Filtered Waveforms\nOffset per Antenna', fontsize=20)
+                fig1_wf_h.set_xlabel('Time (ns)', fontsize=20)
                 fig1_wf_h.minorticks_on()
                 fig1_wf_h.grid(b=True, which='major', color='k', linestyle='-')
                 fig1_wf_h.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
                 fig1_wf_v = fig1.add_subplot(gs[0:2,2:4], sharex=fig1_wf_h, sharey=fig1_wf_h)
-                fig1_wf_v.set_ylabel('Filtered VPol Waveforms\n adu/128, Offset by Antenna Number', fontsize=18)
-                fig1_wf_v.set_xlabel('Time (ns)', fontsize=18)
+                # fig1_wf_v.set_ylabel('Filtered VPol Waveforms\n adu/128, Offset by Antenna Number', fontsize=20)
+                fig1_wf_v.set_xlabel('Time (ns)', fontsize=20)
                 fig1_wf_v.minorticks_on()
                 fig1_wf_v.grid(b=True, which='major', color='k', linestyle='-')
                 fig1_wf_v.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)

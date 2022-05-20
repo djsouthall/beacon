@@ -131,6 +131,8 @@ if __name__ == '__main__':
         else:
             cut = metric <= TS_cut_level
 
+        print('%i events not flagged: %0.2f'%(sum(cut), 100*sum(cut)/len(cut)))
+        print('%i events flagged 60Hz: %0.2f'%(sum(~cut), 100*sum(~cut)/len(~cut)))
 
         for mode in [2]:
             if mode == 0:
@@ -353,6 +355,7 @@ if __name__ == '__main__':
                     ax1 = gs_ax1
                 scatter_1 = ax1.plot((calibrated_trig_time[cut]-min(calibrated_trig_time))/60.0,calibrated_trig_time[cut] % (expected_period if fold_subsecond_plot else 1.0),marker=',',linestyle='None',c='dodgerblue',label='Non-Flagged RF Triggers')#,s=1
                 
+
 
                 if include_total_counts:
                     ax2 = plt.subplot(2,3,4, sharex=ax1, sharey=ax1)

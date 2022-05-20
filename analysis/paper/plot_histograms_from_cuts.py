@@ -119,52 +119,116 @@ if __name__ == '__main__':
     load_dirs = [os.path.join(root_dir,'no_cuts'), os.path.join(root_dir,'all_but_cuts')]#[os.path.join(root_dir,'all_cuts'), os.path.join(root_dir,'all_but_cuts'), os.path.join(root_dir,'no_cuts')]
 
     save_dir = './figures/cut_histograms'
-    if False:
-        for param_key in list(ds.roi[cut_dict_key].keys()):
-            if param_key == 'elevation_best_choice':
-                xlabel = 'Elevation'
-                x_units = ' (Deg)'
-            elif param_key == 'phi_best_choice':
-                xlabel = 'Azimuth'
-                x_units = ' (Deg)'
-            elif param_key == 'similarity_count_h':
-                xlabel = 'Time Delay Similarity H'
-                x_units = ' (Counts)'
-            elif param_key == 'similarity_count_v':
-                xlabel = 'Time Delay Similarity V'
-                x_units = ' (Counts)'
-            elif param_key == 'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':
-                xlabel = 'Peak to Sidelobe , Max(H,V)'
-                x_units = ''
-            elif param_key == 'impulsivity_hSLICERADDimpulsivity_v':
-                xlabel = 'Impulsivity H + V'
-                x_units = ''
-            elif param_key == 'cr_template_search_hSLICERMAXcr_template_search_v':
-                xlabel = 'Simple CR Template Correlation, Max(H,V)'
-                x_units = ''
-            elif param_key == 'p2p_gap_h':
-                xlabel = 'Max P2P (H) - Min P2P (H)'
-                x_units = ''
-            elif param_key == 'above_normalized_map_max_line':
-                xlabel = 'Distance from\nNormalized Map Max Line'
-                x_units = ' (arb)'
-            elif param_key == 'above_snr_line':
-                xlabel = 'Distance From\nP2P/(2*STD) Line'
-                x_units = ' (arb)'
-            elif param_key == 'in_targeted_box':
-                xlabel = 'Target Below Horizon Box'
-                x_units = ' (0 = Not Inside, 1 = Inside)'
-
-            
-            ylabel = 'Normalized Counts'
 
 
-            fig = plt.figure(figsize=(10,4))
+    label_group_0 =  ['elevation_best_choice','phi_best_choice','similarity_count_h','similarity_count_v','hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe']
+    label_group_1 =  ['impulsivity_hSLICERADDimpulsivity_v','cr_template_search_hSLICERMAXcr_template_search_v','p2p_gap_h','above_normalized_map_max_line','above_snr_line']
+    label_group_2 =  ['elevation_best_choice','phi_best_choice','impulsivity_hSLICERADDimpulsivity_v','cr_template_search_hSLICERMAXcr_template_search_v']
+    label_group_3 =  ['impulsivity_hSLICERADDimpulsivity_v','cr_template_search_hSLICERMAXcr_template_search_v']
+    label_group_4 =  ['elevation_best_choice','phi_best_choice']
+    label_group_5 =  [label_group_0, label_group_1]
+    plt.ioff()
+    # plt.ion()
+    for lg_index, label_group in enumerate([label_group_0, label_group_1, label_group_2, label_group_3, label_group_4, label_group_5]):
+        if lg_index > 1 and lg_index < 5:
+            fig = plt.figure(figsize=(12,4*len(label_group)))
+            major_fontsize = 36
+            minor_fontsize = 20
+        elif lg_index == 5:
+            fig = plt.figure(figsize=(12*len(label_group),6*len(label_group[0])))
+            major_fontsize = 42
+            minor_fontsize = 28
+        else:
+            fig = plt.figure(figsize=(12,4*len(label_group)))
+            major_fontsize = 36
+            minor_fontsize = 20
 
-            ax1 = plt.subplot(1,2,1)
+        for param_index, param_key in enumerate(numpy.asarray(label_group).T.flatten()):
+            if True:
+                if param_key == 'elevation_best_choice':
+                    xlabel = 'Elevation'
+                    x_units = ' (deg)'
+                elif param_key == 'phi_best_choice':
+                    xlabel = 'Azimuth'
+                    x_units = ' (deg)'
+                elif param_key == 'similarity_count_h':
+                    xlabel = 'Time Delay Clustering H'
+                    x_units = ' (Counts)'
+                elif param_key == 'similarity_count_v':
+                    xlabel = 'Time Delay Clustering V'
+                    x_units = ' (Counts)'
+                elif param_key == 'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':
+                    xlabel = 'Peak-to-Sidelobe , Max(H,V)'
+                    x_units = ''
+                elif param_key == 'impulsivity_hSLICERADDimpulsivity_v':
+                    xlabel = 'Impulsivity H + V'
+                    x_units = ''
+                elif param_key == 'cr_template_search_hSLICERMAXcr_template_search_v':
+                    xlabel = 'CR Template Correlation, Max(H,V)'
+                    x_units = ''
+                elif param_key == 'p2p_gap_h':
+                    xlabel = 'Signal Amplitude Differences'
+                    x_units = ''
+                elif param_key == 'above_normalized_map_max_line':
+                    xlabel = 'Residual Normalized Map Peak'
+                    x_units = ''
+                elif param_key == 'above_snr_line':
+                    xlabel = 'Residual P2P/(2 STD)'
+                    x_units = ''
+                elif param_key == 'in_targeted_box':
+                    xlabel = 'Target Below Horizon Box'
+                    x_units = ' (0 = Not Inside, 1 = Inside)'
+            else:
+                if param_key == 'elevation_best_choice':
+                    xlabel = 'Elevation'
+                    x_units = ' (deg)'
+                elif param_key == 'phi_best_choice':
+                    xlabel = 'Azimuth'
+                    x_units = ' (deg)'
+                elif param_key == 'similarity_count_h':
+                    xlabel = 'Time Delay Similarity H'
+                    x_units = ' (Counts)'
+                elif param_key == 'similarity_count_v':
+                    xlabel = 'Time Delay Similarity V'
+                    x_units = ' (Counts)'
+                elif param_key == 'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':
+                    xlabel = 'Peak to Sidelobe , Max(H,V)'
+                    x_units = ''
+                elif param_key == 'impulsivity_hSLICERADDimpulsivity_v':
+                    xlabel = 'Impulsivity H + V'
+                    x_units = ''
+                elif param_key == 'cr_template_search_hSLICERMAXcr_template_search_v':
+                    xlabel = 'CR Template Correlation, Max(H,V)'
+                    x_units = ''
+                elif param_key == 'p2p_gap_h':
+                    xlabel = 'Max P2P (H) - Min P2P (H)'
+                    x_units = ''
+                elif param_key == 'above_normalized_map_max_line':
+                    xlabel = 'Distance Above Map Max Line'
+                    x_units = ''
+                elif param_key == 'above_snr_line':
+                    xlabel = 'Distance From P2P/(2*STD) Line'
+                    x_units = ''
+                elif param_key == 'in_targeted_box':
+                    xlabel = 'Target Below Horizon Box'
+                    x_units = ' (0 = Not Inside, 1 = Inside)'
+
+
+            # if lg_index > 1:
+            #     ylabel = 'Normalized Counts'
+            # else:
+            ylabel = 'Normalized\nCounts'
+
+            if lg_index == 5:
+                if param_key in label_group[0]:
+                    ax1 = plt.subplot(len(label_group[0]), len(label_group), 1 + param_index)
+                else:
+                    ax1 = plt.subplot(len(label_group[0]), len(label_group), 1 + param_index)
+            else:
+                ax1 = plt.subplot(len(label_group), 1, 1 + param_index)
 
             filename = 'hist_for_%s_with_no_cuts.npz'%(param_key)
-            plt.title('No Cuts Applied')
+            # plt.title('No Cuts Applied')
 
             cut_name = cut_dict_key + '-' + param_key
             loaded_eventids_dict = {}
@@ -179,41 +243,33 @@ if __name__ == '__main__':
             print(list(hist_data.keys()))
 
             if param_key == 'cr_template_search_hSLICERMAXcr_template_search_v':
-                xlim = min(hist_data['bin_centers'][hist_data['counts'] > 0]) , 1.0
+                xlim = min(hist_data['bin_centers'][hist_data['counts'] > 0]) , 1.03
             else:
                 xlim = min(hist_data['bin_centers'][hist_data['counts'] > 0]), max(hist_data['bin_centers'][hist_data['counts'] > 0])
-
 
             ax1.minorticks_on()
             ax1.grid(b=True, which='major', color='tab:gray', linestyle='-',alpha=0.4)
             ax1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.3)
 
-
             
             if ds.roi[cut_dict_key][param_key][0] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][0] <= max(hist_data['bin_centers']):
                 # plt.axvline(ds.roi[cut_dict_key][param_key][0], c='g', label=textwrap.fill('Cut Lower Limit',width=25))
-                ax1.axvspan(xlim[0], ds.roi[cut_dict_key][param_key][0], color='r', label=textwrap.fill('Cut Lower Limit',width=25), alpha=0.4)
+                ax1.axvspan(xlim[0], ds.roi[cut_dict_key][param_key][0], color='r', label=textwrap.fill('Cut Regions',width=25), alpha=0.3)
             if ds.roi[cut_dict_key][param_key][1] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][1] <= max(hist_data['bin_centers']):
                 # plt.axvline(ds.roi[cut_dict_key][param_key][1], c='b', label=textwrap.fill('Cut Upper Limit',width=25))
-                ax1.axvspan(ds.roi[cut_dict_key][param_key][1], xlim[1], color='r', label=textwrap.fill('Cut Upper Limit',width=25), alpha=0.4)
+                ax1.axvspan(ds.roi[cut_dict_key][param_key][1], xlim[1], color='r', label=textwrap.fill('Cut Regions',width=25), alpha=0.3)
 
 
-            plt.bar(hist_data['bin_centers'], hist_data['counts']/(hist_data['bin_width']*sum(hist_data['counts'])), hist_data['bin_width'], facecolor='k')
+            normalization_factor = hist_data['bin_width']*sum(hist_data['counts'])
+
+
+            plt.bar(hist_data['bin_centers'], hist_data['counts']/normalization_factor, hist_data['bin_width'], facecolor='k', label='Before Cuts')
 
 
 
-            # plt.legend(loc='center right', fontsize=12)
-            plt.ylabel(ylabel + '\nBefore Cuts', fontsize=18)
-            plt.xlabel(xlabel + x_units, fontsize=18)
-
-
-            plt.xlim(xlim[0], xlim[1])
-            ax1.set_yscale('log')
-
-            ax2 = plt.subplot(1,2,2, sharex=ax1)
 
             filename = 'hist_for_%s_with_all_cuts_but_%s.npz'%(param_key, param_key)
-            plt.title('All Cuts Applied Except:\n%s'%xlabel)
+            # plt.title('All Cuts Applied Except:\n%s'%param_key.replace('_',' ').title())
 
             cut_name = cut_dict_key + '-' + param_key
             loaded_eventids_dict = {}
@@ -228,305 +284,39 @@ if __name__ == '__main__':
             print(list(hist_data.keys()))
 
 
-            ax2.minorticks_on()
-            ax2.grid(b=True, which='major', color='tab:gray', linestyle='-',alpha=0.4)
-            ax2.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.3)
+            plt.bar(hist_data['bin_centers'], hist_data['counts']/normalization_factor, hist_data['bin_width'], facecolor='dodgerblue', label='If Last Cut')
 
             if ds.roi[cut_dict_key][param_key][0] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][0] <= max(hist_data['bin_centers']):
-                # plt.axvline(ds.roi[cut_dict_key][param_key][0], c='g', label=textwrap.fill('Cut Lower Limit',width=25))
-                ax2.axvspan(xlim[0], ds.roi[cut_dict_key][param_key][0], color='r', label=textwrap.fill('Cut Lower Limit',width=25), alpha=0.4)
+                plt.axvline(ds.roi[cut_dict_key][param_key][0], c='r', lw=1, alpha=0.7)
             if ds.roi[cut_dict_key][param_key][1] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][1] <= max(hist_data['bin_centers']):
-                # plt.axvline(ds.roi[cut_dict_key][param_key][1], c='b', label=textwrap.fill('Cut Upper Limit',width=25))
-                ax2.axvspan(ds.roi[cut_dict_key][param_key][1], xlim[1], color='r', label=textwrap.fill('Cut Upper Limit',width=25), alpha=0.4)
-
-            plt.bar(hist_data['bin_centers'], hist_data['counts']/(hist_data['bin_width']*sum(hist_data['counts'])), hist_data['bin_width'], facecolor='k')
-
-            ax2.set_yscale('log')
-            # plt.legend(loc='center right', fontsize=12)
-            plt.ylabel(ylabel + '\nIf Last Cut', fontsize=18)
-            plt.xlabel(xlabel + x_units, fontsize=18)
-            plt.tight_layout()
-
-
-    label_group_0 =  ['elevation_best_choice','phi_best_choice','similarity_count_h','similarity_count_v','hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe']
-    label_group_1 =  ['impulsivity_hSLICERADDimpulsivity_v','cr_template_search_hSLICERMAXcr_template_search_v','p2p_gap_h','above_normalized_map_max_line','above_snr_line']
-    label_group_2 =  ['elevation_best_choice','phi_best_choice','impulsivity_hSLICERADDimpulsivity_v','cr_template_search_hSLICERMAXcr_template_search_v']
-    label_group_3 =  ['impulsivity_hSLICERADDimpulsivity_v','cr_template_search_hSLICERMAXcr_template_search_v']
-    label_group_4 =  ['elevation_best_choice','phi_best_choice']
-    label_group_5 =  [label_group_0, label_group_1]
-    if False:
-        plt.ioff()
-        for lg_index, label_group in enumerate([label_group_0, label_group_1, label_group_2]):
-            fig = plt.figure(figsize=(12,16))
-            for param_index, param_key in enumerate(label_group):
-                if param_key == 'elevation_best_choice':
-                    xlabel = 'Elevation'
-                    x_units = ' (Deg)'
-                elif param_key == 'phi_best_choice':
-                    xlabel = 'Azimuth'
-                    x_units = ' (Deg)'
-                elif param_key == 'similarity_count_h':
-                    xlabel = 'Time Delay Similarity H'
-                    x_units = ' (Counts)'
-                elif param_key == 'similarity_count_v':
-                    xlabel = 'Time Delay Similarity V'
-                    x_units = ' (Counts)'
-                elif param_key == 'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':
-                    xlabel = 'Peak to Sidelobe , Max(H,V)'
-                    x_units = ''
-                elif param_key == 'impulsivity_hSLICERADDimpulsivity_v':
-                    xlabel = 'Impulsivity H + V'
-                    x_units = ''
-                elif param_key == 'cr_template_search_hSLICERMAXcr_template_search_v':
-                    xlabel = 'Simple CR Template Correlation, Max(H,V)'
-                    x_units = ''
-                elif param_key == 'p2p_gap_h':
-                    xlabel = 'Max P2P (H) - Min P2P (H)'
-                    x_units = ''
-                elif param_key == 'above_normalized_map_max_line':
-                    xlabel = 'Distance from\nNormalized Map Max Line'
-                    x_units = ' (arb)'
-                elif param_key == 'above_snr_line':
-                    xlabel = 'Distance From\nP2P/(2*STD) Line'
-                    x_units = ' (arb)'
-                elif param_key == 'in_targeted_box':
-                    xlabel = 'Target Below Horizon Box'
-                    x_units = ' (0 = Not Inside, 1 = Inside)'
-
-                ylabel = 'Normalized Counts'
-
-
-                ax1 = plt.subplot(len(label_group), 2, 1 + 2*(param_index))
-
-                filename = 'hist_for_%s_with_no_cuts.npz'%(param_key)
-                # plt.title('No Cuts Applied')
-
-                cut_name = cut_dict_key + '-' + param_key
-                loaded_eventids_dict = {}
-                hist_data = {}
-                with numpy.load(os.path.join(root_dir,'no_cuts', filename)) as data:
-                    for key in list(data.keys()):
-                        if key.isdigit():
-                            loaded_eventids_dict[int(key)] = data[key]
-                        else:
-                            hist_data[key] = data[key]
-                print(cut_name)
-                print(list(hist_data.keys()))
-
-                xlim = min(hist_data['bin_centers'][hist_data['counts'] > 0]), max(hist_data['bin_centers'][hist_data['counts'] > 0])
-
-
-                ax1.minorticks_on()
-                ax1.grid(b=True, which='major', color='tab:gray', linestyle='-',alpha=0.4)
-                ax1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.3)
-
-
-                
-                if ds.roi[cut_dict_key][param_key][0] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][0] <= max(hist_data['bin_centers']):
-                    # plt.axvline(ds.roi[cut_dict_key][param_key][0], c='g', label=textwrap.fill('Cut Lower Limit',width=25))
-                    ax1.axvspan(xlim[0], ds.roi[cut_dict_key][param_key][0], color='r', label=textwrap.fill('Cut Lower Limit',width=25), alpha=0.4)
-                if ds.roi[cut_dict_key][param_key][1] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][1] <= max(hist_data['bin_centers']):
-                    # plt.axvline(ds.roi[cut_dict_key][param_key][1], c='b', label=textwrap.fill('Cut Upper Limit',width=25))
-                    ax1.axvspan(ds.roi[cut_dict_key][param_key][1], xlim[1], color='r', label=textwrap.fill('Cut Upper Limit',width=25), alpha=0.4)
-
-
-                plt.bar(hist_data['bin_centers'], hist_data['counts']/(hist_data['bin_width']*sum(hist_data['counts'])), hist_data['bin_width'], facecolor='k')
+                plt.axvline(ds.roi[cut_dict_key][param_key][1], c='r', lw=1, alpha=0.7)
 
 
 
-                # plt.legend(loc='center right', fontsize=12)
-                plt.ylabel(ylabel + '\nBefore Cuts', fontsize=18)
-                plt.xlabel(xlabel + x_units, fontsize=18)
+            if True:
+                cr_val = ds.getDataArrayFromParam(param_key, eventids_dict={5911:[73399]})
+                ax1.axvline(cr_val, c='gold', lw=2, label='5911-73399')
 
+            # xy = [hist_data['bin_centers'][numpy.argmax(hist_data['counts'])] , numpy.max(numpy.argmax(hist_data['counts']))/normalization_factor]
+            if param_key == 'elevation_best_choice' and lg_index > 1:
+                cut_range = numpy.logical_and(hist_data['bin_centers'] > 30, hist_data['bin_centers'] < 40)
+                xy = [hist_data['bin_centers'][cut_range][numpy.argmax(hist_data['counts'][cut_range])], numpy.max(hist_data['counts'][cut_range]/normalization_factor)]
+                xy_text = [52,0.5e-1]
 
-                plt.xlim(xlim[0], xlim[1])
-                ax1.set_yscale('log')
-
-                ax2 = plt.subplot(len(label_group), 2, 2 + 2*(param_index), sharex=ax1)
-
-                filename = 'hist_for_%s_with_all_cuts_but_%s.npz'%(param_key, param_key)
-                # plt.title('All Cuts Applied Except:\n%s'%param_key.replace('_',' ').title())
-
-                cut_name = cut_dict_key + '-' + param_key
-                loaded_eventids_dict = {}
-                hist_data = {}
-                with numpy.load(os.path.join(root_dir,'all_but_cuts', filename)) as data:
-                    for key in list(data.keys()):
-                        if key.isdigit():
-                            loaded_eventids_dict[int(key)] = data[key]
-                        else:
-                            hist_data[key] = data[key]
-                print(cut_name)
-                print(list(hist_data.keys()))
-
-
-                ax2.minorticks_on()
-                ax2.grid(b=True, which='major', color='tab:gray', linestyle='-',alpha=0.4)
-                ax2.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.3)
-
-                if ds.roi[cut_dict_key][param_key][0] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][0] <= max(hist_data['bin_centers']):
-                    # plt.axvline(ds.roi[cut_dict_key][param_key][0], c='g', label=textwrap.fill('Cut Lower Limit',width=25))
-                    ax2.axvspan(xlim[0], ds.roi[cut_dict_key][param_key][0], color='r', label=textwrap.fill('Cut Lower Limit',width=25), alpha=0.4)
-                if ds.roi[cut_dict_key][param_key][1] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][1] <= max(hist_data['bin_centers']):
-                    # plt.axvline(ds.roi[cut_dict_key][param_key][1], c='b', label=textwrap.fill('Cut Upper Limit',width=25))
-                    ax2.axvspan(ds.roi[cut_dict_key][param_key][1], xlim[1], color='r', label=textwrap.fill('Cut Upper Limit',width=25), alpha=0.4)
-
-                plt.bar(hist_data['bin_centers'], hist_data['counts']/(hist_data['bin_width']*sum(hist_data['counts'])), hist_data['bin_width'], facecolor='k')
-
-                ax2.set_yscale('log')
-                # plt.legend(loc='center right', fontsize=12)
-                plt.ylabel(ylabel + '\nIf Last Cut', fontsize=18)
-                plt.xlabel(xlabel + x_units, fontsize=18)
-                plt.tight_layout()
-
-            fig.savefig('./figures/cuts_pg_%i.pdf'%(lg_index+1))
-            fig.savefig('./figures/cuts_pg_%i.png'%(lg_index+1), dpi=300)
-
-
-    if True:
-        plt.ioff()
-        # plt.ion()
-        for lg_index, label_group in enumerate([label_group_0, label_group_1, label_group_2, label_group_3, label_group_4, label_group_5]):
-            if lg_index > 1 and lg_index < 5:
-                fig = plt.figure(figsize=(12,4*len(label_group)))
-                major_fontsize = 36
-                minor_fontsize = 20
-            elif lg_index == 5:
-                fig = plt.figure(figsize=(12*len(label_group),6*len(label_group[0])))
-                major_fontsize = 42
-                minor_fontsize = 28
-            else:
-                fig = plt.figure(figsize=(12,4*len(label_group)))
-                major_fontsize = 36
-                minor_fontsize = 20
-
-            for param_index, param_key in enumerate(numpy.asarray(label_group).T.flatten()):
-                if param_key == 'elevation_best_choice':
-                    xlabel = 'Elevation'
-                    x_units = ' (Deg)'
-                elif param_key == 'phi_best_choice':
-                    xlabel = 'Azimuth'
-                    x_units = ' (Deg)'
-                elif param_key == 'similarity_count_h':
-                    xlabel = 'Time Delay Similarity H'
-                    x_units = ' (Counts)'
-                elif param_key == 'similarity_count_v':
-                    xlabel = 'Time Delay Similarity V'
-                    x_units = ' (Counts)'
-                elif param_key == 'hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe':
-                    xlabel = 'Peak to Sidelobe , Max(H,V)'
-                    x_units = ''
-                elif param_key == 'impulsivity_hSLICERADDimpulsivity_v':
-                    xlabel = 'Impulsivity H + V'
-                    x_units = ''
-                elif param_key == 'cr_template_search_hSLICERMAXcr_template_search_v':
-                    xlabel = 'Simple CR Template Correlation, Max(H,V)'
-                    x_units = ''
-                elif param_key == 'p2p_gap_h':
-                    xlabel = 'Max P2P (H) - Min P2P (H)'
-                    x_units = ''
-                elif param_key == 'above_normalized_map_max_line':
-                    xlabel = 'Distance from Normalized Map Max Line'
-                    x_units = ' (arb)'
-                elif param_key == 'above_snr_line':
-                    xlabel = 'Distance From P2P/(2*STD) Line'
-                    x_units = ' (arb)'
-                elif param_key == 'in_targeted_box':
-                    xlabel = 'Target Below Horizon Box'
-                    x_units = ' (0 = Not Inside, 1 = Inside)'
-
-
-                # if lg_index > 1:
-                #     ylabel = 'Normalized Counts'
-                # else:
-                ylabel = 'Normalized\nCounts'
-
-                if lg_index == 5:
-                    if param_key in label_group[0]:
-                        ax1 = plt.subplot(len(label_group[0]), len(label_group), 1 + param_index)
-                    else:
-                        ax1 = plt.subplot(len(label_group[0]), len(label_group), 1 + param_index)
-                else:
-                    ax1 = plt.subplot(len(label_group), 1, 1 + param_index)
-
-                filename = 'hist_for_%s_with_no_cuts.npz'%(param_key)
-                # plt.title('No Cuts Applied')
-
-                cut_name = cut_dict_key + '-' + param_key
-                loaded_eventids_dict = {}
-                hist_data = {}
-                with numpy.load(os.path.join(root_dir,'no_cuts', filename)) as data:
-                    for key in list(data.keys()):
-                        if key.isdigit():
-                            loaded_eventids_dict[int(key)] = data[key]
-                        else:
-                            hist_data[key] = data[key]
-                print(cut_name)
-                print(list(hist_data.keys()))
-
-                if param_key == 'cr_template_search_hSLICERMAXcr_template_search_v':
-                    xlim = min(hist_data['bin_centers'][hist_data['counts'] > 0]) , 1.03
-                else:
-                    xlim = min(hist_data['bin_centers'][hist_data['counts'] > 0]), max(hist_data['bin_centers'][hist_data['counts'] > 0])
-
-                ax1.minorticks_on()
-                ax1.grid(b=True, which='major', color='tab:gray', linestyle='-',alpha=0.4)
-                ax1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.3)
-
-                
-                if ds.roi[cut_dict_key][param_key][0] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][0] <= max(hist_data['bin_centers']):
-                    # plt.axvline(ds.roi[cut_dict_key][param_key][0], c='g', label=textwrap.fill('Cut Lower Limit',width=25))
-                    ax1.axvspan(xlim[0], ds.roi[cut_dict_key][param_key][0], color='r', label=textwrap.fill('Cut Regions',width=25), alpha=0.3)
-                if ds.roi[cut_dict_key][param_key][1] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][1] <= max(hist_data['bin_centers']):
-                    # plt.axvline(ds.roi[cut_dict_key][param_key][1], c='b', label=textwrap.fill('Cut Upper Limit',width=25))
-                    ax1.axvspan(ds.roi[cut_dict_key][param_key][1], xlim[1], color='r', label=textwrap.fill('Cut Regions',width=25), alpha=0.3)
-
-
-                normalization_factor = hist_data['bin_width']*sum(hist_data['counts'])
-
-
-                plt.bar(hist_data['bin_centers'], hist_data['counts']/normalization_factor, hist_data['bin_width'], facecolor='k', label='Before Cuts')
-
-
-
-
-                filename = 'hist_for_%s_with_all_cuts_but_%s.npz'%(param_key, param_key)
-                # plt.title('All Cuts Applied Except:\n%s'%param_key.replace('_',' ').title())
-
-                cut_name = cut_dict_key + '-' + param_key
-                loaded_eventids_dict = {}
-                hist_data = {}
-                with numpy.load(os.path.join(root_dir,'all_but_cuts', filename)) as data:
-                    for key in list(data.keys()):
-                        if key.isdigit():
-                            loaded_eventids_dict[int(key)] = data[key]
-                        else:
-                            hist_data[key] = data[key]
-                print(cut_name)
-                print(list(hist_data.keys()))
-
-
-                plt.bar(hist_data['bin_centers'], hist_data['counts']/normalization_factor, hist_data['bin_width'], facecolor='dodgerblue', label='If Last Cut')
-
-                if ds.roi[cut_dict_key][param_key][0] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][0] <= max(hist_data['bin_centers']):
-                    plt.axvline(ds.roi[cut_dict_key][param_key][0], c='r', lw=1)
-                if ds.roi[cut_dict_key][param_key][1] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][1] <= max(hist_data['bin_centers']):
-                    plt.axvline(ds.roi[cut_dict_key][param_key][1], c='r', lw=1)
-
-
-
-                if True:
-                    cr_val = ds.getDataArrayFromParam(param_key, eventids_dict={5911:[73399]})
-                    ax1.axvline(cr_val, c='gold', lw=2, label='5911-73399')
-
-                # xy = [hist_data['bin_centers'][numpy.argmax(hist_data['counts'])] , numpy.max(numpy.argmax(hist_data['counts']))/normalization_factor]
-                if param_key == 'elevation_best_choice' and lg_index > 1:
-                    cut_range = numpy.logical_and(hist_data['bin_centers'] > 30, hist_data['bin_centers'] < 40)
-                    xy = [hist_data['bin_centers'][cut_range][numpy.argmax(hist_data['counts'][cut_range])], numpy.max(hist_data['counts'][cut_range]/normalization_factor)]
-                    xy_text = [52,0.5e-1]
-
-                    # raw_text = "Above horizon clustering corresponds to below horizon events misreconstructing to a prominent sidelobe"
-                    # text = textwrap.fill(raw_text,width=int(len(raw_text)//3))
+                # raw_text = "Above horizon clustering corresponds to below horizon events misreconstructing to a prominent sidelobe"
+                # text = textwrap.fill(raw_text,width=int(len(raw_text)//3))
+                if lg_index == 5 and False:
+                    text = 'Events misreconstructing\nto a prominent sidelobe'
+                    ann = ax1.annotate(text,
+                          xy=xy, xycoords='data',
+                          xytext=xy_text, textcoords='data',
+                          size=minor_fontsize, va="center", ha="center",
+                          bbox=dict(boxstyle="round", fc="w"),
+                          arrowprops=dict(arrowstyle="-|>",
+                                          connectionstyle="arc3,rad=+0.2",
+                                          fc="r",ec="r"),
+                          )
+                elif False:
                     text = 'Above horizon clustering corresponds\nto below horizon events misreconstructing\nto a prominent sidelobe'
                     ann = ax1.annotate(text,
                           xy=xy, xycoords='data',
@@ -539,26 +329,26 @@ if __name__ == '__main__':
                           )
 
 
-                if lg_index == 5:
-                    if param_key in label_group[0]:
-                        plt.ylabel(ylabel, fontsize=major_fontsize)
-                else:
-                    plt.ylabel(ylabel, fontsize=major_fontsize)
+            if lg_index == 5:
+                if param_key == 'similarity_count_h':
+                    plt.ylabel('Normalized Counts', fontsize=major_fontsize)
+            else:
+                plt.ylabel(ylabel, fontsize=major_fontsize)
 
-                plt.xlabel(xlabel + x_units, fontsize=major_fontsize)
-                plt.xticks(fontsize=minor_fontsize)
-                plt.yticks(fontsize=minor_fontsize)
+            plt.xlabel(xlabel + x_units, fontsize=major_fontsize)
+            plt.xticks(fontsize=minor_fontsize)
+            plt.yticks(fontsize=minor_fontsize)
 
 
 
-                plt.xlim(xlim[0], xlim[1])
-                ax1.set_yscale('log')
-                ax1.tick_params(axis='both', labelsize=minor_fontsize)
+            plt.xlim(xlim[0], xlim[1])
+            ax1.set_yscale('log')
+            ax1.tick_params(axis='both', labelsize=minor_fontsize)
 
-                if param_index == len(numpy.asarray(label_group).T.flatten())-1:
-                    plt.legend(loc='upper right', fontsize=minor_fontsize)
-                plt.tight_layout()
-                plt.subplots_adjust(hspace=0.30)#left=0.06, bottom=0.12,right=0.98, top=0.95, wspace=0.3, 
+            if param_index == len(numpy.asarray(label_group).T.flatten())-1:
+                plt.legend(loc='upper right', fontsize=minor_fontsize)
+            plt.tight_layout()
+            plt.subplots_adjust(hspace=0.30)#left=0.06, bottom=0.12,right=0.98, top=0.95, wspace=0.3, 
 
-            fig.savefig('./figures/cut_histograms/cuts_same_axis_pg_%i.pdf'%(lg_index+1))
-            fig.savefig('./figures/cut_histograms/cuts_same_axis_pg_%i.png'%(lg_index+1), dpi=300)
+        fig.savefig('./figures/cut_histograms/cuts_same_axis_pg_%i.pdf'%(lg_index+1))
+        fig.savefig('./figures/cut_histograms/cuts_same_axis_pg_%i.png'%(lg_index+1), dpi=300)

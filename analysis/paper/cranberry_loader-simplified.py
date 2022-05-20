@@ -36,6 +36,8 @@ import textwrap
 
 import matplotlib.pyplot as plt
 
+from analysis.paper.cr_template_plot import makeTemplateFigure
+
 plt.ion()
 
 
@@ -311,78 +313,83 @@ if __name__ == '__main__':
 
 
     # In[14]:
-
-    fig = plt.figure(figsize=(20,5))
-    ax1 = plt.subplot(1,2,1)
-    # histogram of polarization angle
-    wh = 0
-    cc = 0
-    for k in range(len(pol_list_of_arrays)):
-        weight = flx[k] * 10 ** e_array[k] * acc[k] * numpy.log(10.) * 0.1 * T_live
-        h, b = numpy.histogram(pol_list_of_arrays[k], bins=numpy.arange(-2.5, 91., 2.5))
-        wh += h * weight
-        cc += 1
-    
-
-    width = numpy.diff(b[1:])[0]
-    plt.bar(b[1:]-width/2.0, wh / numpy.sum(wh), width = width, fc="dodgerblue")
-    plt.plot(b[1:], wh / numpy.sum(wh), drawstyle='steps', lw=2, c='k')
-
-    y1, y2 = plt.ylim()
-    plt.ylim(0., y2)
-    plt.xticks(numpy.arange(0., 91., 10.))
-    plt.grid(True, which='both', linestyle='--', alpha=0.5)
-    plt.xlabel(r'Polarization Angle (deg)', fontsize=major_fontsize)
-    plt.ylabel('Relative Frequency', fontsize=major_fontsize)
+    for channel in range(8):
+        fig = plt.figure(figsize=(20,10))
+        ax = plt.subplot(2,1,1)
+        makeTemplateFigure(fig, ax, channel, minor_fontsize=major_fontsize, major_fontsize=major_fontsize)
 
 
-    # plt.axvline(polarization_degs[0], c=highlight_color, label=textwrap.fill('5911-73399 with Symmetric Filtering',width=25))
-    # plt.axvline(polarization_degs[1], c='g', label='5911-73399 with Asymettric Filtering')
-    # plt.axvline(polarization_degs[2], c='m', label='5911-73399 with Only Sine Subtraction')
-    plt.axvline(polarization_degs[0], c=highlight_color, label='5911-73399\nPolarization = %0.2f$^\circ$'%polarization_degs[0], lw=4)
-    plt.xlim(10., 70.)
-    ax1.tick_params(axis='both', labelsize=minor_fontsize)
-    plt.legend(fontsize=minor_fontsize)
+        ax1 = plt.subplot(2,2,2+1)
+        # histogram of polarization angle
+        wh = 0
+        cc = 0
+        for k in range(len(pol_list_of_arrays)):
+            weight = flx[k] * 10 ** e_array[k] * acc[k] * numpy.log(10.) * 0.1 * T_live
+            h, b = numpy.histogram(pol_list_of_arrays[k], bins=numpy.arange(-2.5, 91., 2.5))
+            wh += h * weight
+            cc += 1
+        
 
-    #plt.savefig('/home/avz5228/Pictures/polarization_angle.pdf')
-    
+        width = numpy.diff(b[1:])[0]
+        plt.bar(b[1:]-width/2.0, wh / numpy.sum(wh), width = width, fc="dodgerblue")
+        plt.plot(b[1:], wh / numpy.sum(wh), drawstyle='steps', lw=2, c='k')
 
-    # In[15]:
-
-
-    # 2D histogram of CR shower cores that caused a trigger, weighted by the CR flux
-    wh = 0
-    cc = 0
-    for k in range(len(antenna_az_list_of_arrays)):
-        weight = flx[k] * 10 ** e_array[k] * acc[k] * numpy.log(10.) * 0.1 * T_live
-        h, bx, by = numpy.histogram2d(numpy.array(antenna_az_list_of_arrays[k]), numpy.array(antenna_thz_list_of_arrays[k]), bins=(numpy.arange(-90,91,5), numpy.arange(-5, 91, 5)))
-        wh += h.T * weight
-
-    X, Y = numpy.meshgrid(bx, 90.0 - by)
-    ax2 = plt.subplot(1,2,2)
-
-    m = plt.pcolormesh(X, Y, wh / numpy.sum(wh), cmap='Greys')#
-    cbar = plt.colorbar(m)
-    cbar.set_label('Relative Frequency', labelpad=15, fontsize=major_fontsize)
-    #plt.xlabel(r'Azimuth Angle $\phi_{Xmax}$ (deg)', fontsize=major_fontsize)
-    #plt.ylabel(r'Zenith Angle $\theta_{Xmax}$ (deg)', fontsize=major_fontsize)
-
-    plt.scatter(cr_az, cr_el,s=100, c=highlight_color, ec='k', linewidths=1, label='5911-73399')
-    plt.legend(loc='upper right', fontsize=minor_fontsize)
+        y1, y2 = plt.ylim()
+        plt.ylim(0., y2)
+        plt.xticks(numpy.arange(0., 91., 10.))
+        plt.grid(True, which='both', linestyle='--', alpha=0.5)
+        plt.xlabel(r'Polarization Angle (deg)', fontsize=major_fontsize)
+        plt.ylabel('Relative Frequency', fontsize=major_fontsize)
 
 
-    plt.xlabel(r'Azimuth (deg)', fontsize=major_fontsize)
-    plt.ylabel(r'Elevation (deg)', fontsize=major_fontsize)
-    plt.xticks(numpy.arange(-90., 91., 30.))
-    y1, y2 = plt.ylim()
-    plt.ylim(0,60)
-    plt.xlim(-60,60)
-    ax2.tick_params(axis='both', labelsize=minor_fontsize)
-    #plt.title('Location of Ground Intersection Point \n for Triggered Showers')
-    # plt.gca().invert_yaxis()
-    plt.tight_layout()
+        # plt.axvline(polarization_degs[0], c=highlight_color, label=textwrap.fill('5911-73399 with Symmetric Filtering',width=25))
+        # plt.axvline(polarization_degs[1], c='g', label='5911-73399 with Asymettric Filtering')
+        # plt.axvline(polarization_degs[2], c='m', label='5911-73399 with Only Sine Subtraction')
+        plt.axvline(polarization_degs[0], c='k', lw=6)
+        plt.axvline(polarization_degs[0], c=highlight_color, label='5911-73399\nPolarization = %0.2f$^\circ$'%polarization_degs[0], lw=4)
+        plt.xlim(10., 70.)
+        ax1.tick_params(axis='both', labelsize=minor_fontsize)
+        plt.legend(fontsize=minor_fontsize)
+
+        #plt.savefig('/home/avz5228/Pictures/polarization_angle.pdf')
+        
+
+        # In[15]:
 
 
-    fig.savefig('./figures/cr_sim_properties.pdf',dpi=300)
+        # 2D histogram of CR shower cores that caused a trigger, weighted by the CR flux
+        wh = 0
+        cc = 0
+        for k in range(len(antenna_az_list_of_arrays)):
+            weight = flx[k] * 10 ** e_array[k] * acc[k] * numpy.log(10.) * 0.1 * T_live
+            h, bx, by = numpy.histogram2d(numpy.array(antenna_az_list_of_arrays[k]), numpy.array(antenna_thz_list_of_arrays[k]), bins=(numpy.arange(-90,91,5), numpy.arange(-5, 91, 5)))
+            wh += h.T * weight
+
+        X, Y = numpy.meshgrid(bx, 90.0 - by)
+        ax2 = plt.subplot(2,2,2+2)
+
+        m = plt.pcolormesh(X, Y, wh / numpy.sum(wh), cmap='Greys')#
+        cbar = plt.colorbar(m)
+        cbar.set_label('Relative Frequency', labelpad=15, fontsize=major_fontsize)
+        #plt.xlabel(r'Azimuth Angle $\phi_{Xmax}$ (deg)', fontsize=major_fontsize)
+        #plt.ylabel(r'Zenith Angle $\theta_{Xmax}$ (deg)', fontsize=major_fontsize)
+
+        plt.scatter(cr_az, cr_el,s=100, c=highlight_color, ec='k', linewidths=1, label='5911-73399')
+        plt.legend(loc='upper right', fontsize=minor_fontsize)
+
+
+        plt.xlabel(r'Azimuth (deg)', fontsize=major_fontsize)
+        plt.ylabel(r'Elevation (deg)', fontsize=major_fontsize)
+        plt.xticks(numpy.arange(-90., 91., 30.))
+        y1, y2 = plt.ylim()
+        plt.ylim(0,60)
+        plt.xlim(-60,60)
+        ax2.tick_params(axis='both', labelsize=minor_fontsize)
+        #plt.title('Location of Ground Intersection Point \n for Triggered Showers')
+        # plt.gca().invert_yaxis()
+        plt.tight_layout()
+
+
+        fig.savefig('./figures/cr_sim_properties_ch%i.pdf'%channel,dpi=300)
     
 

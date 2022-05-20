@@ -484,7 +484,7 @@ class Correlator:
                 cbar = fig.colorbar(im)
                 cbar.set_label('Angle off of %s Array Plane'%pol.title())
                 plt.xlabel('Azimuth (From East = 0 deg, North = 90 deg)')
-                plt.ylabel('Elevation Angle (Degrees)')
+                plt.ylabel('Elevation Angle (deg)')
 
                 plt.grid(True)
 
@@ -2773,18 +2773,18 @@ class Correlator:
                     #map_ax.set_xlabel(pol + ' MV=%0.2f'%(mean_corr_values.flat[linear_max_index]),fontsize=14)
                     map_ax.grid(True)
                     if pol == 'hpol':
-                        map_ax.set_ylabel('Elevation (Degrees)',fontsize=18) #A bit hacky, don't want label on vpol in event inspector.
+                        map_ax.set_ylabel('Elevation (deg)',fontsize=18) #A bit hacky, don't want label on vpol in event inspector.
                         textstr = 'HPol'
                     elif pol == 'vpol':
                         textstr = 'VPol'
                     else:
                         textstr = None
-                    map_ax.set_xlabel('Azimuth (Degrees)',fontsize=18)
+                    map_ax.set_xlabel('Azimuth (deg)',fontsize=18)
                     map_ax.set_xticks([-90, -45, 0, 45, 90])
                     map_ax.set_yticks([-30, -15, 0, 15, 30, 45, 60, 75, 90])
                     if textstr is not None:
                         props = dict(facecolor='#9DC3E6', alpha=1.0)
-                        map_ax.text(0.97, 0.02, textstr, transform=map_ax.transAxes, fontsize=16, verticalalignment='bottom', horizontalalignment='right', bbox=dict(boxstyle="square", fc="w"))
+                        map_ax.text(0.97, 0.025, textstr, transform=map_ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='right', bbox=dict(boxstyle="square", fc="w"))
                         if label_mountainside:
                             map_ax.text(0.02, 0.02, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=12, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                         
@@ -2795,7 +2795,7 @@ class Correlator:
                     else:
                         cbar.set_label('Mean Correlation Value')
                     map_ax.set_xlabel(xlabel,fontsize=18)
-                    map_ax.set_ylabel('Elevation Angle (Degrees)',fontsize=18)
+                    map_ax.set_ylabel('Elevation Angle (deg)',fontsize=18)
                     map_ax.grid(True)
 
                 #Prepare array cut curves
@@ -3074,7 +3074,7 @@ class Correlator:
                     im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm, rasterized=True)
 
                 plt.xlabel(xlabel)
-                plt.ylabel('Elevation Angle (Degrees)')
+                plt.ylabel('Elevation Angle (deg)')
                 plt.grid(True)
                 if include_cbar:
                     cbar = fig.colorbar(im)
@@ -3293,7 +3293,7 @@ class Correlator:
 
             cbar = fig.colorbar(im)
             plt.xlabel(xlabel)
-            plt.ylabel('Elevation Angle (Degrees)')
+            plt.ylabel('Elevation Angle (deg)')
             plt.grid(True)
             if hilbert == True:
                 cbar.set_label('Mean Correlation Value (Arb)')
@@ -3494,7 +3494,7 @@ class Correlator:
             else:
                 cbar.set_label('Mean Correlation Value')
             plt.xlabel(xlabel)
-            plt.ylabel('Elevation Angle (Degrees)')
+            plt.ylabel('Elevation Angle (deg)')
             plt.grid(True)
 
             # plt.ylim(90.0 - max(self.range_theta_deg) , 90.0 - min(self.range_theta_deg)  )
@@ -3814,8 +3814,8 @@ class Correlator:
                     else:
                         cbar.set_label('Counts (Weighted)')
 
-                    plt.xlabel('Azimuth Angle (Degrees)')
-                    plt.ylabel('Elevation Angle (Degrees)')
+                    plt.xlabel('Azimuth Angle (deg)')
+                    plt.ylabel('Elevation Angle (deg)')
                     plt.grid(True)
 
 
@@ -3875,7 +3875,7 @@ class Correlator:
                     plt.ylabel('Counts')
                     
                     if shift_1d_hists == True:
-                        plt.xlabel('Azimuth Distribution (Degrees)\nCentered on Mean')
+                        plt.xlabel('Azimuth Distribution (deg)\nCentered on Mean')
                         #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         phi_n, phi_bins, phi_patches = plt.hist(all_phi_best - mean_phi, bins=self.phis_deg-mean_phi, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
                         
@@ -3920,7 +3920,7 @@ class Correlator:
 
 
                     else:
-                        plt.xlabel('Azimuth Distribution (Degrees)')
+                        plt.xlabel('Azimuth Distribution (deg)')
                         #ax.text(0.45, 0.85, 'Mean $\\phi$$ = %0.3f\n$\\sigma_\\phi$$ = %0.3f'%(mean_phi,sig_phi), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         phi_n, phi_bins, phi_patches = plt.hist(all_phi_best, bins=self.phis_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_phi,sig_phi),density=False)
                         
@@ -3977,7 +3977,7 @@ class Correlator:
                         plt.subplot(2,2,4)
                     #plt.ylabel('Counts (PDF)')
                     if shift_1d_hists == True:
-                        plt.xlabel('Zenith Distribution (Degrees)\nCentered on Mean')
+                        plt.xlabel('Zenith Distribution (deg)\nCentered on Mean')
                         #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         theta_n, theta_bins, theta_patches = plt.hist(all_theta_best - mean_theta, bins=self.thetas_deg-mean_theta, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=False)
                         
@@ -4028,7 +4028,7 @@ class Correlator:
                                 plt.axvline(circle_zenith[0] - mean_theta,color='fuchsia',label='Highlighted Zenith')
 
                     else:
-                        plt.xlabel('Zenith Distribution (Degrees)')
+                        plt.xlabel('Zenith Distribution (deg)')
                         #ax.text(0.45, 0.85, 'Mean $\\theta$$ = %0.3f\n$\\sigma_\\theta$$ = %0.3f'%(mean_theta,sig_theta), fontsize=14, horizontalalignment='center', verticalalignment='top',transform=plt.gcf().transFigure,usetex=True) #Need to reset the x and y here to be appropriate for the values in the plot. 
                         theta_n, theta_bins, theta_patches = plt.hist(all_theta_best, bins=self.thetas_deg, log=False, edgecolor='black', linewidth=1.0,label='Mean = %0.3f\nSigma = %0.3f'%(mean_theta,sig_theta),density=False)
                         
@@ -4338,7 +4338,7 @@ class Correlator:
                 cbar = fig.colorbar(im)
                 cbar.set_label('N Overlapping Time Delays')
                 plt.xlabel(xlabel,fontsize=18)
-                plt.ylabel('Elevation Angle (Degrees)',fontsize=18)
+                plt.ylabel('Elevation Angle (deg)',fontsize=18)
                 plt.grid(True)
                 im, ax = self.addTimeDelayCurves(im, time_delay_dict, pol, ax, mollweide=mollweide, azimuth_offset_deg=azimuth_offset_deg, include_baselines=include_baselines)
             if plot_map == True:
@@ -4492,7 +4492,7 @@ class Correlator:
                 cbar = fig.colorbar(im)
                 cbar.set_label('Azimuthal Resolution (Deg)')
                 plt.xlabel(xlabel,fontsize=18)
-                plt.ylabel('Elevation Angle (Degrees)',fontsize=18)
+                plt.ylabel('Elevation Angle (deg)',fontsize=18)
                 plt.grid(True)
 
                 #Prepare center line and plot the map.  Prep cut lines as well.
@@ -4525,7 +4525,7 @@ class Correlator:
                 cbar = fig.colorbar(im)
                 cbar.set_label('Elevation Resolution (Deg)')
                 plt.xlabel(xlabel,fontsize=18)
-                plt.ylabel('Elevation Angle (Degrees)',fontsize=18)
+                plt.ylabel('Elevation Angle (deg)',fontsize=18)
                 plt.grid(True)
 
                 plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]

@@ -277,7 +277,7 @@ if __name__ == '__main__':
 
 
 
-    if True:
+    if False:
         print('Getting map values and impulsivity')
         if not numpy.all(df['eventid'].to_numpy() == new_cut_array['eventid']):
             print('WARNING NEED TO FIX SORTING')
@@ -328,9 +328,6 @@ if __name__ == '__main__':
         c_vals[numpy.where(df['key'].to_numpy()[only_new_cut] == 'bad')[0], :]          = numpy.ones((sum(df['key'].to_numpy()[only_new_cut] == 'bad'),4))      *cm.Set1(0.95) #Grey
         c_vals[numpy.where(df['key'].to_numpy()[only_new_cut] == 'ambiguous')[0], :]    = numpy.ones((sum(df['key'].to_numpy()[only_new_cut] == 'ambiguous'),4))*cm.Set1(0.45) #Orange
         c_vals[numpy.where(df['key'].to_numpy()[only_new_cut] == 'unsorted')[0], :]     = numpy.ones((sum(df['key'].to_numpy()[only_new_cut] == 'unsorted'),4)) *cm.Set1(0.05) #Red
-
-
-        
         
 
         if True:
@@ -417,18 +414,68 @@ if __name__ == '__main__':
             # only makes sense to run after code circles made.
             selectorGroupsToDict(time_selector_only_new, savename='./likely_airplanes_batch_%i_%i.npy'%(batch, start_time))
             selectorGroupsToDict(space_selector_only_new, savename='./likely_sidelobes_batch_%i_%i.npy'%(batch, start_time))
+    else:
+        '''
+        For reviewing things after the fact.
+        '''
+        print('Getting map values and impulsivity')
+        if not numpy.all(df['eventid'].to_numpy() == new_cut_array['eventid']):
+            print('WARNING NEED TO FIX SORTING')
+            import pdb; pdb.set_trace()
+
+
+        markersize = 40
+        
+        print('Ready to plot')
+
+        '''
+        Want to add a different sorting such that events which have been sorted are obvious and ones that haven't been sorted are dots.  Rather than new v.s. not, or on top of it.
+        Likely on top of it.  Color based on sorted or not.  Green sorted, red not. 
+        colors = [cm.Set1(x) for x in numpy.linspace(0, 0.8, len(list(self.roi.keys())))]
+        '''
+
+
+        times = df['calibrated_trigtime'].to_numpy()
+        azimuth = df['phi_best_choice'].to_numpy()
+        elevation = df['elevation_best_choice'].to_numpy()
+        min_t = min(times)
+
+        c_vals = numpy.zeros((len(times),4))
+
+        good_cut = numpy.where(numpy.logical_and(df['key'].to_numpy() == 'good', df['suspected_airplane_icao24'].fillna('').to_numpy() == ''))[0]
+        bad_cut = numpy.where(df['key'].to_numpy() == 'bad')[0]
+        ambiguous_cut =numpy.where(df['key'].to_numpy() == 'ambiguous')[0] 
+        unsorted_cut = numpy.where(df['key'].to_numpy() == 'unsorted')[0]
+        airplane_cut = numpy.where(df['suspected_airplane_icao24'].fillna('').to_numpy() != '')[0]
 
 
 
-    # #--------------------#
+        c_vals[good_cut, :]      = numpy.ones((sum(numpy.logical_and(df['key'].to_numpy() == 'good', df['suspected_airplane_icao24'].fillna('').to_numpy() == '')),4))     *cm.Set1(0.25) #Green
+        c_vals[bad_cut, :]       = numpy.ones((sum(df['key'].to_numpy() == 'bad'),4))      *cm.Set1(0.95) #Grey
+        c_vals[ambiguous_cut, :] = numpy.ones((sum(df['key'].to_numpy() == 'ambiguous'),4))*cm.Set1(0.45) #Orange
+        c_vals[unsorted_cut, :]  = numpy.ones((sum(df['key'].to_numpy() == 'unsorted'),4)) *cm.Set1(0.05) #Red
+        c_vals[airplane_cut, :]  = numpy.ones((sum(df['suspected_airplane_icao24'].fillna('').to_numpy() != ''),4))      *cm.Set1(0.85) #Pink
 
+        fig1 = plt.figure(figsize=(16,9))
+        ax1 = plt.gca()
+        for cut, name in [[good_cut, 'Good'], [airplane_cut, 'Airplane'], [ambiguous_cut, 'Ambiguous'], [bad_cut, 'Bad']]:
+            if name == 'Good':
+                s1 = plt.scatter( (times[cut] - min_t)/3600.0, azimuth[cut], c=c_vals[cut], marker='o', label=name)
+                selector1 = SelectFromCollection(ax1, s1, df['eventid'].to_numpy()[cut], df['run'].to_numpy()[cut], ds)
+            else:
+                plt.scatter( (times[cut] - min_t)/3600.0, azimuth[cut], c=c_vals[cut], marker='o', s=(72./fig1.dpi)**2, label=name)
+        plt.ylabel('Azimuth (deg)')
+        plt.xlabel('Trigger Time (hours)')
+        plt.legend()
 
-    # fig2 = plt.figure(figsize=(16,9))
-    # ax2 = plt.gca()
-
-    # s1 = plt.scatter( (only_new_times - min_t)/3600.0, only_new_azimuth, c=only_new_impulsivity, norm=impulsivity_normalize, marker='o', label='New', cmap='inferno')
-    # s2 = plt.scatter( (only_matching_times - min_t)/3600.0, only_matching_azimuth, c=only_matching_impulsivity, norm=impulsivity_normalize, marker='*', label='Matching', cmap='inferno')
-
-    # plt.ylabel('Elevation (deg)')
-    # plt.xlabel('Trigger Time (hours)')
-    # plt.legend()
+        fig2 = plt.figure(figsize=(16,9))
+        ax2 = plt.gca()
+        for cut, name in [[good_cut, 'Good'], [airplane_cut, 'Airplane'], [ambiguous_cut, 'Ambiguous'], [bad_cut, 'Bad']]:
+            if name == 'Good':
+                s2 = plt.scatter( azimuth[cut], elevation[cut], c=c_vals[cut], marker='o', label=name)
+                selector2 = SelectFromCollection(ax2, s2, df['eventid'].to_numpy()[cut], df['run'].to_numpy()[cut], ds)
+            else:
+                plt.scatter( azimuth[cut], elevation[cut], c=c_vals[cut], marker='o', s=(72./fig2.dpi)**2, label=name)
+        plt.ylabel('Elevation (deg)')
+        plt.xlabel('Azimuth (deg)')
+        plt.legend()

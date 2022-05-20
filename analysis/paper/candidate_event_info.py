@@ -91,14 +91,14 @@ if __name__ == '__main__':
     ds = dataSlicer([run], impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath)
     ds.conference_mode = True
 
-    ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=not ds.conference_mode,append_notches=append_notches,include_baselines=include_baselines)
+    ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=not ds.conference_mode,append_notches=append_notches,include_baselines=include_baselines, div128=True)
     ds.inspector_mpl['fig1'].set_size_inches(20,12)
-    [ds.inspector_mpl[p].set_ylabel('Power Spectral Density\n' + apply_filter*'Filtered ' + 'dB (arb)', fontsize=16) for p, apply_filter in [['fig1_spec_raw',False] ,['fig1_spec_filt', True]]]
+    [ds.inspector_mpl[p].set_ylabel(apply_filter*'Filtered ' + 'PSD\n' + '(dB, arb)', fontsize=18) for p, apply_filter in [['fig1_spec_raw',False] ,['fig1_spec_filt', True]]]
 
     [ds.inspector_mpl[p].yaxis.set_label_coords(-0.05,0.5) for p in ['fig1_spec_raw' ,'fig1_spec_filt']]
 
-    ds.inspector_mpl['fig1_wf_h'].text(0.97, 0.02, 'HPol', transform=ds.inspector_mpl['fig1_wf_h'].transAxes, fontsize=16, verticalalignment='bottom', horizontalalignment='right', bbox=dict(boxstyle="round", fc="w"))
-    ds.inspector_mpl['fig1_wf_v'].text(0.97, 0.02, 'VPol', transform=ds.inspector_mpl['fig1_wf_v'].transAxes, fontsize=16, verticalalignment='bottom', horizontalalignment='right', bbox=dict(boxstyle="round", fc="w"))
+    ds.inspector_mpl['fig1_wf_h'].text(0.985, 0.03, 'HPol', transform=ds.inspector_mpl['fig1_wf_h'].transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='right', bbox=dict(boxstyle="square", fc="w"))
+    ds.inspector_mpl['fig1_wf_v'].text(0.985, 0.03, 'VPol', transform=ds.inspector_mpl['fig1_wf_v'].transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='right', bbox=dict(boxstyle="square", fc="w"))
 
     plt.tight_layout()
 
