@@ -14,7 +14,7 @@ from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
+plt.ion()
 
 load_dir = os.path.join('/home/dsouthall/Projects/Beacon/beacon/analysis/paper/data' , 'system_response', 'interpolated' )
 
@@ -95,49 +95,54 @@ signal_chain = convolve(signal_chain, second_stage)
 
 
 if __name__ == '__main__':
+    plt.close('all')
+    major_fontsize = 28
+    minor_fontsize = 22
+    fig, ax = plt.subplots(figsize=(16,9))
 
-    major_fontsize = 24
-    minor_fontsize = 18
-    fig, ax = plt.subplots(figsize=(14,10))
-
+    include_inset = True
+    
     for ch in range(8):
         signal_chain = pd.read_csv(os.path.join(load_dir, 'signalchain_ch%d_interpolate_fd.csv'%ch))
-        ax.plot(signal_chain.freq_Hz/1e6, signal_chain.mag_dB, linewidth=2, label='%d'%ch)
+        ax.plot(signal_chain.freq_Hz/1e6, signal_chain.mag_dB, linewidth=2, label='Antenna %i%s'%(ch//2 , ['VPol', 'HPol'][ch%2 == 0][0]))
 
-        #axins.plot(signal_chain.freq_Hz/1e6, signal_chain.mag_dB)
 
-    #axins = zoomed_inset_axes(ax, 3, loc=1)
-
-    #axins.set_xticks([-0.1, 0, 0.1])
-    #axins.set_yticks([-0.1, 0, 0.1])
-    #axins.tick_params(axis='x', colors='white')
-    #axins.tick_params(axis='y', colors='white')
-
-    axins = inset_axes(ax, 7,2.5, loc=1)
-    axins.set_xlim(30,80)
-    axins.set_ylim(77,83)
-    axins.grid()
-    axins.tick_params(labelsize=minor_fontsize)
-    for ch in range(8):
-        signal_chain = pd.read_csv(os.path.join(load_dir, 'signalchain_ch%d_interpolate_fd.csv'%ch))
-        axins.plot(signal_chain.freq_Hz/1e6, signal_chain.mag_dB)
+    if include_inset:
+        axins = inset_axes(ax, "66.6%","25%", loc='upper left', bbox_to_anchor=(0.05, -0.015, 1, 1), bbox_transform=ax.transAxes)
+        axins.set_xlim(30,80)
+        axins.set_ylim(77.5,82.5)
+        axins.grid()
+        axins.tick_params(labelsize=minor_fontsize)
+        from itertools import cycle
+        lines = ["-"]#["-","--","-.",":"]
+        linecycler = cycle(lines)
+        for ch in range(8):
+            signal_chain = pd.read_csv(os.path.join(load_dir, 'signalchain_ch%d_interpolate_fd.csv'%ch))
+            axins.plot(signal_chain.freq_Hz/1e6, signal_chain.mag_dB, lw=3, linestyle=next(linecycler))
         
-    ax.set_ylim(-10,120)
-    ax.set_xlim(min(signal_chain.freq_Hz/1e6), 240)
+    # ax.set_xlim(min(signal_chain.freq_Hz/1e6), 240)
     ax.grid()
     ax.set_ylabel("Gain (dB)", fontsize=major_fontsize)
     ax.set_xlabel("Frequency (MHz)", fontsize=major_fontsize)
-    ax.set_yticks(numpy.arange(-10,120,10))
-    ax.set_xticks(numpy.arange(min(signal_chain.freq_Hz/1e6), max(signal_chain.freq_Hz/1e6),20))
     ax.tick_params(axis='both', labelsize=minor_fontsize)
-    ax.legend(title="Channel", title_fontsize=major_fontsize, fontsize=major_fontsize, loc=4)
+    ax.legend(title_fontsize=minor_fontsize, fontsize=minor_fontsize, loc='upper right', framealpha=1)#
+
+    ax.set_ylim(-10,130)
+    # ax.set_xticks(numpy.arange(min(signal_chain.freq_Hz/1e6), max(signal_chain.freq_Hz/1e6),20))
+    ax.set_xticks(numpy.arange(min(signal_chain.freq_Hz/1e6), 150+25,25))
+    ax.set_xlim(0,150)
+    ax.set_yticks(numpy.arange(-10,120,20))
+    ax.xaxis.set_tick_params(labelsize=minor_fontsize)
+    ax.yaxis.set_tick_params(labelsize=minor_fontsize)
+    if include_inset:
+        mark_inset(ax, axins, loc1=3, loc2=4, lw=1.5, alpha=0.5)
+        axins.xaxis.set_tick_params(labelsize=minor_fontsize)
+        axins.yaxis.set_tick_params(labelsize=minor_fontsize)
 
 
-
-    mark_inset(ax, axins, loc1=2, loc2=4, lw=1.5, alpha=0.5)
 
     plt.tight_layout()
-    # plt.savefig("/home/avz5228/Pictures/signal_chain.pdf")
+    fig.savefig("./figures/signal_chain.pdf")
 
 
 

@@ -18,7 +18,7 @@ from multiprocessing import Process
 import numpy
 import scipy
 import scipy.signal
-import scipy.signal
+import pandas as pd
 
 #from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
@@ -129,6 +129,25 @@ if __name__ == '__main__':
     label_group_5 =  [label_group_0, label_group_1]
     plt.ioff()
     # plt.ion()
+
+
+
+    if False:
+        excel_filename = '/home/dsouthall/Projects/Beacon/beacon/analysis/paper/data/new-cut-event-info_master_updated.xlsx'
+        with pd.ExcelFile(excel_filename) as xls:
+            for sheet_index, sheet_name in enumerate(xls.sheet_names):
+                if sheet_name != 'passing all cuts':
+                    continue
+                else:
+                    df = xls.parse(sheet_name)
+                    df = df.sort_values(by = ['run', 'eventid'], ascending = [True, True], na_position = 'last')
+        filtered_df = df.query('key == "good" and suspected_airplane_icao24 != suspected_airplane_icao24')
+
+
+
+
+
+
     for lg_index, label_group in enumerate([label_group_0, label_group_1, label_group_2, label_group_3, label_group_4, label_group_5]):
         if lg_index > 1 and lg_index < 5:
             fig = plt.figure(figsize=(12,4*len(label_group)))
@@ -170,10 +189,10 @@ if __name__ == '__main__':
                     xlabel = 'Signal Amplitude Differences'
                     x_units = ''
                 elif param_key == 'above_normalized_map_max_line':
-                    xlabel = 'Residual Normalized Map Peak'
+                    xlabel = 'Combined Normalized Map Peak'
                     x_units = ''
                 elif param_key == 'above_snr_line':
-                    xlabel = 'Residual P2P/(2 STD)'
+                    xlabel = 'Combined P2P/(2 STD)'
                     x_units = ''
                 elif param_key == 'in_targeted_box':
                     xlabel = 'Target Below Horizon Box'
@@ -334,6 +353,20 @@ if __name__ == '__main__':
                     plt.ylabel('Normalized Counts', fontsize=major_fontsize)
             else:
                 plt.ylabel(ylabel, fontsize=major_fontsize)
+
+            
+
+
+            if False:
+                vals = filtered_df[param_key].to_numpy()
+                hist_data['bin_centers']
+                bin_centers = hist_data['bin_centers']
+                bin_width = hist_data['bin_width']
+                bin_edges = numpy.zeros(len(bin_centers) + 1)
+                bin_edges[0:len(bin_centers)] = bin_centers - bin_width/2
+                bin_edges[-1] = bin_edges[-2] + bin_width
+
+                ax1.hist(vals,facecolor='gold', bins=bin_edges, weights=numpy.ones_like(vals)/normalization_factor, label='Remaining %i Events'%len(vals))
 
             plt.xlabel(xlabel + x_units, fontsize=major_fontsize)
             plt.xticks(fontsize=minor_fontsize)

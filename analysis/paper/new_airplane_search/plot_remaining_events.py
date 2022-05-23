@@ -82,7 +82,7 @@ if __name__ == '__main__':
     run = 5911
     eventid = 73399
 
-    excel_filename = '/home/dsouthall/Projects/Beacon/beacon/analysis/paper/data/new-cut-event-info_master.xlsx'
+    excel_filename = '/home/dsouthall/Projects/Beacon/beacon/analysis/paper/data/new-cut-event-info_master_updated.xlsx'
     with pd.ExcelFile(excel_filename) as xls:
         for sheet_index, sheet_name in enumerate(xls.sheet_names):
             if sheet_name != 'passing all cuts':

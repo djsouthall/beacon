@@ -11,6 +11,9 @@ import matplotlib as mpl
 import matplotlib.patheffects as PathEffects
 import os
 from matplotlib import cm
+from beacon.analysis.paper.new_beam_plot import makeBeamPlot
+
+
 
 
 
@@ -34,8 +37,8 @@ if __name__ == '__main__':
     zenith_grid = numpy.load(os.path.join(data_path,"zenith_grid_all_beams.npy"))
     power_array = numpy.load(os.path.join(data_path,"power_grid_all_beams.npy"))
 
-    major_fontsize = 22
-    minor_fontsize = 16
+    major_fontsize = 24
+    minor_fontsize = 20
 
 
     beams = {
@@ -81,14 +84,20 @@ if __name__ == '__main__':
     c2[5+sort_indices]    = numpy.asarray([cm.GnBu(x) for x in numpy.linspace(0.2, 0.9, 15)])[::-1]
 
 
-    for cmap_index, colors in enumerate([c1,c2]):
+    for cmap_index, colors in enumerate([c1, c2]):
+        if cmap_index == 0:
+            continue
 
         # In[5]:
 
 
         powerdB = 10*numpy.log10(power_array)
 
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9,6))
+        fig = plt.figure(figsize=(9,10))
+        ax = plt.subplot(2,1,1)
+
+
+        
         cmap = plt.get_cmap('Greys')
         max_power = max(power_array.flatten())
         norm = mpl.colors.Normalize(vmin=0, vmax=1)
@@ -103,8 +112,6 @@ if __name__ == '__main__':
         # plot circles around beams, with radius 3 dB less than max of that beam
         # text_cmap = plt.get_cmap('hsv')
         # text_colors = numpy.linspace(0,1,20)
-
-
 
 
         for i in range(20):
@@ -129,7 +136,17 @@ if __name__ == '__main__':
         cbar.set_label('Normalized Power', rotation=90, labelpad=15, fontsize=major_fontsize)
         plt.xlabel(r'Azimuth (deg)', fontsize=major_fontsize)
         plt.ylabel(r'Elevation (deg)', fontsize=major_fontsize)
-        plt.tight_layout()
         
+        ax2 = plt.subplot(2,1,2)
+        makeBeamPlot(fig, ax2, major_fontsize=major_fontsize, minor_fontsize=minor_fontsize, mode='c', suppress_legend=True, _colors=colors)
+        
+        ax.xaxis.set_tick_params(labelsize=minor_fontsize)
+        ax.yaxis.set_tick_params(labelsize=minor_fontsize)
+
+        ax2.xaxis.set_tick_params(labelsize=minor_fontsize)
+        ax2.yaxis.set_tick_params(labelsize=minor_fontsize)
+
+        plt.tight_layout()
+
         plt.savefig(os.path.join(out_path, 'beam_map_opt%i.pdf'%(cmap_index+1)))
 
