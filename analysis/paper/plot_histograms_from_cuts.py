@@ -127,6 +127,7 @@ if __name__ == '__main__':
     label_group_3 =  ['impulsivity_hSLICERADDimpulsivity_v','cr_template_search_hSLICERMAXcr_template_search_v']
     label_group_4 =  ['elevation_best_choice','phi_best_choice']
     label_group_5 =  [label_group_0, label_group_1]
+    label_group_6 =  [['elevation_best_choice','impulsivity_hSLICERADDimpulsivity_v'],['phi_best_choice','cr_template_search_hSLICERMAXcr_template_search_v']]
     plt.ioff()
     # plt.ion()
 
@@ -148,12 +149,14 @@ if __name__ == '__main__':
 
 
 
-    for lg_index, label_group in enumerate([label_group_0, label_group_1, label_group_2, label_group_3, label_group_4, label_group_5]):
+    for lg_index, label_group in enumerate([label_group_0, label_group_1, label_group_2, label_group_3, label_group_4, label_group_5, label_group_6]):
         if lg_index > 1 and lg_index < 5:
-            fig = plt.figure(figsize=(12,4*len(label_group)))
+            fig = plt.figure(figsize=(15,5*len(label_group)))
             major_fontsize = 36
             minor_fontsize = 20
-        elif lg_index == 5:
+            # major_fontsize = 42
+            # minor_fontsize = 28
+        elif lg_index >= 5:
             fig = plt.figure(figsize=(12*len(label_group),6*len(label_group[0])))
             major_fontsize = 42
             minor_fontsize = 28
@@ -238,7 +241,7 @@ if __name__ == '__main__':
             # else:
             ylabel = 'Normalized\nCounts'
 
-            if lg_index == 5:
+            if lg_index >= 5:
                 if param_key in label_group[0]:
                     ax1 = plt.subplot(len(label_group[0]), len(label_group), 1 + param_index)
                 else:
@@ -270,13 +273,17 @@ if __name__ == '__main__':
             ax1.grid(b=True, which='major', color='tab:gray', linestyle='-',alpha=0.4)
             ax1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.3)
 
-            
+            labeled = False
             if ds.roi[cut_dict_key][param_key][0] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][0] <= max(hist_data['bin_centers']):
                 # plt.axvline(ds.roi[cut_dict_key][param_key][0], c='g', label=textwrap.fill('Cut Lower Limit',width=25))
                 ax1.axvspan(xlim[0], ds.roi[cut_dict_key][param_key][0], color='r', label=textwrap.fill('Cut Regions',width=25), alpha=0.3)
+                labeled = True
             if ds.roi[cut_dict_key][param_key][1] >= min(hist_data['bin_centers']) and ds.roi[cut_dict_key][param_key][1] <= max(hist_data['bin_centers']):
                 # plt.axvline(ds.roi[cut_dict_key][param_key][1], c='b', label=textwrap.fill('Cut Upper Limit',width=25))
-                ax1.axvspan(ds.roi[cut_dict_key][param_key][1], xlim[1], color='r', label=textwrap.fill('Cut Regions',width=25), alpha=0.3)
+                if labeled == False:
+                    ax1.axvspan(ds.roi[cut_dict_key][param_key][1], xlim[1], color='r', label=textwrap.fill('Cut Regions',width=25), alpha=0.3)
+                else:
+                    ax1.axvspan(ds.roi[cut_dict_key][param_key][1], xlim[1], color='r', alpha=0.3)
 
 
             normalization_factor = hist_data['bin_width']*sum(hist_data['counts'])
@@ -324,7 +331,7 @@ if __name__ == '__main__':
 
                 # raw_text = "Above horizon clustering corresponds to below horizon events misreconstructing to a prominent sidelobe"
                 # text = textwrap.fill(raw_text,width=int(len(raw_text)//3))
-                if lg_index == 5 and False:
+                if lg_index >= 5 and False:
                     text = 'Events misreconstructing\nto a prominent sidelobe'
                     ann = ax1.annotate(text,
                           xy=xy, xycoords='data',
@@ -350,6 +357,9 @@ if __name__ == '__main__':
 
             if lg_index == 5:
                 if param_key == 'similarity_count_h':
+                    plt.ylabel('Normalized Counts', fontsize=major_fontsize)
+            elif lg_index == 6:
+                if param_key in ['elevation_best_choice','impulsivity_hSLICERADDimpulsivity_v']:
                     plt.ylabel('Normalized Counts', fontsize=major_fontsize)
             else:
                 plt.ylabel(ylabel, fontsize=major_fontsize)

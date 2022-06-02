@@ -344,7 +344,8 @@ if __name__ == '__main__':
 
                 if include_total_counts == False:
                     plt.close(burner_fig)
-                    axs[0].set_xlabel('Absolute Time Difference Remainder\nfrom Expected Periodicity (s)', fontsize=label_fontsize)
+                    #axs[0].set_xlabel('Absolute Time Difference Remainder\nfrom Expected Periodicity (s)', fontsize=label_fontsize)
+                    axs[0].set_xlabel('Difference from $T$, $d_{i,j}$ (s)', fontsize=label_fontsize)
                 else:
                     axs[1].set_ylim(0,axs[1].get_ylim()[1]*1.2)
 

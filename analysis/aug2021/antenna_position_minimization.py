@@ -15,6 +15,7 @@ import pymap3d as pm
 from iminuit import Minuit
 import inspect
 import h5py
+import time
 
 #Personal Imports
 from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
@@ -533,7 +534,12 @@ if __name__ == '__main__':
             pol = 'hpol'
 
         if True:
-            deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/september_2021_minimized_calibration.json')#'rtk-gps-day3-june22-2021.json'#'theodolite-day3-june22-2021_only_enu.json'#'rtk-gps-day3-june22-2021.json'
+
+            #Below is my attempt to revert the script to the point where it was when I calculated the current calibration on 5-26-2022
+            deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/rtk-gps-day3-june22-2021.json')
+            
+            #Below is as it was on 5-26-2022
+            #deploy_index = os.path.join(os.environ['BEACON_ANALYSIS_DIR'], 'config/september_2021_minimized_calibration.json')#'rtk-gps-day3-june22-2021.json'#'theodolite-day3-june22-2021_only_enu.json'#'rtk-gps-day3-june22-2021.json'
             if pol == 'hpol':
                 use_sites = ['d2sa','d3sa','d3sb','d3sc','d4sa','d4sb']#['d3sa','d3sb','d3sc','d4sa','d4sb']#
             elif pol == 'vpol':
@@ -593,7 +599,7 @@ if __name__ == '__main__':
         initial_step_y = 0.1#2.0 #m
         initial_step_z = 0.1#0.75 #m
         initial_step_cable_delay = 0.05 #ns
-        cable_delay_guess_range = 1#30 #ns
+        cable_delay_guess_range = None#30 #ns
         antenna_position_guess_range_x = None#0.75 #Limit to how far from input phase locations to limit the parameter space to
         antenna_position_guess_range_y = None#0.75 #Limit to how far from input phase locations to limit the parameter space to
         antenna_position_guess_range_z = None#0.75 #Limit to how far from input phase locations to limit the parameter space to
@@ -1821,6 +1827,19 @@ if __name__ == '__main__':
 
 
 
+        from matplotlib.backends.backend_pdf import PdfPages
+
+        def save_multi_image(filename):
+           pp = PdfPages(filename)
+           fig_nums = plt.get_fignums()
+           figs = [plt.figure(n) for n in fig_nums]
+           for fig in figs:
+              fig.savefig(pp, format='pdf')
+           pp.close()
+
+        filename = "multi_%i.pdf"%(time.time())
+        save_multi_image(filename)
+
 
 
 
@@ -1831,9 +1850,5 @@ if __name__ == '__main__':
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
-
-
-
-
 
 

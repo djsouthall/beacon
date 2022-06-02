@@ -904,9 +904,10 @@ class dataSlicerSingleRun():
             #Line = a*x + b*y + c = 0       -->                         Form of line used in distance of line formula
             #distance = abs(a*x_i + b*y_i + c)/sqrt(a**2 + b**2) -->    Distance of x_i, y_i from line
             #sign_i = sign(y_i - y_line[x_i]) -->                       Positive if above line, negative if below
-            y_int = 1.5
             x_int = 1.25
             a = 1.0/x_int
+
+            y_int = 1.5
             b = 1.0/y_int
             sign = numpy.sign(xy[1] - numpy.multiply(y_int, 1 - numpy.divide(xy[0], x_int))) #positive if above line
             distance = numpy.multiply( sign , numpy.divide(numpy.abs( a*xy[0] + b*xy[1] - 1 ), numpy.sqrt(a**2 + b**2)) )
@@ -929,9 +930,10 @@ class dataSlicerSingleRun():
             #Line = a*x + b*y + c = 0       -->                         Form of line used in distance of line formula
             #distance = abs(a*x_i + b*y_i + c)/sqrt(a**2 + b**2) -->    Distance of x_i, y_i from line
             #sign_i = sign(y_i - y_line[x_i]) -->                       Positive if above line, negative if below
-            y_int = 11
             x_int = 6
             a = 1.0/x_int
+            
+            y_int = 11
             b = 1.0/y_int
             sign = numpy.sign(xy[1] - numpy.multiply(y_int, 1 - numpy.divide(xy[0], x_int))) #positive if above line
             distance = numpy.multiply( sign , numpy.divide(numpy.abs( a*xy[0] + b*xy[1] - 1 ), numpy.sqrt(a**2 + b**2)) )

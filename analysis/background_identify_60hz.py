@@ -261,8 +261,8 @@ def diffFromPeriodic(_calibrated_trig_time, atol=0.025, window_s=10, expected_pe
                     ax = axs[0]
                     
                 
-                ax.axvspan(bin_edges[0],bin_edges[1],color='r',alpha=0.3,label='5% Bin Most Consistent\nWith Rate ' + r'$\mathbf{r}$')
-                ax.axvspan(numpy.mean(bin_edges),bin_edges[-1],color='g',alpha=0.3,label='50% of Bins Least\nConsistent With Rate ' + r'$\mathbf{r}$')
+                ax.axvspan(bin_edges[0],bin_edges[1],color='r',alpha=0.3,label='5% Bin Most\nConsistent With $T$')
+                ax.axvspan(numpy.mean(bin_edges),bin_edges[-1],color='g',alpha=0.3,label='50% of Bins Least\nConsistent With $T$')
                 
                 n, bins, patches = ax.hist(max_diff_from_period,bins=bin_edges, facecolor="dodgerblue", label='Distribution for\nMax TS Event', alpha=1.0 , weights=numpy.ones(len(max_diff_from_period))/(len(max_diff_from_period) if normalize_by_density else 1))
                 y = numpy.zeros(len(bin_edges)+1)

@@ -85,7 +85,7 @@ def getTimes(reader):
 
 ##load data
 data_path = os.environ['BEACON_DATA']
-run_num = 5950
+run_num = 5796#5792#5764#5752#5950#5874
 plot_cut = 100 #skip few seconds at the beginning of the run for plot cosmetic
 
 ##read run
@@ -111,12 +111,13 @@ for id in eventids:
     waveforms = numpy.array([reader.wf(j) for j in range(8)])
     times = reader.t()
 
+    noise_trace = 200 #only select the begginning of the traces to avoid signal
     ##compute RMS for each channels
-    channels_rms = numpy.array([numpy.sqrt(numpy.mean(waveforms[0]**2)), numpy.sqrt(numpy.mean(waveforms[4]**2)), numpy.sqrt(numpy.mean(waveforms[6]**2))]) #Hpol only
+    channels_rms = numpy.sqrt(numpy.mean(waveforms[:,:noise_trace]**2, axis=1))
     ##compute RMS of all channels
     trace_rms.append(numpy.sqrt(numpy.mean(channels_rms**2)))
     ##get the corresponding noise for this event
-    trace_noise.append(64.*trace_rms[-1])
+    trace_noise.append(64.*trace_rms[-1]**2)
 
     ##some check plots
     # fx, xx = plt.subplots()
@@ -129,6 +130,7 @@ for id in eventids:
     # xx.axhline(y=trace_noise[-1], label='64xE(N**2)', color='k')
     # xx.legend()
     # plt.show()
+
 
 ##array handling stuff
 trace_rms = numpy.array(trace_rms)
@@ -144,46 +146,60 @@ for i in range(len(time_run)-1):
 
 def makeBeamPlot(fig, ax, major_fontsize=24, minor_fontsize=20, mode='a', figsize=(16,9), suppress_legend=True, _colors=None):
     try:
-        if fig is None or ax is None:
-            fig, ax = plt.subplots(figsize=figsize)
+        
         if _colors is None:
             _colors = colors
 
-        times = time_run[plot_cut:-1] - min(time_run[plot_cut:-1])
+        # times = time_run[plot_cut:-1] - min(time_run[plot_cut:-1])
 
         if mode == 'a':
-            ax.set_xlabel("Noise (all events)", fontsize=major_fontsize)
-            # ax.set_title(r"$\rm run: $"+" "+str(run_num))
-            ax.hist(trace_rms, label='RMS')
-            ax.hist(trace_noise, label='64xE(N**2)', alpha=0.8)
-            if suppress_legend == False:
-                ax.legend(fontsize=minor_fontsize)
+            if fig is None or ax is None:
+                fa, (a1x, a2x) = plt.subplots(1,2, figsize=figsize)
+            else:
+                fa = fig
+                (a1x, a2x) = ax
+            a1x.set_ylabel("RMS noise (all events)", fontsize=major_fontsize)
+            fa.suptitle(r"$\rm Run $"+" "+str(run_num)+", September 09 2021 (18h-22h UTC)")
+            a1x.hist(trace_rms[trace_rms<15], bins=30, label='RMS')
+            a1x.set_xlim(0,15)
+            a1x.axvline(x=3.5, label='3.5', color='r')
+            a2x.hist(trace_noise[trace_noise<10000], bins=30, label='64xE(N**2)')
+            a2x.set_xlim(0,10000)
+            a2x.axvline(x=800, label='800', color='r')
+            a1x.legend(fontsize=minor_fontsize)
+            a2x.legend(fontsize=minor_fontsize)
+
         elif mode == 'b':
-            ax.set_xlabel("run time (h)", fontsize=major_fontsize)
-            ax.set_ylabel("Noise (binned events)", fontsize=major_fontsize)
-            # ax.set_title(r"$\rm run: $"+" "+str(run_num))
-            ax.plot(times, trace_rms_binned[plot_cut:], label='RMS')
-            ax.plot(times, trace_noise_binned[plot_cut:], label='64xE(N**2)')
-            if suppress_legend == False:
-                ax.legend(fontsize=minor_fontsize)
+            if fig is None or ax is None:
+                fb, bx = plt.subplots(figsize=figsize)
+            else:
+                fb = fig
+                bx = ax
+            bx.set_xlabel("run time (h)", fontsize=major_fontsize)
+            bx.set_ylabel("RMS noise (binned events)", fontsize=major_fontsize)
+            bx.set_title(r"$\rm Run $"+" "+str(run_num)+", September 09 2021 (18h-22h UTC)")
+            bx.plot(time_run[plot_cut:-1], trace_rms_binned[plot_cut:], label='RMS')
+            bx.plot(time_run[plot_cut:-1], trace_noise_binned[plot_cut:], label='64xE(N**2)')
+            bx.legend(fontsize=minor_fontsize)
+
         elif mode == 'c':
-            ax.set_xlabel("Time (h)", fontsize=major_fontsize)
-            ax.set_ylabel("Beam Power Threshold", fontsize=major_fontsize)#"Beam Power Threshold (SNR)"
-            # ax.set_title(r"$\rm run: $"+" "+str(run_num))
+            if fig is None or ax is None:
+                fc, cx = plt.subplots(figsize=figsize)
+            else:
+                fc = fig
+                cx = ax
+            cx.set_xlabel("Time (h)\nSeptember 09 2021 (11.5h-14.5h PDT)", fontsize=major_fontsize)
+            cx.set_ylabel("Beam Power Threshold", fontsize=major_fontsize)#"Beam Power Threshold (SNR)"
+            # cx.set_title(r"$\rm Trigger\ Threshold\ Rates$"+"\n"r"$\rm Run $"+" "+str(run_num)+", September 09 2021 (18h-22h UTC)", fontsize=major_fontsize)
             ##below horizon beams
             for i in range(0,5):
-                ax.plot(times, thresholds[i,plot_cut:-1]/trace_noise_binned[plot_cut:], label='beam %i'%(i), linewidth=4, color=_colors[i])
+                cx.plot(time_run[plot_cut:-1], thresholds[i,plot_cut:-1]/trace_noise_binned[plot_cut:], label='beam %i'%(i), linewidth=4, color=_colors[i])
             ##above horizon beams
             for i in range(5,20):
-                ax.plot(times, thresholds[i,plot_cut:-1]/trace_noise_binned[plot_cut:], label='beam %i'%(i), linewidth=2, linestyle='--', color=_colors[i])
-            if suppress_legend == False:
-                ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-            ax.set_xlim(min(times), max(times))
-            ax.yaxis.set_major_formatter(ticker.FormatStrFormatter(r'%i $\sigma$'))
-
-            ##save figures to pdf
-            # fb.savefig("noise_evol.pdf", format='pdf')
-            # fc.savefig("SNR_thesholds.pdf", format='pdf')
+                cx.plot(time_run[plot_cut:-1], thresholds[i,plot_cut:-1]/trace_noise_binned[plot_cut:], label='beam %i'%(i), linewidth=2, linestyle='--', color=_colors[i])
+            # cx.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=minor_fontsize)
+            cx.set_xlim(0,3)
+            cx.yaxis.set_major_formatter(ticker.FormatStrFormatter(r'%i $\sigma$'))
         return fig, ax
     except Exception as e:  
         print('\nError in %s'%inspect.stack()[0][3])
