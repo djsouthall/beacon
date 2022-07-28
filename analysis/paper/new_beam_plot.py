@@ -81,6 +81,12 @@ def getTimes(reader):
     eventids = numpy.frombuffer(reader.head_tree.GetV4(), numpy.dtype('float64'), N).astype(int)
 
     return raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids
+
+##Conversion from SNR Power to SNR Voltage from Andrew's work
+def get_voltage_snr(power_snr):
+    return 1.806*numpy.sqrt(power_snr)-0.383
+def get_power_snr(voltage_snr):
+    return 0.333*voltage_snr**2 -0.217*voltage_snr+1.33
 ##############################################
 
 ##load data
@@ -143,8 +149,14 @@ for i in range(len(time_run)-1):
     trace_rms_binned.append(numpy.mean(trace_rms[sel]))
     trace_noise_binned.append(numpy.mean(trace_noise[sel]))
 
+## convert power to voltages
+Psnr = thresholds[:,plot_cut:-1]/trace_noise_binned[plot_cut:]
+Vsnr = get_voltage_snr(Psnr)
+##tocheck correct ratio between Psnr and Vsnr
+# fx, xx = plt.subplots()
+# xx.scatter(Psnr, Vsnr)
 
-def makeBeamPlot(fig, ax, major_fontsize=24, minor_fontsize=20, mode='a', figsize=(16,9), suppress_legend=True, _colors=None):
+def makeBeamPlot(fig, ax, major_fontsize=24, minor_fontsize=20, mode='a', figsize=(16,9), suppress_legend=True, _colors=None, primary='power'):
     try:
         
         if _colors is None:
@@ -154,7 +166,7 @@ def makeBeamPlot(fig, ax, major_fontsize=24, minor_fontsize=20, mode='a', figsiz
 
         if mode == 'a':
             if fig is None or ax is None:
-                fa, (a1x, a2x) = plt.subplots(1,2, figsize=figsize)
+                fa, (a1x, a2x) = plt.subplots(1,2, figsize=figsize, constrained_layout=True)
             else:
                 fa = fig
                 (a1x, a2x) = ax
@@ -189,17 +201,44 @@ def makeBeamPlot(fig, ax, major_fontsize=24, minor_fontsize=20, mode='a', figsiz
                 fc = fig
                 cx = ax
             cx.set_xlabel("Time (h)\nSeptember 09 2021 (11.5h-14.5h PDT)", fontsize=major_fontsize)
-            cx.set_ylabel("Beam Power Threshold", fontsize=major_fontsize)#"Beam Power Threshold (SNR)"
-            # cx.set_title(r"$\rm Trigger\ Threshold\ Rates$"+"\n"r"$\rm Run $"+" "+str(run_num)+", September 09 2021 (18h-22h UTC)", fontsize=major_fontsize)
-            ##below horizon beams
-            for i in range(0,5):
-                cx.plot(time_run[plot_cut:-1], thresholds[i,plot_cut:-1]/trace_noise_binned[plot_cut:], label='beam %i'%(i), linewidth=4, color=_colors[i])
-            ##above horizon beams
-            for i in range(5,20):
-                cx.plot(time_run[plot_cut:-1], thresholds[i,plot_cut:-1]/trace_noise_binned[plot_cut:], label='beam %i'%(i), linewidth=2, linestyle='--', color=_colors[i])
-            # cx.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=minor_fontsize)
+            
+            if primary == 'power':
+                cx.set_ylabel("Beam Power Threshold", fontsize=major_fontsize)#"Beam Power Threshold (SNR)"
+                
+                secax_y = cx.secondary_yaxis('right', functions=(get_voltage_snr, get_power_snr))
+                secax_y.set_ylabel("Beam Voltage Threshold", fontsize=major_fontsize)
+                #secax_y.set_ylabel(r'$\rm beam\ voltage\ thresholds\ (\sigma)$', fontsize=major_fontsize)
+                
+                ##below horizon beams
+                for i in range(0,5):
+                    cx.plot(time_run[plot_cut:-1], Psnr[i], label='beam %i'%(i), linewidth=4, color=colors[i])
+                ##above horizon beams
+                for i in range(5,20):
+                    cx.plot(time_run[plot_cut:-1], Psnr[i], label='beam %i'%(i), linewidth=2, linestyle='--', color=colors[i])
+            elif primary == 'voltage':
+                cx.set_ylabel("Beam Voltage Threshold", fontsize=major_fontsize)#"Beam Power Threshold (SNR)"
+                
+                secax_y = cx.secondary_yaxis('right', functions=(get_power_snr, get_voltage_snr))
+                secax_y.set_ylabel("Beam Power Threshold", fontsize=major_fontsize)
+                #secax_y.set_ylabel(r'$\rm beam\ voltage\ thresholds\ (\sigma)$', fontsize=major_fontsize)
+                
+                ##below horizon beams
+                for i in range(0,5):
+                    cx.plot(time_run[plot_cut:-1], Vsnr[i], label='beam %i'%(i), linewidth=4, color=colors[i])
+                ##above horizon beams
+                for i in range(5,20):
+                    cx.plot(time_run[plot_cut:-1], Vsnr[i], label='beam %i'%(i), linewidth=2, linestyle='--', color=colors[i])
+            if suppress_legend == False:
+                cx.legend(loc='center left', bbox_to_anchor=(1.1, 0.5))
+
             cx.set_xlim(0,3)
-            cx.yaxis.set_major_formatter(ticker.FormatStrFormatter(r'%i $\sigma$'))
+            cx.yaxis.set_major_formatter(ticker.FormatStrFormatter(r'%0.1f $\sigma$'))#_\mathrm{P}
+            secax_y.yaxis.set_major_formatter(ticker.FormatStrFormatter(r'%0.1f $\sigma$'))#_\mathrm{V}
+
+            cx.xaxis.set_tick_params(labelsize=minor_fontsize)
+            cx.yaxis.set_tick_params(labelsize=minor_fontsize)
+            secax_y.yaxis.set_tick_params(labelsize=minor_fontsize)
+
         return fig, ax
     except Exception as e:  
         print('\nError in %s'%inspect.stack()[0][3])

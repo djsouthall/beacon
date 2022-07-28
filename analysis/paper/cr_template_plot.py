@@ -179,8 +179,8 @@ tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq
 if sine_subtract:
     tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=max_failed_iterations, verbose=False, plot=False)
 
-polarization_deg = tdc.calculatePolarizationFromTimeDelays(73399, apply_filter=False, waveforms=None, plot=True, sine_subtract=True)
-polarization_deg = tdc.calculatePolarizationFromTimeDelays(73399, apply_filter=True, waveforms=None, plot=True, sine_subtract=True)
+polarization_deg = tdc.calculatePolarizationFromTimeDelays(73399, apply_filter=False, waveforms=None, plot=True, sine_subtract=True, included_error_percent=0.1)
+polarization_deg = tdc.calculatePolarizationFromTimeDelays(73399, apply_filter=True, waveforms=None, plot=True, sine_subtract=True, included_error_percent=0.1)
 
 for key in template_dict.keys():
     filtered_template_dict[key] = {}
@@ -373,9 +373,9 @@ if __name__ == '__main__':
 
             if True:
                 if normalize:
-                    fig.savefig('./figures/normalized_template_event000088_comparison_wf_ch%i.pdf'%channel, dpi=300 )
+                    fig.savefig('./figures/normalized_template_event000088_comparison_wf_ch%i.svg'%channel, dpi=300 )
                 else:
-                    fig.savefig('./figures/template_event000088_comparison_wf_ch%i.pdf'%channel, dpi=300 )
+                    fig.savefig('./figures/template_event000088_comparison_wf_ch%i.svg'%channel, dpi=300 )
 
 
 

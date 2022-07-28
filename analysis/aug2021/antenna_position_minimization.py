@@ -32,7 +32,10 @@ import beacon.tools.config_reader as bcr
 #Plotting Imports
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
+from matplotlib.colors import Normalize
+from matplotlib.lines import Line2D
 from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.cm
 
 from beacon.analysis.aug2021.parse_pulsing_runs import PulserInfo, predictAlignment
 
@@ -1248,7 +1251,9 @@ if __name__ == '__main__':
             else:
                 index_window_dict = {'hpol':{},'vpol':{}}
 
-            for key in am.use_sites:
+            combined_map_figure, subplots = plt.subplots(3,2, figsize=(12,14))
+
+            for key_index, key in enumerate(am.use_sites):
                 #Calculate old and new geometries
                 #Distance needed when calling correlator, as it uses that distance.
                 original_pulser_ENU = numpy.array([am.pulser_locations_ENU[key][0] , am.pulser_locations_ENU[key][1] , am.pulser_locations_ENU[key][2]])
@@ -1320,13 +1325,59 @@ if __name__ == '__main__':
                 else:
                     td_dict = {}
 
+                range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
+                range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
+
+
+
+                vmin = -0.25
+                vmax = 0.9
+
+                adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(int(event_info['eventid']), pol, map_ax=subplots.flatten()[key_index], include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict={},shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading, vmin=vmin, vmax=vmax, include_cbar=False)
+                subplots.flatten()[key_index].set_xlim(range_phi_deg[0], range_phi_deg[1])
+                subplots.flatten()[key_index].set_ylim(min(90.0 - numpy.asarray(range_theta_deg)), max(90.0 - numpy.asarray(range_theta_deg)))
+
+                if key_index in [0,1,2,3]:
+                    subplots.flatten()[key_index].set_xlabel('')
+                else:
+                    subplots.flatten()[key_index].set_xlabel('Azimuth\nFrom East = 0 deg\nNorth = 90 deg')
+                if key_index in [0,1,3,4,5]:
+                    subplots.flatten()[key_index].set_ylabel('')
+                else:
+                    subplots.flatten()[key_index].set_ylabel('Zenith (deg)')
+                if key_index == 5:
+                    cmap=matplotlib.cm.get_cmap('coolwarm')
+                    normalizer=Normalize(vmin,vmax)
+                    im=matplotlib.cm.ScalarMappable(norm=normalizer, cmap=cmap)
+                    cbar = combined_map_figure.colorbar(im, ax=subplots.ravel().tolist())
+                    cbar.set_label('Mean Correlation Value')
+
+                    custom_lines = [Line2D([0], [0], color='lime', lw=2),
+                                    Line2D([0], [0], color='fuchsia', lw=2)]
+
+                    plt.tight_layout()
+                    legend = subplots.flatten()[1].legend(custom_lines, ['Peak Direction','Expected Direction'], bbox_to_anchor=(0.5,1.45))
+                    if pol == 'hpol':
+                        legend.set_title('HPol')
+                        combined_map_figure.savefig('/home/dsouthall/hpol_reconstructed_pulsers.pdf')
+                    elif pol == 'vpol':
+                        legend.set_title('VPol')
+                        combined_map_figure.savefig('/home/dsouthall/vpol_reconstructed_pulsers.pdf')
+
+
+
+
 
                 #mean_corr_values, fig, ax = cor.map(int(event_info['eventid']), pol, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
                 mean_corr_values, fig, ax = cor.map(int(event_info['eventid']), pol, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+                
                 fig.set_size_inches(16, 9)
                 plt.sca(ax)
                 plt.tight_layout()
                 adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(int(event_info['eventid']), pol, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+                
+
+
                 adjusted_fig.set_size_inches(16, 9)
                 plt.sca(adjusted_ax)
                 plt.tight_layout()
@@ -1334,8 +1385,6 @@ if __name__ == '__main__':
 
                 if plot_histograms:
                     map_resolution = 0.1 #degrees
-                    range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
-                    range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
                     n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
                     n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
                                     
@@ -1696,6 +1745,10 @@ if __name__ == '__main__':
 
 
                     #mean_corr_values, fig, ax = cor.map(int(event_info['eventid']), pol, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
+                    range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
+                    range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
+
+
                     adjusted_mean_corr_values, adjusted_fig, adjusted_ax = adjusted_cor.map(int(event_info['eventid']), _pol, include_baselines=include_baselines, plot_map=True, plot_corr=False, hilbert=False, radius=1.0,zenith_cut_ENU=[90,180],zenith_cut_array_plane=[0,90], interactive=True,circle_zenith=zenith_deg, circle_az=azimuth_deg, time_delay_dict=td_dict,shorten_signals=shorten_signals, shorten_thresh=shorten_thresh, shorten_delay=shorten_delay, shorten_length=shorten_length, shorten_keep_leading=shorten_keep_leading)
                     adjusted_fig.set_size_inches(16, 9)
                     plt.sca(adjusted_ax)
@@ -1704,8 +1757,6 @@ if __name__ == '__main__':
 
                     if plot_histograms:
                         map_resolution = 0.1 #degrees
-                        range_phi_deg=(azimuth_deg - 10, azimuth_deg + 10)
-                        range_theta_deg=(zenith_deg - 10,zenith_deg + 10)
                         n_phi = numpy.ceil((max(range_phi_deg) - min(range_phi_deg))/map_resolution).astype(int)
                         n_theta = numpy.ceil((max(range_theta_deg) - min(range_theta_deg))/map_resolution).astype(int)
                                         

@@ -15341,6 +15341,15 @@ if __name__ == '__main__':
 
         print('antenna_phase_vpol = ')
         pprint(antennas_phase_vpol)
+
+        differences = []
+        for antenna in range(4):
+            difference = numpy.sqrt(numpy.sum((antennas_phase_hpol[antenna] - antennas_phase_vpol[antenna])**2))
+            differences.append(difference)
+            print('Antenna %i Difference: %0.2f m'%(antenna,difference))
+
+        print('Average difference of all 4 antennas: %0.2f'%(numpy.mean(differences)))
+        print('Average difference of 3 non-fixed antennas: %0.2f'%(numpy.mean(differences[1:4])))
         #known_planes, calibrated_trigtime, output_tracks = getKnownPlaneTracks()
 
         print('\n\n\n\n')

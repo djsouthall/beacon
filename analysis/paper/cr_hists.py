@@ -184,14 +184,14 @@ if __name__ == '__main__':
     #Create initial tdc
     reader = Reader(raw_datapath, run)
     polarization_degs = []
-    for notch_tv in [False, True]:
-        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=False,apply_phase_response=apply_phase_response, notch_tv=notch_tv, misc_notches=misc_notches)
+    for notch_tv, notch_tv_vpol in [[False, False], [True, True], [True, False]]:
+        tdc = TimeDelayCalculator(reader, final_corr_length=final_corr_length, crit_freq_low_pass_MHz=crit_freq_low_pass_MHz, crit_freq_high_pass_MHz=crit_freq_high_pass_MHz, low_pass_filter_order=low_pass_filter_order, high_pass_filter_order=high_pass_filter_order,waveform_index_range=(None,None),plot_filters=True,apply_phase_response=apply_phase_response, notch_tv=notch_tv, notch_tv_vpol=notch_tv_vpol, misc_notches=misc_notches)
         if sine_subtract:
             tdc.addSineSubtract(sine_subtract_min_freq_GHz, sine_subtract_max_freq_GHz, sine_subtract_percent, max_failed_iterations=max_failed_iterations, verbose=False, plot=False)
 
-        polarization_deg = tdc.calculatePolarizationFromTimeDelays(eventid, apply_filter=True, waveforms=None, plot=True, sine_subtract=True)
+        polarization_deg = tdc.calculatePolarizationFromTimeDelays(eventid, apply_filter=True, waveforms=None, plot=True, sine_subtract=True, included_error_percent=0.1)
         polarization_degs.append(polarization_deg)
-    polarization_deg = tdc.calculatePolarizationFromTimeDelays(eventid, apply_filter=False, waveforms=None, plot=True, sine_subtract=True)
+    polarization_deg = tdc.calculatePolarizationFromTimeDelays(eventid, apply_filter=False, waveforms=None, plot=True, sine_subtract=True, included_error_percent=0.1)
     polarization_degs.append(polarization_deg)
     '''
     This data is a placeholder of the histogram data for polarization
@@ -211,7 +211,7 @@ if __name__ == '__main__':
     # plt.axvline(polarization_degs[0], c='r', label=textwrap.fill('5911-73399 with Symettric Filtering',width=25))
     # plt.axvline(polarization_degs[1], c='g', label='5911-73399 with Asymettric Filtering')
     # plt.axvline(polarization_degs[2], c='m', label='5911-73399 with Only Sine Subtraction')
-    plt.axvline(polarization_degs[0], c='r', label=textwrap.fill('5911-73399 Polarization',width=25))
+    plt.axvline(polarization_degs[1], c='r', label=textwrap.fill('5911-73399 Polarization',width=25))
 
     plt.legend(loc='center right', fontsize=12)
     plt.ylabel('Frequency of Occurance Per Bin From Cranberry', fontsize=18)
@@ -272,5 +272,6 @@ if __name__ == '__main__':
 
     #plt.tight_layout(True)
     plt.subplots_adjust(left=0.05, bottom=0.1, right=0.95, top=0.95, wspace=0.20, hspace=None)
+    # fig.savefig('./figures/angles_histogram_placeholder.pdf', dpi=300)
+    # fig.savefig('./figures/angles_histogram_placeholder.png', dpi=300)
     fig.savefig('./figures/angles_histogram_placeholder.pdf', dpi=300)
-    fig.savefig('./figures/angles_histogram_placeholder.png', dpi=300)

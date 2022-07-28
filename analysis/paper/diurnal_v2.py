@@ -262,7 +262,7 @@ for time in median_time:
     day_frac = (utc.hour*3600 + utc.minute*60 + utc.second)/(3600*24)
     solar_day_frac.append(day_frac)
 
-dB = 10*numpy.ma.log10(mean_rms)
+dB = 20*numpy.ma.log10(mean_rms)
 dB = dB - numpy.ma.mean(dB)
 
 sep_solar_day_frac = solar_day_frac
@@ -303,6 +303,8 @@ for array in split_rms:
 for array in split_time:
     median_time.append(numpy.median(array))
 
+dB = 20*numpy.ma.log10(mean_rms)
+dB = dB - numpy.ma.mean(dB)
 
 
 ast_time = Time(median_time, format='unix') 
@@ -327,8 +329,6 @@ for time in median_time:
 
 
 
-dB = 10*numpy.ma.log10(mean_rms)
-dB = dB - numpy.ma.mean(dB)
 
 
 
@@ -350,8 +350,8 @@ if __name__ == '__main__':
     major_fontsize = 36
     minor_fontsize = 20
     # fig = plt.figure(figsize=(10,6))
-    Z_sep, xedges_sep, yedges_sep = numpy.histogram2d(numpy.array(sep_solar_day_frac), numpy.array(sep_dB), range=[[0,1],[-0.3,0.3]], bins=50)
-    Z_feb, xedges_feb, yedges_feb = numpy.histogram2d(numpy.array(feb_solar_day_frac), numpy.array(feb_dB), range=[[0,1],[-0.3,0.3]], bins=50)
+    Z_sep, xedges_sep, yedges_sep = numpy.histogram2d(numpy.array(sep_solar_day_frac), numpy.array(sep_dB), range=[[0,1],[-0.6,0.6]], bins=50)
+    Z_feb, xedges_feb, yedges_feb = numpy.histogram2d(numpy.array(feb_solar_day_frac), numpy.array(feb_dB), range=[[0,1],[-0.6,0.6]], bins=50)
 
     min_Z = min(numpy.min(Z_feb[Z_feb>0]),numpy.min(Z_sep[Z_sep>0]))
     max_Z = max(numpy.max(Z_feb),numpy.max(Z_sep))
@@ -429,6 +429,8 @@ if __name__ == '__main__':
     ax.set_title("February 2022", fontsize=major_fontsize)
 
     ax = fig.add_subplot(2, 2, 4)
+    plt.xticks(fontsize=minor_fontsize+2)
+    plt.yticks(fontsize=minor_fontsize+2)
     if True:
         plt.fill_between(curves['feb']['sun'][0], curves['feb']['sun'][1], curves['feb']['sun'][2], alpha=0.5, step='mid', color="dodgerblue", label="Sun")
         plt.plot(curves['feb']['sun'][0], curves['feb']['sun'][1], alpha=1.0, lw=2, color="dodgerblue")
@@ -457,11 +459,18 @@ if __name__ == '__main__':
 
     fig.savefig('./figures/diurnal_seperated.pdf')
 
-    vertical = True
+    wide_mode = True
 
     for mode in [0, 1]:
 
-        fig = plt.figure(figsize=(14,7))
+        if wide_mode == True:
+            fig = plt.figure(figsize=(18,6))
+            major_fontsize = 28
+            minor_fontsize = 22
+        else:
+            fig = plt.figure(figsize=(14,7))
+            major_fontsize = 36
+            minor_fontsize = 20
 
         ax = fig.add_subplot(1, 2, 1)
         plt.xticks(fontsize=minor_fontsize+2)
@@ -472,9 +481,9 @@ if __name__ == '__main__':
 
         ax.set_xlabel("Fraction, Solar Day", fontsize=major_fontsize)
         ax.set_xticks(numpy.arange(0,1.1,0.2))
-        #ax.set_yticks(numpy.arange(-0.4,0.31,0.15))
-        ax.set_yticks([-0.3,-0.15,0.0,0.15,0.3])
-        ax.set_ylim(-0.32,0.32)
+        #ax.set_yticks(numpy.arange(-0.4,0.61,0.15))
+        ax.set_yticks([-0.6,-0.3,0.0,0.3,0.6])
+        ax.set_ylim(-0.62,0.62)
 
         if mode == 0:
             ax.plot(sep_solar_day_frac, sep_dB, '.', color="black", alpha=0.2)
@@ -515,7 +524,7 @@ if __name__ == '__main__':
 
         ax3.set_xlabel("Fraction, Solar Day", fontsize=major_fontsize)
         ax3.set_xticks(numpy.arange(0,1.1,0.2))
-        ax3.set_ylim(-0.3,0.3)
+        ax3.set_ylim(-0.6,0.6)
 
         ax3.set_yticks([])
 
@@ -561,9 +570,15 @@ if __name__ == '__main__':
 
         plt.tight_layout()
 
-        if mode == 0:
-            fig.savefig('./figures/diurnal_combined_scatter.pdf')
-        elif mode == 1:
-            fig.savefig('./figures/diurnal_combined_hist.pdf')
+        if wide_mode == True:
+            if mode == 0:
+                fig.savefig('./figures/diurnal_combined_scatter_wide.pdf')
+            elif mode == 1:
+                fig.savefig('./figures/diurnal_combined_hist_wide.pdf')
+        else:
+            if mode == 0:
+                fig.savefig('./figures/diurnal_combined_scatter.pdf')
+            elif mode == 1:
+                fig.savefig('./figures/diurnal_combined_hist.pdf')
 
 

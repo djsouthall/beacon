@@ -6110,14 +6110,14 @@ class dataSlicer():
                     self.inspector_mpl['fig1_map_all'].set_ylim(-30,90)
 
             else:
-                m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_h, circle_az=self.az_h, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, plot_horizon=self.plot_horizon, label_mountainside=False, rasterized=self.rasterized)
+                m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_h'] = self.cor.map(eventid, 'hpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_h'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_h, circle_az=self.az_h, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, plot_horizon=self.plot_horizon, label_mountainside=True, rasterized=self.rasterized)
                 self.inspector_mpl['fig1_map_h'].set_xlim(-90,90)
                 self.inspector_mpl['fig1_map_h'].set_ylim(-30,90)
-                m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.cor.map(eventid, 'vpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_v, circle_az=self.az_v, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, plot_horizon=self.plot_horizon, label_mountainside=False, rasterized=self.rasterized)
+                m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_v'] = self.cor.map(eventid, 'vpol', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_v'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_v, circle_az=self.az_v, radius=1.0, time_delay_dict=time_delay_dict,window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, plot_horizon=self.plot_horizon, label_mountainside=True, rasterized=self.rasterized)
                 self.inspector_mpl['fig1_map_v'].set_xlim(-90,90)
                 self.inspector_mpl['fig1_map_v'].set_ylim(-30,90)
                 if self.show_all:
-                    m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_all'] = self.cor.map(eventid, 'all', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_all, circle_az=self.az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, plot_horizon=self.plot_horizon, label_mountainside=False, rasterized=self.rasterized)
+                    m, self.inspector_mpl['fig1'], self.inspector_mpl['fig1_map_all'] = self.cor.map(eventid, 'all', include_baselines=self.inspector_include_baselines, plot_map=True, map_ax=self.inspector_mpl['fig1_map_all'], plot_corr=False, hilbert=False, interactive=True, max_method=None, waveforms=None, verbose=False, mollweide=self.mollweide, zenith_cut_ENU=None, zenith_cut_array_plane=(0,90), center_dir='E', circle_zenith=90 - self.el_all, circle_az=self.az_all, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=True, circle_map_max=False, plot_horizon=self.plot_horizon, label_mountainside=True, rasterized=self.rasterized)
                     self.inspector_mpl['fig1_map_all'].set_xlim(-90,90)
                     self.inspector_mpl['fig1_map_all'].set_ylim(-30,90)
 
@@ -6132,7 +6132,8 @@ class dataSlicer():
                     freqs, spec_dbish, spec = self.cor.prep.rfftWrapper(raw_t[start:stop], wf)
                     ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel, c=self.mpl_colors[channel])
                 ax.set_ylim(-20,50)
-                ax.set_ylabel('Power Spectral Density\n' + apply_filter*'Filtered ' + 'dB (arb)', fontsize=20)
+                #ax.set_ylabel('Power Spectral Density\n' + apply_filter*'Filtered ' + 'dB (arb)', fontsize=20)
+                ax.set_ylabel('PSD\n' + apply_filter*'Filtered ' + 'dB (arb)', fontsize=20)
                 if self.show_all:
                     ax.set_xlim(0,150)
 
@@ -6358,54 +6359,86 @@ class dataSlicer():
 
             if self.conference_mode == False:
                 fig1_table = fig1.add_subplot(gs[:,4])
+                if True:
+                    #Format is param_key : 'Name In Table'
+                    self.table_params['run'] = 'Run'
+                    self.table_params['eventid'] = 'Event id'
+                    self.table_params['phi_best_choice'] = 'Az (BEST)'
+                    self.table_params['elevation_best_choice'] = 'El (BEST)'
+                    self.table_params['hpol_max_map_value_allsky'] = 'Map Max H'
+                    self.table_params['vpol_max_map_value_allsky'] = 'Map Max V'
+                    self.table_params['impulsivity_h'] = 'Imp H'
+                    self.table_params['impulsivity_v'] = 'Imp V'
+                    self.table_params['cr_template_search_h'] = 'CR XC H'
+                    self.table_params['cr_template_search_v'] = 'CR XC V'
+                    self.table_params['std_h'] = 'SDev H'
+                    self.table_params['std_v'] = 'SDev V'
+                    self.table_params['p2p_h'] = 'P2P H'
+                    self.table_params['p2p_v'] = 'P2P V'
+                    self.table_params['csnr_h'] = 'SNR H'
+                    self.table_params['csnr_v'] = 'SNR V'
+                    # self.table_params['snr_h'] = 'SNR H'
+                    # self.table_params['snr_v'] = 'SNR V'
+                    self.table_params['similarity_count_h'] = 'H Simlr'
+                    self.table_params['similarity_count_v'] = 'V Simlr'
 
-                #Format is param_key : 'Name In Table'
-                self.table_params['run'] = 'Run'
-                self.table_params['eventid'] = 'Event id'
-                self.table_params['phi_best_choice'] = 'Az (BEST)'
-                self.table_params['elevation_best_choice'] = 'El (BEST)'
-                self.table_params['hpol_max_map_value_allsky'] = 'Map Max H'
-                self.table_params['vpol_max_map_value_allsky'] = 'Map Max V'
-                self.table_params['impulsivity_h'] = 'Imp H'
-                self.table_params['impulsivity_v'] = 'Imp V'
-                self.table_params['cr_template_search_h'] = 'CR XC H'
-                self.table_params['cr_template_search_v'] = 'CR XC V'
-                self.table_params['std_h'] = 'SDev H'
-                self.table_params['std_v'] = 'SDev V'
-                self.table_params['p2p_h'] = 'P2P H'
-                self.table_params['p2p_v'] = 'P2P V'
-                self.table_params['csnr_h'] = 'cSNR H'
-                self.table_params['csnr_v'] = 'cSNR V'
-                self.table_params['snr_h'] = 'SNR H'
-                self.table_params['snr_v'] = 'SNR V'
-                self.table_params['similarity_count_h'] = 'H Simlr'
-                self.table_params['similarity_count_v'] = 'V Simlr'
+                    self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
+                    self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
 
-                self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
-                self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
+                    self.table_params['mean_max_corr_h'] = 'Mean Corr H'
+                    self.table_params['mean_max_corr_v'] = 'Mean Corr V'
 
-                self.table_params['phi_best_h_allsky'] = 'Az H'
-                self.table_params['elevation_best_h_allsky'] = 'El H'
-                self.table_params['phi_best_v_allsky'] = 'Az V'
-                self.table_params['elevation_best_v_allsky'] = 'El V'
-                self.table_params['phi_best_all_allsky'] = 'Az All'
-                self.table_params['elevation_best_all_allsky'] = 'El All'
+                    self.table_params['hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe'] = 'Combined P2S'
+                    self.table_params['impulsivity_hSLICERADDimpulsivity_v'] = 'Combined Imp'
+                    self.table_params['cr_template_search_hSLICERMAXcr_template_search_v'] = 'Max CR'
+                else:
+                    #Format is param_key : 'Name In Table'
+                    self.table_params['run'] = 'Run'
+                    self.table_params['eventid'] = 'Event id'
+                    self.table_params['phi_best_choice'] = 'Az (BEST)'
+                    self.table_params['elevation_best_choice'] = 'El (BEST)'
+                    self.table_params['hpol_max_map_value_allsky'] = 'Map Max H'
+                    self.table_params['vpol_max_map_value_allsky'] = 'Map Max V'
+                    self.table_params['impulsivity_h'] = 'Imp H'
+                    self.table_params['impulsivity_v'] = 'Imp V'
+                    self.table_params['cr_template_search_h'] = 'CR XC H'
+                    self.table_params['cr_template_search_v'] = 'CR XC V'
+                    self.table_params['std_h'] = 'SDev H'
+                    self.table_params['std_v'] = 'SDev V'
+                    self.table_params['p2p_h'] = 'P2P H'
+                    self.table_params['p2p_v'] = 'P2P V'
+                    self.table_params['csnr_h'] = 'cSNR H'
+                    self.table_params['csnr_v'] = 'cSNR V'
+                    self.table_params['snr_h'] = 'SNR H'
+                    self.table_params['snr_v'] = 'SNR V'
+                    self.table_params['similarity_count_h'] = 'H Simlr'
+                    self.table_params['similarity_count_v'] = 'V Simlr'
 
-                self.table_params['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value'] = 'H AH Peak/Opt'
-                self.table_params['vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'] = 'V AH Peak/Opt'
+                    self.table_params['hpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S H'
+                    self.table_params['vpol_peak_to_sidelobe_abovehorizon'] = 'AH P2S V'
+
+                    self.table_params['phi_best_h_allsky'] = 'Az H'
+                    self.table_params['elevation_best_h_allsky'] = 'El H'
+                    self.table_params['phi_best_v_allsky'] = 'Az V'
+                    self.table_params['elevation_best_v_allsky'] = 'El V'
+                    self.table_params['phi_best_all_allsky'] = 'Az All'
+                    self.table_params['elevation_best_all_allsky'] = 'El All'
+
+                    self.table_params['hpol_max_map_value_abovehorizonSLICERDIVIDEhpol_max_possible_map_value'] = 'H AH Peak/Opt'
+                    self.table_params['vpol_max_map_value_abovehorizonSLICERDIVIDEvpol_max_possible_map_value'] = 'V AH Peak/Opt'
 
 
-                self.table_params['mean_max_corr_h'] = 'Mean Corr H'
-                self.table_params['mean_max_corr_v'] = 'Mean Corr V'
+                    self.table_params['mean_max_corr_h'] = 'Mean Corr H'
+                    self.table_params['mean_max_corr_v'] = 'Mean Corr V'
 
-                
-                self.table_params['elevation_best_choice'] = '[10,90]'
-                self.table_params['phi_best_choice'] = '[-90,90]'
-                self.table_params['similarity_count_h'] = '[-0.1,10]'
-                self.table_params['similarity_count_v'] = '[-0.1,10]'
-                self.table_params['hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe'] = '[1.2,10000]'
-                self.table_params['impulsivity_hSLICERADDimpulsivity_v'] = '[0.3,100]'
-                self.table_params['cr_template_search_hSLICERMAXcr_template_search_v'] = '[0.4,100]'
+                    
+                    self.table_params['elevation_best_choice'] = '[10,90]'
+                    self.table_params['phi_best_choice'] = '[-90,90]'
+                    self.table_params['similarity_count_h'] = '[-0.1,10]'
+                    self.table_params['similarity_count_v'] = '[-0.1,10]'
+                    self.table_params['hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe'] = '[1.2,10000]'
+                    self.table_params['impulsivity_hSLICERADDimpulsivity_v'] = '[0.3,100]'
+                    self.table_params['cr_template_search_hSLICERMAXcr_template_search_v'] = '[0.4,100]'
 
 
             #Sample eventid, would normally be selected from and changeable

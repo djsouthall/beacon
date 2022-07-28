@@ -75,4 +75,4 @@ if __name__ == '__main__':
 
 
     plt.tight_layout()
-    plt.savefig('/home/dsouthall/Projects/Beacon/beacon/analysis/paper/figures/spectra_comparison.pdf')
+    #plt.savefig('/home/dsouthall/Projects/Beacon/beacon/analysis/paper/figures/spectra_comparison.pdf')

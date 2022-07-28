@@ -131,7 +131,7 @@ if __name__ == '__main__':
         if len(args) == 4:
             apply_additional_notches = bool(args[3])
         else:
-            plt.close('all')
+            # plt.close('all')
             apply_additional_notches = True
 
         cmap = 'cool'#'coolwarm'
@@ -140,7 +140,6 @@ if __name__ == '__main__':
         map_direction_dset_key = 'LPf_85.0-LPo_6-HPf_25.0-HPo_8-Phase_1-Hilb_0-upsample_16384-maxmethod_0-sinesubtract_1-deploy_calibration_september_2021_minimized_calibration.json-n_phi_3600-min_phi_neg180-max_phi_180-n_theta_480-min_theta_0-max_theta_120-scope_allsky'
 
         ds = dataSlicer([run], impulsivity_dset_key, time_delays_dset_key, map_direction_dset_key, analysis_data_dir=processed_datapath)
-        ds.conference_mode = False
         
         # Custom testing values
         if apply_additional_notches:
@@ -154,9 +153,11 @@ if __name__ == '__main__':
 
         # ds.eventInspector({run:[eventid]}, show_all=True, include_time_delays=True,append_notches=append_notches)
 
+        for conference_mode in [False]:
+            ds.conference_mode = conference_mode
+            ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=not ds.conference_mode,append_notches=append_notches,include_baselines=include_baselines, div128=ds.conference_mode)
+            
 
-
-        ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=not ds.conference_mode,append_notches=append_notches,include_baselines=include_baselines)
         # ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=True,append_notches=append_notches)
         # ds.eventInspector({run:[eventid]}, show_all=False, include_time_delays=False,append_notches=append_notches)
         print('https://users.rcc.uchicago.edu/~cozzyd/monutau/#event&run=%i&entry=%i'%(run,eventid))

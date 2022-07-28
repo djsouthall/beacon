@@ -97,7 +97,7 @@ class FFTPrepper:
     --------
     examples.beacon_data_reader.reader
     '''
-    def __init__(self, reader, final_corr_length=2**15, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,tukey_alpha=0.1,tukey_default=False,apply_phase_response=False, notch_tv=True, misc_notches=True):
+    def __init__(self, reader, final_corr_length=2**15, crit_freq_low_pass_MHz=None, crit_freq_high_pass_MHz=None, low_pass_filter_order=None, high_pass_filter_order=None, waveform_index_range=(None,None), plot_filters=False,tukey_alpha=0.1,tukey_default=False,apply_phase_response=False, notch_tv=True, notch_tv_vpol=False, misc_notches=True):
         try:
             self.reader = None #Value before setReader has been called.  If setReader is called multiple times this will be checked each to to throw warnings that some things might not change.
             
@@ -125,6 +125,7 @@ class FFTPrepper:
             self.setReader(reader) #First call this won't call self.prepareWaveformIndexing, but any subsequent calls will call self.prepareWaveformIndexing.  self.prepareWaveformIndexing is called below on first call and is forced to set everything.  All other times these will only be updated if a difference is detected.
             
             self.notch_tv = notch_tv
+            self.notch_tv_vpol = notch_tv_vpol
             self.misc_notches = misc_notches
 
             self.prepareWaveformIndexing(self.requested_waveform_index_range, force=True, skip_additional_prep=True,notch_tv=notch_tv, misc_notches=misc_notches)
@@ -793,6 +794,9 @@ class FFTPrepper:
 
                 if notch_tv == True and channel%2 == 0:
                     filter_y[channel] = numpy.multiply(filter_y[channel] , filter_y_tv_notch)
+                elif self.notch_tv_vpol == True and notch_tv == True and channel%2 == 1:
+                    filter_y[channel] = numpy.multiply(filter_y[channel] , filter_y_tv_notch)
+
 
                 if misc_notches:
                     filter_y[channel] = numpy.multiply(filter_y[channel] , filter_y_misc_notches)
@@ -2182,7 +2186,7 @@ class TimeDelayCalculator(FFTPrepper):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def calculatePolarizationFromTimeDelays(self, eventid, apply_filter=True, waveforms=None, plot=False, sine_subtract=True):
+    def calculatePolarizationFromTimeDelays(self, eventid, apply_filter=True, waveforms=None, plot=False, sine_subtract=True, included_error_percent=None):
         '''
         This will calculate the polarization of the event in the reference frame of the antennas.  This can then
         be compared to observed distrobutions of this parameter as produced via simulation for varification of
@@ -2213,30 +2217,60 @@ class TimeDelayCalculator(FFTPrepper):
                     roll = numpy.argmax(correlation) - len(correlation)//2
                     waveforms[v] = numpy.roll(waveforms[v], roll)
 
-            summed_adu_h = numpy.sum(waveforms[0::2,:],axis=0)
-            summed_adu_v = numpy.sum(waveforms[1::2,:],axis=0)
+            summed_adu_h = numpy.abs(numpy.sum(waveforms[0::2,:],axis=0))
+            summed_adu_v = numpy.abs(numpy.sum(waveforms[1::2,:],axis=0))
 
-            polarization_deg = numpy.rad2deg(numpy.arctan2(max(abs(summed_adu_v)),max(abs(summed_adu_h))))
+            h_index = numpy.argmax(summed_adu_h)
+            v_index = numpy.argmax(summed_adu_v)
+
+            h_values = waveforms[0::2,h_index]
+            v_values = waveforms[1::2,v_index]
+
+            # import pdb; pdb.set_trace()
+
+            if included_error_percent is not None:
+                from uncertainties import ufloat, unumpy
+                h_errors = numpy.abs(included_error_percent * h_values)
+                v_errors = numpy.abs(included_error_percent * v_values)
+
+                h_values = unumpy.uarray(h_values, h_errors)
+                v_values = unumpy.uarray(v_values, v_errors)
+
+                polarization_deg = unumpy.arctan2(numpy.abs(numpy.sum(v_values)),numpy.abs(numpy.sum(h_values))) * 180.0/numpy.pi
+                print('Polarization Angle With Errors:')
+                print(polarization_deg)
+
+                h_values = waveforms[0::2,h_index]
+                v_values = waveforms[1::2,v_index]
+                polarization_deg = numpy.rad2deg(numpy.arctan2(numpy.abs(numpy.sum(v_values)),numpy.abs(numpy.sum(h_values))))
+            else:
+                polarization_deg = numpy.rad2deg(numpy.arctan2(numpy.abs(numpy.sum(v_values)),numpy.abs(numpy.sum(h_values))))
+
+            #polarization_deg = numpy.rad2deg(numpy.arctan2(max(summed_adu_v),max(summed_adu_h)))
 
             if plot == True:
                 plt.figure()
-                plt.subplot(2,1,1)
+                ax1 = plt.subplot(2,1,1)
                 for channel in range(8):
                     plt.plot(self.t(), channel%2 + waveforms[channel]/128.0, label='Ch %i'%channel)
-                plt.legend()
+                plt.legend(loc='upper right')
 
-                ax = plt.subplot(2,1,2)
+                ax = plt.subplot(2,1,2, sharex=ax1)
 
-                plt.plot(self.t(), numpy.abs(summed_adu_h)/128.0, label='HPol Summed')
+                plt.plot(self.t(), summed_adu_h/128.0, label='HPol Summed')
                 
-                plt.plot(self.t(), numpy.abs(summed_adu_v)/128.0, label='VPol Summed')
+                plt.plot(self.t(), summed_adu_v/128.0, label='VPol Summed')
+
+                plt.xlim(300,1200)
 
                 title = 'Calculated Polarization = %0.3f deg'%polarization_deg
 
                 if apply_filter == True:
                     title += '\nFilters Applied'
-                    if self.notch_tv == True:
+                    if self.notch_tv == True and self.notch_tv_vpol == False:
                         title += ', TV Notched in HPol (Not in VPol)'
+                    elif self.notch_tv == True and self.notch_tv_vpol == True:
+                        title += ', TV Notched in HPol AND VPol'
                     else:
                         title += ', No TV Notch'
 
@@ -2244,7 +2278,7 @@ class TimeDelayCalculator(FFTPrepper):
                     title += '\nNo Additional Filters Applied'
 
                 plt.suptitle(title)
-                plt.legend()
+                plt.legend(loc='upper right')
             return polarization_deg
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])

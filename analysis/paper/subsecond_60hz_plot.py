@@ -47,9 +47,11 @@ import inspect
 warnings.simplefilter(action='ignore', category=FutureWarning)
 plt.ion()
 
-label_fontsize = 24
+label_fontsize = 22
 plt.rc('xtick',labelsize=label_fontsize)
 plt.rc('ytick',labelsize=label_fontsize)
+font = {'family' : 'normal','weight' : 'normal'} 
+plt.rc('font', **font)      
 
 if __name__ == '__main__':
     plt.close('all')
@@ -133,6 +135,9 @@ if __name__ == '__main__':
 
         print('%i events not flagged: %0.2f'%(sum(cut), 100*sum(cut)/len(cut)))
         print('%i events flagged 60Hz: %0.2f'%(sum(~cut), 100*sum(~cut)/len(~cut)))
+
+        import pdb; pdb.set_trace()
+
 
         for mode in [2]:
             if mode == 0:

@@ -2040,8 +2040,8 @@ class Correlator:
             circle = plt.Circle((azimuth, elevation), radius, edgecolor=color, *args, **kwargs)
 
             if crosshair == True or return_crosshair == True:
-                h = ax.axhline(elevation,c=color,linewidth=1,alpha=0.5)
-                v = ax.axvline(azimuth,c=color,linewidth=1,alpha=0.5)
+                h = ax.axhline(elevation,c=color,linewidth=1)#,linewidth=1.0, alpha=0.5)
+                v = ax.axvline(azimuth,c=color,linewidth=1)#,linewidth=1.0, alpha=0.5)
 
             ax.add_artist(circle)
             if return_circle == False and return_crosshair == False:
@@ -2372,7 +2372,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)  
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True, override_to_time_window=(None,None), plot_horizon=False, label_mountainside=True, rasterized=True):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True, override_to_time_window=(None,None), plot_horizon=False, label_mountainside=True, rasterized=True, vmin=None, vmax=None, include_cbar=True):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -2751,9 +2751,11 @@ class Correlator:
                 else:
                     fig = map_ax.figure
 
-                vmax = numpy.max(numpy.abs(rolled_values))
+                if vmin is None:
+                    vmin = numpy.min(rolled_values)
+                if vmax is None:
+                    vmax = numpy.max(numpy.abs(rolled_values))
                 # vmin = vmax
-                vmin = numpy.min(rolled_values)
 
                 if mollweide == True:
                     #Automatically converts from rads to degs
@@ -2789,11 +2791,12 @@ class Correlator:
                             map_ax.text(0.02, 0.02, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=12, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                         
                 else:
-                    cbar = plt.colorbar(im, ax=map_ax)
-                    if hilbert == True:
-                        cbar.set_label('Mean Correlation Value (Arb)')
-                    else:
-                        cbar.set_label('Mean Correlation Value')
+                    if include_cbar == True:
+                        cbar = plt.colorbar(im, ax=map_ax)
+                        if hilbert == True:
+                            cbar.set_label('Mean Correlation Value (Arb)')
+                        else:
+                            cbar.set_label('Mean Correlation Value')
                     map_ax.set_xlabel(xlabel,fontsize=18)
                     map_ax.set_ylabel('Elevation Angle (deg)',fontsize=18)
                     map_ax.grid(True)
@@ -2856,19 +2859,19 @@ class Correlator:
                 #Plot array plane 0 elevation curve.
                 im = self.addCurveToMap(im, plane_xy, ax=map_ax, mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
 
+                x = plane_xy[0]
+                y1 = plane_xy[1]
+                if mollweide == True:
+                    y2 = -numpy.pi/2 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
+                else:
+                    y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
+                map_ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
                 if self.conference_mode:
                     ticks_deg = numpy.array([-60,-40,-30,-15,0,15,30,45,60,75])
                     if mollweide == True:
                         map_ax.set_yticks(numpy.deg2rad(ticks_deg))
                     else:
                         map_ax.set_yticks(ticks_deg)
-                    x = plane_xy[0]
-                    y1 = plane_xy[1]
-                    if mollweide == True:
-                        y2 = -numpy.pi/2 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
-                    else:
-                        y2 = -90 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
-                    map_ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
                     map_ax.text(0.015, 0.005, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=14, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                     if mollweide == False:
                         map_ax.set_xlim(-90, 90)
@@ -2889,7 +2892,7 @@ class Correlator:
 
                 if circle_map_max:
                     #Added circles as specified.
-                    map_ax, peak_circle = self.addCircleToMap(map_ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='lime', linewidth=0.5,fill=False)
+                    map_ax, peak_circle = self.addCircleToMap(map_ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='lime', linewidth=1,fill=False)
 
 
 
@@ -2922,7 +2925,7 @@ class Correlator:
                                 _cs = plt.cm.rainbow(numpy.linspace(0,1,len(_circle_az)))
 
                             for i in range(len(_circle_az)):
-                                ax, _circ = self.addCircleToMap(map_ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color=_cs[i], linewidth=0.5,fill=False)
+                                ax, _circ = self.addCircleToMap(map_ax, _circle_az[i], 90.0-_circle_zenith[i], azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color=_cs[i], linewidth=1,fill=False)
                                 additional_circles.append(_circ)
 
                 if add_airplanes:
@@ -3384,7 +3387,7 @@ class Correlator:
         else:
             return total_mean_corr_values
 
-    def animatedMap(self, eventids, pol, title, include_baselines=[0,1,2,3,4,5], plane_zenith=None, plane_az=None, map_source_distance_m=None, radius=1.0, hilbert=False, max_method=None,center_dir='E',save=True,dpi=300,fps=3):
+    def animatedMap(self, eventids, pol, title, mollweide=False, include_baselines=[0,1,2,3,4,5], plane_zenith=None, plane_az=None, map_source_distance_m=None, radius=1.0, hilbert=False, max_method=None,center_dir='E',save=True,dpi=300,fps=3, fig=None, ax=None):
         '''
         Does the same thing as map, but updates the canvas for each event creating an animation.
         Mostly helpful for repeated sources that are expected to be moving such as planes.
@@ -3467,26 +3470,30 @@ class Correlator:
                 m = numpy.roll(m,roll,axis=1) #orients center.
                 all_maps.append(m)
             print('')
-
-            fig = plt.figure(figsize=(16,9))
-            ax = fig.add_subplot(1,1,1, projection='mollweide')
-            
-            fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
-            ax.set_title('r%i %s Correlation Map Eventid = %i\nSource Distance = %0.2f m'%(self.reader.run,pol.title(),eventids[0],self.map_source_distance_m))
-
+            title_added = False
+            if fig is None and ax is None:
+                fig = plt.figure(figsize=(16,9))
+                if mollweide:
+                    ax = fig.add_subplot(1,1,1, projection='mollweide')
+                else:
+                    ax = fig.add_subplot(1,1,1)
+                
+                fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[0]))
+                ax.set_title('r%i %s Correlation Map Eventid = %i\nSource Distance = %0.2f m'%(self.reader.run,pol.title(),eventids[0],self.map_source_distance_m))
+                title_added = True
             # fig.canvas.set_window_title('Correlation Map Airplane Event %i'%(0))
             # ax.set_title('Correlation Map Airplane Event %i'%(0))
 
             if hilbert == True:
                 #im = ax.imshow(all_maps[0], interpolation='none', vmin=numpy.min(all_maps[0]),vmax=numpy.max(all_maps[0]), extent=extent,cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
-                im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, all_maps[0], vmin=numpy.min(all_maps[0]), vmax=numpy.max(all_maps[0]),cmap=plt.cm.coolwarm)
+                im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, all_maps[0], vmin=numpy.min(all_maps[0]), vmax=numpy.max(all_maps[0]),cmap=plt.cm.coolwarm, rasterized=True)
             else:
                 #im = ax.imshow(all_maps[0], interpolation='none', vmin=numpy.concatenate(all_maps).min(),vmax=numpy.concatenate(all_maps).max(), extent=extent,cmap=plt.cm.coolwarm) #cmap=plt.cm.jet)
                 vmax = numpy.max(numpy.abs(all_maps[0]))
-                vmax = numpy.max(numpy.abs(rolled_values))
+                vmax = numpy.max(numpy.abs(all_maps[0]))
                 # vmin = vmax
                 vmin = numpy.min(all_maps[0])
-                im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, all_maps[0], vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm)
+                im = ax.pcolormesh(self.mesh_azimuth_rad, self.mesh_elevation_rad, all_maps[0], vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm, rasterized=True)
 
             cbar = fig.colorbar(im)
             if hilbert == True:
@@ -3506,12 +3513,15 @@ class Correlator:
             #Prepare center line and plot the map.  Prep cut lines as well.
             if pol == 'hpol':
                 selection_index = 1
+                plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]
             elif pol == 'vpol':
-                selection_index = 2 
-            
-            plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+                selection_index = 2
+                plane_xy = self.getArrayPlaneZenithCurves(90.0, azimuth_offset_deg=azimuth_offset_deg)[selection_index]
+            elif pol == 'all':
+                plane_xy = self.getPlaneZenithCurves(self.n_all.copy(), 'all', 90.0, azimuth_offset_deg=azimuth_offset_deg) #This is janky
+
             #Plot array plane 0 elevation curve.
-            im = self.addCurveToMap(im, plane_xy,  mollweide=True, linewidth = self.min_elevation_linewidth, color='k')
+            im = self.addCurveToMap(im, plane_xy,  mollweide=mollweide, linewidth = self.min_elevation_linewidth, color='k')
 
 
             #Plot circles
@@ -3541,7 +3551,7 @@ class Correlator:
                 plane_elevation = None
 
             if plane_elevation is not None and _plane_az is not None:
-                ax, circle, lines = self.addCircleToMap(ax, _plane_az[0], plane_elevation[0], azimuth_offset_deg=0.0, mollweide=True, radius=radius, crosshair=True, return_circle=True, return_crosshair=True, color='fuchsia', linewidth=2.0,fill=False,zorder=10) #azimuth offset_deg already accounted for as passed.
+                ax, circle, lines = self.addCircleToMap(ax, _plane_az[0], plane_elevation[0], azimuth_offset_deg=0.0, mollweide=mollweide, radius=radius, crosshair=True, return_circle=True, return_crosshair=True, color='fuchsia', linewidth=2.0,fill=False,zorder=10) #azimuth offset_deg already accounted for as passed.
 
             if self.conference_mode:
                 ticks_deg = numpy.array([-60,-40,-30,-15,0,15,30,45,60,75])
@@ -3551,18 +3561,19 @@ class Correlator:
                 y2 = -numpy.pi/2 * numpy.ones_like(plane_xy[0])#lower_plane_xy[1]
                 y1_interp = scipy.interpolate.interp1d(x,y1)
                 ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
-                map_ax.text(0.03, 0.03, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+                ax.text(0.2, 0.2, 'Local\nMountainside', transform=ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                 #plt.plot(plane_xy[0], plane_xy[1],linestyle='-',linewidth=6,color='#41719C')
 
             def update(frame):
                 _frame = frame%len(eventids) #lets it loop multiple times.  i.e. give animation more frames but same content looped.
                 # fig.canvas.set_window_title('Correlation Map Airplane Event %i'%(_frame))
                 # ax.set_title('Correlation Map Airplane Event %i'%(_frame))
-                fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[_frame]))
-                if change_per_frame:
-                    ax.set_title('r%i %s Correlation Map Eventid = %i\nSource Distance = %0.2f km'%(self.reader.run,pol.title(),eventids[_frame],map_source_distance_m[_frame]/1000.0))
-                else:
-                    ax.set_title('r%i %s Correlation Map Eventid = %i\nSource Distance = %0.2f km'%(self.reader.run,pol.title(),eventids[_frame],self.map_source_distance_m/1000.0))
+                if title_added:
+                    fig.canvas.set_window_title('r%i %s Correlation Map Eventid = %i'%(self.reader.run,pol.title(),eventids[_frame]))
+                    if change_per_frame:
+                        ax.set_title('r%i %s Correlation Map Eventid = %i\nSource Distance = %0.2f km'%(self.reader.run,pol.title(),eventids[_frame],map_source_distance_m[_frame]/1000.0))
+                    else:
+                        ax.set_title('r%i %s Correlation Map Eventid = %i\nSource Distance = %0.2f km'%(self.reader.run,pol.title(),eventids[_frame],self.map_source_distance_m/1000.0))
                 im.set_array(all_maps[_frame][:-1,:-1].ravel()) #Some obscure bug as noted here: https://stackoverflow.com/questions/29009743/using-set-array-with-pyplot-pcolormesh-ruins-figure
 
                 if hilbert == True:
@@ -3579,7 +3590,7 @@ class Correlator:
 
                     if self.conference_mode:
                         ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
-                        map_ax.text(0.03, 0.03, 'Local\nMountainside', transform=map_ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+                        ax.text(0.2, 0.2, 'Local\nMountainside', transform=ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
 
                 except Exception as e:
                     pass
@@ -3608,7 +3619,7 @@ class Correlator:
                 self.axs.append(ax)
                 self.animations.append(ani)
             
-            return      
+            return fig, ax, ani
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)
