@@ -5951,6 +5951,7 @@ class dataSlicer():
         This will return the data corresponding to param_key for all events specified by the given trigger types.  
         If trigger_types is None then the previously assigned trigger types will be used. 
         '''
+        print('HERE')
         if eventids_dict is None:
             eventids_dict = self.getEventidsFromTriggerType(trigger_types=trigger_types)
         return self.concatenateParamDict(self.getDataFromParam(eventids_dict,param_key, verbose=verbose))

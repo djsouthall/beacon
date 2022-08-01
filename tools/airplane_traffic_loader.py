@@ -37,17 +37,19 @@ def getFileNamesFromTimestamps(start_time_utc_timestamp, stop_time_utc_timestamp
 
     stop_datetime = datetime.fromtimestamp(stop_time_utc_timestamp)
     stop_date = datetime(stop_datetime.year, stop_datetime.month, stop_datetime.day)
-    stop_hour = start_datetime.hour
+    stop_hour = stop_datetime.hour
 
     delta = stop_datetime - start_datetime
     print('DELTA = ', delta)
+    print('')
 
-
+    # import pdb; pdb.set_trace()
     filenames = []
     for i in range(delta.days + 1):
         day = start_date + timedelta(days=i) 
         day_string = str(day.date())
         for h in range(24):
+            # pdb.set_trace()
             if i == 0 and i == len(range(delta.days + 1)) - 1:
                 #All within the same day
                 if h < start_hour or h > stop_hour:
@@ -136,15 +138,17 @@ def getDataFrames(start_time_utc_timestamp, stop_time_utc_timestamp, origin=defa
     A query is automatically used to match table to given timestamps.
     '''
     filenames = getFileNamesFromTimestamps(start_time_utc_timestamp, stop_time_utc_timestamp, verbose=verbose)
+    if verbose == True:
+        print('Filenames:')
+        print(filenames)
 
     time_query = 'utc_timestamp >= %f and utc_timestamp <= %f'%(start_time_utc_timestamp, stop_time_utc_timestamp)
 
     if len(filenames) > 0:
         for index, filename in enumerate(filenames):
-            df = pd.read_pickle(filename)
-
-            # print('\n' + filename)
-            # print(df.loc[0])
+            if verbose:
+                print(index)
+                print(filename)
 
             if index == 0:
                 if query is None:
@@ -153,12 +157,13 @@ def getDataFrames(start_time_utc_timestamp, stop_time_utc_timestamp, origin=defa
                     df = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin).query(query)
             else:
                 if query is None:
-                    # df = df.merge(addDirectionInformationToDataFrame(, origin=originreadPickle(filename).query(time_query)))
-                    df.merge(addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin))
+                    addition = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin)
                 else:
-                    # df = df.merge(addDirectionInformationToDataFrame(, origin=originreadPickle(filename).query(time_query)).query(query))
-                    df.merge(addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin).query(query))
+                    addition = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin).query(query)
 
+                df = df.append(addition)
+            if verbose:
+                print('len(df)', len(df))
         return df
     else:
         print('No filenames matched the given time window.')
@@ -207,10 +212,10 @@ if __name__ == '__main__':
                     df = pd.read_pickle(filename).query(query)
             else:
                 if query is None:
-                    # df = df.merge(pd.read_pickle(filename))
-                    df.merge(pd.read_pickle(filename))
+                    # df = df.append(pd.read_pickle(filename))
+                    df.append(pd.read_pickle(filename))
                 else:
-                    # df = df.merge(pd.read_pickle(filename).query(query))
-                    df.merge(pd.read_pickle(filename).query(query))
+                    # df = df.append(pd.read_pickle(filename).query(query))
+                    df.append(pd.read_pickle(filename).query(query))
 
         df = addDirectionInformationToDataFrame(df, origin=default_origin)

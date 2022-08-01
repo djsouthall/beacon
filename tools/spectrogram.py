@@ -6,6 +6,7 @@ import gc
 import multiprocessing
 import concurrent.futures
 from multiprocessing import cpu_count
+from datetime import datetime
 
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
 from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
@@ -15,6 +16,48 @@ import tools.interpret #Must be imported before matplotlib or else plots don't l
 
 import matplotlib.pyplot as plt
 plt.ion()
+
+
+def getTimes(reader):
+    '''
+    This pulls timing information for each event from the reader object..
+    
+    Parameters
+    ----------
+    reader : examples.beacon_data_reader.Reader
+        This is the reader for the selected run.
+
+    Returns
+    -------
+    raw_approx_trigger_time : numpy.ndarray of floats
+        The raw_approx_trigger_time values for each event from the Tree.
+    raw_approx_trigger_time_nsecs : numpy.ndarray of floats
+        The raw_approx_trigger_time_nsecs values for each event from the Tree. 
+    trig_time : numpy.ndarray of floats
+        The trig_time values for each event from the Tree.
+    '''
+    try:
+        N = reader.head_tree.Draw("raw_approx_trigger_time_nsecs:raw_approx_trigger_time:trig_time:Entry$","","goff") 
+        #ROOT.gSystem.ProcessEvents()
+        raw_approx_trigger_time_nsecs = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), N)
+        raw_approx_trigger_time = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), N) 
+        trig_time = numpy.frombuffer(reader.head_tree.GetV3(), numpy.dtype('float64'), N)
+        eventids = numpy.frombuffer(reader.head_tree.GetV4(), numpy.dtype('float64'), N).astype(int)
+
+        return raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids
+    except Exception as e:
+        print('\nError in %s'%inspect.stack()[0][3])
+        print('Error while trying to copy header elements to attrs.')
+        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+        return e
+
+def getFirstDateTime(reader):
+    raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids = getTimes(reader)
+    dt = datetime.fromtimestamp(raw_approx_trigger_time[0] + raw_approx_trigger_time_nsecs[0]/1e9)
+    return dt
 
 def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=False, channels=numpy.arange(8)):
     '''
@@ -159,31 +202,92 @@ if __name__ == '__main__':
     # If your data is elsewhere, pass it as an argument
     datapath = os.environ['BEACON_DATA']#sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
     run = int(sys.argv[1]) if len(sys.argv) > 1 else 367 #Selects which run to examine
-    event_limit = None
+    event_limit = 1000
+    channels = numpy.array([7])#numpy.arange(8)
 
     import time
 
-    reader, freqs, spectra_dbish_binned, time_range = getSpectData(datapath,run,event_limit,bin_size=100,group_fft=False)
+    #runs = numpy.arange(2000,6501,250)
+    #runs = numpy.array([4700,5140])
+    # runs = numpy.arange(1600,6000,250)
+    # runs = numpy.arange(5135,5140,1)
+    runs = numpy.array([3000, 4000, 5140, 5911])
+    cmap = plt.cm.brg
+    colors = cmap(numpy.arange(len(runs))/(len(runs)-1))
 
-    gc.collect()
+    spectral_figure = plt.figure()
+    spectral_ax = plt.gca()
 
     cmaps=[ 'coolwarm']#['PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu', 'RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic']
 
     plt.rc('xtick',labelsize=18)
     plt.rc('ytick',labelsize=18)
-    for cmap in cmaps:
-        for channel in range(8):
-            f = plt.figure(figsize=(12,6))
-            ax = plt.gca()
-            plt.title('Run %i, Channel %i'%(run,channel),fontsize=28)
-            plt.imshow(spectra_dbish_binned['ch%i'%channel],extent = [0,(reader.head_tree.GetMaximum('readout_time')-reader.head_tree.GetMinimum('readout_time'))/60.0,min(freqs)/1e6,max(freqs)/1e6],aspect='auto',cmap=cmap)
-            #plt.xlim(0,100)
-            plt.ylabel('Freq (MHz)',fontsize=20)
-            plt.xlabel('Readout Time (min)',fontsize=20)
-            cb = plt.colorbar()
-            cb.set_label('dB (arb)',fontsize=20)
-            #cb.set_label('Power (~dB)',fontsize=20)
-            #f.savefig('./spectrogram_run%i_ch%i_20MHz-100MHz_cmap%s.pdf'%(run,channel,cmap), bbox_inches='tight')
-            #plt.close(f)
 
-    #,cmap='RdGy'
+
+    Z = []
+    skipped_runs = []
+    datetimes = []
+    for run_index, run in enumerate(runs):
+        try:
+            reader, freqs, spectra_dbish_binned, time_range = getSpectData(datapath,run,event_limit,bin_size=100,group_fft=False, channels=channels)
+
+            gc.collect()
+
+            for cmap in cmaps:
+                for channel in channels:
+                    if False:
+                        f = plt.figure(figsize=(12,6))
+                        # ax = plt.subplot(2,1,1)
+                        plt.title('Run %i, Channel %i'%(run,channel),fontsize=28)
+
+
+                        plt.imshow(spectra_dbish_binned['ch%i'%channel],extent = [0,(reader.head_tree.GetMaximum('readout_time')-reader.head_tree.GetMinimum('readout_time'))/60.0,min(freqs)/1e6,max(freqs)/1e6],aspect='auto',cmap=cmap)
+                        #plt.xlim(0,100)
+                        plt.ylabel('Freq (MHz)',fontsize=20)
+                        plt.xlabel('Readout Time (min)',fontsize=20)
+                        cb = plt.colorbar()
+                        cb.set_label('dB (arb)',fontsize=20)
+                        #cb.set_label('Power (~dB)',fontsize=20)
+                        #f.savefig('./spectrogram_run%i_ch%i_20MHz-100MHz_cmap%s.pdf'%(run,channel,cmap), bbox_inches='tight')
+                        #plt.close(f)
+
+                    if True:
+                        #ax = plt.subplot(2,1,2)
+                        if run_index == 0:
+                            spectral_ax.set_xlabel('Freqs (MHz)')
+
+                        avg = numpy.mean(spectra_dbish_binned['ch%i'%channel], axis=1)[::-1]
+
+
+                        Z.append(avg)
+                        dt = getFirstDateTime(reader)
+                        datetimes.append(dt)
+                        spectral_ax.plot(freqs/1e6, avg, c=colors[run_index], label='Run %i, ~ %s'%(run, str(dt.date())))
+                        spectral_ax.set_xlim(0,150)
+                        spectral_ax.set_ylim(-10,40)
+        except Exception as e:
+            print(e)
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
+            print('Skipping %i'%run)
+            skipped_runs.append(run)
+
+    spectral_ax.legend()
+
+    Z = numpy.asarray(Z)
+    Z[numpy.isinf(Z)] = numpy.nan
+
+    run_cut = ~numpy.isin(runs, skipped_runs)
+    runs = runs[run_cut]
+    datetimes = numpy.asarray(datetimes)[run_cut]
+
+
+    X, Y = numpy.meshgrid(freqs/1e6, runs)
+
+    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+    # surf = ax.plot_surface(X, Y, Z, cmap=plt.cm.coolwarm, vmin=numpy.nanmin(Z), vmax=numpy.nanmax(Z), linewidth=1, antialiased=False)
+    # # ax.plot_wireframe(X, Y, Z, rcount=len(runs), ccount=0, color='k', alpha=0.4, linewidth=0.5)
+
+
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    ax.plot_wireframe(X, Y, Z, rcount=len(runs), ccount=0, color='k', alpha=1.0, linewidth=0.5)
