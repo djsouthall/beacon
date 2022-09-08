@@ -33,6 +33,7 @@ import matplotlib.colors as colors
 from matplotlib import cm, ticker
 from matplotlib.patches import Rectangle
 import time
+import matplotlib.patches as mpatches
 
 
 import warnings
@@ -197,19 +198,37 @@ if __name__ == '__main__':
 
     confidence_integral_value = 0.9
 
-    map_resolution_theta = 0.25 #degrees
-    min_theta   = 0
-    max_theta   = 120
-    n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
+    try_better_aspect_ratio = True
 
-    map_resolution_phi = 0.1 #degrees
-    min_phi     = -90
-    max_phi     = 90
-    n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
+
+    if try_better_aspect_ratio:
+        map_resolution_theta = 0.25 #degrees
+        min_theta   = 0
+        max_theta   = 120
+        n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
+
+        map_resolution_phi = 0.1 #degrees
+        min_phi     = -90
+        max_phi     = 90
+        n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
+    else:
+        map_resolution_theta = 0.25 #degrees
+        min_theta   = 0
+        max_theta   = 120
+        n_theta = numpy.ceil((max_theta - min_theta)/map_resolution_theta).astype(int)
+
+        map_resolution_phi = 0.1 #degrees
+        min_phi     = -90
+        max_phi     = 90
+        n_phi = numpy.ceil((max_phi - min_phi)/map_resolution_phi).astype(int)
+    
+
     run_modes = ['rfi']#['pulsers']#['rfi', 'pulsers']
-
     cut_range = 2.5
     small_log = True
+
+
+    horizon_angle = -1.5
 
     cmap = 'coolwarm'
     roi_cmap = cm.inferno
@@ -217,11 +236,13 @@ if __name__ == '__main__':
     for mode in run_modes:
         print('Generating %s plots:'%mode)
         if mode == 'rfi':
-            # runs = numpy.arange(5733,5736)
-            if False:
+            if True:
                 runs = numpy.arange(5733,5790)
+            elif True:
+                runs = numpy.arange(5733,5736)  
             else:
                 runs = numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5790)# numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5736)
+            # runs = numpy.arange(5733,5736)
             # runs = numpy.arange(5733,5974,dtype=int)#numpy.arange(5733,5736)#
 
             roi_dict = {}
@@ -325,28 +346,47 @@ if __name__ == '__main__':
                             eventids_dict[run] = numpy.append(eventids_dict[run],all_event_info[all_event_info['run'] == run]['eventid'])
 
 
-            do = list(ds.roi.keys())
+            do = ['RFI Source 3']#list(ds.roi.keys())
             # do = ['RFI Source 4']
             for roi_index, roi_key in enumerate(list(ds.roi.keys())):
                 if roi_key not in do:
                     continue
                 try:
                     #Make new desired gridspec'd layout
-                    fig_2d = plt.figure(figsize=(20,7))
+                    fig_2d = plt.figure(figsize=(20,12))
                     # fig_2d.suptitle("Controlling subplot sizes with width_ratios and height_ratios")
 
-                    gs = plt.GridSpec(2, 2, width_ratios=[3, 1], height_ratios=[1, 1])
-                    ax1 = fig_2d.add_subplot(gs[:, :-1])
-                    ax2 = fig_2d.add_subplot(gs[0, 1])
-                    ax3 = fig_2d.add_subplot(gs[1, 1], sharex=ax2, sharey=ax2)
+                    if try_better_aspect_ratio == True:
+                        # gs = plt.GridSpec(2, 4, width_ratios=[4, 1, 4, 1], height_ratios=[1, 1])
+                        # ax1 = fig_2d.add_subplot(gs[0, :])
+                        # ax2 = fig_2d.add_subplot(gs[1, 0], aspect='equal')
+                        # ax3 = fig_2d.add_subplot(gs[1, 2], aspect='equal')
+                        gs = plt.GridSpec(2, 3, width_ratios=[5, 5, 2], height_ratios=[1, 1])
+                        ax1 = fig_2d.add_subplot(gs[0, :])
+                        ax2 = fig_2d.add_subplot(gs[1, 0], aspect='equal')
+                        ax3 = fig_2d.add_subplot(gs[1, 1], aspect='equal')
+
+                    else:
+                        gs = plt.GridSpec(2, 2, width_ratios=[3, 1], height_ratios=[1, 1])
+                        ax1 = fig_2d.add_subplot(gs[:, :-1])
+                        ax2 = fig_2d.add_subplot(gs[0, 1], aspect='equal')
+                        ax3 = fig_2d.add_subplot(gs[1, 1], aspect='equal')
 
                     plt.sca(ax1)
-                    fig_2d, ax1 = ds.plotROI2dHist(key_x, key_y, cmap=cmap, include_roi=True, eventids_dict=eventids_dict, fig=fig_2d, ax=ax1, rasterized=True)
+                    fig_2d, ax1, counts = ds.plotROI2dHist(key_x, key_y, return_counts=True, cmap=cmap, include_roi=True, eventids_dict=eventids_dict, fig=fig_2d, ax=ax1, rasterized=True, cbar_fontsize=fontsize)
                     
-                    ax1.text(0.01, 0.01, 'Local\nMountainside', transform=ax1.transAxes, fontsize=fontsize, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+                    vmin, vmax = 0.5, numpy.max(counts)
 
-                    ax1.set_ylim((-25, 10))
-                    ax1.set_xlim((-90, 90))
+                    # ax1.text(0.01, 0.01, 'Local\nMountainside', transform=ax1.transAxes, fontsize=fontsize, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
+
+                    if try_better_aspect_ratio:
+                        ax1.set_ylim((-13, 5))
+                        ax1.set_xlim((-60, 60))
+                        ax1.set_yticks([-10, -5, 0 , 5])
+                    else:
+                        ax1.set_ylim((-25, 10))
+                        ax1.set_xlim((-90, 90))
+
 
                     ax1.set_ylabel('Elevation (deg)', fontsize=fontsize)
                     ax1.set_xlabel('Azimuth (From East = 0 deg, North = 90 deg)', fontsize=fontsize)
@@ -357,6 +397,9 @@ if __name__ == '__main__':
                     ax1.grid(b=True, which='major', color='tab:gray', linestyle='--',alpha=0.5)
                     ax1.grid(b=True, which='minor', color='tab:gray', linestyle='--',alpha=0.5)
 
+                    ax1.axhline(horizon_angle,linestyle='-.', alpha=1.0, linewidth=1.0, c='k', label='Horizon (~ %0.1f deg)'%horizon_angle)
+
+                    #ax1.legend(loc = 'upper left', fontsize=fontsize-4)
 
                     if True:
                         roi_eventids_dict = ds.getCutsFromROI(roi_key,load=False,save=False,verbose=False)
@@ -381,8 +424,25 @@ if __name__ == '__main__':
                     x0 = (roi_dict[roi_key]['phi_best_h'][0] + roi_dict[roi_key]['phi_best_h'][1])/2.0
                     y0 = (roi_dict[roi_key]['elevation_best_h'][0] + roi_dict[roi_key]['elevation_best_h'][1])/2.0
 
-                    ax2.set_ylim(y0 - 1.5, y0 + 2)
-                    ax2.set_xlim(x0 - 1.25, x0 + 1.25)
+                    plot_range_x = x0 - 2, x0 + 1
+                    plot_range_y = y0 - 1.5, y0 + 1.5
+
+                    # ax2.set_ylim(y0 - 1.5, y0 + 2)
+                    # ax2.set_xlim(x0 - 1.25, x0 + 1.25)
+
+                    if try_better_aspect_ratio:
+                        ax2.set_xticks(numpy.arange(int(x0)-10,int(x0)+10,1))
+                        # ax2.set_xticklabels('')
+                        ax2.set_yticks(numpy.arange(int(y0)-10,int(y0)+10,1))
+                        ax2.set_xlim(plot_range_x[0],plot_range_x[1])
+                        ax2.set_ylim(plot_range_y[0],plot_range_y[1])
+
+                    else:
+                        ax2.set_xticks(numpy.arange(int(x0)-10,int(x0)+10,1))
+                        ax2.set_xticklabels('')
+                        ax2.set_yticks(numpy.arange(int(y0)-10,int(y0)+10,1))
+                        ax2.set_xlim(plot_range_x[0],plot_range_x[1])
+                        ax2.set_ylim(plot_range_y[0],plot_range_y[1])
 
                     # Bins must be called after plotROI2dHist
                     current_bin_edges_x = ds.current_bin_edges_x
@@ -582,12 +642,17 @@ if __name__ == '__main__':
                     # x_modifier = 0.2
                     # ax2.set_ylim(y0 - y_modifier*cut_range, y0 + y_modifier*cut_range + 0.5)
                     # ax2.set_xlim(x0 - x_modifier*cut_range, x0 + x_modifier*cut_range)
-                    ax2.set_ylim(y0 - 1.5, y0 + 2)
-                    ax2.set_xlim(x0 - 1.25, x0 + 1.25)
+                    # ax2.set_ylim(y0 - 1.5, y0 + 2)
+                    # ax2.set_xlim(x0 - 1.25, x0 + 1.25)
 
+                    ax3.set_xticks(numpy.arange(int(x0)-10,int(x0)+10,1))
+                    ax3.set_yticks(numpy.arange(int(y0)-10,int(y0)+10,1))
+                    ax3.set_xlim(plot_range_x[0],plot_range_x[1])
+                    ax3.set_ylim(plot_range_y[0],plot_range_y[1])
 
                     try:
                         cbar = plt.colorbar(im, ax=ax2)
+                        im.set_clim(vmin, vmax)
                         if small_log == False:
                             cbar.formatter.set_powerlimits((0, 0))
                         cbar.set_label('Counts', fontsize=fontsize)
@@ -595,7 +660,9 @@ if __name__ == '__main__':
                         print('Error in colorbar, often caused by no events.')
                         print(e)
 
-                    # plt.xlabel('Azimuth (deg)', fontsize=fontsize)
+                    if try_better_aspect_ratio:
+                        plt.xlabel('Azimuth (deg)', fontsize=fontsize)
+                    
                     ax2.set_ylabel('Elevation (deg)', fontsize=fontsize)
 
                     ax2.grid(which='both', axis='both')
@@ -641,11 +708,17 @@ if __name__ == '__main__':
                         print('Az :         initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(direction_dict[roi_key]['azimuth_deg'], popt[0],       popt[0] - direction_dict[roi_key]['azimuth_deg']))
                         print('El :         initial %0.4f, \tfit  %0.4f, \tdiff  %0.6f'%(direction_dict[roi_key]['elevation_deg'], popt[2],       popt[2] - direction_dict[roi_key]['elevation_deg']))
                     
-                    ax2.legend(title='Counts from\n%s'%roi_key, loc='upper right', fontsize=fontsize-4)
-                    ax3.legend(loc = 'upper right', fontsize=fontsize-4)
+                    if False:
+                        ax2.legend(title='Counts from\n%s'%roi_key, loc='upper right', fontsize=fontsize-6, title_fontsize=fontsize-6, title_fontproperties={'weight':'normal'})#, prop={'weight':'normal'}
+                    else:
+                        empty_patch = mpatches.Patch(color='none', label='Counts from\n%s'%roi_key) 
+                        ax2.legend(handles=[empty_patch], handleheight=0, handlelength=0, loc = 'upper center', fontsize=fontsize-6, prop={'weight':'normal'})
+
+                    ax3.legend(loc = 'upper center', fontsize=fontsize-6, prop={'weight':'normal'})
 
                     try:
                         cbar = plt.colorbar(im, ax=ax3)
+                        im.set_clim(vmin, vmax)
                         if small_log == False:
                             cbar.formatter.set_powerlimits((0, 0))
                         cbar.set_label('Counts (Fit)', fontsize=fontsize)
@@ -671,14 +744,22 @@ if __name__ == '__main__':
                                       fc="w"),
                       )
 
-                    plt.subplots_adjust(left=0.05, bottom=0.1,right=0.95, top=0.95, wspace=0.05, hspace=0.27)
+                    #plt.subplots_adjust(left=0.05, bottom=0.1,right=0.95, top=0.95, wspace=0.05, hspace=0.27)
+                    if try_better_aspect_ratio:
+                        plt.subplots_adjust(left=0.05, bottom=0.1,right=1.06, top=0.95, wspace=0.02, hspace=0.05)
+                    else:
+                        plt.subplots_adjust(left=0.05, bottom=0.1,right=0.95, top=0.95, wspace=0.05, hspace=0.05)
 
                     #fig_2d.set_tight_layout(True)
                     if save_fig_dir is not None:
                         # fig_2d.set_size_inches(halfsize_fig_dims)
-                        fig_2d.subplots_adjust(top=0.93)
-                        fig_2d.savefig(os.path.join(save_fig_dir,'%s_spot_%s.pdf'%(roi_key.replace(' ','').lower() , pol)),transparent=True)
-                        fig_2d.savefig(os.path.join(save_fig_dir,'%s_spot_%s.png'%(roi_key.replace(' ','').lower() , pol)), dpi=150,transparent=True)
+                        if try_better_aspect_ratio:
+                            plt.tight_layout()
+                            fig_2d.subplots_adjust(right=1.06)
+                        else:
+                            fig_2d.subplots_adjust(top=0.93)
+                        fig_2d.savefig(os.path.join(save_fig_dir,'%s_spot_%s_v2.pdf'%(roi_key.replace(' ','').lower() , pol)),transparent=True)
+                        fig_2d.savefig(os.path.join(save_fig_dir,'%s_spot_%s_v2.png'%(roi_key.replace(' ','').lower() , pol)), dpi=150,transparent=True)
 
                     if True:
                         # Sanity check

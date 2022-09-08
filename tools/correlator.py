@@ -1795,6 +1795,58 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
+    def generateCustomCutMask(self, azimuth_cut_ENU=None, zenith_cut_ENU=None, shape=None):
+        '''
+        zenith_cut_ENU : list of 2 float values
+            Given in degrees, angles within these two values are considered.  If None is given for the first then it is
+            assumed to be 0 (overhead), if None is given for the latter then it is assumed to be 180 (straight down).
+        zenith_cut_array_plane : list of 2 float values
+            Given in degrees, angles within these two values are considered.  If None is given for the first then it is
+            assumed to be 0 (overhead), if None is given for the latter then it is assumed to be 180 (straight down).  This is
+            polarization dependant because it depends on the calibration of the antennas positions.  So if pol=None then this will
+            be ignored.
+        '''
+        try:
+            if shape is None:
+                shape = numpy.shape(self.mesh_azimuth_deg)
+
+            theta_cut = numpy.ones(shape,dtype=bool)
+            azimuth_cut = numpy.ones(shape,dtype=bool)
+
+            if zenith_cut_ENU is not None:
+                if len(zenith_cut_ENU) != 2:
+                    print('zenith_cut_ENU must be a 2 valued list.')
+                    return
+                else:
+                    if zenith_cut_ENU[0] is None:
+                        zenith_cut_ENU[0] = 0
+                    if zenith_cut_ENU[1] is None:
+                        zenith_cut_ENU[1] = 180
+
+                    theta_cut_1d = numpy.logical_and(self.thetas_deg >= min(zenith_cut_ENU), self.thetas_deg <= max(zenith_cut_ENU))
+                    theta_cut = numpy.multiply(theta_cut.T,theta_cut_1d).T
+
+            if azimuth_cut_ENU is not None:
+                if len(azimuth_cut_ENU) != 2:
+                    print('azimuth_cut_ENU must be a 2 valued list.')
+                    return
+                else:
+                    if azimuth_cut_ENU[0] is None:
+                        azimuth_cut_ENU[0] = 0
+                    if azimuth_cut_ENU[1] is None:
+                        azimuth_cut_ENU[1] = 180
+
+                    azimuth_cut_1d = numpy.logical_and(self.phis_deg >= min(azimuth_cut_ENU), self.phis_deg <= max(azimuth_cut_ENU))
+                    azimuth_cut = numpy.multiply(azimuth_cut,azimuth_cut_1d)
+
+            return numpy.logical_and(theta_cut, azimuth_cut)
+        except Exception as e:
+            print('\nError in %s'%inspect.stack()[0][3])
+            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+
     def mapMax(self, map_values, max_method=0, verbose=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, pol=None, return_peak_to_sidelobe=False, theta_cut=None):
         '''
         Determines the indices in the given map of the optimal source direction.
@@ -1853,6 +1905,10 @@ class Correlator:
 
             masked_map_values = numpy.ma.array(map_values,mask=~theta_cut) #This way the values not in the range are not included in calculations but the dimensions of the map stay the same.#masked_map_values = numpy.ma.array(map_values.copy(),mask=~theta_cut) #This way the values not in the range are not included in calculations but the dimensions of the map stay the same.
 
+            if False:
+                plt.figure()
+                plt.imshow(masked_map_values)
+                import pdb;pdb.set_trace()
             # if max_method == 0:
             #     row_index, column_index = numpy.unravel_index(masked_map_values.argmax(),numpy.shape(masked_map_values))
 
@@ -2372,7 +2428,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)  
 
-    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True, override_to_time_window=(None,None), plot_horizon=False, label_mountainside=True, rasterized=True, vmin=None, vmax=None, include_cbar=True):
+    def map(self, eventid, pol, include_baselines=numpy.array([0,1,2,3,4,5]), plot_map=True, map_ax=None, plot_corr=False, hilbert=False, interactive=False, max_method=None, waveforms=None, verbose=True, mollweide=False, zenith_cut_ENU=None, zenith_cut_array_plane=None, center_dir='E', circle_zenith=None, circle_az=None, radius=1.0, time_delay_dict={},window_title=None,add_airplanes=False, return_max_possible_map_value=False, plot_peak_to_sidelobe=True, shorten_signals=False, shorten_thresh=0.7, shorten_delay=10.0, shorten_length=90.0, shorten_keep_leading=100.0, minimal=False, circle_map_max=True, override_to_time_window=(None,None), plot_horizon=False, label_mountainside=True, rasterized=True, vmin=None, vmax=None, include_cbar=True, map_mask=None):
         '''
         Makes the cross correlation make for the given event.  center_dir only specifies the center direction when
         plotting and does not modify the output array, which is ENU oriented.  Note that pol='all' may cause bugs. 
@@ -2427,7 +2483,10 @@ class Correlator:
         override_to_time_window : tuple of 2 floats
             This will window the waveforms to the specified time window *given in ns*.  The time window is assumed to
             be applied *after the initial waveform_index_range* which was specified on the construction of the
-            correlator.  
+            correlator.
+        map_mask : numpy.ndarray
+            Must be the same shape as the map.  If given this will be used as "theta_cut" in the mapMax function, and
+            effectively mask out which region is used in that calculation. 
         '''
         try:
             if hilbert == True:
@@ -2451,33 +2510,10 @@ class Correlator:
                 time_window = False
             mask = None
             if pol == 'both':
-                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe, override_to_time_window=override_to_time_window)
-                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe, override_to_time_window=override_to_time_window)
+                hpol_result = self.map(eventid,'hpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe, override_to_time_window=override_to_time_window, map_mask=map_mask)
+                vpol_result = self.map(eventid,'vpol', plot_map=plot_map, plot_corr=plot_corr, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,interactive=interactive,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe, override_to_time_window=override_to_time_window, map_mask=map_mask)
                 return hpol_result, vpol_result
-                # elif pol == 'all':
-                #     hpol_result = self.map(eventid,'hpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe)
-                #     vpol_result = self.map(eventid,'vpol', plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=mollweide, center_dir=center_dir, zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,circle_zenith=circle_zenith,circle_az=circle_az,time_delay_dict=time_delay_dict,include_baselines=include_baselines,window_title=window_title, plot_peak_to_sidelobe=plot_peak_to_sidelobe)
-                #     mean_corr_values = (hpol_result + vpol_result)/2
 
-                #     if plot_map == True:
-                #         if max_method is not None:
-                #             if plot_peak_to_sidelobe:
-                #                 linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all', return_peak_to_sidelobe=plot_peak_to_sidelobe)
-                #             else:
-                #                 linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all', return_peak_to_sidelobe=plot_peak_to_sidelobe)
-
-                #         else:
-                #             if plot_peak_to_sidelobe:
-                #                 linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all', return_peak_to_sidelobe=plot_peak_to_sidelobe)
-                #             else:
-                #                 linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane,pol='all', return_peak_to_sidelobe=plot_peak_to_sidelobe)
-
-                #     if plot_corr == True:
-                #         print('Disabling plot corr for all antenna map.')
-                #         plot_corr = False
-                #     if interactive == True:
-                #         print('Disabling interactive for all antenna map.')
-                #         interactive = False
             elif pol == 'all':
                 if waveforms is None:
                     waveforms = self.wf(eventid, numpy.array([0,1,2,3,4,5,6,7]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter,tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract) #Div by std and resampled waveforms normalizes the correlations
@@ -2524,9 +2560,6 @@ class Correlator:
                             linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
 
 
-
-
-
             elif pol == 'hpol':
                 if waveforms is None:
                     waveforms = self.wf(eventid, numpy.array([0,2,4,6]),div_std=True,hilbert=hilbert,apply_filter=self.apply_filter,tukey=self.apply_tukey, sine_subtract=self.apply_sine_subtract) #Div by std and resampled waveforms normalizes the correlations
@@ -2565,14 +2598,14 @@ class Correlator:
                 if plot_map == True:
                     if max_method is not None:
                         if plot_peak_to_sidelobe:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe, theta_cut=map_mask)
                         else:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe, theta_cut=map_mask)
                     else:
                         if plot_peak_to_sidelobe:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe, theta_cut=map_mask)
                         else:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe, theta_cut=map_mask)
 
             elif pol == 'vpol':
                 if waveforms is None:
@@ -2612,14 +2645,14 @@ class Correlator:
                 if plot_map == True:
                     if max_method is not None:
                         if plot_peak_to_sidelobe:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe,theta_cut=map_mask)
                         else:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,max_method=max_method,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe,theta_cut=map_mask)
                     else:
                         if plot_peak_to_sidelobe:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3, peak_to_sidelobe = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe,theta_cut=map_mask)
                         else:
-                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe)
+                            linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(mean_corr_values,verbose=True,zenith_cut_ENU=zenith_cut_ENU, zenith_cut_array_plane=zenith_cut_array_plane, pol=pol, return_peak_to_sidelobe=plot_peak_to_sidelobe,theta_cut=map_mask)
 
             else:
                 print('Invalid polarization option.  Returning nothing.')
@@ -2894,10 +2927,6 @@ class Correlator:
                     #Added circles as specified.
                     map_ax, peak_circle = self.addCircleToMap(map_ax, phi_best, elevation_best_deg, azimuth_offset_deg=azimuth_offset_deg, mollweide=mollweide, radius = radius, crosshair=True, return_circle=True, color='lime', linewidth=1,fill=False)
 
-
-
-
-
                 if circle_az is not None:
                     if circle_zenith is not None:
                         if type(circle_az) == list:
@@ -2982,7 +3011,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def multiEventMaxMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', fig=None, ax=None, include_cbar=True):
+    def multiEventMaxMap(self, eventids, pol, plot_map=True, hilbert=False, max_method=None, mollweide=False, zenith_cut_ENU=None,zenith_cut_array_plane=None, center_dir='E', fig=None, ax=None, include_cbar=True, expected_zenith=None, expected_azimuth=None):
         '''
         Does the same thing as map, but then takes the maximum value from each events maps and plots that as the map.
         Hopefully this is useful for showing things like trajectories, but that is unlikely. 
@@ -2991,9 +3020,12 @@ class Correlator:
             total_max_corr_values = -999*numpy.ones((self.n_theta, self.n_phi))
             map_max_phis = []
             map_max_thetas = []
+
             for event_index, eventid in enumerate(eventids):
                 sys.stdout.write('(%i/%i)\t\t\t\r'%(event_index+1,len(eventids)))
                 sys.stdout.flush()
+
+
                 if False:
                     m1, max_possible_map_value1 = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=True, mollweide=False, zenith_cut_ENU=zenith_cut_ENU, return_max_possible_map_value=True)
                     m2, max_possible_map_value2 = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=False, mollweide=False, zenith_cut_ENU=zenith_cut_ENU, return_max_possible_map_value=True)
@@ -3003,7 +3035,18 @@ class Correlator:
                 else:
                     m, max_possible_map_value = self.map(eventid, pol, plot_map=False, plot_corr=False, hilbert=hilbert, mollweide=False, zenith_cut_ENU=zenith_cut_ENU, return_max_possible_map_value=True)
                     m = m/max_possible_map_value
-                linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=0,verbose=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,pol=pol)
+                
+                map_mask = None
+                if expected_zenith is not None and expected_azimuth is not None:
+                    if len(expected_zenith) == len(eventids) and len(expected_azimuth) == len(eventids):
+                        map_mask = self.generateCustomCutMask(azimuth_cut_ENU=[expected_azimuth[event_index] - 5, expected_azimuth[event_index] + 5 ], zenith_cut_ENU=[expected_zenith[event_index] - 5, expected_zenith[event_index] + 5 ])
+                        if False:
+                            plt.figure()
+                            plt.imshow(map_mask)
+                            import pdb; pdb.set_trace()
+                
+                linear_max_index, theta_best, phi_best, t_best_0subtract1, t_best_0subtract2, t_best_0subtract3, t_best_1subtract2, t_best_1subtract3, t_best_2subtract3 = self.mapMax(m,max_method=0,verbose=True,zenith_cut_ENU=zenith_cut_ENU,zenith_cut_array_plane=zenith_cut_array_plane,pol=pol, theta_cut=map_mask)
+                
                 map_max_phis.append(phi_best)
                 map_max_thetas.append(theta_best)
 
@@ -3076,6 +3119,7 @@ class Correlator:
                 else:
                     im = ax.pcolormesh(self.mesh_azimuth_deg, self.mesh_elevation_deg, rolled_values, vmin=vmin, vmax=vmax,cmap=plt.cm.coolwarm, rasterized=True)
 
+                im.set_clim(0,1)
                 plt.xlabel(xlabel)
                 plt.ylabel('Elevation Angle (deg)')
                 plt.grid(True)
@@ -3134,8 +3178,8 @@ class Correlator:
                     ax.fill_between(x, y1, y2, where=y2 <= y1,facecolor='#9DC3E6', interpolate=True,alpha=1)#'#EEC6C7'
                     # ax.text(0.015, 0.005, 'Local\nMountainside', transform=ax.transAxes, fontsize=18, verticalalignment='bottom', horizontalalignment='left', c='#4D878F', fontweight='heavy')
                     if mollweide == False:
-                        ax.set_xlim(-90, 90)
-                        ax.set_ylim(-30, 90)
+                        ax.set_xlim(min(self.phis_deg),max(self.phis_deg))
+                        ax.set_ylim(min(90 - self.thetas_deg), max(90 - self.thetas_deg))
 
                 #Block out simple ENU zenith cut region. 
                 if zenith_cut_ENU is not None:

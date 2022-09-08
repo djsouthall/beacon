@@ -4661,7 +4661,7 @@ class dataSlicerSingleRun():
                         continue
 
                     freqs, spec_dbish, spec = self.tct.rfftWrapper(times, averaged_waveform)
-                    fft_ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel)#Dividing by 2 to match monutau.  Idk why I have to do this though normally this function has worked well...
+                    fft_ax.plot(freqs/1e6,spec_dbish,label='Ch %i'%channel)
                 plt.xlim(10,110)
                 plt.ylim(-20,90)
 
@@ -4684,7 +4684,7 @@ class dataSlicerSingleRun():
                     elif mode == 'vpol' and channel%2 == 0:
                         continue
 
-                    wf_ax.plot(times,averaged_waveform,label='Ch %i'%channel)#Dividing by 2 to match monutau.  Idk why I have to do this though normally this function has worked well...
+                    wf_ax.plot(times,averaged_waveform,label='Ch %i'%channel)
                 #plt.xlim(250,1000)
 
             if save == True:
@@ -5482,7 +5482,7 @@ class dataSlicer():
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids_dict, title=None,cmap='coolwarm', lognorm=True, return_counts=False, mask_top_N_bins=0, fill_value=0, fig=None, ax=None, rasterized=False):
+    def plot2dHist(self, main_param_key_x,  main_param_key_y, eventids_dict, title=None,cmap='coolwarm', lognorm=True, return_counts=False, mask_top_N_bins=0, fill_value=0, fig=None, ax=None, rasterized=False, cbar_fontsize=24):
         '''
         This is meant to be a function the plot corresponding to the main parameter, and will plot the same quantity 
         (corresponding to main_param_key) with just events corresponding to the cut being used.  This subset will show
@@ -5584,7 +5584,7 @@ class dataSlicer():
                 if numpy.sum(counts) > 0:
                     try:
                         cbar = fig.colorbar(_im)
-                        cbar.set_label('Counts',fontsize=18)
+                        cbar.set_label('Counts',fontsize=cbar_fontsize)
                     except Exception as e:
                         print('Error in colorbar, often caused by no events.')
                         print(e)
@@ -5749,7 +5749,7 @@ class dataSlicer():
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
-    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', return_counts=False, include_roi=True, lognorm=True, mask_top_N_bins=0, fill_value=0, suppress_legend=False, fig=None, ax=None,rasterized=False):
+    def plotROI2dHist(self, main_param_key_x, main_param_key_y, eventids_dict=None, cmap='coolwarm', return_counts=False, include_roi=True, lognorm=True, mask_top_N_bins=0, fill_value=0, suppress_legend=False, fig=None, ax=None,rasterized=False, include_horizon=True, cbar_fontsize=24):
         '''
         This is the "do it all" function.  Given the parameter it will plot the 2dhist of the corresponding param by
         calling plot2dHist.  It will then plot the contours for each ROI on top.  It will do so assuming that each 
@@ -5781,7 +5781,13 @@ class dataSlicer():
                     title = '%s, Runs = %i-%i'%(main_param_key_x + ' vs ' + main_param_key_y,list(eventids_dict.keys())[0],list(eventids_dict.keys())[-1])
                 else:
                     title = '%s, Runs = %s'%(main_param_key_x + ' vs ' + main_param_key_y,str(list(eventids_dict.keys())))
-            fig, ax, counts = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap, lognorm=lognorm, return_counts=True, mask_top_N_bins=mask_top_N_bins, fill_value=fill_value, fig=fig, ax=ax, rasterized=rasterized) #prepares binning, must be called early (before addContour)
+            fig, ax, counts = self.plot2dHist(main_param_key_x, main_param_key_y, eventids_dict, title=title, cmap=cmap, lognorm=lognorm, return_counts=True, mask_top_N_bins=mask_top_N_bins, fill_value=fill_value, fig=fig, ax=ax, rasterized=rasterized, cbar_fontsize=cbar_fontsize) #prepares binning, must be called early (before addContour)
+            
+            if include_horizon:     
+                horizon_angle = -1.5
+                horizon_label = 'Horizon'#'Horizon\nElevation ~ %0.1f deg'%horizon_angle
+                horizon_line = ax.axhline(horizon_angle,linestyle='-.', alpha=1.0, linewidth=1.0, c='k', label=horizon_label)
+
             #these few lines below this should be used for adding contours to the map. 
             if include_roi:
                 legend_properties = []
@@ -5803,8 +5809,13 @@ class dataSlicer():
                         legend_labels.append('roi %i: %s'%(roi_index, roi_key))
                     else:
                         legend_labels.append('%s'%(roi_key))
+                
+                if include_horizon:
+                    legend_properties.append(horizon_line)
+                    legend_labels.append(horizon_label)
+
                 if suppress_legend == False:
-                    ax.legend(legend_properties,legend_labels,loc='upper left', fontsize=18)
+                    ax.legend(legend_properties,legend_labels,loc='upper left', fontsize=20)#, prop={'weight':'normal'}
 
             if return_counts == True:
                 return fig, ax, counts
@@ -6131,7 +6142,7 @@ class dataSlicer():
                     wf = self.cor.prep.wf(channel,apply_filter=apply_filter,hilbert=False,tukey=apply_filter,sine_subtract=apply_filter and sine_subtract, return_sine_subtract_info=False)
 
                     freqs, spec_dbish, spec = self.cor.prep.rfftWrapper(raw_t[start:stop], wf)
-                    ax.plot(freqs/1e6,spec_dbish/2.0,label='Ch %i'%channel, c=self.mpl_colors[channel])
+                    ax.plot(freqs/1e6,spec_dbish,label='Ch %i'%channel, c=self.mpl_colors[channel])
                 ax.set_ylim(-20,50)
                 #ax.set_ylabel('Power Spectral Density\n' + apply_filter*'Filtered ' + 'dB (arb)', fontsize=20)
                 ax.set_ylabel('PSD\n' + apply_filter*'Filtered ' + 'dB (arb)', fontsize=20)
@@ -6141,7 +6152,8 @@ class dataSlicer():
                 if self.conference_mode:
                     ax.set_xlim(0,150) #All others will follow
                     ax.set_xticks([0,30,80,150])
-                    ax.set_ylim(-20,40)
+                    ax.set_ylim(-25,45)
+                    ax.set_yticks([-20,0,20,40])
                     if apply_filter:
                         ax.set_xlabel('Frequency (MHz)', fontsize=20)
 

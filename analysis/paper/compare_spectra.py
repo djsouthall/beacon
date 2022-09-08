@@ -37,7 +37,7 @@ if __name__ == '__main__':
     # params = {'axes.labelsize': 30,'axes.titlesize':30, 'font.size': 30, 'legend.fontsize': 20, 'xtick.labelsize': 20, 'ytick.labelsize': 20,'font.family':'serif'}
     # matplotlib.rcParams.update(params)
 
-    plt.figure(figsize=(9,6))
+    plt.figure(figsize=(8,6))
     major_fontsize = 18
     minor_fontsize = 14
     plt.rc('xtick',labelsize=minor_fontsize)
@@ -59,20 +59,38 @@ if __name__ == '__main__':
     ax2.set_xlim(0,150) #All others will follow
     ax2.set_xticks([0,30,80,150])
     ax2.set_ylabel('PSD (dB, arb)', fontsize=major_fontsize)
-    ax2.text(0.025, 0.95, 'HPol',
-        size=major_fontsize,
-        transform=ax2.transAxes, va='top', ha='left',
-        bbox=dict(boxstyle="square", fc="w"))
+
+    align = 'right'
+
+    if align == 'right':
+
+        ax2.text(1 - 0.025, 0.95, 'HPol',
+            size=major_fontsize,
+            transform=ax2.transAxes, va='top', ha='right',
+            bbox=dict(boxstyle="square", fc="w"))
 
 
-    ax3.set_xlabel('Frequency (MHz)', fontsize=major_fontsize)
-    ax3.set_ylabel('PSD (dB, arb)', fontsize=major_fontsize)
-    ax3.text(0.025, 0.95, 'VPol',
-        size=major_fontsize,
-        transform=ax3.transAxes, va='top', ha='left',
-        bbox=dict(boxstyle="square", fc="w"))
-    ax3.legend(fontsize=minor_fontsize, loc='center left')
+        ax3.set_xlabel('Frequency (MHz)', fontsize=major_fontsize)
+        ax3.set_ylabel('PSD (dB, arb)', fontsize=major_fontsize)
+        ax3.text(1 - 0.025, 0.95, 'VPol',
+            size=major_fontsize,
+            transform=ax3.transAxes, va='top', ha='right',
+            bbox=dict(boxstyle="square", fc="w"))
+        ax3.legend(fontsize=minor_fontsize, loc='center right')
+    else:
+        ax2.text(0.025, 0.95, 'HPol',
+            size=major_fontsize,
+            transform=ax2.transAxes, va='top', ha='left',
+            bbox=dict(boxstyle="square", fc="w"))
 
+
+        ax3.set_xlabel('Frequency (MHz)', fontsize=major_fontsize)
+        ax3.set_ylabel('PSD (dB, arb)', fontsize=major_fontsize)
+        ax3.text(0.025, 0.95, 'VPol',
+            size=major_fontsize,
+            transform=ax3.transAxes, va='top', ha='left',
+            bbox=dict(boxstyle="square", fc="w"))
+        ax3.legend(fontsize=minor_fontsize, loc='center left')
 
     plt.tight_layout()
-    #plt.savefig('/home/dsouthall/Projects/Beacon/beacon/analysis/paper/figures/spectra_comparison.pdf')
+    plt.savefig('/home/dsouthall/Projects/Beacon/beacon/analysis/paper/figures/spectra_comparison_v2.pdf')

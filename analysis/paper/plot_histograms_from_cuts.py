@@ -118,7 +118,7 @@ if __name__ == '__main__':
     root_dir = '/home/dsouthall/Projects/Beacon/beacon/analysis/paper/data/cuts_run5733-run6640_1652152119'#'./data/cuts_run5733-run6640_1651969811'
     load_dirs = [os.path.join(root_dir,'no_cuts'), os.path.join(root_dir,'all_but_cuts')]#[os.path.join(root_dir,'all_cuts'), os.path.join(root_dir,'all_but_cuts'), os.path.join(root_dir,'no_cuts')]
 
-    save_dir = './figures/cut_histograms'
+    save_dir = './figures/cut_histograms/v2/'
 
 
     label_group_0 =  ['elevation_best_choice','phi_best_choice','similarity_count_h','similarity_count_v','hpol_peak_to_sidelobeSLICERMAXvpol_peak_to_sidelobe']
@@ -133,7 +133,7 @@ if __name__ == '__main__':
 
 
 
-    if False:
+    if True:
         excel_filename = '/home/dsouthall/Projects/Beacon/beacon/analysis/paper/data/new-cut-event-info_master_updated.xlsx'
         with pd.ExcelFile(excel_filename) as xls:
             for sheet_index, sheet_name in enumerate(xls.sheet_names):
@@ -145,11 +145,10 @@ if __name__ == '__main__':
         filtered_df = df.query('key == "good" and suspected_airplane_icao24 != suspected_airplane_icao24')
 
 
-
-
-
-
+    do = [3,4]
     for lg_index, label_group in enumerate([label_group_0, label_group_1, label_group_2, label_group_3, label_group_4, label_group_5, label_group_6]):
+        if lg_index not in do:
+            continue
         if lg_index > 1 and lg_index < 5:
             fig = plt.figure(figsize=(15,5*len(label_group)))
             major_fontsize = 36
@@ -367,7 +366,7 @@ if __name__ == '__main__':
             
 
 
-            if False:
+            if True:
                 vals = filtered_df[param_key].to_numpy()
                 hist_data['bin_centers']
                 bin_centers = hist_data['bin_centers']
@@ -388,10 +387,71 @@ if __name__ == '__main__':
             ax1.set_yscale('log')
             ax1.tick_params(axis='both', labelsize=minor_fontsize)
 
-            if param_index == len(numpy.asarray(label_group).T.flatten())-1:
+            if lg_index == 3 or lg_index == 4:
+                print('Adding custom legend!!!!!!!!!!!!!')
+                #Need to change these to be present for each figure appropriately to the paper.  Additionally need to make
+                #sure this added horizon line works.
+                #Lg index 6 is wrong, I don't want the combined plot I want the 2 seperate plots.  
+                if lg_index == 4 and param_index == 0:
+                    horizon_angle = -1.5
+                    horizon_label = 'Horizon'#'Horizon\nElevation ~ %0.1f deg'%horizon_angle
+                    horizon_line = ax1.axvline(horizon_angle,linestyle='-.', alpha=1.0, linewidth=2.0, c='k', label=horizon_label)
+
+                #     #['5911-73399', 'Horizon', 'Cut Regions', 'Remaining 36 Events', 'Before Cuts', 'If Last Cut']
+                #     numpy.array([1,0,5])
+                #     lines_2_cut = numpy.array([3,4,2])
+                # else:
+                #     lines_1_cut = numpy.array([1,0])
+                #     lines_2_cut = numpy.array([3,4,2])
+
+                lines, labels = plt.gca().get_legend_handles_labels()
+                lines = numpy.asarray(lines)
+                labels = numpy.asarray(labels)
+
+                if False:
+                    if 'Horizon' in labels:
+                        labels_1 = ['Cut Regions', '5911-73399', 'Horizon']
+                    else:
+                        labels_1 = ['Cut Regions', '5911-73399']
+                    lines_1_cut = []
+                    for l in labels_1:
+                        lines_1_cut.append(numpy.where(labels == l)[0][0])
+                    lines_1_cut = numpy.asarray(lines_1_cut, dtype=int)
+                    
+                    labels_2 = ['Before Cuts', 'If Last Cut', 'Remaining 36 Events']
+                    lines_2_cut = []
+                    for l in labels_2:
+                        lines_2_cut.append(numpy.where(labels == l)[0][0])
+                    lines_2_cut = numpy.asarray(lines_2_cut, dtype=int)
+
+                    ax_list = fig.axes
+                    if param_index == 0:
+                        ax_list[0].legend(lines[lines_1_cut], labels[lines_1_cut], loc='upper right')
+                    elif param_index == 1:
+                        ax_list[1].legend(lines[lines_2_cut], labels[lines_2_cut], loc='upper right')
+                else:
+
+                    if 'Horizon' in labels:
+                        label_order = ['Before Cuts', 'If Last Cut', 'Remaining 36 Events', 'Cut Regions', '5911-73399', 'Horizon']
+                    else:
+                        label_order = ['Before Cuts', 'If Last Cut', 'Remaining 36 Events', 'Cut Regions', '5911-73399']
+                    label_order_cut = []
+                    for l in label_order:
+                        label_order_cut.append(numpy.where(labels == l)[0][0])
+                    label_order_cut = numpy.asarray(label_order_cut, dtype=int)
+                    
+                    ax_list = fig.axes
+                    if param_index == 0:
+                        ax_list[0].legend(lines[label_order_cut], labels[label_order_cut], loc='upper right', ncol=2)
+
+            elif param_index == len(numpy.asarray(label_group).T.flatten())-1:
                 plt.legend(loc='upper right', fontsize=minor_fontsize)
+
+
             plt.tight_layout()
             plt.subplots_adjust(hspace=0.30)#left=0.06, bottom=0.12,right=0.98, top=0.95, wspace=0.3, 
 
-        fig.savefig('./figures/cut_histograms/cuts_same_axis_pg_%i.pdf'%(lg_index+1))
-        fig.savefig('./figures/cut_histograms/cuts_same_axis_pg_%i.png'%(lg_index+1), dpi=300)
+        fig.savefig(os.path.join(save_dir, 'cuts_same_axis_pg_%i_v2.pdf'%(lg_index+1)))
+        fig.savefig(os.path.join(save_dir, 'cuts_same_axis_pg_%i_v2.png'%(lg_index+1)), dpi=300)
+        # fig.savefig('./figures/cut_histograms/cuts_same_axis_pg_%i.pdf'%(lg_index+1))
+        # fig.savefig('./figures/cut_histograms/cuts_same_axis_pg_%i.png'%(lg_index+1), dpi=300)

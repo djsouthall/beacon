@@ -100,7 +100,8 @@ def addDirectionInformationToDataFrame(df, origin=default_origin, altitude_str='
     u = numpy.zeros(len(df.index))
     utc_timestamp = numpy.zeros(len(df.index))
 
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
+
 
     for i, (index, row) in enumerate(df.iterrows()):
         e[i], n[i], u[i] = pm.geodetic2enu(row['latitude'], row['longitude'], row[altitude_str]*0.3048, origin[0], origin[1], origin[2])
@@ -131,7 +132,7 @@ def readPickle(filename):
 
 
 
-def getDataFrames(start_time_utc_timestamp, stop_time_utc_timestamp, origin=default_origin, query=None, verbose=False):
+def getDataFrames(start_time_utc_timestamp, stop_time_utc_timestamp, origin=default_origin, query=None, verbose=False, altitude_str='geoaltitude'):
     '''
     Given 2 timestamps, this will load in all pandas dataframes which have timestamps between those 2 times.
 
@@ -152,14 +153,14 @@ def getDataFrames(start_time_utc_timestamp, stop_time_utc_timestamp, origin=defa
 
             if index == 0:
                 if query is None:
-                    df = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin)
+                    df = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin, altitude_str=altitude_str)
                 else:
-                    df = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin).query(query)
+                    df = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin, altitude_str=altitude_str).query(query)
             else:
                 if query is None:
-                    addition = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin)
+                    addition = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin, altitude_str=altitude_str)
                 else:
-                    addition = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin).query(query)
+                    addition = addDirectionInformationToDataFrame(readPickle(filename).query(time_query), origin=origin, altitude_str=altitude_str).query(query)
 
                 df = df.append(addition)
             if verbose:

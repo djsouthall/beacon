@@ -15,10 +15,6 @@ from beacon.analysis.paper.new_beam_plot import makeBeamPlot
 
 
 
-
-
-
-
 if __name__ == '__main__':
     # In[8]:
     plt.close('all')
@@ -129,7 +125,7 @@ if __name__ == '__main__':
 
 
                 for i in range(20):
-                    
+                    beams[i]['hex_color'] = mpl.colors.to_hex(colors[i])
                     theta = beams[i]["theta"]
                     phi = beams[i]["phi"]
                     theta_idx = numpy.where(zeniths == theta)[0][0]

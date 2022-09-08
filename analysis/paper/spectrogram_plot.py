@@ -44,9 +44,10 @@ if __name__ == '__main__':
     run = int(6049)
 
     event_limit = 30000
+    bin_size = 1
     channels = numpy.array([0, 1])
 
-    reader, freqs, spectra_dbish_binned, time_range = getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=False, channels=channels)
+    reader, freqs, spectra_dbish_binned, time_range = getSpectData(datapath,run,event_limit,bin_size=bin_size,trigger_type=1,group_fft=False, channels=channels)
 
     gc.collect()
 
@@ -179,10 +180,10 @@ if __name__ == '__main__':
             plt.tight_layout()
 
             if not len(channels) == 2:
-                fig.savefig('./figures/spectrogram/spectrogram_run%i_ch%i_%s.pdf'%(run, channel, cmap), dpi=300)
+                fig.savefig('./figures/spectrogram/spectrogram_run%i_ch%i_%s_binsize_%i.pdf'%(run, channel, cmap, bin_size), dpi=300)
 
         if len(channels) == 2:
-            fig.savefig('./figures/spectrogram/spectrogram_run%i_chs_%i-%i_%s.pdf'%(run, channels[0], channels[1], cmap), dpi=300)
+            fig.savefig('./figures/spectrogram/spectrogram_run%i_chs_%i-%i_%s_binsize_%i.pdf'%(run, channels[0], channels[1], cmap, bin_size), dpi=300)
 
 
 

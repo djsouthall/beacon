@@ -105,5 +105,5 @@ if __name__ == '__main__':
     plt.subplots_adjust(left=0.05, bottom=0.1,right=0.95, top=0.95, wspace=0.33, hspace=0.4)
 
     if save == True:
-        ds.inspector_mpl['fig1'].savefig('./figures/r%i_e%i_event_display.svg'%(run,eventid), dpi=300)
+        ds.inspector_mpl['fig1'].savefig('./figures/r%i_e%i_event_display.pdf'%(run,eventid), dpi=300)
     # plt.subplots_adjust(left=0.06, bottom=0.12,right=0.98, top=0.95, wspace=0.3, hspace=0.2)
