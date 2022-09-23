@@ -661,7 +661,7 @@ if __name__ == '__main__':
                         print(e)
 
                     if try_better_aspect_ratio:
-                        plt.xlabel('Azimuth (deg)', fontsize=fontsize)
+                        ax2.set_xlabel('Azimuth (deg)', fontsize=fontsize)
                     
                     ax2.set_ylabel('Elevation (deg)', fontsize=fontsize)
 

@@ -124,7 +124,11 @@ max_method = 0
 
 apply_filter = True
 
-deploy_index = info.returnDefaultDeploy()
+if True:
+    deploy_index = info.returnDefaultDeploy()
+else:
+    deploy_index = '/home/dsouthall/Projects/Beacon/beacon/config/september_2021_minimized_calibration_rotated_1663963370.json'
+
 datapath = os.environ['BEACON_DATA']
 map_source_distance_m = info.returnDefaultSourceDistance()
 waveform_index_range = info.returnDefaultWaveformIndexRange()
@@ -438,22 +442,43 @@ if __name__ == '__main__':
                                             plt.sca(gs_ax2)
                                             gs_ax2 = addStatsPlot(ax=gs_ax2, major_fontsize=minor_fontsize - 4, minor_fontsize=minor_fontsize - 4, altitude_str=altitude_str)
 
+                                            axis_adjust_margin = 0.085
+                                            gs_ax2.patch.set_width(1 + axis_adjust_margin)
+                                            gs_ax2.patch.set_height(1 + axis_adjust_margin)
+                                            gs_ax2.patch.set_xy([-axis_adjust_margin,-axis_adjust_margin])
+                                            # ax.patch.set_alpha(1)
+
+
 
                                     # plt.title('Included Channels: ' + pol.title().replace('pol','Pol'))
 
 
                                     plt.tight_layout()
 
-                                    if hilbert == True:
-                                        if mollweide == True:
-                                            fig.savefig('./figures/airplanes/%i_events_%s_%s_hilbert_mollweide_include_hist_mode_%s_v2.pdf'%(len(eventids), pol, airplane, altitude_str),dpi=300)
+                                    if 'rotated' in deploy_index:
+                                        if hilbert == True:
+                                            if mollweide == True:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_hilbert_mollweide_include_hist_mode_%s_v2_rotated_calibration.pdf'%(len(eventids), pol, airplane, altitude_str),dpi=300)
+                                            else:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_hilbert_include_hist_mode_%s_v2_rotated_calibration.pdf'%(len(eventids), pol, airplane, altitude_str),dpi=300)
                                         else:
-                                            fig.savefig('./figures/airplanes/%i_events_%s_%s_hilbert_include_hist_mode_%s_v2.pdf'%(len(eventids), pol, airplane, altitude_str),dpi=300)
+                                            if mollweide == True:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_mollweide_include_hist_mode_%s_v2_rotated_calibration.pdf'%(len(eventids), pol, airplane, altitude_str),dpi=300)
+                                            else:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_include_hist_mode_%s_v2_rotated_calibration.pdf'%(len(eventids), pol, airplane, altitude_str),dpi=300)
+
                                     else:
-                                        if mollweide == True:
-                                            fig.savefig('./figures/airplanes/%i_events_%s_%s_mollweide_include_hist_mode_%s_v2.pdf'%(len(eventids), pol, airplane, altitude_str),dpi=300)
+
+                                        if hilbert == True:
+                                            if mollweide == True:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_hilbert_mollweide_include_hist_mode_%s_v2.pdf'%(len(eventids), pol, airplane, altitude_str),dpi=300)
+                                            else:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_hilbert_include_hist_mode_%s_v2.pdf'%(len(eventids), pol, airplane, altitude_str),dpi=300)
                                         else:
-                                            fig.savefig('./figures/airplanes/%i_events_%s_%s_include_hist_mode_%s_v2.pdf'%(len(eventids), pol, airplane, altitude_str),dpi=300)
+                                            if mollweide == True:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_mollweide_include_hist_mode_%s_v2.pdf'%(len(eventids), pol, airplane, altitude_str),dpi=300)
+                                            else:
+                                                fig.savefig('./figures/airplanes/%i_events_%s_%s_include_hist_mode_%s_v2.pdf'%(len(eventids), pol, airplane, altitude_str),dpi=300)
 
                             if True:
                                 pass
@@ -461,3 +486,8 @@ if __name__ == '__main__':
                                 #and the trajectories
 
 
+
+    if deploy_index != info.returnDefaultDeploy():
+        print('WARNING!!! NOT USING DEFAULT DEPLOY INDEX.')
+        print('Using: %s'%deploy_index)
+        print('Instead of: %s'%info.returnDefaultDeploy())

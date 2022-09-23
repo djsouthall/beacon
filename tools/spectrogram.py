@@ -13,6 +13,8 @@ from examples.beacon_data_reader import Reader #Must be imported before matplotl
 
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 import tools.interpret #Must be imported before matplotlib or else plots don't load.
+from beacon.tools.data_handler import loadTriggerTypes, getEventTimes
+
 
 import matplotlib.pyplot as plt
 plt.ion()
@@ -55,11 +57,10 @@ def getTimes(reader):
         return e
 
 def getFirstDateTime(reader):
-    raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids = getTimes(reader)
-    dt = datetime.fromtimestamp(raw_approx_trigger_time[0] + raw_approx_trigger_time_nsecs[0]/1e9)
+    dt = datetime.fromtimestamp(getEventTimes(reader))
     return dt
 
-def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=False, channels=numpy.arange(8)):
+def getSpectData(datapath,run,event_limit,max_time_min=None,bin_size=10,trigger_type=1,group_fft=False, channels=numpy.arange(8)):
     '''
     This function obtains the data for a spectrogram.
 
@@ -100,15 +101,25 @@ def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=F
     reader = Reader(datapath,run)
 
     draw = reader.head_tree.Draw("trig_time:trigger_type","","goff")
-    ttypes = trigger_type = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), draw).astype(int)
-    trigtimes = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), draw)[ttypes == trigger_type]
-    eventids = numpy.arange(reader.N())[ttypes == trigger_type]
+    ttypes = loadTriggerTypes(reader)
+    trigtimes_s = getEventTimes(reader)
 
+    cut = numpy.isin(ttypes, numpy.asarray(trigger_type))
+
+    # import pdb; pdb.set_trace()
+    if max_time_min is not None:
+        cut = numpy.logical_and(cut, trigtimes_s < (max_time_min*60 + min(trigtimes_s)))
+        # cut = numpy.logical_and(numpy.logical_and(cut, trigtimes_s < (10.97*60 + min(trigtimes_s))), trigtimes_s > (10.92*60 + min(trigtimes_s)))
+
+    trigtimes_s = trigtimes_s[cut]
+    eventids = numpy.arange(reader.N())[cut]
+
+    print(eventids)
 
     if event_limit is not None:
         if event_limit < len(eventids):
             eventids = eventids[0:event_limit]
-            trigtimes = trigtimes[0:event_limit]
+            trigtimes_s = trigtimes_s[0:event_limit]
     event_limit = len(eventids)
 
     print('\nReader:')
@@ -143,7 +154,6 @@ def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=F
         if group_fft == True:
             waveforms = {}
         spectra_dbish = {}
-        readout_times = []
         
         for channel in channels:
             if group_fft == True:
@@ -153,15 +163,17 @@ def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=F
         print('')
 
         for event_index, eventid in enumerate(eventids):
-            sys.stdout.write('\r(%i/%i)'%(eventid+1,len(eventids)))
+            sys.stdout.write('\r(%i/%i)'%(event_index+1,len(eventids)))
             sys.stdout.flush()
             reader.setEntry(eventid) 
-            readout_times.append(getattr(reader.header(),'readout_time'))
             for channel in channels:
                 if group_fft == True:
                     waveforms['ch%i'%channel][event_index] = reader.wf(int(channel))
                 else:
                     spectra_dbish['ch%i'%channel][event_index] = rfftWrapper('ch%i'%channel, waveform_times, reader.wf(int(channel)))[1]
+                    # import pdb; pdb.set_trace()
+                # if numpy.any(numpy.isnan(spectra_dbish['ch%i'%channel])):
+                #     import pdb; pdb.set_trace()
         if group_fft == True:
             with concurrent.futures.ThreadPoolExecutor(max_workers = cpu_count()) as executor:
                 thread_results = []
@@ -172,25 +184,33 @@ def getSpectData(datapath,run,event_limit,bin_size=10,trigger_type=1,group_fft=F
             sys.stdout.flush()
 
             for index, future in enumerate(concurrent.futures.as_completed(thread_results)):
-                spectra_dbish[future.result()[0]] = future.result()[1] 
+                spectra_dbish[future.result()[0]] = future.result()[1]
                 print('Channel %i FFTs Completed'%(index+1))
         
-        bin_edges = numpy.arange(min(readout_times),max(readout_times)+bin_size,bin_size)
-        bin_L_2d = numpy.tile( bin_edges[:-1] , (len(readout_times),1))
-        bin_R_2d = numpy.tile( numpy.roll(bin_edges,-1)[:-1] , (len(readout_times),1))
-        readout_times_2d = numpy.tile(readout_times,(len(bin_edges) - 1, 1)).T
+        bin_edges = numpy.arange(min(trigtimes_s),max(trigtimes_s)+bin_size,bin_size)
+        bin_L_2d = numpy.tile( bin_edges[:-1] , (len(trigtimes_s),1))
+        bin_R_2d = numpy.tile( numpy.roll(bin_edges,-1)[:-1] , (len(trigtimes_s),1))
+        trigtimes_s_2d = numpy.tile(trigtimes_s,(len(bin_edges) - 1, 1)).T
 
-        cut_2d = numpy.logical_and(readout_times_2d >= bin_L_2d, readout_times_2d < bin_R_2d).T
+        cut_2d = numpy.logical_and(trigtimes_s_2d >= bin_L_2d, trigtimes_s_2d < bin_R_2d).T
+
+        # plt.figure()
+        # plt.imshow(cut_2d)
 
         del bin_L_2d
         del bin_R_2d
-        del readout_times_2d
+        del trigtimes_s_2d
 
         spectra_dbish_binned = {}
         for channel in channels:
             spectra_dbish_binned['ch%i'%channel] = numpy.zeros((len(freqs),len(bin_edges)-1))
             for index,cut in enumerate(cut_2d):
                 spectra_dbish_binned['ch%i'%channel][:,index] = numpy.mean( spectra_dbish['ch%i'%channel][cut], axis=0 )
+                # if numpy.any(numpy.isnan(spectra_dbish_binned['ch%i'%channel][:,index])):
+                #     import pdb; pdb.set_trace()
+
+            # if numpy.any(numpy.isnan(spectra_dbish_binned['ch%i'%channel])):
+            #     import pdb; pdb.set_trace()
             spectra_dbish_binned['ch%i'%channel] = numpy.flipud(numpy.ma.array(spectra_dbish_binned['ch%i'%channel], mask=numpy.isnan(spectra_dbish_binned['ch%i'%channel])))
         
 
@@ -202,8 +222,8 @@ if __name__ == '__main__':
     # If your data is elsewhere, pass it as an argument
     datapath = os.environ['BEACON_DATA']#sys.argv[1] if len(sys.argv) > 1 else os.environ['BEACON_DATA']
     run = int(sys.argv[1]) if len(sys.argv) > 1 else 367 #Selects which run to examine
-    event_limit = 1000
-    channels = numpy.array([7])#numpy.arange(8)
+    event_limit = 40000
+    channels = numpy.array([1])#numpy.arange(8)
 
     import time
 
@@ -211,7 +231,8 @@ if __name__ == '__main__':
     #runs = numpy.array([4700,5140])
     # runs = numpy.arange(1600,6000,250)
     # runs = numpy.arange(5135,5140,1)
-    runs = numpy.array([3000, 4000, 5140, 5911])
+    # runs = numpy.array([3000, 4000, 5140, 5911])
+    runs = numpy.array([run])
     cmap = plt.cm.brg
     colors = cmap(numpy.arange(len(runs))/(len(runs)-1))
 
@@ -223,25 +244,27 @@ if __name__ == '__main__':
     plt.rc('xtick',labelsize=18)
     plt.rc('ytick',labelsize=18)
 
-
     Z = []
     skipped_runs = []
     datetimes = []
+
+    trigtimes_s = getEventTimes(reader)
+
     for run_index, run in enumerate(runs):
         try:
-            reader, freqs, spectra_dbish_binned, time_range = getSpectData(datapath,run,event_limit,bin_size=100,group_fft=False, channels=channels)
+            reader, freqs, spectra_dbish_binned, time_range = getSpectData(datapath,run,event_limit,bin_size=10,group_fft=False, channels=channels)
 
             gc.collect()
 
             for cmap in cmaps:
                 for channel in channels:
-                    if False:
+                    if True:
                         f = plt.figure(figsize=(12,6))
                         # ax = plt.subplot(2,1,1)
                         plt.title('Run %i, Channel %i'%(run,channel),fontsize=28)
 
 
-                        plt.imshow(spectra_dbish_binned['ch%i'%channel],extent = [0,(reader.head_tree.GetMaximum('readout_time')-reader.head_tree.GetMinimum('readout_time'))/60.0,min(freqs)/1e6,max(freqs)/1e6],aspect='auto',cmap=cmap)
+                        plt.imshow(spectra_dbish_binned['ch%i'%channel],extent = [0,(max(trigtimes_s)-min(trigtimes_s))/60.0,min(freqs)/1e6,max(freqs)/1e6],aspect='auto',cmap=cmap)
                         #plt.xlim(0,100)
                         plt.ylabel('Freq (MHz)',fontsize=20)
                         plt.xlabel('Readout Time (min)',fontsize=20)
@@ -291,3 +314,23 @@ if __name__ == '__main__':
 
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
     ax.plot_wireframe(X, Y, Z, rcount=len(runs), ccount=0, color='k', alpha=1.0, linewidth=0.5)
+
+    draw = reader.head_tree.Draw("trig_time:trigger_type","","goff")
+    ttypes = trigger_type = numpy.frombuffer(reader.head_tree.GetV2(), numpy.dtype('float64'), draw).astype(int)
+    trigtimes = numpy.frombuffer(reader.head_tree.GetV1(), numpy.dtype('float64'), draw)[ttypes == trigger_type]
+
+    raw_approx_trigger_time, raw_approx_trigger_time_nsecs, trig_time, eventids = getTimes(reader)
+    t = getEventTimes(reader)
+    t_mins = (t - min(t))/60
+
+    cut_48 =  numpy.logical_and(numpy.logical_and(t_mins >= 18.4, t_mins <= 18.67), ttypes==1)
+
+    print(run)
+    print(eventids[cut_48][0:10])
+
+    cut_42 =  numpy.logical_and(numpy.logical_and(t_mins >= 21.24, t_mins <= 21.92), ttypes==1)
+
+    print(eventids[cut_42][0:10])
+
+    # [14120 14121 14122 14123 14124 14125 14126 14127 14128 14129]
+    # [16180 16181 16182 16183 16184 16185 16186 16187 16188 16189]

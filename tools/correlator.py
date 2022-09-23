@@ -1126,7 +1126,7 @@ class Correlator:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
 
-    def rotateAaboutBbyTheta(self, a, b, dtheta_rad):
+    def rotateAaboutBbyTheta(self, a, b, dtheta_rad, normalize_output=True):
         '''
         This is a utility function that rotates vector a about vector b by dtheta_rad.
         '''
@@ -1139,7 +1139,10 @@ class Correlator:
 
             a_perp_new = numpy.linalg.norm(a_perp)*(x1*a_perp + x2*rot_dir)
 
-            return (a_perp_new + a_par)/numpy.linalg.norm(a_perp_new + a_par)
+            if normalize_output:
+                return (a_perp_new + a_par)/numpy.linalg.norm(a_perp_new + a_par)
+            else:
+                return numpy.linalg.norm(a)*(a_perp_new + a_par)/numpy.linalg.norm(a_perp_new + a_par)
         except Exception as e:
             print('\nError in %s'%inspect.stack()[0][3])
             print(e)

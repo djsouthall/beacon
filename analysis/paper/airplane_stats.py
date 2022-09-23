@@ -111,8 +111,10 @@ apply_filter = True
 
 min_event_cut = 0
 
-
-deploy_index = info.returnDefaultDeploy()
+if True:
+    deploy_index = info.returnDefaultDeploy()
+else:
+    deploy_index = '/home/dsouthall/Projects/Beacon/beacon/config/september_2021_minimized_calibration_rotated_1663963370.json'
 datapath = os.environ['BEACON_DATA']
 map_source_distance_m = info.returnDefaultSourceDistance()
 waveform_index_range = info.returnDefaultWaveformIndexRange()
@@ -327,8 +329,8 @@ def addStatsPlot(ax=None, major_fontsize=24, minor_fontsize=18, altitude_str='ge
         fig1 = plt.figure()
         ax = plt.subplot(1,1,1, aspect='equal')
     plt.sca(ax)
-    ax.set_xticks(ticks=[-3,0,3])
-    ax.set_yticks(ticks=[-3,0,3])
+    ax.set_xticks(ticks=[-3,-2,-1,0,1,2,3])
+    ax.set_yticks(ticks=[-3,-2,-1,0,1,2,3])
     ax.tick_params(axis="y",direction="in", pad=-40)
     ax.tick_params(axis="x",direction="in", pad=-25)
     ax.xaxis.set_tick_params(labelsize=minor_fontsize-4)
@@ -905,3 +907,7 @@ if __name__ == '__main__':
         plt.legend(loc='upper right', fontsize=18)
         plt.tight_layout()
 
+        if deploy_index != info.returnDefaultDeploy():
+            print('WARNING!!! NOT USING DEFAULT DEPLOY INDEX.')
+            print('Using: %s'%deploy_index)
+            print('Instead of: %s'%info.returnDefaultDeploy())

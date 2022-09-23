@@ -1,0 +1,181 @@
+{
+    "description": "This calibration is 2nd iteration rotation.  Originally from /home/dsouthall/Projects/Beacon/beacon/config/september_2021_minimized_calibration.json the antennas were rotated by HPOL: 1.0847 deg in theta and 0.2823 deg in azimuth and VPOL: 2.0957 deg in theta and 0.1448 deg in azimuth to get the calibration /home/dsouthall/Projects/Beacon/beacon/config/september_2021_minimized_calibration_rotated_1663962064.json.  This was then rotated again to fine tune the result by HPOL: 0.1497 deg in theta and 0.0694 deg in azimuth and VPOL: 0.2810 deg in theta and 0.2280 deg in azimuth.  This was done with the rotate_calibration.py script.",
+    "additional_text": "None",
+    "origin": {
+        "latlonel": [
+            37.589339,
+            -118.23761867,
+            3850.5272
+        ]
+    },
+    "antennas": {
+        "ant0": {
+            "physical": {
+                "latlonel": [
+                    37.589339,
+                    -118.23761867,
+                    3850.5272
+                ],
+                "enu": [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "hpol": {
+                "latlonel": [
+                    37.589339,
+                    -118.23761867,
+                    3850.5272
+                ],
+                "enu": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "cable_delay": 462.5927,
+                "channel": 0
+            },
+            "vpol": {
+                "latlonel": [
+                    37.589339,
+                    -118.23761867,
+                    3850.5272
+                ],
+                "enu": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "cable_delay": 459.1555,
+                "channel": 1
+            }
+        },
+        "ant1": {
+            "physical": {
+                "latlonel": [
+                    37.58922017,
+                    -118.238006,
+                    3865.1272
+                ],
+                "enu": [
+                    -34.229739100497184,
+                    -13.196735088178848,
+                    14.599894634214646
+                ]
+            },
+            "hpol": {
+                "latlonel": [
+                    37.58921726,
+                    -118.23801003,
+                    3865.66525499
+                ],
+                "enu": [
+                    -34.5862315559504,
+                    -13.519609941147188,
+                    15.137947025380159
+                ],
+                "cable_delay": 465.1074785107916,
+                "channel": 2
+            },
+            "vpol": {
+                "latlonel": [
+                    37.58921798,
+                    -118.23800502,
+                    3865.7954972
+                ],
+                "enu": [
+                    -34.14312266869515,
+                    -13.44043529126231,
+                    15.268191791212862
+                ],
+                "cable_delay": 469.80874254008086,
+                "channel": 3
+            }
+        },
+        "ant2": {
+            "physical": {
+                "latlonel": [
+                    37.58889833,
+                    -118.23769983,
+                    3854.3272
+                ],
+                "enu": [
+                    -7.172418589601591,
+                    -48.93903858128436,
+                    3.799807775379783
+                ]
+            },
+            "hpol": {
+                "latlonel": [
+                    37.58889835,
+                    -118.23769496,
+                    3854.33719981
+                ],
+                "enu": [
+                    -6.742234095519489,
+                    -48.93724656186726,
+                    3.8098080673083072
+                ],
+                "cable_delay": 454.6295239909029,
+                "channel": 4
+            },
+            "vpol": {
+                "latlonel": [
+                    37.58889812,
+                    -118.23769477,
+                    3854.46281086
+                ],
+                "enu": [
+                    -6.724824722718285,
+                    -48.96285646999342,
+                    3.9354189359060454
+                ],
+                "cable_delay": 463.7920466006454,
+                "channel": 5
+            }
+        },
+        "ant3": {
+            "physical": {
+                "latlonel": [
+                    37.588943,
+                    -118.23796567,
+                    3864.3272
+                ],
+                "enu": [
+                    -30.665742457535302,
+                    -43.978183388828505,
+                    13.799774438470354
+                ]
+            },
+            "hpol": {
+                "latlonel": [
+                    37.5889432,
+                    -118.23796361,
+                    3863.59066082
+                ],
+                "enu": [
+                    -30.48326262311382,
+                    -43.95627504061492,
+                    13.063236280113866
+                ],
+                "cable_delay": 462.94867883740665,
+                "channel": 6
+            },
+            "vpol": {
+                "latlonel": [
+                    37.58894287,
+                    -118.23796337,
+                    3863.97975958
+                ],
+                "enu": [
+                    -30.462702072508765,
+                    -43.99313824049976,
+                    13.452334887371515
+                ],
+                "cable_delay": 463.8325167263529,
+                "channel": 7
+            }
+        }
+    }
+}
