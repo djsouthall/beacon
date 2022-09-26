@@ -21,7 +21,7 @@ ROOT.gInterpreter.ProcessLine("void dobranch(TTree *t,  const char * name, long 
 from ROOT import FFTtools
 
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
+from beaconroot.examples.beacon_data_reader import Reader #Must be imported before matplotlib or else plots don't load.
 
 sys.path.append(os.environ['BEACON_ANALYSIS_DIR'])
 from tools.data_handler import loadTriggerTypes
@@ -285,6 +285,95 @@ class sineSubtractedReader(Reader):
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
+    # def returnTriggerThresholds(self, expected_max_beam=19, plot=False):
+    #     '''
+    #     Given a reader object this will extract the trigger thresholds for each beam.
+
+    #     If expected_max_beam = None then this will attempt to access beams until the reader returns an error.
+    #     '''
+    #     try:
+    #         failed = False
+    #         beam_index = 0
+    #         while failed == False:
+    #             try:
+    #                 if beam_index == 0:
+    #                     N = self.status_tree.Draw("trigger_thresholds[%i]:Entry$"%beam_index,"","goff")
+    #                     thresholds = numpy.zeros((expected_max_beam + 1, N))
+    #                     eventids = numpy.frombuffer(self.status_tree.GetV2(), numpy.dtype('float64'), N).astype(int)
+    #                 else:
+    #                     N = self.status_tree.Draw("trigger_thresholds[%i]"%beam_index,"","goff")
+
+    #                 thresholds[beam_index] = numpy.frombuffer(self.status_tree.GetV1(), numpy.dtype('float64'), N)#numpy.vstack((thresholds,numpy.frombuffer(self.status_tree.GetV1(), numpy.dtype('float64'), N)))
+
+    #                 if beam_index is not None:
+    #                     if beam_index == expected_max_beam:
+    #                         failed=True
+    #                 beam_index += 1
+    #             except:
+    #                 failed = True
+
+    #         if plot:
+    #             import matplotlib.pyplot as plt # Can't be imported at the top of the script, it causes problems with other programs that import this class for some reason.
+    #             plt.figure()
+    #             plt.title('Trigger Thresholds')
+    #             for beam_index, t in enumerate(thresholds):
+    #                 plt.plot(eventids, t, label='Beam %i'%beam_index)
+    #             plt.xlabel('EntryId / eventid')
+    #             plt.ylabel('Power Sum (arb)')
+
+    #         return thresholds
+    #     except Exception as e:
+    #         print('\nError in %s'%inspect.stack()[0][3])
+    #         print(e)
+    #         exc_type, exc_obj, exc_tb = sys.exc_info()
+    #         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    #         print(exc_type, fname, exc_tb.tb_lineno)
+
+    # def returnBeamScalers(self, expected_max_beam=19, plot=False):
+    #     '''
+    #     Given a reader object this will extract the beam scalers for each beam as they are presented on monutau.
+
+    #     If expected_max_beam = None then this will attempt to access beams until the reader returns an error.
+    #     '''
+    #     try:
+    #         failed = False
+    #         beam_index = 0
+    #         while failed == False:
+    #             try:
+    #                 if beam_index == 0:
+    #                     N = self.status_tree.Draw("readout_time","","goff")
+    #                     readout_time = numpy.frombuffer(self.status_tree.GetV1(), numpy.dtype('float64'), N).astype(int)
+    #                     beam_scalers = numpy.zeros((expected_max_beam + 1, N))
+    #                     trigger_thresholds = numpy.zeros((expected_max_beam + 1, N))
+
+    #                 N = self.status_tree.Draw("beam_scalers[0][%i]/10.:trigger_thresholds[%i]"%(beam_index,beam_index),"","goff")
+    #                 beam_scalers[beam_index]        = numpy.frombuffer(self.status_tree.GetV1(), numpy.dtype('float64'), N)
+    #                 trigger_thresholds[beam_index]  = numpy.frombuffer(self.status_tree.GetV2(), numpy.dtype('float64'), N)
+
+    #                 if beam_index is not None:
+    #                     if beam_index == expected_max_beam:
+    #                         failed=True
+    #                 beam_index += 1
+    #             except:
+    #                 failed = True
+
+    #         if plot:
+    #             import matplotlib.pyplot as plt # Can't be imported at the top of the script, it causes problems with other programs that import this class for some reason.
+    #             plt.figure()
+    #             plt.title('Beam Scalers')
+    #             for beam_index, t in enumerate(beam_scalers):
+    #                 plt.plot(readout_time, t, label='Beam %i'%beam_index)
+    #             plt.xlabel('EntryId / eventid')
+    #             plt.ylabel('Hz')
+
+    #         return beam_scalers, trigger_thresholds, readout_time
+    #     except Exception as e:
+    #         print('\nError in %s'%inspect.stack()[0][3])
+    #         print(e)
+    #         exc_type, exc_obj, exc_tb = sys.exc_info()
+    #         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    #         print(exc_type, fname, exc_tb.tb_lineno)
 
 
 if __name__ == '__main__':

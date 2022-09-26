@@ -379,9 +379,9 @@ if __name__ == '__main__':
                                         elif include_hist_mode == 2:
                                             plt.sca(gs_ax2)
                                             if use_inset:
-                                                gs_ax2 = addStatsPlot(ax=gs_ax2, major_fontsize=minor_fontsize - 10, minor_fontsize=minor_fontsize - 10, altitude_str=altitude_str)
+                                                gs_ax2 = addStatsPlot(ax=gs_ax2, major_fontsize=minor_fontsize - 10, minor_fontsize=minor_fontsize - 10, altitude_str=altitude_str, deploy_index=deploy_index)
                                             else:
-                                                gs_ax2 = addStatsPlot(ax=gs_ax2, major_fontsize=major_fontsize, minor_fontsize=minor_fontsize, altitude_str=altitude_str)
+                                                gs_ax2 = addStatsPlot(ax=gs_ax2, major_fontsize=major_fontsize, minor_fontsize=minor_fontsize, altitude_str=altitude_str, deploy_index=deploy_index)
 
                                     else:
                                         for i in range(len(expected_rpe)):
@@ -440,7 +440,7 @@ if __name__ == '__main__':
                                             # gs_ax2.scatter(airplane_phi_deg - expected_rpe[:,1] , airplane_el_deg - expected_rpe[:,2], c='k')
                                         elif include_hist_mode == 2:
                                             plt.sca(gs_ax2)
-                                            gs_ax2 = addStatsPlot(ax=gs_ax2, major_fontsize=minor_fontsize - 4, minor_fontsize=minor_fontsize - 4, altitude_str=altitude_str)
+                                            gs_ax2 = addStatsPlot(ax=gs_ax2, major_fontsize=minor_fontsize - 4, minor_fontsize=minor_fontsize - 4, altitude_str=altitude_str, deploy_index=deploy_index)
 
                                             axis_adjust_margin = 0.085
                                             gs_ax2.patch.set_width(1 + axis_adjust_margin)

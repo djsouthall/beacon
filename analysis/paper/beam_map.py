@@ -244,15 +244,23 @@ if __name__ == '__main__':
                         plt.ylim(10,40)
                         secax3_y = ax3.secondary_yaxis('left', functions=(get_voltage_snr, get_power_snr))
                         secax3_y.set_ylabel("Beam Voltage Threshold", fontsize=major_fontsize)
+                        
+                        ax3.set_yticks(numpy.arange(10,45,5))
+                        secax3_y.set_yticks(numpy.arange(6,12,1))
                         # plt.ylim(5.5,12)
                     else:
                         plt.ylim(10,40)
                         ax3.set_ylabel("Beam Power Threshold", fontsize=major_fontsize)#"Beam Power Threshold (SNR)"
                         secax3_y = ax3.secondary_yaxis('right', functions=(get_voltage_snr, get_power_snr))
                         secax3_y.set_ylabel("Beam Voltage Threshold", fontsize=major_fontsize)
-                                    
+                    
+
                     ax3.yaxis.set_major_formatter(FormatStrFormatter(r'%0.1f $\sigma$'))#_\mathrm{P}
                     secax3_y.yaxis.set_major_formatter(FormatStrFormatter(r'%0.1f $\sigma$'))#_\mathrm{V}
+
+                    ax3.xaxis.set_tick_params(labelsize=minor_fontsize)
+                    ax3.yaxis.set_tick_params(labelsize=minor_fontsize)
+                    secax3_y.yaxis.set_tick_params(labelsize=minor_fontsize)
 
                     plt.xlabel(r'Relative Frequency (Offset By Beam Number)', fontsize=major_fontsize)
 

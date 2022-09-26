@@ -120,7 +120,10 @@ map_source_distance_m = info.returnDefaultSourceDistance()
 waveform_index_range = info.returnDefaultWaveformIndexRange()
 
 
-def addStatsPlot(ax=None, major_fontsize=24, minor_fontsize=18, altitude_str='geoaltitude'):
+def addStatsPlot(ax=None, major_fontsize=24, minor_fontsize=18, altitude_str='geoaltitude',deploy_index=None):
+    if deploy_index is None:
+        deploy_index = info.returnDefaultDeploy()
+
     start_time = time.time()
 
     font = {'family' : 'normal',

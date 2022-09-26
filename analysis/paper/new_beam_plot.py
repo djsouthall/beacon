@@ -5,8 +5,10 @@ import sys
 import os
 import numpy
 import matplotlib.pyplot as plt
+#from beacon.tools.sine_subtract_cache import sineSubtractedReader as Reader
+
 sys.path.append(os.environ['BEACON_INSTALL_DIR'])
-from examples.beacon_data_reader import Reader
+from beaconroot.examples.beacon_data_reader import Reader
 import inspect
 import matplotlib.ticker as ticker
 plt.ion()
@@ -100,6 +102,7 @@ reader = Reader(data_path,run_num)
 ##get "header" info for the run
 thresholds = reader.returnTriggerThresholds()
 beam_scalers, trigger_thresholds, readout_time = reader.returnBeamScalers()
+
 triggered_beams, beams_power = reader.returnTriggerInfo()
 time_run = (readout_time - min(readout_time))/3600. #in hours
 
@@ -222,6 +225,12 @@ def makeBeamPlot(fig, ax, major_fontsize=24, minor_fontsize=20, mode='a', figsiz
                 secax_y.set_ylabel("Beam Power Threshold", fontsize=major_fontsize)
                 #secax_y.set_ylabel(r'$\rm beam\ voltage\ thresholds\ (\sigma)$', fontsize=major_fontsize)
                 
+                for i in range(20):
+                    print('Beam %i'%i)
+                    print(min(Vsnr[i]))
+                    print(numpy.mean(Vsnr[i]))
+                    print(max(Vsnr[i]))
+
                 ##below horizon beams
                 for i in range(0,5):
                     cx.plot(time_run[plot_cut:-1], Vsnr[i], label='beam %i'%(i), linewidth=4, color=colors[i])

@@ -114,6 +114,7 @@ apply_filter = True
 min_event_cut = 0
 
 deploy_index = info.returnDefaultDeploy()
+deploy_index_origin, deploy_index_antennas_physical, deploy_index_antennas_phase_hpol, deploy_index_antennas_phase_vpol, deploy_index_cable_delays, deploy_index_description = bcr.configReader(deploy_index,return_description=True)
 datapath = os.environ['BEACON_DATA']
 map_source_distance_m = info.returnDefaultSourceDistance()
 waveform_index_range = info.returnDefaultWaveformIndexRange()
@@ -203,14 +204,44 @@ if __name__ == '__main__':
     output_antennas_phase_hpol = rotated_antennas_phase_hpol
     output_antennas_phase_vpol = rotated_antennas_phase_vpol
 
+
+
+
+
     output_description = 'This calibration is a rotated form of %s.  Antennas 1,2,3 have been rotated to attempt shift pointing reconstruct by HPOL: %0.4f deg in theta and %0.4f deg in azimuth and VPOL: %0.4f deg in theta and %0.4f deg in azimuth'%(initial_calibration, theta_shift_hpol, azimuth_shift_hpol, theta_shift_vpol, azimuth_shift_vpol)
     json_path = initial_calibration.replace('.json','_rotated_%i.json'%time.time())
     
     if False:
         bcr.configWriter(json_path, output_origin, output_antennas_physical, output_antennas_phase_hpol, output_antennas_phase_vpol, output_cable_delays, description=output_description,update_latlonel=True,force_write=True, additional_text=None) #does not overwrite.
     else:
-
         for mode in ('phase_hpol', 'phase_vpol'):
             bcr.configSchematicPlotter(deploy_index, en_figsize=(16,16), eu_figsize=(16,9), mode=mode, mast_height=12*0.3048, antenna_scale_factor=5, mast_colors=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'])
             json_path = '/home/dsouthall/Projects/Beacon/beacon/config/september_2021_minimized_calibration_rotated_1663963370.json'
             bcr.configSchematicPlotter(json_path, en_figsize=(16,16), eu_figsize=(16,9), mode=mode, mast_height=12*0.3048, antenna_scale_factor=5, mast_colors=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'])
+
+
+
+
+
+    print('Original Calibration HPol:')
+    print(deploy_index_antennas_phase_hpol)
+
+    print('Rotated Calibration HPol:')
+    print(rotated_antennas_phase_hpol)
+
+    print('Differences by antenna in meters, (E,N,U)_rotated - (E,N,U)_original:')
+
+    for antenna in range(4):
+        print(rotated_antennas_phase_hpol[antenna] - deploy_index_antennas_phase_hpol[antenna])
+
+
+    print('Original Calibration VPol:')
+    print(deploy_index_antennas_phase_vpol)
+
+    print('Rotated Calibration VPol:')
+    print(rotated_antennas_phase_vpol)
+
+    print('Differences by antenna in meters, (E,N,U)_rotated - (E,N,U)_original:')
+
+    for antenna in range(4):
+        print(rotated_antennas_phase_vpol[antenna] - deploy_index_antennas_phase_vpol[antenna])
