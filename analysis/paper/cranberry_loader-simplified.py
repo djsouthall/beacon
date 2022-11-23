@@ -349,7 +349,7 @@ if __name__ == '__main__':
         # plt.axvline(polarization_degs[2], c='m', label='5911-73399 with Only Sine Subtraction')
         plt.axvline(polarization_degs[0], c='k', lw=6)
         plt.axvline(polarization_degs[0], c=highlight_color, label='5911-73399\nPolarization = %0.1f$^\circ$'%polarization_degs[0], lw=4)
-        plt.xlim(10., 70.)
+        plt.xlim(0., 60.)
         ax1.tick_params(axis='both', labelsize=minor_fontsize)
         plt.legend(fontsize=minor_fontsize)
 
@@ -392,7 +392,7 @@ if __name__ == '__main__':
         plt.tight_layout()
 
 
-        fig.savefig('./figures/cr_sim_properties_ch%i.pdf'%channel,dpi=300)
-        fig.savefig('./figures/cr_sim_properties_ch%i.svg'%channel,dpi=300)
+        fig.savefig('./figures/cr_sim_properties_ch%i_v2.pdf'%channel,dpi=300)
+        fig.savefig('./figures/cr_sim_properties_ch%i_v2.svg'%channel,dpi=300)
     
 
